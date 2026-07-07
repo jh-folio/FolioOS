@@ -1,0 +1,21 @@
+{
+  "date": "2026-06-10",
+  "generatedAt": "2026-06-10T09:00:00+09:00",
+  "title": "Daily Market Briefing — 2026.06.10",
+  "summary": "Synthetic legacy briefing contract fixture.",
+  "prompt": "fixture",
+  "promptPath": "features/daily_briefing/prompt.md",
+  "markdown": "# Daily Market Briefing — 2026.06.10\n\n## 0. 오늘의 시장 성격\n\nSynthetic canonical markdown.",
+  "headlines": [],
+  "sources": [{"title": "Synthetic source", "source": "Reuters", "date": "2026-06-09", "url": "https://example.test/source"}],
+  "generation": {"mode": "rules", "status": "disabled", "sourceCount": 1},
+  "marketSnapshot": {"ok": false},
+  "koreaMarketData": {"ok": false},
+  "marketWindows": {"analysisMode": "weekday_kr_open", "usRegularSessionDate": "2026-06-09", "krCurrentSessionDate": "2026-06-10"},
+  "marketDrivers": [],
+  "checkpoints": [],
+  "dataGaps": [],
+  "marketTape": {"status": "unavailable"},
+  "stats": {"documents": 1, "sourceDate": "2026-06-09", "analysisMode": "weekday_kr_open", "sourceCount": 1},
+  "personalOverlay": {"enabled": true, "status": "ok", "markdown": "Synthetic overlay"}
+}

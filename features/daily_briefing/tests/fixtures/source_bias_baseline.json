@@ -1,0 +1,16 @@
+{
+  "description": "Aggregated June 12-18 reference distribution; no article-level or local-path data.",
+  "totalReferences": 98,
+  "publishers": {
+    "연합인포맥스": 52,
+    "한국경제": 39,
+    "CNBC": 6,
+    "Reuters": 1
+  },
+  "expected": {
+    "publisherCount": 4,
+    "maxPublisherShare": 0.530612,
+    "topTwoShare": 0.928571,
+    "sourceConcentration": 0.443773
+  }
+}

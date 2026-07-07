@@ -1,0 +1,203 @@
+{
+  "description": "Company master used for local tagging. Add listed companies here when you want deterministic matching.",
+  "companies": [
+    {
+      "name": "NVIDIA",
+      "aliases": [
+        "엔비디아",
+        "NVDA",
+        "Nvidia"
+      ],
+      "ticker": "NVDA",
+      "sector": "Semiconductors",
+      "market": "US"
+    },
+    {
+      "name": "SPACE EXPLORATION TECHNOLOGIES CORP",
+      "aliases": [
+        "SpaceX",
+        "SPCX",
+        "스페이스X",
+        "스페이스엑스"
+      ],
+      "ticker": "SPCX",
+      "sector": "Aerospace",
+      "market": "US"
+    },
+    {
+      "name": "Dell Technologies",
+      "aliases": [
+        "Dell",
+        "DELL",
+        "델"
+      ],
+      "ticker": "DELL",
+      "sector": "Hardware",
+      "market": "US"
+    },
+    {
+      "name": "Apple",
+      "aliases": [
+        "애플",
+        "AAPL"
+      ],
+      "ticker": "AAPL",
+      "sector": "Consumer Technology",
+      "market": "US"
+    },
+    {
+      "name": "Microsoft",
+      "aliases": [
+        "마이크로소프트",
+        "MSFT"
+      ],
+      "ticker": "MSFT",
+      "sector": "Software",
+      "market": "US"
+    },
+    {
+      "name": "Tesla",
+      "aliases": [
+        "테슬라",
+        "TSLA"
+      ],
+      "ticker": "TSLA",
+      "sector": "EV",
+      "market": "US"
+    },
+    {
+      "name": "Amazon",
+      "aliases": [
+        "아마존",
+        "AMZN"
+      ],
+      "ticker": "AMZN",
+      "sector": "Internet",
+      "market": "US"
+    },
+    {
+      "name": "Alphabet",
+      "aliases": [
+        "구글",
+        "Google",
+        "GOOGL",
+        "GOOG"
+      ],
+      "ticker": "GOOGL",
+      "sector": "Internet",
+      "market": "US"
+    },
+    {
+      "name": "Meta",
+      "aliases": [
+        "메타",
+        "META"
+      ],
+      "ticker": "META",
+      "sector": "Internet",
+      "market": "US"
+    },
+    {
+      "name": "AMD",
+      "aliases": [
+        "Advanced Micro Devices"
+      ],
+      "ticker": "AMD",
+      "sector": "Semiconductors",
+      "market": "US"
+    },
+    {
+      "name": "TSMC",
+      "aliases": [
+        "Taiwan Semiconductor",
+        "TSM"
+      ],
+      "ticker": "TSM",
+      "sector": "Semiconductors",
+      "market": "US"
+    },
+    {
+      "name": "Uber",
+      "aliases": [
+        "우버",
+        "UBER"
+      ],
+      "ticker": "UBER",
+      "sector": "Mobility",
+      "market": "US"
+    },
+    {
+      "name": "Samsung Electronics",
+      "aliases": [
+        "삼성전자",
+        "005930",
+        "Samsung"
+      ],
+      "ticker": "005930",
+      "sector": "Semiconductors",
+      "market": "KR"
+    },
+    {
+      "name": "Samsung Electro-Mechanics",
+      "aliases": [
+        "삼성전기",
+        "009150"
+      ],
+      "ticker": "009150",
+      "sector": "Electronic Components",
+      "market": "KR"
+    },
+    {
+      "name": "SK hynix",
+      "aliases": [
+        "SK하이닉스",
+        "000660",
+        "하이닉스"
+      ],
+      "ticker": "000660",
+      "sector": "Semiconductors",
+      "market": "KR"
+    },
+    {
+      "name": "POSCO Future M",
+      "aliases": [
+        "포스코퓨처엠",
+        "003670"
+      ],
+      "ticker": "003670",
+      "sector": "Battery",
+      "market": "KR"
+    },
+    {
+      "name": "Hyundai Motor",
+      "aliases": [
+        "현대차",
+        "005380"
+      ],
+      "ticker": "005380",
+      "sector": "Automobiles",
+      "market": "KR"
+    },
+    {
+      "name": "Kia",
+      "aliases": [
+        "기아",
+        "000270"
+      ],
+      "ticker": "000270",
+      "sector": "Automobiles",
+      "market": "KR"
+    },
+    {
+      "name": "LG Energy Solution",
+      "aliases": [
+        "LG에너지솔루션",
+        "373220",
+        "LG엔솔"
+      ],
+      "ticker": "373220",
+      "sector": "Battery",
+      "market": "KR"
+    }
+  ]
+}

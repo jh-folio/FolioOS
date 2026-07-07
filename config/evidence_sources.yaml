@@ -1,0 +1,17 @@
+official_sources:
+  sec_edgar:
+    enabled: true
+    source_type: "official_filing"
+    reliability_tier: 1
+  opendart:
+    enabled: true
+    source_type: "official_filing"
+    reliability_tier: 1
+  fred:
+    enabled: true
+    source_type: "macro_data"
+    reliability_tier: 1
+  bok_ecos:
+    enabled: true
+    source_type: "macro_data"
+    reliability_tier: 1

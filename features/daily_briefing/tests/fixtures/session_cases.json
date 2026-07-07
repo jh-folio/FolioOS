@@ -1,0 +1,7 @@
+[
+  {"date": "2026-06-10", "analysisMode": "weekday_kr_open", "weekendOrHolidayNewsMode": false},
+  {"date": "2026-06-13", "analysisMode": "weekend", "weekendOrHolidayNewsMode": true},
+  {"date": "2026-06-19", "analysisMode": "us_holiday_kr_open", "weekendOrHolidayNewsMode": true},
+  {"date": "2026-08-17", "analysisMode": "kr_holiday", "weekendOrHolidayNewsMode": true},
+  {"date": "2026-05-25", "analysisMode": "both_holiday", "weekendOrHolidayNewsMode": true}
+]

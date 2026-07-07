@@ -1,0 +1,16 @@
+{
+  "description": "User corrections and aliases. Entries here override/extend company_master.json.",
+  "companies": [
+    {
+      "name": "McKesson Corporation",
+      "ticker": "MCK",
+      "sector": "Healthcare",
+      "market": "US",
+      "aliases": [
+        "McKesson",
+        "NYSE:MCK",
+        "MCK"
+      ]
+    }
+  ]
+}

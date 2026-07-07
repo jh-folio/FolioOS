@@ -1,0 +1,493 @@
+"""LLM-driven market narrative memory context building and execution."""
+import json
+import os
+import re
+import sys
+import threading
+from pathlib import Path
+
+from features.common.utils import normalize, now_iso, kst_date, clean_brief_text
+from features.common.dataframe_ops import top_records
+from features.daily_briefing.service import (
+    news_documents,
+    select_briefing_docs,
+    source_refs,
+)
+from features.common.research_library.search.service import group_docs
+from features.market_memory.memory import (
+    list_memory,
+    list_states,
+    list_story_links,
+    list_taxonomy,
+    upsert_memory,
+)
+from features.market_memory.regime_v2 import refresh_all_regimes
+from features.market_memory.snapshot import (
+    MARKET_STATE_SNAPSHOT_PROMPT,
+    build_market_state_context,
+    save_market_state_snapshot,
+)
+from features.llm_settings.client import (
+    LlmRequestError,
+    extract_json_object,
+    json_repair_prompt,
+    request_llm_text,
+    selected_llm_config,
+)
+from features.common.quality_generation.telemetry import normalize_token_usage
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = ROOT / "data"
+FEATURES_DIR = ROOT / "features"
+MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
+MARKET_MEMORY_PROMPT_PATH = FEATURES_DIR / "market_memory" / "prompt.md"
+_STARTUP_REGIME_REFRESH_STARTED = False
+
+
+def read_market_memory_prompt():
+    try:
+        return MARKET_MEMORY_PROMPT_PATH.read_text(encoding="utf-8")
+    except Exception:
+        return ""
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)) or default)
+    except (TypeError, ValueError):
+        return default
+
+
+def schedule_startup_regime_refresh(db_path: str | Path = MARKET_MEMORY_DB_PATH) -> dict:
+    """Refresh Regime Tracker metrics once in the background after server startup."""
+    global _STARTUP_REGIME_REFRESH_STARTED
+    enabled = os.environ.get("STARTUP_REGIME_REFRESH", "1").strip().lower()
+    if enabled in {"0", "false", "no", "off"}:
+        return {"scheduled": False, "reason": "disabled"}
+    if _STARTUP_REGIME_REFRESH_STARTED:
+        return {"scheduled": False, "reason": "already_started"}
+    _STARTUP_REGIME_REFRESH_STARTED = True
+    status = os.environ.get("STARTUP_REGIME_REFRESH_STATUS", "current").strip() or "current"
+    limit = _int_env("STARTUP_REGIME_REFRESH_LIMIT", 30)
+    days = _int_env("STARTUP_REGIME_REFRESH_DAYS", 90)
+
+    def worker():
+        try:
+            result = refresh_all_regimes(db_path, status=status, limit=limit, days=days)
+            print(f"Regime Tracker startup refresh complete: {result.get('count', 0)} states")
+        except Exception as exc:
+            print(f"Regime Tracker startup refresh failed: {exc}", file=sys.stderr)
+
+    thread = threading.Thread(target=worker, name="regime-startup-refresh", daemon=True)
+    thread.start()
+    return {"scheduled": True, "status": status, "limit": limit, "days": days}
+
+
+def compact_memory_row(mem):
+    return {
+        "date": mem.get("date", ""),
+        "title": mem.get("title", ""),
+        "story": mem.get("story", ""),
+        "family": mem.get("storyFamily", ""),
+        "stateKey": mem.get("stateKey", ""),
+        "status": mem.get("status", ""),
+        "bias": mem.get("bias", ""),
+        "importance": mem.get("importance", ""),
+        "summary": clean_brief_text(mem.get("summary", ""), 420),
+        "checkpoint": clean_brief_text(mem.get("storyCheckpoint") or mem.get("rationale") or "", 220),
+    }
+
+
+def build_memory_llm_context(date=None):
+    from features.common.research_library.indexing.service import load_index
+    date = date or kst_date()
+    index = load_index()
+    docs, source_date, market_windows = select_briefing_docs(news_documents(index), date, strict=False)
+    groups = group_docs(docs)[:4]
+    memories = list_memory(MARKET_MEMORY_DB_PATH, limit=8)
+    states = list_states(MARKET_MEMORY_DB_PATH, limit=6, status="current")
+    taxonomy = list_taxonomy(MARKET_MEMORY_DB_PATH, term_type="story_family", limit=10)
+    story_links = list_story_links(MARKET_MEMORY_DB_PATH, limit=10)
+
+    used_docs = []
+    seen = set()
+    issue_blocks = []
+    source_index_by_key = {}
+    for i, group in enumerate(groups, 1):
+        subject = group.get("company") or group.get("sector") or "시장"
+        ranked = top_records(group.get("docs", []), ["marketRelevance", "sourceWeight"], 2, descending=True)
+        block_docs = []
+        tags = []
+        for doc in ranked:
+            key = doc.get("url") or doc.get("path") or doc.get("title")
+            if key and key not in seen:
+                seen.add(key)
+                used_docs.append(doc)
+                source_index_by_key[key] = len(used_docs)
+            source_index = source_index_by_key.get(key, len(used_docs))
+            for tag in (doc.get("impactTags", []) + doc.get("sectors", [])):
+                if tag and tag not in tags:
+                    tags.append(tag)
+            block_docs.append({
+                "source": doc.get("source", ""),
+                "date": doc.get("date", ""),
+                "title": clean_brief_text(doc.get("title", ""), 160),
+                "summary": clean_brief_text(doc.get("summary") or doc.get("content") or "", 320),
+                "companies": [c.get("ticker") or c.get("name") for c in doc.get("companies", [])[:4]],
+                "tags": (doc.get("impactTags", []) + doc.get("sectors", []))[:8],
+                "url": doc.get("url", ""),
+                "sourceIndex": source_index,
+                # Evidence Intake provenance: collector/query는 어떤 수집 경로·질의에서
+                # 왔는지, narrativeIds는 수집기가 이미 연결한 기존 내러티브 힌트다.
+                # (사용자 query intent는 관심 방향일 뿐 evidence가 아니다.)
+                "collector": doc.get("collector", ""),
+                "query": doc.get("query", ""),
+                "narrativeIds": doc.get("narrativeIds", []) or [],
+            })
+        issue_blocks.append({
+            "rank": i,
+            "subject": subject,
+            "tags": tags[:10],
+            "documentCount": len(group.get("docs", [])),
+            "docs": block_docs,
+        })
+
+    axis_terms = {
+        "관세·무역정책": ["tariff", "trade", "관세", "무역", "수출통제", "policy"],
+        "금리·달러 유동성": ["fed", "rate", "yield", "bond", "dollar", "fx", "금리", "국채", "채권", "달러", "환율", "스와프"],
+        "AI 리더십 재분류": ["ai", "nvidia", "semiconductor", "data center", "gpu", "hbm", "인공지능", "반도체", "데이터센터"],
+        "한국 수출과 원화 민감도": ["korea", "kospi", "krw", "export", "semiconductor", "한국", "코스피", "원화", "수출", "반도체"],
+        "에너지·지정학 리스크": ["oil", "energy", "iran", "hormuz", "middle east", "war", "유가", "에너지", "이란", "중동", "호르무즈"],
+        "신용·금융 스트레스": ["credit", "bank", "loan", "private credit", "debt", "금융", "은행", "신용", "부채"],
+    }
+    market_axes = []
+    for axis, terms in axis_terms.items():
+        matches = []
+        for doc in docs:
+            hay = normalize(" ".join([
+                doc.get("title", ""),
+                doc.get("summary", ""),
+                " ".join(doc.get("impactTags", []) + doc.get("sectors", [])),
+                " ".join(c.get("name", "") + " " + c.get("ticker", "") for c in doc.get("companies", [])),
+            ])).lower()
+            if any(term.lower() in hay for term in terms):
+                matches.append({
+                    "source": doc.get("source", ""),
+                    "date": doc.get("date", ""),
+                    "title": clean_brief_text(doc.get("title", ""), 160),
+                    "summary": clean_brief_text(doc.get("summary") or doc.get("content") or "", 260),
+                })
+            if len(matches) >= 3:
+                break
+        if matches:
+            market_axes.append({"axis": axis, "evidenceCount": len(matches), "evidence": matches})
+
+    context = {
+        "taskDate": date,
+        "sourceDate": source_date,
+        "marketTimeRule": market_windows.get("rule", ""),
+        "marketClosedNotes": market_windows.get("closedNotes", []),
+        "tokenPolicy": {
+            "selectedIssueGroups": len(issue_blocks),
+            "maxDocsPerGroup": 2,
+            "instruction": "Use only the compact evidence below. Do not ask for full articles unless needed later.",
+        },
+        "existingStates": [compact_memory_row(item) for item in states[:6]],
+        "recentMemory": [compact_memory_row(item) for item in memories[:8]],
+        "knownStoryFamilies": taxonomy,
+        "storyLinks": story_links[:10],
+        "marketAxes": market_axes[:6],
+        "candidateIssues": issue_blocks,
+    }
+    return json.dumps(context, ensure_ascii=False, indent=2), used_docs, source_date
+
+
+def llm_story_key(value):
+    token = normalize(value).lower()
+    replacements = {
+        "관세": "tariff",
+        "무역": "trade",
+        "정책": "policy",
+        "금리": "rates",
+        "달러": "dollar",
+        "유동성": "liquidity",
+        "한국": "korea",
+        "수출": "export",
+        "원화": "krw",
+        "환율": "fx",
+        "반도체": "semiconductors",
+        "에너지": "energy",
+        "유가": "oil",
+        "지정학": "geopolitics",
+        "리더십": "leadership",
+        "재분류": "reclassification",
+    }
+    for source, target in replacements.items():
+        token = token.replace(source, f" {target} ")
+    token = re.sub(r"[^0-9a-z]+", "_", token)
+    return token.strip("_")[:80] or "market_narrative"
+
+
+def normalize_llm_memory_entry(entry, date, used_docs):
+    if not isinstance(entry, dict):
+        return None, "entry_not_object"
+    title = normalize(entry.get("title") or entry.get("stateLabel") or entry.get("storyFamily") or "")
+    summary = normalize(entry.get("summary") or entry.get("storyThesis") or entry.get("thesis") or "")
+    state_conclusion = normalize(entry.get("stateConclusion") or entry.get("conclusion") or "")
+    if state_conclusion and not summary.startswith(state_conclusion):
+        summary = f"{state_conclusion} {summary}".strip()
+    story = normalize(entry.get("story") or entry.get("stateKey") or entry.get("story_key") or entry.get("storyFamily") or title)
+    story_family = normalize(entry.get("storyFamily") or entry.get("story_family") or entry.get("stateLabel") or title or story)
+    state_key = normalize(entry.get("stateKey") or entry.get("state_key") or entry.get("story") or story_family or title)
+    if not title or not summary:
+        missing = [name for name, value in [("title", title), ("summary", summary)] if not value]
+        return None, "missing_" + "_".join(missing)
+    if not story:
+        story = state_key or title
+    if not state_key:
+        state_key = story
+    story = llm_story_key(story)
+    state_key = llm_story_key(state_key)
+    source_ids = entry.get("sourceIndexes", [])
+    selected_sources = []
+    if isinstance(source_ids, list):
+        for idx in source_ids[:8]:
+            try:
+                doc = used_docs[int(idx) - 1]
+            except Exception:
+                continue
+            selected_sources.append({
+                "title": doc.get("title", ""),
+                "source": doc.get("source", ""),
+                "date": doc.get("date", ""),
+                "url": doc.get("url", ""),
+                "path": doc.get("path", ""),
+                "type": doc.get("type", ""),
+            })
+    if not selected_sources:
+        selected_sources = source_refs(used_docs, limit=5)
+    allowed_category = {"stock_bond", "geopolitics", "emerging"}
+    allowed_region = {"US", "KR", "GLOBAL"}
+    allowed_importance = {"high", "medium", "low"}
+    allowed_event = {"earnings", "policy", "geopolitics", "industry_trend", "market_move", "brief"}
+    allowed_bias = {"bullish", "bearish", "neutral", "mixed"}
+    allowed_relation = {"evolves_from", "branches_from", "confirms", "conflicts_with", "replaces", "same_family"}
+    return {
+        "date": date,
+        "asOf": now_iso(),
+        "title": title[:180],
+        "summary": summary[:900],
+        "story": story[:80],
+        "storyFamily": story_family[:120] or story,
+        "storyThesis": normalize(entry.get("storyThesis", ""))[:700] or summary[:300],
+        "storyCheckpoint": normalize(entry.get("storyCheckpoint", ""))[:500] or "후속 가격 반응, 수급, 실적 가이던스, 정책 발표를 확인",
+        "stateKey": state_key[:80] or story,
+        "stateLabel": normalize(entry.get("stateLabel", ""))[:120] or story_family or title,
+        "parentStory": normalize(entry.get("parentStory", ""))[:80] or state_key or story,
+        "storyRelation": normalize(entry.get("storyRelation", "")) if normalize(entry.get("storyRelation", "")) in allowed_relation else "same_family",
+        "stateBias": normalize(entry.get("stateBias", "")) if normalize(entry.get("stateBias", "")) in allowed_bias else "neutral",
+        "category": normalize(entry.get("category", "")) if normalize(entry.get("category", "")) in allowed_category else "stock_bond",
+        "region": normalize(entry.get("region", "")) if normalize(entry.get("region", "")) in allowed_region else "GLOBAL",
+        "importance": normalize(entry.get("importance", "")) if normalize(entry.get("importance", "")) in allowed_importance else "medium",
+        "entryMode": "issue",
+        "eventKind": normalize(entry.get("eventKind", "")) if normalize(entry.get("eventKind", "")) in allowed_event else "brief",
+        "netEffect": normalize(entry.get("netEffect", ""))[:80],
+        "sourceKind": "llm",
+        "subjects": entry.get("subjects", []) if isinstance(entry.get("subjects", []), list) else [],
+        "industries": entry.get("industries", []) if isinstance(entry.get("industries", []), list) else [],
+        "tickers": entry.get("tickers", []) if isinstance(entry.get("tickers", []), list) else [],
+        "tags": entry.get("tags", []) if isinstance(entry.get("tags", []), list) else [],
+        "sources": selected_sources,
+        "dedupeKey": normalize(entry.get("dedupeKey", ""))[:160] or f"llm:{date}:{story}",
+    }, ""
+
+
+def run_llm_market_memory(date=None):
+    cfg = selected_llm_config()
+    if not cfg["apiKey"]:
+        return {"ok": False, "status": f"missing_{cfg['provider']}_api_key", "saved": [], "message": "선택한 LLM Provider의 API 키가 없습니다."}
+    prompt = read_market_memory_prompt()
+    if not prompt:
+        return {"ok": False, "status": "missing_prompt", "saved": [], "message": "시장 내러티브 LLM 프롬프트가 없습니다."}
+    context, used_docs, source_date = build_memory_llm_context(date)
+    max_tokens = int(os.environ.get("LLM_MEMORY_MAX_OUTPUT_TOKENS", "2600"))
+    try:
+        try:
+            text, response_id, usage = request_llm_text(cfg, prompt, context, web_search=False, max_output_tokens=max_tokens, json_mode=True, include_usage=True)
+        except LlmRequestError as exc:
+            if exc.status_code != 400:
+                raise
+            fallback_prompt = (
+                prompt
+                + "\n\nThe provider rejected strict JSON mode. Still return only one valid JSON object with an `entries` array. "
+                "No Markdown fences, no prose before or after JSON."
+            )
+            text, response_id, usage = request_llm_text(
+                cfg, fallback_prompt, context,
+                web_search=False, max_output_tokens=max_tokens, json_mode=False, include_usage=True,
+            )
+        try:
+            payload = extract_json_object(text)
+        except Exception:
+            repair_context = (
+                "Original output:\n"
+                + clean_brief_text(text, 5000)
+                + "\n\nRequired schema: {\"entries\": [...]}"
+            )
+            repaired, repair_id, repair_usage = request_llm_text(
+                cfg, json_repair_prompt(), repair_context,
+                web_search=False, max_output_tokens=min(max_tokens, 1800), json_mode=True, include_usage=True,
+            )
+            response_id = response_id or repair_id
+            payload = extract_json_object(repaired)
+        entries = payload.get("entries", []) if isinstance(payload, dict) else []
+        saved = []
+        dropped = []
+        for raw_entry in entries[:3]:
+            entry, reason = normalize_llm_memory_entry(raw_entry, date or kst_date(), used_docs)
+            if not entry:
+                dropped.append(reason or "invalid_entry")
+                continue
+            saved.append(upsert_memory(MARKET_MEMORY_DB_PATH, entry))
+        if not saved and not entries:
+            detail = "LLM이 중기 내러티브로 저장할 만큼 충분한 후보가 없다고 판단했습니다."
+        elif not saved:
+            detail = f"LLM 응답 {len(entries)}건 중 저장 가능한 형식이 없었습니다: {', '.join(dropped[:3])}"
+        else:
+            detail = f"LLM 시장 내러티브 {len(saved)}건을 저장했습니다."
+        return {
+            "ok": True,
+            "status": "ok_local_only",
+            "provider": cfg["provider"],
+            "model": cfg["model"],
+            "responseId": response_id,
+            "sourceDate": source_date,
+            "usedSourceCount": len(used_docs),
+            "estimatedInputTokens": max(1, len(context) // 4),
+            "maxOutputTokens": max_tokens,
+            "tokenUsage": normalize_token_usage(usage, prompt=prompt, context=context, output=text, max_output_tokens=max_tokens),
+            "repairTokenUsage": normalize_token_usage(repair_usage, prompt=json_repair_prompt(), context=repair_context, output=repaired, max_output_tokens=min(max_tokens, 1800)) if "repair_usage" in locals() else {},
+            "rawEntryCount": len(entries),
+            "droppedCount": len(dropped),
+            "droppedReasons": dropped[:6],
+            "saved": saved,
+            "message": detail,
+        }
+    except Exception as exc:
+        return {"ok": False, "status": f"error: {exc}", "saved": [], "message": f"LLM 시장 내러티브 생성 실패: {exc}"}
+
+
+MARKET_STATE_SCOPES = ("overall", "us", "kr")
+
+
+def _market_state_scope_prompt(scope: str) -> str:
+    labels = {"overall": "종합", "us": "미국장", "kr": "한국장"}
+    label = labels.get(scope, scope)
+    return (
+        MARKET_STATE_SNAPSHOT_PROMPT
+        + "\n\n"
+        + f"Current task: generate the {label} MarketStateSnapshot only.\n"
+        + "Return the same top-level JSON shape. Do not rely on another market view to fill keyDrivers or sourceRefs.\n"
+        + "Use only the rssCandidates/sourceRefs supplied in this context for cited sourceRefs.\n"
+        + "marketTape and macroSnapshot are supporting evidence only; missing or weak market data must not be listed as user-facing uncertainties.\n"
+    )
+
+
+def _payload_to_market_view(payload: dict, scope: str) -> dict:
+    return {
+        "id": scope,
+        "headline": payload.get("headline", ""),
+        "marketInterpretation": payload.get("oneLineSummary", ""),
+        "actionSummary": payload.get("beginnerSummary") or payload.get("actionPosture", ""),
+        "actionGuide": payload.get("actionGuide") or {},
+        "keyDrivers": payload.get("keyDrivers") or [],
+        "watchItems": payload.get("watchItems") or [],
+        "counterEvidence": payload.get("counterEvidence") or [],
+        "uncertainties": payload.get("uncertainties") or [],
+        "sourceRefs": payload.get("sourceRefs") or payload.get("sources") or [],
+    }
+
+
+def _merge_context_refs(contexts: dict[str, dict]) -> dict:
+    merged = dict(contexts.get("overall") or {})
+    for key in ("rssCandidates", "sourceRefs"):
+        seen = set()
+        items = []
+        for context in contexts.values():
+            for item in context.get(key) or []:
+                if not isinstance(item, dict):
+                    continue
+                item_id = str(item.get("id") or "")
+                dedupe_key = item_id or str(item)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                items.append(item)
+        merged[key] = items
+    merged["marketViewContexts"] = {
+        scope: {
+            "marketScope": context.get("marketScope"),
+            "sourceRefs": context.get("sourceRefs") or [],
+            "rssCandidateCount": len(context.get("rssCandidates") or []),
+        }
+        for scope, context in contexts.items()
+    }
+    return merged
+
+
+def run_llm_market_state_snapshot(date=None):
+    cfg = selected_llm_config()
+    if not cfg["apiKey"]:
+        return {"ok": False, "status": f"missing_{cfg['provider']}_api_key", "message": "선택한 LLM Provider의 API 키가 없습니다."}
+    max_tokens = int(os.environ.get("LLM_MARKET_STATE_MAX_OUTPUT_TOKENS", "2200"))
+    try:
+        payloads = {}
+        contexts = {}
+        response_ids = {}
+        token_usage = {}
+        estimated_input_tokens = 0
+        for scope in MARKET_STATE_SCOPES:
+            context_payload = build_market_state_context(market_scope=scope)
+            context = json.dumps(context_payload, ensure_ascii=False, indent=2)
+            prompt = _market_state_scope_prompt(scope)
+            text, response_id, usage = request_llm_text(
+                cfg,
+                prompt,
+                context,
+                web_search=False,
+                max_output_tokens=max_tokens,
+                json_mode=True,
+                include_usage=True,
+            )
+            payloads[scope] = extract_json_object(text)
+            contexts[scope] = context_payload
+            response_ids[scope] = response_id
+            estimated_input_tokens += max(1, len(context) // 4)
+            token_usage[scope] = normalize_token_usage(
+                usage,
+                prompt=prompt,
+                context=context,
+                output=text,
+                max_output_tokens=max_tokens,
+            )
+        payload = dict(payloads["overall"])
+        payload["marketViews"] = {
+            scope: _payload_to_market_view(payloads[scope], scope)
+            for scope in MARKET_STATE_SCOPES
+        }
+        merged_context = _merge_context_refs(contexts)
+        snapshot = save_market_state_snapshot(MARKET_MEMORY_DB_PATH, payload, context=merged_context)
+        return {
+            "ok": True,
+            "status": "ok_llm_authored",
+            "provider": cfg["provider"],
+            "model": cfg["model"],
+            "responseId": response_ids.get("overall", ""),
+            "responseIds": response_ids,
+            "snapshot": snapshot,
+            "message": "LLM 시장 상태 스냅샷을 저장했습니다.",
+            "tokenUsage": token_usage,
+            "estimatedInputTokens": estimated_input_tokens,
+        }
+    except Exception as exc:
+        return {"ok": False, "status": f"error: {exc}", "message": f"LLM 시장 상태 스냅샷 생성 실패: {exc}"}

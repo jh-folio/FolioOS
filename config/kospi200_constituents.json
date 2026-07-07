@@ -1,0 +1,1401 @@
+{
+  "asOf": "2026-06-23",
+  "source": "wikipedia:KOSPI_200 + yfinance market caps",
+  "count": 199,
+  "missingCap": [],
+  "companies": [
+    {
+      "ticker": "005930",
+      "label": "Samsung Electronics",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 2035634562860000.0
+    },
+    {
+      "ticker": "000660",
+      "label": "SK Hynix",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 1813679246505000.0
+    },
+    {
+      "ticker": "402340",
+      "label": "SK Square",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 241473148184000.0
+    },
+    {
+      "ticker": "009150",
+      "label": "Samsung Electro-Mechanics",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 150339027500000.0
+    },
+    {
+      "ticker": "005380",
+      "label": "Hyundai Motor",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 133797212836000.0
+    },
+    {
+      "ticker": "373220",
+      "label": "LG Energy Solution",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 84708000000000.0
+    },
+    {
+      "ticker": "032830",
+      "label": "Samsung Life",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 76319281075000.0
+    },
+    {
+      "ticker": "028260",
+      "label": "Samsung C&T",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 74454002805000.0
+    },
+    {
+      "ticker": "329180",
+      "label": "HD Hyundai Heavy Industries",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 61700471112000.0
+    },
+    {
+      "ticker": "207940",
+      "label": "Samsung Biologics",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 58928380623000.0
+    },
+    {
+      "ticker": "034020",
+      "label": "Doosan Enerbility",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 57010647365600.0
+    },
+    {
+      "ticker": "012450",
+      "label": "Hanwha Aerospace",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 55204549524000.0
+    },
+    {
+      "ticker": "105560",
+      "label": "KB Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 54515504715800.0
+    },
+    {
+      "ticker": "000270",
+      "label": "Kia",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 53401340308200.0
+    },
+    {
+      "ticker": "055550",
+      "label": "Shinhan Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 46003448069700.0
+    },
+    {
+      "ticker": "012330",
+      "label": "Hyundai Mobis",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 45482097330000.0
+    },
+    {
+      "ticker": "034730",
+      "label": "SK",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 38452031040000.0
+    },
+    {
+      "ticker": "006400",
+      "label": "Samsung SDI",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 36907314815000.0
+    },
+    {
+      "ticker": "068270",
+      "label": "Celltrion",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 36807014316000.0
+    },
+    {
+      "ticker": "066570",
+      "label": "LG Electronics",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 36279041632000.0
+    },
+    {
+      "ticker": "010120",
+      "label": "LS Electric",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 34592593875000.0
+    },
+    {
+      "ticker": "267260",
+      "label": "HD Hyundai Electric",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 34157076096000.0
+    },
+    {
+      "ticker": "298040",
+      "label": "Hyosung Heavy Industries",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 33671255456000.0
+    },
+    {
+      "ticker": "042660",
+      "label": "Hanwha Ocean",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 32014390831500.0
+    },
+    {
+      "ticker": "086790",
+      "label": "Hana Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 30986022490500.0
+    },
+    {
+      "ticker": "035420",
+      "label": "Naver",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 30289904842500.0
+    },
+    {
+      "ticker": "000810",
+      "label": "Samsung Fire & Marine",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 27461147336000.0
+    },
+    {
+      "ticker": "000150",
+      "label": "Doosan",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 27377812017000.0
+    },
+    {
+      "ticker": "009540",
+      "label": "HD KSOE",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 25775482635000.0
+    },
+    {
+      "ticker": "006800",
+      "label": "Mirae Asset Securities",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 24522612084150.0
+    },
+    {
+      "ticker": "042700",
+      "label": "Hanmi Semiconductor",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 24472074516000.0
+    },
+    {
+      "ticker": "005490",
+      "label": "POSCO",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 24349890838000.0
+    },
+    {
+      "ticker": "011070",
+      "label": "LG Innotek",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 23451526437000.0
+    },
+    {
+      "ticker": "015760",
+      "label": "KEPCO",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 23271197791250.0
+    },
+    {
+      "ticker": "051910",
+      "label": "LG Chem",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 22817191650000.0
+    },
+    {
+      "ticker": "010130",
+      "label": "Korea Zinc",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 22106263488000.0
+    },
+    {
+      "ticker": "316140",
+      "label": "Woori Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 21432319459350.0
+    },
+    {
+      "ticker": "064350",
+      "label": "Hyundai Rotem",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 21129947924800.0
+    },
+    {
+      "ticker": "010140",
+      "label": "Samsung Heavy Industries",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 20755855108800.0
+    },
+    {
+      "ticker": "017670",
+      "label": "SK Telecom",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 19153906198900.0
+    },
+    {
+      "ticker": "033780",
+      "label": "KT&G",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 17917684705600.0
+    },
+    {
+      "ticker": "079550",
+      "label": "LIG Nex1",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 17672807250000.0
+    },
+    {
+      "ticker": "011200",
+      "label": "HMM",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 17534793862300.0
+    },
+    {
+      "ticker": "138040",
+      "label": "Meritz Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 17235378391200.0
+    },
+    {
+      "ticker": "024110",
+      "label": "Industrial Bank of Korea",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 16147873806750.0
+    },
+    {
+      "ticker": "096770",
+      "label": "SK Innovation",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 15867430198500.0
+    },
+    {
+      "ticker": "003670",
+      "label": "POSCO Future M",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 15378795386500.0
+    },
+    {
+      "ticker": "272210",
+      "label": "Hanwha Systems",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 15314748075900.0
+    },
+    {
+      "ticker": "003550",
+      "label": "LG",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 15204435815800.0
+    },
+    {
+      "ticker": "035720",
+      "label": "Kakao",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 15093422650250.0
+    },
+    {
+      "ticker": "307950",
+      "label": "Hyundai AutoEver",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 15082713800000.0
+    },
+    {
+      "ticker": "267250",
+      "label": "HD Hyundai",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 14911038730000.0
+    },
+    {
+      "ticker": "018260",
+      "label": "Samsung SDS",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 14820295637600.0
+    },
+    {
+      "ticker": "086280",
+      "label": "Hyundai Glovis",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 14017500000000.0
+    },
+    {
+      "ticker": "047810",
+      "label": "Korea Aerospace",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 13685505022800.0
+    },
+    {
+      "ticker": "278470",
+      "label": "APR",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 13309264102500.0
+    },
+    {
+      "ticker": "000720",
+      "label": "Hyundai E&C",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 12938443715800.0
+    },
+    {
+      "ticker": "030200",
+      "label": "KT",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 12540986739200.0
+    },
+    {
+      "ticker": "071050",
+      "label": "Korea Investment",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 12146526912000.0
+    },
+    {
+      "ticker": "010950",
+      "label": "S-Oil",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 11816694858500.0
+    },
+    {
+      "ticker": "005940",
+      "label": "NH Investment & Securities",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 10767785397500.0
+    },
+    {
+      "ticker": "006260",
+      "label": "LS",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 10026167434500.0
+    },
+    {
+      "ticker": "259960",
+      "label": "Krafton",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 9989017396000.0
+    },
+    {
+      "ticker": "323410",
+      "label": "KakaoBank",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 9648701835750.0
+    },
+    {
+      "ticker": "016360",
+      "label": "Samsung Securities",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 9644400000000.0
+    },
+    {
+      "ticker": "003490",
+      "label": "Korean Air",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 9565683285900.0
+    },
+    {
+      "ticker": "000880",
+      "label": "Hanwha",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 9406306032900.0
+    },
+    {
+      "ticker": "443060",
+      "label": "HD Hyundai Marine Solution",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 9168008007500.0
+    },
+    {
+      "ticker": "028050",
+      "label": "Samsung E&A",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 8790600000000.0
+    },
+    {
+      "ticker": "047050",
+      "label": "POSCO International",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 8573357696100.0
+    },
+    {
+      "ticker": "005830",
+      "label": "DB Insurance",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 8429442191000.0
+    },
+    {
+      "ticker": "039490",
+      "label": "Kiwoom Securities",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 8427058335000.0
+    },
+    {
+      "ticker": "352820",
+      "label": "Hybe",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 8304219036100.0
+    },
+    {
+      "ticker": "003230",
+      "label": "Samyang Foods",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 7995113216000.0
+    },
+    {
+      "ticker": "047040",
+      "label": "Daewoo E&C",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 7962965253600.0
+    },
+    {
+      "ticker": "007660",
+      "label": "Isu Petasys",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 7935536573900.0
+    },
+    {
+      "ticker": "064400",
+      "label": "LG CNS",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 7750875840000.0
+    },
+    {
+      "ticker": "161390",
+      "label": "Hankook",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 7514507184800.0
+    },
+    {
+      "ticker": "180640",
+      "label": "Hanjin KAL",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 7375266110400.0
+    },
+    {
+      "ticker": "062040",
+      "label": "Sanil Electric",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 6783231534000.0
+    },
+    {
+      "ticker": "090430",
+      "label": "Amorepacific",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 6630755370200.0
+    },
+    {
+      "ticker": "001440",
+      "label": "Taihan Cable & Solution",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 6447619283800.0
+    },
+    {
+      "ticker": "326030",
+      "label": "SK Biopharm",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 6437349150000.0
+    },
+    {
+      "ticker": "078930",
+      "label": "GS",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 6153886115000.0
+    },
+    {
+      "ticker": "009830",
+      "label": "Hanwha Solutions",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 6151578861450.0
+    },
+    {
+      "ticker": "034220",
+      "label": "LG Display",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 6090000000000.0
+    },
+    {
+      "ticker": "021240",
+      "label": "Coway",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 6031086518000.0
+    },
+    {
+      "ticker": "032640",
+      "label": "LG Uplus",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 6026873794400.0
+    },
+    {
+      "ticker": "241560",
+      "label": "Doosan Bobcat",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 5982112625000.0
+    },
+    {
+      "ticker": "004170",
+      "label": "Shinsegae",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 5891881632000.0
+    },
+    {
+      "ticker": "454910",
+      "label": "Doosan Robotics",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 5756014224000.0
+    },
+    {
+      "ticker": "001040",
+      "label": "CJ",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 5331418824000.0
+    },
+    {
+      "ticker": "377300",
+      "label": "KakaoPay",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 5254282507950.0
+    },
+    {
+      "ticker": "000100",
+      "label": "Yuhan",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 5218535645800.0
+    },
+    {
+      "ticker": "011790",
+      "label": "SKC",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 5215801113600.0
+    },
+    {
+      "ticker": "138930",
+      "label": "BNK Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 5188667991760.0
+    },
+    {
+      "ticker": "029780",
+      "label": "Samsung Card",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 4967382852250.0
+    },
+    {
+      "ticker": "271560",
+      "label": "Orion",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 4960862894000.0
+    },
+    {
+      "ticker": "023530",
+      "label": "Lotte Shopping",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 4947362000000.0
+    },
+    {
+      "ticker": "128940",
+      "label": "Hanmi Pharm",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 4780440678000.0
+    },
+    {
+      "ticker": "036570",
+      "label": "NCSoft",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 4702701486000.0
+    },
+    {
+      "ticker": "175330",
+      "label": "JB Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 4595227811200.0
+    },
+    {
+      "ticker": "082740",
+      "label": "Hanwha Engine",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 4463266122500.0
+    },
+    {
+      "ticker": "066970",
+      "label": "L&F",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 4235995619800.0
+    },
+    {
+      "ticker": "069960",
+      "label": "Hyundai Department Store",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 4087297803200.0
+    },
+    {
+      "ticker": "018880",
+      "label": "Hanon Systems",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 4053692800900.0
+    },
+    {
+      "ticker": "010060",
+      "label": "OCI Holdings",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 4020652512000.0
+    },
+    {
+      "ticker": "052690",
+      "label": "KEPCO E&C",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 3994568025000.0
+    },
+    {
+      "ticker": "004020",
+      "label": "Hyundai Steel",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 3801671857100.0
+    },
+    {
+      "ticker": "051900",
+      "label": "LG H&H",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 3778487696500.0
+    },
+    {
+      "ticker": "088350",
+      "label": "Hanwha Life",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 3610430151250.0
+    },
+    {
+      "ticker": "002380",
+      "label": "KCC",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 3518970823500.0
+    },
+    {
+      "ticker": "022100",
+      "label": "POSCO DX",
+      "sector": "IT",
+      "industry": "IT",
+      "marketCap": 3332504292050.0
+    },
+    {
+      "ticker": "450080",
+      "label": "Ecopro Materials",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 3305677624900.0
+    },
+    {
+      "ticker": "111770",
+      "label": "Youngone",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 3072840086400.0
+    },
+    {
+      "ticker": "251270",
+      "label": "Netmarble",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 3035675855550.0
+    },
+    {
+      "ticker": "097950",
+      "label": "CJ CheilJedang",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 2977107401400.0
+    },
+    {
+      "ticker": "011780",
+      "label": "Kumho Petrochemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 2954407974300.0
+    },
+    {
+      "ticker": "014680",
+      "label": "Hansol Chemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 2884881920000.0
+    },
+    {
+      "ticker": "035250",
+      "label": "Kangwon Land",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 2871828219960.0
+    },
+    {
+      "ticker": "001450",
+      "label": "Hyundai Marine & Fire",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 2855106000000.0
+    },
+    {
+      "ticker": "036460",
+      "label": "Korea Gas",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 2849542920100.0
+    },
+    {
+      "ticker": "011170",
+      "label": "Lotte Chemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 2766164843200.0
+    },
+    {
+      "ticker": "302440",
+      "label": "SK Bioscience",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 2757747837950.0
+    },
+    {
+      "ticker": "383220",
+      "label": "F&F",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 2743651216800.0
+    },
+    {
+      "ticker": "005850",
+      "label": "SL",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 2698850073200.0
+    },
+    {
+      "ticker": "139130",
+      "label": "IM Financial",
+      "sector": "금융",
+      "industry": "금융",
+      "marketCap": 2565487209600.0
+    },
+    {
+      "ticker": "017800",
+      "label": "Hyundai Elevator",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 2563459402000.0
+    },
+    {
+      "ticker": "009420",
+      "label": "Hanall Biopharma",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 2507309013500.0
+    },
+    {
+      "ticker": "028670",
+      "label": "Pan Ocean",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 2496439621040.0
+    },
+    {
+      "ticker": "375500",
+      "label": "DL E&C",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 2458747642500.0
+    },
+    {
+      "ticker": "012750",
+      "label": "S-1",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 2380240825600.0
+    },
+    {
+      "ticker": "026960",
+      "label": "Dongsuh",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 2368222080000.0
+    },
+    {
+      "ticker": "204320",
+      "label": "HL Mando",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 2317333872000.0
+    },
+    {
+      "ticker": "120110",
+      "label": "Kolon Industries",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 2263696575000.0
+    },
+    {
+      "ticker": "139480",
+      "label": "Emart",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 2180571934200.0
+    },
+    {
+      "ticker": "000240",
+      "label": "Hankook & Company",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 2154837776000.0
+    },
+    {
+      "ticker": "457190",
+      "label": "Isu Specialty Chemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 2145539912000.0
+    },
+    {
+      "ticker": "006360",
+      "label": "GS E&C",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 2088266817000.0
+    },
+    {
+      "ticker": "081660",
+      "label": "Misto",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 2042736657600.0
+    },
+    {
+      "ticker": "051600",
+      "label": "KEPCO KPS",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 2040750000000.0
+    },
+    {
+      "ticker": "071970",
+      "label": "HD Hyundai Marine Engine",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 2028504085400.0
+    },
+    {
+      "ticker": "282330",
+      "label": "BGF Retail",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 2017721752000.0
+    },
+    {
+      "ticker": "007340",
+      "label": "DN Automotive",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1979906827500.0
+    },
+    {
+      "ticker": "161890",
+      "label": "Kolmar Korea",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1968663421800.0
+    },
+    {
+      "ticker": "004370",
+      "label": "Nongshim",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1954452980000.0
+    },
+    {
+      "ticker": "009970",
+      "label": "Youngone Holdings",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1947301884400.0
+    },
+    {
+      "ticker": "007070",
+      "label": "GS Retail",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1913652011000.0
+    },
+    {
+      "ticker": "093370",
+      "label": "Foosung",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 1904854660800.0
+    },
+    {
+      "ticker": "002790",
+      "label": "Amorepacific Holdings",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1889334856250.0
+    },
+    {
+      "ticker": "030000",
+      "label": "Cheil Worldwide",
+      "sector": "커뮤니케이션서비스",
+      "industry": "커뮤니케이션서비스",
+      "marketCap": 1882771497750.0
+    },
+    {
+      "ticker": "008770",
+      "label": "Hotel Shilla",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1881323572100.0
+    },
+    {
+      "ticker": "008930",
+      "label": "Hanmi Science",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 1851969859100.0
+    },
+    {
+      "ticker": "004990",
+      "label": "Lotte",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1831132308600.0
+    },
+    {
+      "ticker": "103140",
+      "label": "Poongsan",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 1800010920200.0
+    },
+    {
+      "ticker": "112610",
+      "label": "CS Wind",
+      "sector": "Heavy Industries",
+      "industry": "Heavy Industries",
+      "marketCap": 1759071966000.0
+    },
+    {
+      "ticker": "192820",
+      "label": "Cosmax",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1730213455000.0
+    },
+    {
+      "ticker": "011210",
+      "label": "Hyundai WIA",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1686297033000.0
+    },
+    {
+      "ticker": "000120",
+      "label": "CJ Logistics",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 1463972468600.0
+    },
+    {
+      "ticker": "001800",
+      "label": "Orion Holdings",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1443759648000.0
+    },
+    {
+      "ticker": "017960",
+      "label": "Hankuk Carbon",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 1410296888000.0
+    },
+    {
+      "ticker": "361610",
+      "label": "SK IE Technology",
+      "sector": "산업재",
+      "industry": "산업재",
+      "marketCap": 1363390957000.0
+    },
+    {
+      "ticker": "006280",
+      "label": "Green Cross",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 1353596862200.0
+    },
+    {
+      "ticker": "006040",
+      "label": "Dongwon Industries",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1326593610500.0
+    },
+    {
+      "ticker": "069620",
+      "label": "Daewoong Pharmaceutical",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 1289852867000.0
+    },
+    {
+      "ticker": "001430",
+      "label": "Seah Besteel",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 1251587953100.0
+    },
+    {
+      "ticker": "073240",
+      "label": "Kumho Tire",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1236655535535.0
+    },
+    {
+      "ticker": "192080",
+      "label": "DoubleU Games",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1181870926900.0
+    },
+    {
+      "ticker": "298020",
+      "label": "Hyosung TNC",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 1167387824000.0
+    },
+    {
+      "ticker": "034230",
+      "label": "Paradise",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 1128583492040.0
+    },
+    {
+      "ticker": "004000",
+      "label": "Lotte Fine Chemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 1128321000000.0
+    },
+    {
+      "ticker": "000080",
+      "label": "HiteJinro",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1048833019080.0
+    },
+    {
+      "ticker": "007310",
+      "label": "Ottogi",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 1042116081000.0
+    },
+    {
+      "ticker": "300720",
+      "label": "Hanil Cement",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 996493043100.0
+    },
+    {
+      "ticker": "005300",
+      "label": "Lotte Chilsung",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 975256818000.0
+    },
+    {
+      "ticker": "000210",
+      "label": "DL",
+      "sector": "Constructions",
+      "industry": "Constructions",
+      "marketCap": 972436529000.0
+    },
+    {
+      "ticker": "185750",
+      "label": "Chong Kun Dang",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 881478949200.0
+    },
+    {
+      "ticker": "280360",
+      "label": "Lotte Wellfood",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 824890211100.0
+    },
+    {
+      "ticker": "071320",
+      "label": "Korea District Heating",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 764197104000.0
+    },
+    {
+      "ticker": "298050",
+      "label": "HS Hyosung Advanced Materials",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 760457344400.0
+    },
+    {
+      "ticker": "285130",
+      "label": "SK Chemicals",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 752909892000.0
+    },
+    {
+      "ticker": "000670",
+      "label": "Young Poong",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 748283452050.0
+    },
+    {
+      "ticker": "137310",
+      "label": "SD Biosensor",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 726088635050.0
+    },
+    {
+      "ticker": "003240",
+      "label": "Taekwang Industrial",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 690979051000.0
+    },
+    {
+      "ticker": "003090",
+      "label": "Daewoong",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 689404750000.0
+    },
+    {
+      "ticker": "114090",
+      "label": "Grand Korea Leisure",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 675463916400.0
+    },
+    {
+      "ticker": "004490",
+      "label": "Sebang Global Battery",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 671527987100.0
+    },
+    {
+      "ticker": "006650",
+      "label": "Korea Petrochemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 667636410000.0
+    },
+    {
+      "ticker": "001680",
+      "label": "Daesang",
+      "sector": "필수소비재",
+      "industry": "필수소비재",
+      "marketCap": 596822369360.0
+    },
+    {
+      "ticker": "069260",
+      "label": "TKG Huchems",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 588609253180.0
+    },
+    {
+      "ticker": "014820",
+      "label": "Dongwon Systems",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 548538618750.0
+    },
+    {
+      "ticker": "002840",
+      "label": "Miwon Commercial",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 522293662800.0
+    },
+    {
+      "ticker": "009240",
+      "label": "Hanssem",
+      "sector": "경기소비재",
+      "industry": "경기소비재",
+      "marketCap": 515439998100.0
+    },
+    {
+      "ticker": "268280",
+      "label": "Miwon Specialty Chemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 470369908700.0
+    },
+    {
+      "ticker": "003030",
+      "label": "Seah Steel Holdings",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 466673245500.0
+    },
+    {
+      "ticker": "005250",
+      "label": "Green Cross Holdings",
+      "sector": "헬스케어",
+      "industry": "헬스케어",
+      "marketCap": 456228403040.0
+    },
+    {
+      "ticker": "005420",
+      "label": "Cosmo Chemical",
+      "sector": "Energy & Chemicals",
+      "industry": "Energy & Chemicals",
+      "marketCap": 408964066940.0
+    },
+    {
+      "ticker": "008730",
+      "label": "Youlchon Chemical",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 387624000000.0
+    },
+    {
+      "ticker": "002030",
+      "label": "Asia Holdings",
+      "sector": "Steels & Materials",
+      "industry": "Steels & Materials",
+      "marketCap": 299238887200.0
+    }
+  ]
+}

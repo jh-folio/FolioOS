@@ -1,0 +1,435 @@
+"""일일 브리핑 전용 자료 선별/시장 동인 그룹화.
+
+기존 `marketRelevance`(인덱싱용)와 `group_docs()`(회사/섹터 묶음)는 그대로 두고,
+브리핑 품질 개선을 위한 다음 로직을 분리해 담는다.
+
+- `briefing_doc_score()`     : "이 자료가 오늘 브리핑에서 얼마나 쓸 만한가" 전용 점수
+- `infer_drivers()`          : 문서가 어떤 시장 동인에 속하는지 추론
+- `derive_market_drivers()`  : 문서들을 금리/환율/반도체 등 시장 동인으로 묶음
+- `briefing_doc_excerpt()`   : driver/group/support tier에 따라 발췌 길이를 차등
+
+service.py / app.py 는 이 모듈을 얇게 호출한다.
+"""
+import re
+
+from features.common.company_lookup import term_in_text
+from features.common.utils import normalize
+from features.common.market_calendar import (
+    doc_analysis_priority,
+    doc_market_bucket,
+    previous_trading_day,
+    parse_iso_date,
+)
+
+
+# ---------------------------------------------------------------------------
+# 시장 거래일(marketSessionDate) 추론
+# ---------------------------------------------------------------------------
+# 한국 언론의 '뉴욕증시 마감/브리핑' 류 기사는 한국시간 D일에 발행돼도 보통 미국
+# D-1 정규장 마감 결과를 다룬다. 발행일을 그대로 미국장 거래일로 쓰면 전 거래일
+# 결과를 당일 결과로 오인하므로, 이런 기사는 발행일 직전 미국 거래일로 보정한다.
+_KO_US_CLOSE_TERMS = [
+    "뉴욕증시", "뉴욕 증시", "미국증시", "미국 증시", "미 증시", "美 증시", "美증시",
+    "뉴욕 마감", "뉴욕증시 브리핑", "월가",
+]
+_HANGUL_RE = re.compile(r"[가-힣]")
+
+
+def is_us_market_close_article(doc):
+    """한국 언론의 '뉴욕증시 마감/브리핑' 류 기사인지 추정한다.
+
+    한글 제목/매체(=한국 언론)이면서 미국 증시 마감을 가리키는 표현이 있으면 True.
+    이런 기사는 발행일(KST)이 실제 미국 정규장 거래일보다 하루 앞설 수 있다.
+    """
+    blob = f"{doc.get('title', '')} {doc.get('source', '')}"
+    if not _HANGUL_RE.search(blob):  # 한국 언론에 한정
+        return False
+    hay = blob.lower()
+    return any(term.lower() in hay for term in _KO_US_CLOSE_TERMS)
+
+
+def infer_market_session_date(doc, market_windows=None):
+    """자료가 실제로 다루는 '시장 거래일'을 추정한다.
+
+    - 명시적 `marketSessionDate`가 있으면 그것을 사용.
+    - 한국 언론의 미국 증시 마감 기사: 발행일(KST) 직전 미국 거래일(= 미국 D-1)을 사용.
+    - 그 외 자료: 발행일(doc.date)을 그대로 사용.
+
+    발행일만 보고 미국장 거래일을 단정하지 않기 위한 보정이다.
+    """
+    explicit = doc.get("marketSessionDate")
+    if explicit:
+        return explicit
+    date_str = str(doc.get("date", ""))[:10]
+    if not date_str:
+        return date_str
+    if is_us_market_close_article(doc):
+        try:
+            return previous_trading_day(parse_iso_date(date_str), "US").isoformat()
+        except Exception:
+            return date_str
+    return date_str
+
+
+def session_doc_counts(docs, market_windows):
+    """브리핑 후보 자료를 세션 버킷별로 센다(디버그/데이터 부족 진단용).
+
+    krCurrentIntradayDocCount가 0이면 한국 D 장중이 약한 이유가 코드가 아니라
+    자료 부족임을 바로 알 수 있다.
+    """
+    counts = {
+        "krCurrentIntradayDocCount": 0,
+        "usPrevRegularDocCount": 0,
+        "krPrevRegularDocCount": 0,
+    }
+    for d in docs:
+        bucket = doc_market_bucket(d, market_windows)
+        if bucket == "KR 당일 개장/장중":
+            counts["krCurrentIntradayDocCount"] += 1
+        elif bucket == "US 전일 정규장":
+            counts["usPrevRegularDocCount"] += 1
+        elif bucket == "KR 전일 정규장":
+            counts["krPrevRegularDocCount"] += 1
+    return counts
+
+
+# ---------------------------------------------------------------------------
+# 시장 동인(term) 매핑
+# ---------------------------------------------------------------------------
+DRIVER_TERMS = {
+    "금리": [
+        "fed", "fomc", "treasury", "yield", "rate", "bond",
+        "금리", "연준", "국채", "채권", "수익률",
+    ],
+    "환율/달러": [
+        "dollar", "dxy", "currency", "fx", "won", "yen",
+        "환율", "원달러", "달러", "원화", "엔화", "강달러",
+    ],
+    "반도체/AI": [
+        "nvidia", "hbm", "gpu", "semiconductor", "chip", "ai", "data center",
+        "엔비디아", "반도체", "gpu", "인공지능", "데이터센터",
+    ],
+    "원자재/유가": [
+        "oil", "crude", "wti", "brent", "energy", "gas", "gold",
+        "유가", "원유", "브렌트", "천연가스", "금", "원자재",
+    ],
+    "수급": [
+        "foreign buying", "foreign selling", "institution", "retail", "volume",
+        "외국인", "기관", "개인", "순매수", "순매도", "거래대금", "수급",
+    ],
+    "정책/규제": [
+        "policy", "regulation", "tariff", "sanction", "subsidy", "tax",
+        "정책", "규제", "관세", "제재", "보조금", "세제", "정부",
+    ],
+    "실적/가이던스": [
+        "earnings", "guidance", "revenue", "margin", "profit", "sales",
+        "실적", "가이던스", "매출", "영업이익", "마진", "이익",
+    ],
+    "중국/글로벌 경기": [
+        "china", "pmi", "manufacturing", "export", "global growth",
+        "중국", "제조업", "수출", "경기", "글로벌 경기",
+    ],
+    "지정학": [
+        "geopolitical", "war", "conflict", "middle east", "taiwan",
+        "지정학", "전쟁", "분쟁", "중동", "대만",
+    ],
+}
+
+
+def _doc_text(doc, content_limit=3000):
+    companies = doc.get("companies", []) or []
+    return normalize(" ".join([
+        doc.get("title", "") or "",
+        doc.get("summary", "") or "",
+        (doc.get("content", "") or "")[:content_limit],
+        " ".join(doc.get("sectors", []) or []),
+        " ".join(doc.get("impactTags", []) or []),
+        " ".join(c.get("name", "") for c in companies),
+        " ".join(c.get("ticker", "") for c in companies),
+    ])).lower()
+
+
+def infer_drivers(doc):
+    """문서가 어떤 시장 동인에 속하는지 추론한다. 0개 이상 반환."""
+    hay = _doc_text(doc)
+    drivers = []
+    for driver, terms in DRIVER_TERMS.items():
+        if any(term_in_text(term, hay) for term in terms):
+            drivers.append(driver)
+    return drivers
+
+
+# ---------------------------------------------------------------------------
+# 브리핑 전용 자료 점수
+# ---------------------------------------------------------------------------
+def _is_article(path):
+    return str(path).replace("\\", "/").lower().startswith("research-inbox/articles")
+
+
+def _is_rss(path):
+    return str(path).replace("\\", "/").lower().startswith("research-inbox/rss/")
+
+
+# 실제 시장 가격/지수/수급 반응과 연결되는지 판단하는 신호
+_INDEX_TERMS = [
+    "s&p", "나스닥", "nasdaq", "다우", "dow", "코스피", "kospi", "코스닥", "kosdaq",
+    "russell", "러셀", "반도체지수", "sox", "필라델피아", "vix", "선물지수",
+]
+_MOVE_TERMS = [
+    "급등", "급락", "반등", "되돌림", "사이드카", "서킷브레이커", "순매수", "순매도",
+    "외국인", "기관", "거래대금", "강세", "약세", "%", "surge", "plunge", "rebound",
+    "rally", "selloff", "sell-off", "soared", "tumbled",
+]
+
+
+def market_connection_score(doc):
+    """이 자료가 실제 시장 가격/지수/수급 반응과 얼마나 직접 연결되는지.
+
+    지수·등락·수급 신호가 있고 회사/섹터가 붙은 자료는 브리핑 핵심에 쓰일
+    가능성이 높다. broad keyword(금리·채권·달러 등)만 스친 단발 기사(개별 채권
+    발행, 펀드, trivia)는 이 점수가 0에 가깝다.
+    """
+    hay = _doc_text(doc, content_limit=1500)
+    s = 0.0
+    if any(t in hay for t in _INDEX_TERMS):
+        s += 12
+    if any(t in hay for t in _MOVE_TERMS):
+        s += 10
+    companies = doc.get("companies") or []
+    if companies and doc.get("sectors"):
+        s += 6
+    if len(companies) >= 2:
+        s += 4
+    return s
+
+
+def effective_market_relevance(doc):
+    """직접 저장 article이 인덱싱 단계에서 marketRelevance=100으로 고정되는
+    문제를 브리핑 선별 단계에서만 완화한다(인덱싱은 건드리지 않음).
+
+    시장 신호(회사/섹터/영향 태그)가 거의 없는 article은 100점을 그대로
+    신뢰하지 않고 보수적으로 낮춰, RSS보다는 우대하되 무조건 상단으로
+    올라오지 않게 한다.
+    """
+    mr = float(doc.get("marketRelevance", 0) or 0)
+    if _is_article(doc.get("path", "")) and mr >= 100:
+        signal = (
+            len(doc.get("companies", []) or [])
+            + len(doc.get("sectors", []) or [])
+            + len(doc.get("impactTags", []) or [])
+        )
+        if signal == 0:
+            return 45.0
+        if signal <= 2:
+            return 70.0
+    return mr
+
+
+def briefing_doc_score(doc, market_windows):
+    """"이 자료가 오늘 브리핑에서 얼마나 쓸 만한가"를 평가한다.
+
+    출처 신뢰도, 시장 시간창 적합성, 시장 관련성, 본문 품질, 영향/섹터/회사
+    태그, RSS 헤드라인 감점을 합산한다.
+    """
+    score = 0.0
+
+    # 1. 출처 신뢰도
+    source_weight = float(doc.get("sourceWeight", 5) or 5)
+    score += min(source_weight, 10) * 3
+
+    # 1-b. Evidence Intake 신뢰도 계층(reliability_tier) 보너스. Tier 1(공식자료)·
+    #      Tier 2(주요 매체)는 소폭 우대한다. 단, 공식자료(source_type=official_*/
+    #      macro_data)는 브리핑의 "직접 근거"로 쓰지 않는다는 Folio OS 원칙에 따라
+    #      여기서 가산하지 않고, 브리핑 본문 근거 후보에서 강하게 내린다.
+    source_type = str(doc.get("sourceType", "") or "")
+    is_official = source_type.startswith("official_") or source_type == "macro_data"
+    if is_official:
+        score -= 40
+    else:
+        try:
+            tier = int(doc.get("reliabilityTier") or 0)
+        except (TypeError, ValueError):
+            tier = 0
+        if tier == 1:
+            score += 6
+        elif tier == 2:
+            score += 3
+
+    # 2. 분석 우선순위(브리핑 모드별 가중치). 평일은 미국 전일/한국 당일이 primary,
+    #    주말·휴장 모드에서는 off_session_news(다음 거래일 영향 후보)의 비중이 커진다.
+    priority = doc_analysis_priority(doc, market_windows)
+    weekend_mode = bool(market_windows.get("weekendOrHolidayNewsMode"))
+    if weekend_mode:
+        if priority == "off_session_news":
+            score += 38
+        elif priority == "primary":
+            score += 16
+        elif priority == "secondary":
+            score += 12
+        else:  # background
+            score += 5
+    else:
+        if priority == "primary":
+            score += 28
+        elif priority == "secondary":
+            score += 16
+        elif priority == "off_session_news":
+            score += 4
+        else:  # background
+            score += 6
+
+    # 3. 시장 관련성(article 과대평가는 effective_market_relevance로 완화)
+    market_relevance = effective_market_relevance(doc)
+    score += min(market_relevance, 100) * 0.4
+
+    # 4. 본문 품질
+    word_count = int(doc.get("wordCount", 0) or 0)
+    if word_count >= 600:
+        score += 20
+    elif word_count >= 200:
+        score += 10
+    elif word_count >= 80:
+        score += 3
+    else:
+        score -= 12
+
+    # 5. 영향 태그
+    impact_tags = doc.get("impactTags", []) or []
+    score += min(len(impact_tags), 4) * 6
+
+    # 6. 회사/섹터 태그
+    companies = doc.get("companies", []) or []
+    sectors = doc.get("sectors", []) or []
+    if companies:
+        score += 8
+    if sectors:
+        score += 6
+
+    # 7. 시장 가격/지수/수급 반응과의 연결성 (실제 브리핑 본문에 쓰일 자료 우대)
+    connection = market_connection_score(doc)
+    score += connection
+
+    # 8. broad keyword만 스친 단발 기사 감점:
+    #    동인 키워드는 걸렸지만 지수/등락/수급 신호가 전혀 없고 회사/섹터도 빈약한
+    #    자료(개별 채권 발행, 펀드, trivia, 거시 단신)는 핵심에서 내린다.
+    if connection == 0 and not sectors and len(companies) <= 1:
+        score -= 15
+
+    # 9. RSS headline-only 감점 (본문 품질이 낮은 RSS는 더 강하게)
+    if _is_rss(doc.get("path", "")):
+        if word_count < 80:
+            score -= 18
+        elif word_count < 200 and not impact_tags and not sectors:
+            score -= 10
+
+    return max(score, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# 시장 동인 그룹화
+# ---------------------------------------------------------------------------
+def _doc_key(doc):
+    return doc.get("url") or doc.get("path") or doc.get("title")
+
+
+def derive_market_drivers(docs, market_windows, limit=4):
+    """문서들을 금리/환율/반도체 등 시장 동인 기준으로 묶는다.
+
+    자료 수가 많은 동인이 곧 중요한 동인은 아니므로, 점수에는 출처 다양성과
+    미국·한국 양쪽 시간대에 걸친 동인 여부를 가산한다.
+    """
+    groups = {}
+    for doc in docs:
+        drivers = infer_drivers(doc) or ["시장 전반"]
+        doc_score = briefing_doc_score(doc, market_windows)
+        bucket = doc_market_bucket(doc, market_windows)
+        enriched = {**doc, "briefingDocScore": doc_score, "marketBucket": bucket}
+
+        for driver in drivers:
+            g = groups.setdefault(driver, {
+                "driver": driver,
+                "docs": [],
+                "score": 0.0,
+                "sources": set(),
+                "markets": set(),
+                "impactTags": set(),
+                "sectors": set(),
+            })
+            g["docs"].append(enriched)
+            g["score"] += doc_score
+            g["sources"].add(doc.get("source", ""))
+            g["markets"].add(bucket)
+            for tag in doc.get("impactTags", []) or []:
+                g["impactTags"].add(tag)
+            for sector in doc.get("sectors", []) or []:
+                g["sectors"].add(sector)
+
+    out = []
+    for g in groups.values():
+        # 여러 출처에서 반복 확인되면 가산
+        g["score"] += min(len(g["sources"]), 4) * 8
+        # 미국장/한국장 양쪽 시간대에 걸친 동인이면 가산
+        if any("US" in m for m in g["markets"]) and any("KR" in m for m in g["markets"]):
+            g["score"] += 15
+        if market_windows.get("weekendOrHolidayNewsMode"):
+            off_docs = [d for d in g["docs"] if doc_analysis_priority(d, market_windows) == "off_session_news"]
+            if off_docs:
+                # 주말/휴장 브리핑의 핵심 변수는 정규장 복기보다 휴장 중 새 재료를
+                # 우선한다. 가격 반응은 다음 거래일 확인 대상으로 남긴다.
+                g["score"] += 35 + min(len(off_docs), 4) * 8
+        g["docs"] = sorted(
+            g["docs"], key=lambda d: d.get("briefingDocScore", 0), reverse=True
+        )[:5]
+        out.append({
+            **g,
+            "sources": sorted(s for s in g["sources"] if s),
+            "markets": sorted(m for m in g["markets"] if m),
+            "impactTags": sorted(g["impactTags"]),
+            "sectors": sorted(g["sectors"]),
+        })
+
+    # "시장 전반"은 분류 실패 묶음이므로 동순위면 뒤로 민다.
+    out.sort(key=lambda g: (g["score"], g["driver"] != "시장 전반"), reverse=True)
+    return out[:limit]
+
+
+def prioritize_briefing_groups(groups, market_windows, limit=None):
+    """주도 기업/섹터 그룹을 브리핑 모드에 맞게 재정렬한다.
+
+    group_docs()는 일반 뉴스 검색용 점수라 주말에는 직전 정규장 자료가 계속
+    상단을 차지할 수 있다. 주말/휴장 모드에서는 off_session_news 자료가 있는
+    기업/섹터를 우선해 '다음 거래일 반영 후보' 중심으로 주도 기업 섹션을 만든다.
+    """
+    weekend_mode = bool(market_windows.get("weekendOrHolidayNewsMode"))
+    out = []
+    for group in groups or []:
+        docs = list(group.get("docs") or [])
+        scored_docs = sorted(docs, key=lambda d: briefing_doc_score(d, market_windows), reverse=True)
+        off_docs = [d for d in scored_docs if doc_analysis_priority(d, market_windows) == "off_session_news"]
+        score = sum(briefing_doc_score(d, market_windows) for d in scored_docs[:5])
+        if weekend_mode:
+            score += sum(briefing_doc_score(d, market_windows) for d in off_docs[:4]) * 1.2
+            score += len(off_docs[:4]) * 30
+        out.append({
+            **group,
+            "docs": scored_docs,
+            "briefingGroupScore": score,
+            "offSessionDocCount": len(off_docs),
+        })
+    out.sort(key=lambda g: (g.get("briefingGroupScore", 0), g.get("score", 0)), reverse=True)
+    return out[:limit] if limit else out
+
+
+# ---------------------------------------------------------------------------
+# tier별 발췌 길이
+# ---------------------------------------------------------------------------
+_TIER_LIMIT = {"driver": 1200, "group": 850, "support": 450}
+
+
+def briefing_doc_excerpt(doc, clean_fn, tier="support"):
+    """tier에 따라 발췌 길이를 차등한다.
+
+    clean_fn 은 service.clean_brief_text 처럼 (text, limit) -> str 인 정리 함수.
+    """
+    limit = _TIER_LIMIT.get(tier, _TIER_LIMIT["support"])
+    return clean_fn(doc.get("summary") or doc.get("content") or "", limit)

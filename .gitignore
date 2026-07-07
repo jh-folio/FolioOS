@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+README.dev.md
+roadmap/
+research-inbox/
+start-lan.ps1
+start-lan.cmd
+.agents/
+.claude/
+.superpowers/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+data/
