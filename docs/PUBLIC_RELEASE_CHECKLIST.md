@@ -35,6 +35,9 @@ Use this checklist before changing the repository visibility to Public.
 
 - [ ] `python -m py_compile app.py` passes.
 - [ ] Python tests pass.
+- [ ] `py -3 scripts/public_release_audit.py` passes.
+- [ ] `py -3 scripts/package_release.py --version vX.Y.Z` creates a verified ZIP under `dist/`.
+- [ ] `py -3 scripts/verify_release.py --release-dir dist/FolioOS-vX.Y.Z` passes.
 - [ ] Web typecheck passes.
 - [ ] Web tests pass.
 - [ ] Web build passes.

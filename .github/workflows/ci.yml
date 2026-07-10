@@ -33,8 +33,14 @@ jobs:
       - name: Compile app
         run: python -m py_compile app.py
 
+      - name: Audit public release tree
+        run: python scripts/public_release_audit.py
+
+      - name: Validate release package manifest
+        run: python scripts/package_release.py --version ci --dry-run
+
       - name: Run tests
-        run: python -m pytest features -q
+        run: python -m pytest features tests -q
 
   web:
     name: Web checks
