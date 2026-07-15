@@ -113,3 +113,25 @@ def test_package_build_creates_verified_zip() -> None:
     finally:
         shutil.rmtree(package_dir, ignore_errors=True)
         package_zip.unlink(missing_ok=True)
+
+
+def test_package_build_preserves_dotted_version_in_zip_name() -> None:
+    version = "v0.1.1-smoke"
+    package_dir = ROOT / "dist" / f"FolioOS-{version}"
+    package_zip = ROOT / "dist" / f"FolioOS-{version}.zip"
+    wrong_zip = ROOT / "dist" / "FolioOS-v0.1.zip"
+    shutil.rmtree(package_dir, ignore_errors=True)
+    package_zip.unlink(missing_ok=True)
+    wrong_zip.unlink(missing_ok=True)
+
+    result = run_package("--version", version, "--force", "--skip-gitleaks")
+    try:
+        assert result.returncode == 0, result.stderr
+        assert package_zip.is_file()
+        assert not wrong_zip.exists()
+        with zipfile.ZipFile(package_zip) as archive:
+            assert f"FolioOS-{version}/release-manifest.json" in archive.namelist()
+    finally:
+        shutil.rmtree(package_dir, ignore_errors=True)
+        package_zip.unlink(missing_ok=True)
+        wrong_zip.unlink(missing_ok=True)

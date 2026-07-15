@@ -159,7 +159,7 @@ def build_package(
     safe_version = validate_version(version)
     output_root = validate_output_root(output_root)
     package_dir = output_root / f"{manifest['packageName']}-{safe_version}"
-    package_zip = package_dir.with_suffix(".zip")
+    package_zip = package_dir.parent / f"{package_dir.name}.zip"
     validate_artifact_path(package_dir)
     validate_artifact_path(package_zip)
 
