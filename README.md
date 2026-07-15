@@ -10,6 +10,18 @@ Your files and generated reports stay local by default. LLM/API integrations are
 
 ---
 
+## Visual Preview
+
+These screenshots were captured from a clean sample workspace with no private research material, reports, portfolio data, or API keys.
+
+<img src="docs/assets/screenshots/folio-os-home.png" alt="Folio OS Home screen with the AI Agent entry point" width="920">
+
+<img src="docs/assets/screenshots/folio-os-briefing.png" alt="Folio OS Briefing screen with empty-state briefing controls" width="920">
+
+<img src="docs/assets/screenshots/folio-os-rss-feed.png" alt="Folio OS RSS Feed screen with empty-state feed filters" width="920">
+
+---
+
 ## What You Can Do In 0.1
 
 - Chat with the Folio OS AI Agent from the Home screen.
