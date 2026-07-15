@@ -1,0 +1,50 @@
+{
+  "packageName": "FolioOS",
+  "runtimeFiles": [
+    ".env.example",
+    "app.py",
+    "LICENSE",
+    "README.md",
+    "README.ko.md",
+    "installation.md",
+    "requirements.txt",
+    "start.ps1",
+    "start.sh",
+    "start-archive.cmd",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "runtimeDirectories": [
+    "features",
+    "public",
+    "config"
+  ],
+  "emptyDirectories": [
+    "data",
+    "data/briefings",
+    "data/company-analysis",
+    "data/topic-reports",
+    "data/investment-notes",
+    "data/notes",
+    "data/logs",
+    "research-inbox",
+    "research-inbox/articles",
+    "research-inbox/rss",
+    "research-inbox/reports",
+    "research-inbox/filings",
+    "research-inbox/links",
+    "research-inbox/market-data"
+  ],
+  "forbiddenPaths": [
+    ".env",
+    ".git",
+    "README.dev.md",
+    "roadmap",
+    ".agents",
+    ".claude",
+    ".codex",
+    ".superpowers",
+    "node_modules",
+    "start-lan.ps1",
+    "start-lan.cmd"
+  ]
+}

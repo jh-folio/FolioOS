@@ -525,6 +525,7 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - README는 프로젝트를 처음 사용하는 사람이 읽는 문서다. 0.1에서 실제로 보이는 기능의 목적, 화면에서 하는 일, 필요한 입력 자료, 저장 위치, 주의점을 쉬운 말로 설명한다. 내부 구현 추적, Step 번호 중심 설명, 0.2+ 아이디어, 숨김/비활성 기능을 현재 기능처럼 서술하지 않는다.
 - README는 기본적으로 화면 탭 단위로 정리한다. 여러 탭에서 함께 쓰는 자료·품질·연동 기능은 `features/common/` 또는 명확한 통합 폴더(예: `features/obsidian/`)의 상위 README에서 관리하고, 하위 README를 불필요하게 늘리지 않는다.
 - `roadmap/`은 개인 개발용 로컬 계획 폴더이며 GitHub/source archive/릴리즈 패키지에는 포함하지 않는다. 새 대형 작업은 `master`에서 독립 브랜치를 따고, 사용자가 로컬 roadmap 문서를 유지하는 경우에만 그 문서에 제품 순서와 진행 상태를 반영한다.
+- 앞으로 계획 관리는 GitHub Issues와 로컬 계획문서를 함께 사용한다. 공개적으로 추적할 작업은 GitHub Issue를 기준으로 삼고, 세부 실행 메모·개인 맥락·agent handoff는 `roadmap/` 또는 공개-safe한 `docs/superpowers/` 계획문서에 둔다. 자세한 규칙은 `docs/PLANNING_WORKFLOW.md`를 따른다.
 
 ---
 

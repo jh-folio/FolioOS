@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -33,8 +33,14 @@ jobs:
       - name: Compile app
         run: python -m py_compile app.py
 
+      - name: Audit public release tree
+        run: python scripts/public_release_audit.py
+
+      - name: Validate release package manifest
+        run: python scripts/package_release.py --version ci --dry-run
+
       - name: Run tests
-        run: python -m pytest features -q
+        run: python -m pytest features tests -q
 
   web:
     name: Web checks
@@ -45,10 +51,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"

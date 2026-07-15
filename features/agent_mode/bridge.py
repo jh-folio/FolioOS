@@ -31,7 +31,9 @@ _RUN_SEMAPHORE = threading.Semaphore(1)
 
 
 def _creation_flags() -> int:
-    return subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    if os.name != "nt":
+        return 0
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 def _configured_executable(adapter: str) -> str:
