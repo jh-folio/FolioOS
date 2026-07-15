@@ -309,7 +309,8 @@ def refresh_regime_state(db_path: str | Path, state_id: str, *, days: int = 90) 
         return {"ok": False, "error": "State not found", "stateId": state_id}
     state = dict(row)
     as_of = _now()
-    min_date = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=max(7, int(days or 90)))).date().isoformat()
+    anchor = _parse_date(as_of) or dt.datetime.now(dt.timezone.utc)
+    min_date = (anchor - dt.timedelta(days=max(7, int(days or 90)))).date().isoformat()
     candidates = conn.execute(
         """
         SELECT * FROM market_memory

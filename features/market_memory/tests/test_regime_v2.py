@@ -99,12 +99,14 @@ def _seed_db(db_path):
     conn.close()
 
 
-def test_refresh_regime_state_keeps_existing_status_compatibility():
+def test_refresh_regime_state_keeps_existing_status_compatibility(monkeypatch):
     with tempfile.TemporaryDirectory() as tmp:
         db_path = os.path.join(tmp, "market-memory.sqlite3")
         _seed_db(db_path)
-        result = R.refresh_regime_state(db_path, "state-ai", days=90)
+        monkeypatch.setattr(R, "_now", lambda: "2026-06-11T00:00:00+00:00")
+        result = R.refresh_regime_state(db_path, "state-ai", days=7)
         assert result["ok"] is True
+        assert result["evidenceCount7d"] == 2
         assert result["evidenceCount30d"] == 2
         assert result["momentum"] in R.MOMENTUM_CHOICES
         states = M.list_states(db_path, status="current")

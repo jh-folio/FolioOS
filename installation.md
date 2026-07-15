@@ -174,7 +174,7 @@ Development-only folders such as `web/`, `docs/`, and `roadmap/` are needed for 
 Maintainers can create a clean 0.1 user package with:
 
 ```powershell
-py -3 scripts\package_release.py --force
+py -3 scripts\package_release.py --version vX.Y.Z --force
 ```
 
 ---
