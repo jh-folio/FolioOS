@@ -214,6 +214,7 @@ from features.topic_report.service import (
     preset_topics_list,
     save_topic_report,
 )
+from features.topic_report.routes import ApprovedRequestBoundary
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
     get_quality as get_research_quality,
@@ -353,6 +354,8 @@ async def lifespan(_app: FastAPI):
 
 
 fastapi_app = FastAPI(title="Folio OS", version=APP_VERSION, lifespan=lifespan)
+TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(DATA_DIR)
+fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
 
 
 @fastapi_app.exception_handler(Exception)
@@ -1565,23 +1568,11 @@ def api_list_topic_reports():
     return list_topic_reports()
 
 
-@fastapi_app.post("/api/topic-reports/plan")
-def api_topic_report_plan(body: dict | None = Body(default=None)):
-    body = body or {}
-    from features.topic_report.planner import build_topic_plan
-    generation_mode = request_generation_mode(body)
-    plan = build_topic_plan(
-        body.get("topicKey", "custom"),
-        custom_label=body.get("customLabel", ""),
-        user_context=body.get("userContext", ""),
-        llm_override=False if generation_mode == "llm_cli" else llm_override_for_mode(generation_mode),
-    )
-    return {"topicPlan": plan}
-
-
 @fastapi_app.post("/api/topic-reports")
 def api_generate_topic_report(body: dict | None = Body(default=None)):
     body = body or {}
+    if any(key in body for key in ("approvedRequest", "approval", "execution")):
+        return TOPIC_APPROVAL_BOUNDARY.preflight(body)
     custom_tickers = body.get("customTickers")
     quality_mode = normalize_quality_mode(body.get("qualityMode", "diagnose_only"))
     generation_mode = request_generation_mode(body)

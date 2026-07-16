@@ -1,0 +1,245 @@
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
+from uuid import UUID
+
+from features.common.jcs import JsonValue, sha256_hex
+from features.topic_report.approval_store import (
+    ApprovalEntry,
+    ApprovalProof,
+    ApprovalStore,
+    ApprovalStoreRuntime,
+    utc_z,
+)
+from features.topic_report.approved_plan_schema import (
+    FALSIFICATION_TRIGGERS,
+    REQUIRED_OUTPUTS,
+    TopicPlanV1,
+)
+from features.topic_report.approved_schema import (
+    ApprovedRequest,
+    ConfirmDegradedRequest,
+    DegradedConfirmation,
+    GenerateApprovedRequest,
+    PlanPreviewEnvelope,
+    PlanRequest,
+)
+from features.topic_report.planner import apply_deep_research_plan, build_topic_plan
+from features.topic_report.resolution_schema import ResearchPreview, ResolutionSnapshotV1, ZeroEvidence
+
+
+@dataclass(frozen=True, slots=True)
+class ApprovedRequestRuntime:
+    dataDir: Path
+    clock: Callable[[], datetime]
+    entropy: Callable[[int], bytes]
+    uuidFactory: Callable[[], UUID]
+    resolver: Callable[[ApprovedRequest], ResolutionSnapshotV1]
+
+
+@dataclass(frozen=True, slots=True)
+class ApprovedRequestError(Exception):
+    code: str
+
+    def __str__(self) -> str:
+        return self.code
+
+
+class IntegrityMismatchError(ApprovedRequestError):
+    def __init__(self) -> None:
+        super().__init__(code="approval_mismatch")
+
+
+class CollectionResolutionDeferredError(ApprovedRequestError):
+    def __init__(self) -> None:
+        super().__init__(code="collection_resolution_deferred")
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceConfirmationRequiredError(ApprovedRequestError):
+    preview: ResearchPreview
+
+    def __init__(self, preview: ResearchPreview) -> None:
+        super().__init__(code="evidence_confirmation_required")
+        object.__setattr__(self, "preview", preview)
+
+
+@dataclass(frozen=True, slots=True)
+class ResolutionChangedError(ApprovedRequestError):
+    preview: ResearchPreview
+
+    def __init__(self, preview: ResearchPreview) -> None:
+        super().__init__(code="resolution_changed")
+        object.__setattr__(self, "preview", preview)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionPreflight:
+    preview: ResearchPreview
+    replayJobId: str | None
+
+
+class ApprovedRequestService:
+    def __init__(self, runtime: ApprovedRequestRuntime) -> None:
+        self._runtime = runtime
+        self._store = ApprovalStore(
+            ApprovalStoreRuntime(
+                path=runtime.dataDir / "topic-plan-approvals.json",
+                clock=runtime.clock,
+                entropy=runtime.entropy,
+                uuidFactory=runtime.uuidFactory,
+            )
+        )
+
+    def hash_approved_payload(self, payload: dict[str, JsonValue]) -> str:
+        preimage = {key: value for key, value in payload.items() if key != "planHash"}
+        return sha256_hex(preimage)
+
+    def definition_plan_hash(self, approved: ApprovedRequest) -> str:
+        payload = approved.model_dump(mode="json")
+        payload.pop("planHash")
+        payload["degradedConfirmation"] = None
+        return sha256_hex(payload)
+
+    def _topic_plan(self, request: PlanRequest) -> TopicPlanV1:
+        raw = build_topic_plan(
+            "custom",
+            custom_label=request.question,
+            user_context=request.userContext,
+            llm_override=False,
+        )
+        raw.pop("plannerMode", None)
+        raw["candidateTickers"] = request.customTickers or raw.get("candidateTickers", {})
+        if request.deepResearch:
+            raw = apply_deep_research_plan(raw)
+        else:
+            raw["deepResearch"] = {
+                "enabled": False,
+                "maxRounds": 2,
+                "subQuestions": [],
+                "falsificationTriggers": FALSIFICATION_TRIGGERS,
+                "requiredOutputs": REQUIRED_OUTPUTS,
+            }
+        return TopicPlanV1.model_validate(raw)
+
+    def _approved(self, request: PlanRequest) -> ApprovedRequest:
+        if request.collectionRef is not None:
+            raise CollectionResolutionDeferredError
+        now = self._runtime.clock().astimezone(UTC)
+        payload: dict[str, JsonValue] = {
+            "schemaVersion": 1,
+            "planRevision": 1,
+            "asOfDate": now.astimezone(timezone(timedelta(hours=9))).date().isoformat(),
+            "qualityMode": "diagnose_only",
+            "question": request.question,
+            "userContext": request.userContext,
+            "contextLayer": "hypothesis",
+            "deepResearch": request.deepResearch,
+            "customTickers": request.customTickers,
+            "marketStatePolicy": request.marketStatePolicy,
+            "marketStateScope": request.marketStateScope,
+            "collectionRef": None,
+            "topicPlan": self._topic_plan(request).model_dump(mode="json"),
+            "degradedConfirmation": None,
+        }
+        payload["planHash"] = self.hash_approved_payload(payload)
+        return ApprovedRequest.model_validate(payload)
+
+    def _fingerprint(
+        self,
+        approved: ApprovedRequest,
+        reason: str,
+        resolution: ResolutionSnapshotV1,
+    ) -> str:
+        preimage: dict[str, JsonValue] = {
+            "schemaVersion": 1,
+            "definitionPlanHash": self.definition_plan_hash(approved),
+            "reasonCode": reason,
+            "resolution": resolution.model_dump(mode="json"),
+        }
+        return "rf1_" + sha256_hex(preimage)
+
+    def _preview(self, approved: ApprovedRequest) -> ResearchPreview:
+        resolution = self._runtime.resolver(approved)
+        if resolution.selectedEvidenceIds:
+            zero = ZeroEvidence(required=False, reasonCode=None, resolutionFingerprint=None)
+        else:
+            reason = (
+                "filtered_empty"
+                if approved.collectionRef is not None
+                else "no_index"
+                if resolution.providerGenerations.indexGeneration is None
+                else "zero_matches"
+            )
+            zero = ZeroEvidence(
+                required=True,
+                reasonCode=reason,
+                resolutionFingerprint=self._fingerprint(approved, reason, resolution),
+            )
+        return ResearchPreview(
+            resolution=resolution,
+            resolvedAt=utc_z(self._runtime.clock()),
+            zeroEvidence=zero,
+        )
+
+    def _proof(self, approved: ApprovedRequest, approval_id: str, token: str) -> ApprovalProof:
+        return ApprovalProof(id=approval_id, token=token, planHash=approved.planHash)
+
+    def _validate_integrity(self, approved: ApprovedRequest) -> None:
+        payload = approved.model_dump(mode="json")
+        if self.hash_approved_payload(payload) != approved.planHash:
+            raise IntegrityMismatchError
+
+    def plan(self, request: PlanRequest) -> PlanPreviewEnvelope:
+        approved = self._approved(request)
+        preview = self._preview(approved)
+        grant = self._store.issue(approved.planHash)
+        return PlanPreviewEnvelope(approvedRequest=approved, approval=grant, preview=preview)
+
+    def confirm(self, request: ConfirmDegradedRequest) -> PlanPreviewEnvelope:
+        approved = request.approvedRequest
+        self._validate_integrity(approved)
+        proof = self._proof(approved, request.approval.id, request.approval.token)
+        self._store.authorize(proof)
+        preview = self._preview(approved)
+        zero = preview.zeroEvidence
+        if (
+            not zero.required
+            or zero.reasonCode != request.reasonCode
+            or zero.resolutionFingerprint != request.resolutionFingerprint
+        ):
+            self._store.supersede(proof)
+            raise ResolutionChangedError(preview)
+        confirmation = DegradedConfirmation(
+            reasonCode=request.reasonCode,
+            resolutionFingerprint=request.resolutionFingerprint,
+            confirmed=True,
+            confirmedAt=utc_z(self._runtime.clock()),
+        )
+        payload = approved.model_dump(mode="json")
+        payload["degradedConfirmation"] = confirmation.model_dump(mode="json")
+        payload["planHash"] = self.hash_approved_payload(payload)
+        replacement = ApprovedRequest.model_validate(payload)
+        grant = self._store.replace(proof, replacement.planHash)
+        return PlanPreviewEnvelope(approvedRequest=replacement, approval=grant, preview=preview)
+
+    def preflight(self, request: GenerateApprovedRequest) -> ExecutionPreflight:
+        approved = request.approvedRequest
+        self._validate_integrity(approved)
+        proof = self._proof(approved, request.approval.id, request.approval.token)
+        entry: ApprovalEntry = self._store.authorize(proof)
+        preview = self._preview(approved)
+        confirmation = approved.degradedConfirmation
+        if preview.zeroEvidence.required and confirmation is None:
+            raise EvidenceConfirmationRequiredError(preview)
+        if confirmation is not None and (
+            not preview.zeroEvidence.required
+            or preview.zeroEvidence.reasonCode != confirmation.reasonCode
+            or preview.zeroEvidence.resolutionFingerprint != confirmation.resolutionFingerprint
+        ):
+            self._store.supersede(proof)
+            raise ResolutionChangedError(preview)
+        return ExecutionPreflight(preview=preview, replayJobId=entry.jobId)
