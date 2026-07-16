@@ -215,6 +215,7 @@ from features.topic_report.service import (
     save_topic_report,
 )
 from features.topic_report.routes import ApprovedRequestBoundary
+from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
     get_quality as get_research_quality,
@@ -354,8 +355,13 @@ async def lifespan(_app: FastAPI):
 
 
 fastapi_app = FastAPI(title="Folio OS", version=APP_VERSION, lifespan=lifespan)
-TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(DATA_DIR)
+SMART_COLLECTION_SERVICE = create_smart_collection_service(DATA_DIR)
+TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(
+    DATA_DIR,
+    collection_service=SMART_COLLECTION_SERVICE,
+)
 fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
+fastapi_app.include_router(SmartCollectionBoundary(SMART_COLLECTION_SERVICE).router())
 
 
 @fastapi_app.exception_handler(Exception)

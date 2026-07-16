@@ -20,6 +20,7 @@ from features.topic_report.approved_plan_schema import (
     TopicPlanV1,
 )
 from features.topic_report.approved_schema import (
+    ApprovedCollectionRef,
     ApprovedRequest,
     ConfirmDegradedRequest,
     DegradedConfirmation,
@@ -38,6 +39,7 @@ class ApprovedRequestRuntime:
     entropy: Callable[[int], bytes]
     uuidFactory: Callable[[], UUID]
     resolver: Callable[[ApprovedRequest], ResolutionSnapshotV1]
+    collectionResolver: Callable[[str, int], ApprovedCollectionRef] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,8 +128,14 @@ class ApprovedRequestService:
         return TopicPlanV1.model_validate(raw)
 
     def _approved(self, request: PlanRequest) -> ApprovedRequest:
+        approved_collection = None
         if request.collectionRef is not None:
-            raise CollectionResolutionDeferredError
+            if self._runtime.collectionResolver is None:
+                raise CollectionResolutionDeferredError
+            approved_collection = self._runtime.collectionResolver(
+                request.collectionRef.id,
+                request.collectionRef.revision,
+            )
         now = self._runtime.clock().astimezone(UTC)
         payload: dict[str, JsonValue] = {
             "schemaVersion": 1,
@@ -141,7 +149,11 @@ class ApprovedRequestService:
             "customTickers": request.customTickers,
             "marketStatePolicy": request.marketStatePolicy,
             "marketStateScope": request.marketStateScope,
-            "collectionRef": None,
+            "collectionRef": (
+                approved_collection.model_dump(mode="json")
+                if approved_collection is not None
+                else None
+            ),
             "topicPlan": self._topic_plan(request).model_dump(mode="json"),
             "degradedConfirmation": None,
         }

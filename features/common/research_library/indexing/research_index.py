@@ -110,6 +110,13 @@ def init_db(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE documents ADD COLUMN content TEXT NOT NULL DEFAULT ''")
     except sqlite3.OperationalError:
         pass
+    document_columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(documents)")}
+    if "content_updated_at" not in document_columns:
+        conn.execute("ALTER TABLE documents ADD COLUMN content_updated_at TEXT")
+    conn.execute(
+        "UPDATE documents SET content_updated_at = updated_at "
+        "WHERE content_updated_at IS NULL OR content_updated_at = ''"
+    )
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS chunks (
@@ -204,7 +211,7 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                 "modifiedAt": doc.get("modifiedAt", ""),
             }
             existing = conn.execute(
-                "SELECT metadata_json FROM documents WHERE doc_id = ?",
+                "SELECT metadata_json, content_updated_at FROM documents WHERE doc_id = ?",
                 (doc_id,),
             ).fetchone()
             existing_hash = ""
@@ -218,6 +225,11 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                 (doc_id,),
             ).fetchone()
             reuse_chunks = bool(existing_hash and existing_hash == doc.get("contentHash") and chunks_exist)
+            content_updated_at = (
+                str(existing["content_updated_at"])
+                if existing is not None and existing_hash == doc.get("contentHash")
+                else str(index.get("generatedAt", ""))
+            )
             stale_ids = [
                 str(row["doc_id"])
                 for row in conn.execute(
@@ -236,9 +248,9 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                 """
                 INSERT INTO documents (
                     doc_id, path, title, source, date, type, url,
-                    market_relevance, metadata_json, updated_at, content
+                    market_relevance, metadata_json, updated_at, content, content_updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(doc_id) DO UPDATE SET
                     path=excluded.path,
                     title=excluded.title,
@@ -249,7 +261,8 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                     market_relevance=excluded.market_relevance,
                     metadata_json=excluded.metadata_json,
                     updated_at=excluded.updated_at,
-                    content=excluded.content
+                    content=excluded.content,
+                    content_updated_at=excluded.content_updated_at
                 """,
                 (
                     doc_id,
@@ -263,6 +276,7 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                     json.dumps(metadata, ensure_ascii=False),
                     str(index.get("generatedAt", "")),
                     str(doc.get("content") or ""),
+                    content_updated_at,
                 ),
             )
             if reuse_chunks:
@@ -404,6 +418,11 @@ def load_documents_from_db(db_path: str | Path) -> list[dict]:
             "absolutePath": "",
         }
         doc["content"] = str(row["content"]) if "content" in col_names else ""
+        doc["contentUpdatedAt"] = (
+            str(row["content_updated_at"])
+            if "content_updated_at" in col_names
+            else str(row["updated_at"])
+        )
         docs.append(doc)
     return docs
 
@@ -432,6 +451,7 @@ def hybrid_search(
     limit: int = 20,
     scope_prefixes: tuple[str, ...] = (),
     fts_pool: int = 120,
+    allowed_doc_ids: set[str] | None = None,
 ) -> list[dict]:
     """
     Two-stage hybrid search: FTS5 candidate retrieval → embedding re-ranking.
@@ -443,6 +463,8 @@ def hybrid_search(
     """
     q = normalize_space(query)
     if not q:
+        return []
+    if allowed_doc_ids is not None and not allowed_doc_ids:
         return []
     path = Path(db_path)
     if not path.exists():
@@ -456,9 +478,24 @@ def hybrid_search(
     fts_rank: dict[str, int] = {}  # chunk_id -> 0-based rank (lower = better)
     if fts_query:
         try:
+            scope_filter, scope_params = _scope_sql(scope_prefixes)
+            allowed_filter = ""
+            allowed_params: tuple[str, ...] = ()
+            if allowed_doc_ids is not None:
+                allowed_placeholders = ",".join("?" for _ in allowed_doc_ids)
+                allowed_filter = f"AND d.doc_id IN ({allowed_placeholders})"
+                allowed_params = tuple(sorted(allowed_doc_ids))
             rows = conn.execute(
-                "SELECT chunk_id FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts) LIMIT ?",
-                (fts_query, fts_pool),
+                f"""
+                SELECT chunks_fts.chunk_id
+                FROM chunks_fts
+                JOIN chunks c ON c.chunk_id = chunks_fts.chunk_id
+                JOIN documents d ON d.doc_id = c.doc_id
+                WHERE chunks_fts MATCH ? {scope_filter} {allowed_filter}
+                ORDER BY bm25(chunks_fts)
+                LIMIT ?
+                """,
+                (fts_query, *scope_params, *allowed_params, min(120, fts_pool)),
             ).fetchall()
             for rank, row in enumerate(rows):
                 fts_rank[str(row["chunk_id"])] = rank

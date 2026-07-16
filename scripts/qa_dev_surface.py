@@ -29,10 +29,12 @@ from qa_dev_surface_support import (
     stop_server,
     wait_ready,
 )
+from qa_smart_collections import run as run_smart_collections
 
 
 @dataclass(frozen=True, slots=True)
 class RunConfig:
+    scenario: str
     sourceRoot: Path
     attemptDir: Path
 
@@ -42,6 +44,8 @@ def write_json(path: Path, payload: JsonValue) -> None:
 
 
 def run_scenario(config: RunConfig) -> int:
+    if config.scenario == "smart-collections":
+        return run_smart_collections(config.sourceRoot, config.attemptDir)
     attempt = config.attemptDir.resolve()
     attempt.mkdir(parents=True, exist_ok=True)
     runtime = attempt / ".runtime"
@@ -205,7 +209,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="qa_dev_surface.py")
     commands = result.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run")
-    run.add_argument("--scenario", choices=["approved-request"], required=True)
+    run.add_argument("--scenario", choices=["approved-request", "smart-collections"], required=True)
     run.add_argument("--source-root", type=Path, required=True)
     run.add_argument("--attempt-dir", type=Path, required=True)
     server = commands.add_parser("serve")
@@ -219,7 +223,7 @@ def main() -> int:
     args = parser().parse_args()
     match args.command:
         case "run":
-            return run_scenario(RunConfig(args.source_root, args.attempt_dir))
+            return run_scenario(RunConfig(args.scenario, args.source_root, args.attempt_dir))
         case "serve":
             return serve(args.data_dir, args.clock_file, args.port)
         case unreachable:

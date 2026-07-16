@@ -28,10 +28,12 @@ from features.topic_report.approved_schema import (
     GenerateApprovedRequest,
     PlanRequest,
 )
-from features.topic_report.research_resolution import resolve_null_collection
+from features.smart_collections.integration import resolve_approved_collection
+from features.smart_collections.routes import create_smart_collection_service
+from features.smart_collections.service import CollectionServiceError, SmartCollectionService
 
 
-BoundaryFailure = ValidationError | ApprovalStoreError | ApprovedRequestError
+BoundaryFailure = ValidationError | ApprovalStoreError | ApprovedRequestError | CollectionServiceError
 
 
 def _response(status_code: int, payload: dict[str, JsonValue]) -> JSONResponse:
@@ -62,6 +64,8 @@ def _failure_response(error: BoundaryFailure) -> JSONResponse:
             return _response(503, {"error": error.code})
         case ApprovalStoreError(code=code) | ApprovedRequestError(code=code):
             return _response(409, {"error": code})
+        case CollectionServiceError(code=code):
+            return _response(409, {"error": code})
         case unreachable:
             assert_never(unreachable)
 
@@ -71,15 +75,18 @@ class ApprovedRequestBoundary:
         self,
         data_dir: Path,
         clock: Callable[[], datetime] | None = None,
+        collection_service: SmartCollectionService | None = None,
     ) -> None:
         runtime_clock = clock or (lambda: datetime.now(UTC))
+        collections = collection_service or create_smart_collection_service(data_dir)
         self._service = ApprovedRequestService(
             ApprovedRequestRuntime(
                 dataDir=data_dir,
                 clock=runtime_clock,
                 entropy=secrets.token_bytes,
                 uuidFactory=uuid4,
-                resolver=lambda approved: resolve_null_collection(data_dir, approved),
+                resolver=lambda approved: resolve_approved_collection(collections, approved),
+                collectionResolver=collections.approved_ref,
             )
         )
 
@@ -87,7 +94,7 @@ class ApprovedRequestBoundary:
         try:
             request = PlanRequest.model_validate(body)
             envelope = self._service.plan(request)
-        except (ValidationError, ApprovalStoreError, ApprovedRequestError) as error:
+        except (ValidationError, ApprovalStoreError, ApprovedRequestError, CollectionServiceError) as error:
             return _failure_response(error)
         return _response(200, envelope.model_dump(mode="json"))
 
@@ -95,7 +102,7 @@ class ApprovedRequestBoundary:
         try:
             request = ConfirmDegradedRequest.model_validate(body)
             envelope = self._service.confirm(request)
-        except (ValidationError, ApprovalStoreError, ApprovedRequestError) as error:
+        except (ValidationError, ApprovalStoreError, ApprovedRequestError, CollectionServiceError) as error:
             return _failure_response(error)
         return _response(200, envelope.model_dump(mode="json"))
 
@@ -103,7 +110,7 @@ class ApprovedRequestBoundary:
         try:
             request = GenerateApprovedRequest.model_validate(body)
             self._service.preflight(request)
-        except (ValidationError, ApprovalStoreError, ApprovedRequestError) as error:
+        except (ValidationError, ApprovalStoreError, ApprovedRequestError, CollectionServiceError) as error:
             return _failure_response(error)
         return _response(501, {"error": "topic_execution_deferred"})
 

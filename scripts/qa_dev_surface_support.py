@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import gc
+import shutil
 import socket
 import subprocess
 import sys
@@ -19,6 +21,8 @@ from fastapi import FastAPI
 
 from features.common.jcs import JsonValue
 from features.topic_report.routes import ApprovedRequestBoundary
+from features.smart_collections.routes import SmartCollectionBoundary
+from features.smart_collections.service import SmartCollectionRuntime, SmartCollectionService
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,11 +56,21 @@ def json_dict(raw: bytes) -> dict[str, JsonValue]:
 
 
 def post(base_url: str, path: str, payload: Mapping[str, JsonValue]) -> HttpResult:
+    return request_json(base_url, path, "POST", payload)
+
+
+def request_json(
+    base_url: str,
+    path: str,
+    method: str,
+    payload: Mapping[str, JsonValue] | None = None,
+) -> HttpResult:
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8") if payload is not None else None
     request = urllib.request.Request(
         base_url + path,
-        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        data=data,
         headers={"Content-Type": "application/json"},
-        method="POST",
+        method=method,
     )
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
@@ -122,6 +136,18 @@ def stop_server(process: subprocess.Popen[str]) -> int:
     return int(process.returncode or 0)
 
 
+def remove_tree(path: Path) -> None:
+    for attempt in range(20):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            gc.collect()
+            time.sleep(0.1)
+
+
 def execution(envelope: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
     approved = envelope.get("approvedRequest")
     approval = envelope.get("approval")
@@ -153,8 +179,11 @@ def clock_from_file(path: Path) -> datetime:
 
 def serve(data_dir: Path, clock_file: Path, port: int) -> int:
     app = FastAPI()
-    boundary = ApprovedRequestBoundary(data_dir, clock=lambda: clock_from_file(clock_file))
+    clock = lambda: clock_from_file(clock_file)
+    collections = SmartCollectionService(SmartCollectionRuntime(dataDir=data_dir, clock=clock))
+    boundary = ApprovedRequestBoundary(data_dir, clock=clock, collection_service=collections)
     app.include_router(boundary.router())
+    app.include_router(SmartCollectionBoundary(collections).router())
     app.add_api_route("/health", lambda: {"ok": True}, methods=["GET"])
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
     return 0
