@@ -8,7 +8,9 @@ intentionally stricter than the packager so it can catch hand-edited artifacts.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -84,13 +86,15 @@ def find_missing_required_paths(release_dir: Path, manifest: dict) -> list[str]:
             issues.append(f"Missing empty runtime directory: {rel}")
     if not (release_dir / "release-manifest.json").is_file():
         issues.append("Missing copied release-manifest.json")
+    if not (release_dir / "BUILD.json").is_file():
+        issues.append("Missing BUILD.json")
     return issues
 
 
 def find_forbidden_paths(release_dir: Path, manifest: dict) -> list[str]:
     issues: list[str] = []
     forbidden = set(str(path).replace("\\", "/").strip("/") for path in manifest["forbiddenPaths"])
-    forbidden_names = {Path(path).name for path in forbidden}
+    forbidden_names = {Path(path).name for path in forbidden if path != "config"}
     empty_roots = [release_dir / rel for rel in manifest["emptyDirectories"]]
 
     for rel in sorted(forbidden):
@@ -122,6 +126,7 @@ def find_unexpected_files(release_dir: Path, manifest: dict) -> list[str]:
     issues: list[str] = []
     allowed_files = {str(rel).replace("\\", "/") for rel in manifest["runtimeFiles"]}
     allowed_files.add("release-manifest.json")
+    allowed_files.add("BUILD.json")
     allowed_dirs = [release_dir / rel for rel in manifest["runtimeDirectories"]]
 
     for path in release_dir.rglob("*"):
@@ -141,7 +146,7 @@ def run_gitleaks_scan(release_dir: Path) -> list[str]:
     if not exe:
         return ["Gitleaks is required for release verification but was not found on PATH."]
     result = subprocess.run(
-        [exe, "dir", str(release_dir), "--redact"],
+        [exe, "dir", str(release_dir), "--redact=100"],
         cwd=ROOT,
         text=True,
         encoding="utf-8",
@@ -155,7 +160,44 @@ def run_gitleaks_scan(release_dir: Path) -> list[str]:
     return [f"Gitleaks found issues in release artifact: {detail}"]
 
 
-def verify_release(release_dir: Path, manifest_path: Path = DEFAULT_MANIFEST, *, run_gitleaks: bool = True) -> list[str]:
+def find_build_metadata_issues(release_dir: Path, expected_commit: str | None) -> list[str]:
+    issues: list[str] = []
+    version_path = release_dir / "VERSION"
+    build_path = release_dir / "BUILD.json"
+    if not version_path.is_file() or not build_path.is_file():
+        return issues
+    try:
+        version = version_path.read_text(encoding="utf-8").strip()
+        build = json.loads(build_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return ["BUILD.json or VERSION is unreadable."]
+    if not isinstance(build, dict) or set(build) != {"version", "commit", "builtAt"}:
+        return ["BUILD.json must contain exactly version, commit, and builtAt."]
+    if build["version"] != version:
+        issues.append("BUILD.json version does not match VERSION.")
+    commit = str(build["commit"])
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        issues.append("BUILD.json commit is not a full lowercase Git SHA.")
+    if expected_commit is not None and commit != expected_commit:
+        issues.append("BUILD.json commit does not match the expected source commit.")
+    built_at = str(build["builtAt"])
+    try:
+        parsed = dt.datetime.fromisoformat(built_at.removesuffix("Z") + "+00:00")
+    except ValueError:
+        issues.append("BUILD.json builtAt is not a UTC-Z instant.")
+    else:
+        if not built_at.endswith("Z") or parsed.utcoffset() != dt.timedelta(0):
+            issues.append("BUILD.json builtAt is not a UTC-Z instant.")
+    return issues
+
+
+def verify_release(
+    release_dir: Path,
+    manifest_path: Path = DEFAULT_MANIFEST,
+    *,
+    run_gitleaks: bool = True,
+    expected_commit: str | None = None,
+) -> list[str]:
     release_dir = release_dir.resolve()
     if not release_dir.is_dir():
         return [f"Release directory does not exist: {release_dir}"]
@@ -163,6 +205,7 @@ def verify_release(release_dir: Path, manifest_path: Path = DEFAULT_MANIFEST, *,
     issues = find_missing_required_paths(release_dir, manifest)
     issues.extend(find_forbidden_paths(release_dir, manifest))
     issues.extend(find_unexpected_files(release_dir, manifest))
+    issues.extend(find_build_metadata_issues(release_dir, expected_commit))
     if run_gitleaks:
         issues.extend(run_gitleaks_scan(release_dir))
     return sorted(set(issues))
@@ -173,9 +216,15 @@ def main() -> int:
     parser.add_argument("--release-dir", type=Path, required=True, help="Release directory to verify.")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST, help="Release manifest path.")
     parser.add_argument("--skip-gitleaks", action="store_true", help="Skip Gitleaks scan for tests or diagnostics.")
+    parser.add_argument("--expected-commit", help="Require BUILD.json to identify this full Git SHA.")
     args = parser.parse_args()
 
-    issues = verify_release(args.release_dir, args.manifest, run_gitleaks=not args.skip_gitleaks)
+    issues = verify_release(
+        args.release_dir,
+        args.manifest,
+        run_gitleaks=not args.skip_gitleaks,
+        expected_commit=args.expected_commit,
+    )
     if issues:
         for issue in issues:
             print(issue, file=__import__("sys").stderr)

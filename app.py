@@ -252,6 +252,7 @@ from features.portfolio.service import (
 )
 
 ROOT = Path(__file__).resolve().parent
+APP_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 DATA_DIR = ROOT / "data"
 CONFIG_DIR = ROOT / "config"
 INBOX_DIR = ROOT / "research-inbox"
@@ -351,7 +352,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-fastapi_app = FastAPI(title="Folio OS", version="0.1.0", lifespan=lifespan)
+fastapi_app = FastAPI(title="Folio OS", version=APP_VERSION, lifespan=lifespan)
 
 
 @fastapi_app.exception_handler(Exception)

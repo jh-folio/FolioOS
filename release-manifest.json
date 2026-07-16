@@ -2,6 +2,7 @@
   "packageName": "FolioOS",
   "runtimeFiles": [
     ".env.example",
+    "VERSION",
     "app.py",
     "LICENSE",
     "README.md",
@@ -19,7 +20,7 @@
   "runtimeDirectories": [
     "features",
     "public",
-    "config"
+    "defaults"
   ],
   "emptyDirectories": [
     "data",
@@ -39,6 +40,7 @@
   ],
   "forbiddenPaths": [
     ".env",
+    "config",
     ".git",
     "README.dev.md",
     "roadmap",

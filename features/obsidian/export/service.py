@@ -4,6 +4,7 @@ import binascii
 import re
 from pathlib import Path
 
+from features.common.config_bootstrap import resolve_config
 from features.common.utils import read_json, write_json
 from features.common.taxonomy import normalize_tag
 from features.daily_briefing.schema import briefing_export_units
@@ -11,7 +12,6 @@ from features.obsidian.export.formatter import build_frontmatter, inject_wikilin
 
 ROOT = Path(__file__).resolve().parents[3]
 DATA_DIR = ROOT / "data"
-CONFIG_DIR = ROOT / "config"
 SETTINGS_PATH = DATA_DIR / "obsidian-settings.json"
 MARKET_MEMORY_DB = DATA_DIR / "market-memory.sqlite3"
 BRIEFINGS_DIR = DATA_DIR / "briefings"
@@ -63,7 +63,7 @@ def _all_company_names() -> list[str]:
         for alias in c.get("aliases", []):
             _add(alias)
 
-    master_data = read_json(CONFIG_DIR / "company_master.json", {})
+    master_data = read_json(resolve_config("company_master.json"), {})
     master_list = master_data.get("companies", []) if isinstance(master_data, dict) else master_data
     for c in master_list:
         if not isinstance(c, dict):

@@ -23,9 +23,8 @@ import re
 from typing import Any, Callable
 import urllib.request
 
+from features.common.config_bootstrap import resolve_config
 
-ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_CONSTITUENTS_PATH = ROOT / "config" / "sp500_constituents.json"
 WIKIPEDIA_URL = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
 
 
@@ -96,7 +95,7 @@ def fetch_wikipedia_html(url: str = WIKIPEDIA_URL) -> str:
 
 
 def build_sp500_constituents_file(
-    path: Path | str = DEFAULT_CONSTITUENTS_PATH,
+    path: Path | str | None = None,
     *,
     html_fetcher: Callable[[], str] | None = None,
     cap_fetcher: Callable[[], dict] | None = None,
@@ -124,15 +123,16 @@ def build_sp500_constituents_file(
         "missingCap": missing,
         "companies": sorted(companies, key=lambda row: row.get("marketCap") or 0, reverse=True),
     }
-    target = Path(path)
+    target = Path(path) if path is not None else resolve_config("sp500_constituents.json")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return payload
 
 
-def load_sp500_constituents(path: Path | str = DEFAULT_CONSTITUENTS_PATH) -> list[dict]:
+def load_sp500_constituents(path: Path | str | None = None) -> list[dict]:
+    target = Path(path) if path is not None else resolve_config("sp500_constituents.json")
     try:
-        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        payload = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError):
         return []
     companies = payload.get("companies") if isinstance(payload, dict) else None

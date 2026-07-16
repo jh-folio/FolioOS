@@ -67,6 +67,13 @@ def test_manifest_includes_cross_platform_launchers() -> None:
     assert "start.sh" in manifest["runtimeFiles"]
 
 
+def test_package_defaults_to_version_file() -> None:
+    result = run_package("--dry-run")
+
+    assert result.returncode == 0, result.stderr
+    assert "FolioOS-v0.2.0" in result.stdout
+
+
 def test_package_dry_run_requires_a_safe_version() -> None:
     result = run_package("--version", "../unsafe", "--dry-run")
     assert result.returncode != 0
@@ -96,6 +103,20 @@ def test_gitleaks_scan_uses_utf8_output_decoding(monkeypatch, tmp_path: Path) ->
     assert calls["errors"] == "replace"
 
 
+def test_gitleaks_scan_redacts_all_secret_values(monkeypatch, tmp_path: Path) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr(verifier.shutil, "which", lambda name: "gitleaks")
+
+    def fake_run(args, **kwargs):
+        calls.append(args)
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(verifier.subprocess, "run", fake_run)
+
+    assert verifier.run_gitleaks_scan(tmp_path) == []
+    assert "--redact=100" in calls[0]
+
+
 def test_package_build_creates_verified_zip() -> None:
     version = "test-release-tools"
     package_dir = ROOT / "dist" / f"FolioOS-{version}"
@@ -107,12 +128,42 @@ def test_package_build_creates_verified_zip() -> None:
     try:
         assert result.returncode == 0, result.stderr
         assert (package_dir / "release-manifest.json").is_file()
+        assert (package_dir / "defaults" / "config").is_dir()
+        assert not (package_dir / "config").exists()
+        assert {
+            "company_aliases.json",
+            "company_master.json",
+            "evidence_sources.yaml",
+            "kospi200_constituents.json",
+            "rss_feeds.yaml",
+            "sp500_constituents.json",
+        } == {path.name for path in (package_dir / "defaults" / "config").iterdir()}
+        build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
+        assert build["version"] == "0.2.0"
+        assert len(build["commit"]) == 40
         assert package_zip.is_file()
         with zipfile.ZipFile(package_zip) as archive:
             assert "FolioOS-test-release-tools/release-manifest.json" in archive.namelist()
     finally:
         shutil.rmtree(package_dir, ignore_errors=True)
         package_zip.unlink(missing_ok=True)
+
+
+def test_verifier_rejects_build_commit_mismatch(tmp_path: Path) -> None:
+    package = make_minimal_package(tmp_path)
+    (package / "BUILD.json").write_text(
+        json.dumps({"version": "placeholder", "commit": "0" * 40, "builtAt": "2026-07-16T00:00:00Z"}),
+        encoding="utf-8",
+    )
+
+    issues = verifier.verify_release(
+        package,
+        ROOT / "release-manifest.json",
+        run_gitleaks=False,
+        expected_commit="1" * 40,
+    )
+
+    assert "BUILD.json commit does not match the expected source commit." in issues
 
 
 def test_package_build_preserves_dotted_version_in_zip_name() -> None:

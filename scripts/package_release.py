@@ -8,8 +8,11 @@ verified, and then a cross-platform ZIP is written under dist/.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
+import json
 import re
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -19,6 +22,18 @@ from verify_release import load_manifest, verify_release
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_ROOT = ROOT / "dist"
 DEFAULT_MANIFEST = ROOT / "release-manifest.json"
+RELEASE_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+DEFAULT_VERSION = f"v{RELEASE_VERSION}"
+
+ADDITIONAL_SOURCE_FILES = {
+    "features/common/config_bootstrap.py",
+    "defaults/config/company_aliases.json",
+    "defaults/config/company_master.json",
+    "defaults/config/evidence_sources.yaml",
+    "defaults/config/kospi200_constituents.json",
+    "defaults/config/rss_feeds.yaml",
+    "defaults/config/sp500_constituents.json",
+}
 
 EXCLUDED_DIR_NAMES = {
     "__pycache__",
@@ -57,15 +72,32 @@ def should_skip(path: Path) -> bool:
 
 
 def copy_tree(src: Path, dst: Path, *, dry_run: bool, copied: list[str]) -> None:
-    for item in src.rglob("*"):
+    relative_source = _relative(src)
+    result = subprocess.run(
+        ["git", "ls-files", "-z", "--", relative_source],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"Unable to enumerate tracked package inputs: {relative_source}")
+    source_files = {
+        ROOT / rel.decode("utf-8")
+        for rel in result.stdout.split(b"\0")
+        if rel
+    }
+    source_files.update(
+        ROOT / rel
+        for rel in ADDITIONAL_SOURCE_FILES
+        if rel == relative_source or rel.startswith(f"{relative_source}/")
+    )
+    for item in sorted(source_files):
+        if not item.is_file():
+            raise SystemExit(f"Required tracked package input is missing: {_relative(item)}")
         if should_skip(item):
             continue
         rel = item.relative_to(src)
         target = dst / rel
-        if item.is_dir():
-            if not dry_run:
-                target.mkdir(parents=True, exist_ok=True)
-            continue
         if not dry_run:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target)
@@ -147,7 +179,7 @@ def write_zip(package_dir: Path, package_zip: Path) -> None:
 
 
 def build_package(
-    version: str,
+    version: str | None,
     *,
     output_root: Path = DEFAULT_OUTPUT_ROOT,
     manifest_path: Path = DEFAULT_MANIFEST,
@@ -156,7 +188,7 @@ def build_package(
     skip_gitleaks: bool,
 ) -> tuple[list[str], Path, Path]:
     manifest = load_manifest(manifest_path)
-    safe_version = validate_version(version)
+    safe_version = validate_version(version or DEFAULT_VERSION)
     output_root = validate_output_root(output_root)
     package_dir = output_root / f"{manifest['packageName']}-{safe_version}"
     package_zip = package_dir.parent / f"{package_dir.name}.zip"
@@ -172,9 +204,32 @@ def build_package(
 
     _copy_manifest_entries(manifest, package_dir, dry_run=dry_run, copied=copied)
     if not dry_run:
+        commit_result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+            encoding="ascii",
+            capture_output=True,
+            check=False,
+        )
+        commit = commit_result.stdout.strip().lower()
+        if commit_result.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", commit):
+            raise SystemExit("Unable to derive the full release commit.")
+        built_at = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        build = {"version": RELEASE_VERSION, "commit": commit, "builtAt": built_at}
+        (package_dir / "BUILD.json").write_text(
+            json.dumps(build, ensure_ascii=False, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        copied.append("BUILD.json")
         shutil.copy2(manifest_path, package_dir / "release-manifest.json")
         copied.append("release-manifest.json")
-        issues = verify_release(package_dir, manifest_path, run_gitleaks=not skip_gitleaks)
+        issues = verify_release(
+            package_dir,
+            manifest_path,
+            run_gitleaks=not skip_gitleaks,
+            expected_commit=commit,
+        )
         if issues:
             for issue in issues:
                 print(issue)
@@ -185,8 +240,8 @@ def build_package(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Package Folio OS 0.1 runtime files.")
-    parser.add_argument("--version", required=True, help="Package version suffix, e.g. v0.1.0.")
+    parser = argparse.ArgumentParser(description="Package Folio OS runtime files from tracked inputs.")
+    parser.add_argument("--version", default=DEFAULT_VERSION, help=f"Package version suffix (default: {DEFAULT_VERSION}).")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_ROOT, help="Output root under dist/.")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST, help="Release manifest path.")
     parser.add_argument("--dry-run", action="store_true", help="Print what would be packaged without writing files.")

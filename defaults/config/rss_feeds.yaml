@@ -1,0 +1,257 @@
+feeds:
+  - media: "Bloomberg"
+    url: "https://rss.app/feeds/_t07deORnyZW90CjC.xml"
+    category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Dow Jones"
+    url: "https://rss.app/feeds/_m6HwVpkVbkV6H1V6.xml"
+    category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "CNBC"
+    url: "https://www.cnbc.com/id/10001147/device/rss/rss.html"
+    category: "business"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "CNBC"
+    url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"
+    category: "top"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "CNBC"
+    url: "https://www.cnbc.com/id/10000664/device/rss/rss.html"
+    category: "finance"
+    enabled: true
+    priority: 3
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "CNBC"
+    url: "https://www.cnbc.com/id/20910258/device/rss/rss.html"
+    category: "economy"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "CNBC"
+    url: "https://www.cnbc.com/id/15839069/device/rss/rss.html"
+    category: "investing"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "MarketWatch"
+    url: "https://feeds.marketwatch.com/marketwatch/topstories/"
+    category: "markets"
+    enabled: true
+    priority: 3
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "MarketWatch"
+    url: "https://feeds.marketwatch.com/marketwatch/marketpulse/"
+    category: "markets"
+    enabled: true
+    priority: 3
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "top"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fmarkets%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "markets"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fbusiness%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "business"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fworld%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "world"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Ftechnology%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "technology"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "WSJ"
+    url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
+    category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "WSJ"
+    url: "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml"
+    category: "business"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "WSJ"
+    url: "https://feeds.a.dj.com/rss/RSSWSJD.xml"
+    category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Financial Times"
+    url: "https://www.ft.com/markets?format=rss"
+    category: "markets"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Financial Times"
+    url: "https://www.ft.com/companies?format=rss"
+    category: "companies"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Financial Times"
+    url: "https://www.ft.com/global-economy?format=rss"
+    category: "macro"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Financial Times"
+    url: "https://www.ft.com/technology?format=rss"
+    category: "technology"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "한국경제"
+    url: "https://www.hankyung.com/feed/finance"
+    category: "kr_markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "한국경제"
+    url: "https://www.hankyung.com/feed/economy"
+    category: "kr_macro"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "연합뉴스"
+    url: "https://www.yna.co.kr/rss/market.xml"
+    category: "kr_markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "연합뉴스"
+    url: "https://www.yna.co.kr/rss/economy.xml"
+    category: "kr_economy"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "매일경제"
+    url: "https://www.mk.co.kr/rss/50200011/"
+    category: "kr_markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "매일경제"
+    url: "https://www.mk.co.kr/rss/30100041/"
+    category: "kr_economy"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "연합인포맥스"
+    url: "https://news.einfomax.co.kr/rss/S1N2.xml"
+    category: "kr_markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "연합인포맥스"
+    url: "https://news.einfomax.co.kr/rss/S1N7.xml"
+    category: "kr_companies"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "연합인포맥스"
+    url: "https://news.einfomax.co.kr/rss/S1N16.xml"
+    category: "kr_rates_fx"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "KR"
+  - media: "연합인포맥스"
+    url: "https://news.einfomax.co.kr/rss/S1N21.xml"
+    category: "global_equities"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "연합인포맥스"
+    url: "https://news.einfomax.co.kr/rss/S1N23.xml"
+    category: "global_news"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
