@@ -54,7 +54,11 @@ def test_proposal_apply_updates_markdown_and_preserves_other_fields(monkeypatch,
     assert result["status"] == "applied"
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert "## Bear case" in saved["markdown"]
-    assert saved["personalOverlay"] == {"keep": True}
+    assert saved["personalOverlay"] == {
+        "keep": True,
+        "stale": True,
+        "staleReason": "canonical_revision_changed",
+    }
     assert saved["agentRevisions"][0]["proposalId"] == proposal["id"]
 
 
@@ -81,10 +85,11 @@ def test_proposal_apply_rejects_when_report_changed(monkeypatch, tmp_path):
 
 def test_reject_proposal(monkeypatch, tmp_path):
     _patch_dirs(monkeypatch, tmp_path)
-    _write_briefing(tmp_path)
+    path = _write_briefing(tmp_path)
+    current = json.loads(path.read_text(encoding="utf-8"))["markdown"]
     proposal = chat.create_revision_proposal(
         kind="briefing", report_id="2026-07-02", market_scope="us",
-        message="m", summary="s", revised_markdown="new", current_markdown="old",
+        message="m", summary="s", revised_markdown=current + "\nnew", current_markdown=current,
     )
     result = chat.reject_proposal(proposal["id"])
     assert result["status"] == "rejected"

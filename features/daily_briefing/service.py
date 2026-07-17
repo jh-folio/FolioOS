@@ -1485,19 +1485,21 @@ def delete_briefing(date, market=None):
     report and sidecars.  Without market, the endpoint keeps legacy date-wide
     behavior and removes all reports/sidecars for the date.
     """
+    from features.agent_mode.report_delete import DeleteRequest, execute_report_delete
     from features.daily_briefing.archive import refresh_briefing_archive
 
     date_text = _valid_briefing_date(date)
     market_text = str(market or "").strip().lower()
     if market_text and market_text not in {"us", "kr"}:
         raise ValueError("market must be us or kr")
-    removed = []
     if market_text:
         targets = (
             BRIEFINGS_DIR / briefing_file_name(date_text, market_text),
             BRIEFINGS_DIR / visual_sidecar_file_name(date_text, market_text),
             BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date_text, market_text),
+            BRIEFINGS_DIR / briefing_link_file_name(date_text),
         )
+        primary_names = (briefing_file_name(date_text, market_text),)
     else:
         targets = (
             BRIEFINGS_DIR / briefing_file_name(date_text),
@@ -1511,17 +1513,24 @@ def delete_briefing(date, market=None):
             BRIEFINGS_DIR / visual_sidecar_file_name(date_text, "kr"),
             BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date_text, "kr"),
         )
-    for path in targets:
-        if path.exists():
-            path.unlink()
-            removed.append(path.name)
-    if not removed:
+        primary_names = (
+            briefing_file_name(date_text),
+            briefing_file_name(date_text, "us"),
+            briefing_file_name(date_text, "kr"),
+        )
+    outcome = execute_report_delete(DeleteRequest(
+        root=BRIEFINGS_DIR,
+        identity=f"briefing:{date_text}:{market_text or 'both'}",
+        primary_names=primary_names,
+        target_names=tuple(path.name for path in targets),
+        refresh=refresh_briefing_archive,
+    ))
+    if not outcome.deleted:
         result = {"deleted": False, "date": date_text, "removedFiles": []}
         if market_text:
             result["market"] = market_text
         return result
-    refresh_briefing_archive()
-    result = {"deleted": True, "date": date_text, "removedFiles": removed}
+    result = {"deleted": True, "date": date_text, "removedFiles": list(outcome.removed_names)}
     if market_text:
         result["market"] = market_text
     return result

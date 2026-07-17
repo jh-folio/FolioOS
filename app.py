@@ -28,8 +28,16 @@ from features.agent_mode.bridge import (
     cancel_agent_task,
     submit_agent_task,
 )
-from features.agent_mode.chat import apply_proposal, reject_proposal, submit_agent_chat
+from features.agent_mode.chat import (
+    ProposalActionError,
+    apply_proposal,
+    get_proposal,
+    recover_proposals,
+    reject_proposal,
+    submit_agent_chat,
+)
 from features.agent_mode.companion import agent_companion_reply
+from features.agent_mode.proposal_schema import ProposalAction, ProposalActionRequest
 from features.agent_mode.generation_mode import (
     llm_override_for_mode,
 )
@@ -158,7 +166,7 @@ from features.daily_briefing.builder import (
     cached_korea_market_data as feature_cached_korea_market_data,
     cached_market_snapshot as feature_cached_market_snapshot,
 )
-from features.daily_briefing.archive import query_briefing_archive
+from features.daily_briefing.archive import query_briefing_archive, refresh_briefing_archive
 from features.daily_briefing.schema import briefing_scope_view
 from features.daily_briefing.visuals import load_current_visuals, load_visual_sidecar
 from features.company_analysis.report_rules import build_rule_report
@@ -278,6 +286,12 @@ def ensure_dirs():
         INBOX_DIR / "articles", INBOX_DIR / "links",
     ]:
         p.mkdir(parents=True, exist_ok=True)
+    from features.agent_mode.report_delete import recover_report_deletes
+
+    recover_report_deletes(BRIEFINGS_DIR, refresh=refresh_briefing_archive)
+    recover_report_deletes(ANALYSIS_REPORTS_DIR)
+    recover_report_deletes(TOPIC_REPORTS_DIR)
+    recover_proposals()
     ensure_company_files()
 
 
@@ -712,7 +726,10 @@ def api_run_thesis_delta(ticker: str, body: dict | None = Body(default=None)):
 
 @fastapi_app.delete("/api/analysis-reports/{report_id}")
 def api_delete_analysis_report(report_id: str):
-    result = delete_analysis_report(report_id)
+    try:
+        result = delete_analysis_report(report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Analysis report not found")
     return result
@@ -1256,17 +1273,25 @@ def api_agent_chat(body: dict | None = Body(default=None)):
     return submit_agent_chat(body.get("message", ""), body.get("context") or {}, body.get("options") or {})
 
 
-@fastapi_app.post("/api/agent/proposals/{proposal_id}")
-def api_agent_proposal_action(proposal_id: str, body: dict | None = Body(default=None)):
-    action = str((body or {}).get("action") or "").strip()
+@fastapi_app.get("/api/agent/proposals/{proposal_id}")
+def api_agent_proposal(proposal_id: str):
     try:
-        if action == "approve":
+        proposal = get_proposal(proposal_id)
+    except ProposalActionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+    if proposal is None:
+        raise HTTPException(status_code=404, detail={"code": "proposal_not_found"})
+    return proposal
+
+
+@fastapi_app.post("/api/agent/proposals/{proposal_id}")
+def api_agent_proposal_action(proposal_id: str, body: ProposalActionRequest):
+    try:
+        if body.action == ProposalAction.APPROVE:
             return apply_proposal(proposal_id)
-        if action == "reject":
-            return reject_proposal(proposal_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
+        return reject_proposal(proposal_id)
+    except ProposalActionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
 
 
 @fastapi_app.get("/api/agent-bridge/settings")
@@ -1605,7 +1630,10 @@ def api_topic_report_personal_overlay(report_id: str, body: dict | None = Body(d
 
 @fastapi_app.delete("/api/topic-reports/{report_id}")
 def api_delete_topic_report(report_id: str):
-    result = delete_topic_report(report_id)
+    try:
+        result = delete_topic_report(report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Topic report not found")
     return result

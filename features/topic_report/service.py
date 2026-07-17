@@ -8,6 +8,15 @@ import re
 from pathlib import Path
 
 from features.common.utils import kst_date, now_iso
+from features.common.canonical_identity import (
+    CanonicalIdentityError,
+    CanonicalNotFoundError,
+    ReportKind,
+    resolve_exact_report_path,
+)
+from features.common.canonical_report_state import load_report
+from features.common.canonical_report_types import WriteKind
+from features.common.canonical_reports import commit_sync, prepare
 from features.common.market_data.tape import build_market_tape
 from features.common.research_schema.checkpoints import checkpoints_from_markdown
 from features.common.research_schema.data_gaps import data_gaps_from_messages
@@ -632,16 +641,17 @@ def save_topic_report(report: dict) -> dict:
             if isinstance(item, dict) and not item.get("artifactId"):
                 item["artifactId"] = report_id
     path = _reports_dir() / filename
-    # 덮어쓰기 시 기존 personalOverlay는 보존한다(개인 해석 유실 방지).
-    if saved.get("personalOverlay") is None and path.exists():
-        try:
-            existing = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(existing, dict) and existing.get("personalOverlay"):
-                saved["personalOverlay"] = existing["personalOverlay"]
-        except Exception:
-            pass
-    path.write_text(json.dumps(saved, ensure_ascii=False, indent=2), encoding="utf-8")
-    return saved
+    prepared = prepare(
+        report_kind=ReportKind.TOPIC_REPORT,
+        exact_path=path,
+        write_kind=WriteKind.CANONICAL,
+        candidate=saved,
+    )
+    commit_sync(prepared)
+    committed = load_report(path)
+    if committed is None:
+        raise RuntimeError("canonical topic report commit did not persist the report")
+    return committed
 
 
 def list_topic_reports() -> list:
@@ -669,12 +679,11 @@ def list_topic_reports() -> list:
 
 def _find_report_path(report_id: str) -> Path | None:
     try:
-        for p in _reports_dir().glob("*.json"):
-            if report_id in p.stem:
-                return p
-    except Exception:
-        pass
-    return None
+        return resolve_exact_report_path(REPORTS_DIR.parent, ReportKind.TOPIC_REPORT, report_id)
+    except CanonicalNotFoundError:
+        return None
+    except CanonicalIdentityError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def get_topic_report(report_id: str) -> dict | None:
@@ -688,14 +697,27 @@ def get_topic_report(report_id: str) -> dict | None:
 
 
 def delete_topic_report(report_id: str) -> dict:
-    path = _find_report_path(report_id)
-    if path:
-        try:
-            path.unlink()
-            return {"deleted": True, "id": report_id}
-        except Exception:
-            pass
-    return {"deleted": False, "id": report_id}
+    from features.agent_mode.report_delete import DeleteRequest, execute_report_delete
+    from features.common.canonical_reports import (
+        CanonicalIdentityError,
+        CanonicalNotFoundError,
+        ReportKind,
+        resolve_exact_report_path,
+    )
+
+    try:
+        path = resolve_exact_report_path(REPORTS_DIR.parent, ReportKind.TOPIC_REPORT, report_id)
+    except CanonicalNotFoundError:
+        return {"deleted": False, "id": report_id}
+    except CanonicalIdentityError as exc:
+        raise ValueError(str(exc)) from exc
+    outcome = execute_report_delete(DeleteRequest(
+        root=REPORTS_DIR,
+        identity=f"topic:{report_id}",
+        primary_names=(path.name,),
+        target_names=(path.name,),
+    ))
+    return {"deleted": outcome.deleted, "id": report_id}
 
 
 def preset_topics_list() -> list:

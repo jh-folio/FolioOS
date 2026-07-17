@@ -9,12 +9,11 @@
 from __future__ import annotations
 
 import difflib
-import hashlib
 import json
 import re
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import assert_never
 
 from features.agent_mode import bridge
 from features.agent_mode.companion import (
@@ -28,8 +27,23 @@ from features.agent_mode.market_state_context import (
     project_market_state,
     render_market_state_projection,
 )
+from features.agent_mode.proposal_schema import ProposalAction
+from features.agent_mode.proposal_service import (
+    ProposalActionError,
+    ProposalPaths,
+    act_on_proposal,
+    create_proposal,
+    get_proposal as get_stored_proposal,
+    recover_all,
+)
+from features.common.canonical_reports import (
+    CanonicalIdentityError,
+    CanonicalNotFoundError,
+    ReportKind,
+    resolve_exact_report_path,
+)
 from features.common.jobs import submit_job
-from features.common.utils import now_iso, read_json, write_json
+from features.common.utils import read_json
 from features.market_memory.market_state_ref import MarketStateRefQuery
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +58,7 @@ RESEARCH_INDEX_PATH = DATA_DIR / "research-index.sqlite3"
 REVISABLE_KINDS = {"briefing", "company_analysis", "topic_report"}
 MAX_REPORT_PROMPT_CHARS = 24_000
 MAX_DIFF_LINES = 400
+PROPOSAL_PHASE_HOOK = lambda _phase: None
 
 EFFORT_HINTS = {
     "low": "간결하게 핵심만 3~5문장으로 답한다.",
@@ -53,45 +68,27 @@ EFFORT_HINTS = {
 }
 
 
-def _markdown_hash(markdown: str) -> str:
-    return hashlib.sha256(str(markdown or "").encode("utf-8")).hexdigest()[:16]
-
-
-def _safe_report_id(report_id: str) -> str:
-    return re.sub(r"[^a-zA-Z0-9._:-]", "", str(report_id or ""))[:120]
-
-
 def resolve_artifact_path(kind: str, report_id: str, market_scope: str = "") -> Path | None:
     """대화 컨텍스트의 보고서를 저장 파일로 매핑한다. 못 찾으면 None."""
-    report_id = _safe_report_id(report_id)
-    if not report_id:
+    try:
+        report_kind = ReportKind(kind)
+    except ValueError:
         return None
-    if kind == "briefing":
-        scope = str(market_scope or "").strip().lower()
-        candidates = []
-        if scope in {"us", "kr"}:
-            candidates.append(BRIEFINGS_DIR / f"{report_id}.{scope}.json")
-        # 종합(both)·레거시는 단일 {date}.json만 수정 대상으로 삼는다.
-        candidates.append(BRIEFINGS_DIR / f"{report_id}.json")
-        for path in candidates:
-            if path.exists():
-                return path
+    match report_kind:
+        case ReportKind.BRIEFING:
+            data_root = BRIEFINGS_DIR.parent
+        case ReportKind.COMPANY_ANALYSIS:
+            data_root = ANALYSIS_DIR.parent
+        case ReportKind.TOPIC_REPORT:
+            data_root = TOPIC_DIR.parent
+        case unreachable:
+            assert_never(unreachable)
+    scope = str(market_scope or "").strip().lower()
+    exact_scope = scope if report_kind == ReportKind.BRIEFING and scope in {"us", "kr"} else None
+    try:
+        return resolve_exact_report_path(data_root, report_kind, str(report_id or ""), exact_scope)
+    except (CanonicalIdentityError, CanonicalNotFoundError):
         return None
-    if kind == "company_analysis":
-        path = ANALYSIS_DIR / f"{report_id}.json"
-        return path if path.exists() else None
-    if kind == "topic_report":
-        path = TOPIC_DIR / f"{report_id}.json"
-        if path.exists():
-            return path
-        try:
-            for candidate in TOPIC_DIR.glob("*.json"):
-                if report_id in candidate.stem:
-                    return candidate
-        except Exception:
-            pass
-        return None
-    return None
 
 
 def load_artifact(kind: str, report_id: str, market_scope: str = "") -> tuple[Path | None, dict | None]:
@@ -185,93 +182,52 @@ def _unified_diff(before: str, after: str) -> str:
     return "\n".join(lines)
 
 
-def save_proposal(record: dict) -> dict:
-    PROPOSALS_DIR.mkdir(parents=True, exist_ok=True)
-    write_json(PROPOSALS_DIR / f"{record['id']}.json", record)
-    return record
+def _proposal_paths() -> ProposalPaths:
+    return ProposalPaths(PROPOSALS_DIR, PROPOSALS_DIR.parent)
 
 
 def get_proposal(proposal_id: str) -> dict | None:
-    safe = re.sub(r"[^a-zA-Z0-9-]", "", str(proposal_id or ""))
-    if not safe:
-        return None
-    return read_json(PROPOSALS_DIR / f"{safe}.json", None)
+    proposal = get_stored_proposal(_proposal_paths(), str(proposal_id or ""), PROPOSAL_PHASE_HOOK)
+    return proposal.model_dump(mode="json", exclude_none=True) if proposal is not None else None
 
 
 def create_revision_proposal(*, kind: str, report_id: str, market_scope: str, message: str,
                              summary: str, revised_markdown: str, current_markdown: str,
                              adapter: str = "", model: str = "") -> dict:
     diff = _unified_diff(current_markdown, revised_markdown)
-    record = {
-        "id": uuid.uuid4().hex[:12],
-        "status": "pending",
-        "createdAt": now_iso(),
-        "artifactKind": kind,
-        "artifactId": report_id,
-        "marketScope": market_scope,
-        "request": str(message or "")[:2000],
-        "summary": str(summary or "")[:1000],
-        "adapter": adapter,
-        "model": model,
-        # 승인 시점에 저장본이 그 사이 바뀌었으면 적용을 거부하기 위한 기준 해시
-        "baseMarkdownHash": _markdown_hash(current_markdown),
-        "revisedMarkdown": revised_markdown,
-        "diff": diff,
-    }
-    return save_proposal(record)
+    proposal = create_proposal(
+        _proposal_paths(),
+        kind=kind,
+        report_id=report_id,
+        market_scope=market_scope,
+        message=message,
+        summary=summary,
+        revised_markdown=revised_markdown,
+        current_markdown=current_markdown,
+        diff=diff,
+        adapter=adapter,
+        model=model,
+    )
+    projected = proposal.model_dump(mode="json", exclude_none=True)
+    projected["artifactKind"] = projected["reportKind"]
+    projected["artifactId"] = projected["reportId"]
+    return projected
 
 
 def apply_proposal(proposal_id: str) -> dict:
-    record = get_proposal(proposal_id)
-    if not record:
-        raise ValueError("제안을 찾을 수 없습니다.")
-    if record.get("status") != "pending":
-        raise ValueError(f"이미 처리된 제안입니다({record.get('status')}).")
-    path, data = load_artifact(record.get("artifactKind", ""), record.get("artifactId", ""), record.get("marketScope", ""))
-    if not path or not data:
-        raise ValueError("대상 보고서를 찾을 수 없습니다. 삭제되었을 수 있습니다.")
-    if _markdown_hash(data.get("markdown", "")) != record.get("baseMarkdownHash"):
-        record["status"] = "stale"
-        save_proposal(record)
-        raise ValueError("제안 생성 이후 보고서가 변경되어 적용할 수 없습니다. 다시 요청해 주세요.")
-    # Canonical markdown 교체는 사용자 승인 시점에만 일어난다. 다른 필드(personalOverlay 등)는 보존.
-    data["markdown"] = record.get("revisedMarkdown", "")
-    revisions = data.get("agentRevisions")
-    if not isinstance(revisions, list):
-        revisions = []
-    revisions.append({
-        "at": now_iso(),
-        "proposalId": record["id"],
-        "summary": record.get("summary", ""),
-        "request": record.get("request", "")[:300],
-        "adapter": record.get("adapter", ""),
-        "model": record.get("model", ""),
-    })
-    data["agentRevisions"] = revisions
-    write_json(path, data)
-    record["status"] = "applied"
-    record["appliedAt"] = now_iso()
-    save_proposal(record)
-    return {
-        "ok": True,
-        "status": "applied",
-        "proposalId": record["id"],
-        "artifactKind": record.get("artifactKind", ""),
-        "artifactId": record.get("artifactId", ""),
-        "marketScope": record.get("marketScope", ""),
-        "summary": record.get("summary", ""),
-    }
+    result = act_on_proposal(_proposal_paths(), proposal_id, ProposalAction.APPROVE, PROPOSAL_PHASE_HOOK)
+    result["ok"] = True
+    return result
 
 
 def reject_proposal(proposal_id: str) -> dict:
-    record = get_proposal(proposal_id)
-    if not record:
-        raise ValueError("제안을 찾을 수 없습니다.")
-    if record.get("status") == "pending":
-        record["status"] = "rejected"
-        record["rejectedAt"] = now_iso()
-        save_proposal(record)
-    return {"ok": True, "status": record.get("status"), "proposalId": record.get("id", "")}
+    result = act_on_proposal(_proposal_paths(), proposal_id, ProposalAction.REJECT, PROPOSAL_PHASE_HOOK)
+    result["ok"] = True
+    return result
+
+
+def recover_proposals() -> int:
+    return recover_all(_proposal_paths(), PROPOSAL_PHASE_HOOK)
 
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
