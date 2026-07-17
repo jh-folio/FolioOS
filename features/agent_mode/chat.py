@@ -13,6 +13,7 @@ import hashlib
 import json
 import re
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from features.agent_mode import bridge
@@ -22,9 +23,14 @@ from features.agent_mode.companion import (
     normalize_agent_context,
     normalize_agent_options,
 )
+from features.agent_mode.market_state_context import (
+    MarketStateSelection,
+    project_market_state,
+    render_market_state_projection,
+)
 from features.common.jobs import submit_job
 from features.common.utils import now_iso, read_json, write_json
-from features.market_memory.snapshot import render_market_memory_context
+from features.market_memory.market_state_ref import MarketStateRefQuery
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
@@ -33,6 +39,7 @@ BRIEFINGS_DIR = DATA_DIR / "briefings"
 ANALYSIS_DIR = DATA_DIR / "company-analysis"
 TOPIC_DIR = DATA_DIR / "topic-reports"
 MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
+RESEARCH_INDEX_PATH = DATA_DIR / "research-index.sqlite3"
 
 REVISABLE_KINDS = {"briefing", "company_analysis", "topic_report"}
 MAX_REPORT_PROMPT_CHARS = 24_000
@@ -128,7 +135,12 @@ def _context_block(context: dict, markdown: str) -> str:
 def build_chat_prompt(message: str, context: dict, options: dict, markdown: str = "") -> str:
     effort = EFFORT_HINTS.get(options.get("effort", "medium"), EFFORT_HINTS["medium"])
     attachments = _attachment_block(options)
-    market_memory = render_market_memory_context(MARKET_MEMORY_DB_PATH)
+    raw_scope = str(context.get("marketScope") or "").strip().upper()
+    regions = ("US", "KR") if raw_scope == "BOTH" else ((raw_scope,) if raw_scope in {"US", "KR"} else ())
+    market_memory = render_market_state_projection(project_market_state(
+        MarketStateSelection("include_current", "AUTO", regions),
+        MarketStateRefQuery(MARKET_MEMORY_DB_PATH, RESEARCH_INDEX_PATH, "GLOBAL", datetime.now(timezone.utc)),
+    ))
     return "\n\n".join(filter(None, [
         "You are the Folio OS in-app research assistant. Folio OS is a local investment research workspace. Answer in Korean, in Markdown.",
         f"응답 지침: {effort}",

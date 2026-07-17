@@ -30,6 +30,7 @@ from qa_dev_surface_support import (
     wait_ready,
 )
 from qa_smart_collections import run as run_smart_collections
+from qa_market_state import run as run_market_state
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +47,8 @@ def write_json(path: Path, payload: JsonValue) -> None:
 def run_scenario(config: RunConfig) -> int:
     if config.scenario == "smart-collections":
         return run_smart_collections(config.sourceRoot, config.attemptDir)
+    if config.scenario == "market-state":
+        return run_market_state(config.sourceRoot, config.attemptDir)
     attempt = config.attemptDir.resolve()
     attempt.mkdir(parents=True, exist_ok=True)
     runtime = attempt / ".runtime"
@@ -209,7 +212,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="qa_dev_surface.py")
     commands = result.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run")
-    run.add_argument("--scenario", choices=["approved-request", "smart-collections"], required=True)
+    run.add_argument("--scenario", choices=["approved-request", "smart-collections", "market-state"], required=True)
     run.add_argument("--source-root", type=Path, required=True)
     run.add_argument("--attempt-dir", type=Path, required=True)
     server = commands.add_parser("serve")

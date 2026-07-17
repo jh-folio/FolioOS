@@ -23,6 +23,7 @@ from features.common.jcs import JsonValue
 from features.topic_report.routes import ApprovedRequestBoundary
 from features.smart_collections.routes import SmartCollectionBoundary
 from features.smart_collections.service import SmartCollectionRuntime, SmartCollectionService
+from qa_market_state_server import create_qa_market_state_router
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +50,10 @@ class QaFailure(Exception):
 
 
 def json_dict(raw: bytes) -> dict[str, JsonValue]:
-    payload = json.loads(raw)
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {"error": raw.decode("utf-8", errors="replace")}
     if not isinstance(payload, dict):
         raise QaFailure("non_object_response")
     return payload
@@ -184,6 +188,7 @@ def serve(data_dir: Path, clock_file: Path, port: int) -> int:
     boundary = ApprovedRequestBoundary(data_dir, clock=clock, collection_service=collections)
     app.include_router(boundary.router())
     app.include_router(SmartCollectionBoundary(collections).router())
+    app.include_router(create_qa_market_state_router(data_dir, clock))
     app.add_api_route("/health", lambda: {"ok": True}, methods=["GET"])
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
     return 0

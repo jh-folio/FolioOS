@@ -8,6 +8,7 @@ from features.common.utils import now_iso
 from features.common.market_calendar import infer_doc_markets
 from features.market_memory.digest import build_rss_digest
 from features.market_memory.market_context import build_market_macro_context
+from features.market_memory.market_state_ref import capture_input_watermarks
 from features.market_memory.memory import connect, init_db, list_states
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -426,6 +427,11 @@ def validate_market_state_snapshot(payload: dict, context: dict | None = None) -
         "confidence": _confidence(payload.get("confidence")),
         "freshness": _text(payload.get("freshness"), 120) or "latest_available",
     }
+    snapshot.update({
+        key: payload[key] if key in payload else context[key]
+        for key in ("inputWatermarks", "updateAttemptRef")
+        if key in payload or isinstance(context, dict) and key in context
+    })
     snapshot["marketViews"] = _market_views(payload, snapshot, source_lookup)
     return snapshot
 
@@ -613,6 +619,7 @@ def build_market_state_context(
         "macroSnapshot": macro_context.get("macroSnapshot") or {},
         "existingStates": [_compact_state(state) for state in (states or [])[:12]],
         "sourceRefs": source_refs,
+        "inputWatermarks": capture_input_watermarks(Path(db_path).parent / "research-index.sqlite3"),
     }
 
 

@@ -27,7 +27,6 @@ from features.agent_mode.bridge import (
     bridge_status,
     cancel_agent_task,
     submit_agent_task,
-    submit_market_memory_update,
 )
 from features.agent_mode.chat import apply_proposal, reject_proposal, submit_agent_chat
 from features.agent_mode.companion import agent_companion_reply
@@ -70,10 +69,9 @@ from features.common.research_library.search.service import (
 from features.llm_settings.settings_service import public_settings, save_settings
 from features.llm_settings.provider_status import check_provider as check_llm_api_provider
 from features.company_analysis.cache_cleanup import cache_stats, cleanup_cache
-from features.market_memory.service import run_llm_market_memory, run_llm_market_state_snapshot, schedule_startup_regime_refresh
+from features.market_memory.service import run_llm_market_memory, schedule_startup_regime_refresh
 from features.market_memory.digest import run_rss_market_memory_update
-from features.market_memory.state_dashboard import market_state_dashboard_payload
-from features.market_memory.snapshot import current_market_state_snapshot
+from features.market_memory.routes import create_market_state_router
 from features.market_widgets.service import (
     get_market_widget_settings,
     save_market_widget_settings,
@@ -362,6 +360,7 @@ TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(
 )
 fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
 fastapi_app.include_router(SmartCollectionBoundary(SMART_COLLECTION_SERVICE).router())
+fastapi_app.include_router(create_market_state_router(DATA_DIR))
 
 
 @fastapi_app.exception_handler(Exception)
@@ -1384,68 +1383,10 @@ def api_run_llm_market_memory(body: dict | None = Body(default=None)):
     return run_llm_market_memory(body.get("date") or kst_date())
 
 
-@fastapi_app.post("/api/memory/update")
-def api_update_market_memory(body: dict | None = Body(default=None)):
-    body = body or {}
-    date = body.get("date") or kst_date()
-    generation_mode = request_generation_mode(body)
-    if generation_mode == "llm_cli":
-        return submit_market_memory_update({
-            "date": date,
-        }, adapter=body.get("agentAdapter", ""))
-    if generation_mode == "rules":
-        return {
-            "ok": False,
-            "status": "rules_unavailable",
-            "message": "시장 메모리 업데이트는 화면용 시장 상태 스냅샷 생성을 위해 AI Agent 또는 LLM API가 필요합니다.",
-        }
-    memory = run_llm_market_memory(date)
-    snapshot = run_llm_market_state_snapshot(date)
-    return {
-        "ok": bool(memory.get("ok", True) and snapshot.get("ok", True)),
-        "status": "ok",
-        "message": "시장 메모리와 화면용 시장 상태 스냅샷을 모두 업데이트했습니다.",
-        "memory": memory,
-        "snapshot": snapshot,
-        "savedCount": len(memory.get("saved") or []),
-        "snapshotId": (snapshot.get("snapshot") or {}).get("id", ""),
-        "title": (snapshot.get("snapshot") or {}).get("headline", ""),
-        "date": date,
-    }
-
-
 @fastapi_app.post("/api/memory/rss-digest")
 def api_memory_rss_digest(body: dict | None = Body(default=None)):
     body = body or {}
     return run_rss_market_memory_update(date=body.get("date", ""))
-
-
-@fastapi_app.post("/api/memory/state-snapshot")
-def api_run_market_state_snapshot(body: dict | None = Body(default=None)):
-    body = body or {}
-    generation_mode = request_generation_mode(body)
-    if generation_mode == "llm_cli":
-        return submit_agent_task("market_state_snapshot", {
-            "date": body.get("date") or kst_date(),
-        }, adapter=body.get("agentAdapter", ""))
-    if generation_mode == "rules":
-        return {
-            "ok": False,
-            "status": "rules_unavailable",
-            "message": "시장 상태 스냅샷은 AI Agent 또는 LLM API가 활성화되어 있을 때 생성할 수 있습니다.",
-        }
-    return run_llm_market_state_snapshot(body.get("date") or kst_date())
-
-
-@fastapi_app.get("/api/memory/state-snapshot")
-def api_current_market_state_snapshot():
-    snapshot = current_market_state_snapshot(MARKET_MEMORY_DB_PATH)
-    return {"ok": bool(snapshot), "snapshot": snapshot}
-
-
-@fastapi_app.get("/api/memory/state-dashboard")
-def api_market_state_dashboard(limit: int = 5):
-    return market_state_dashboard_payload(MARKET_MEMORY_DB_PATH, limit=limit)
 
 
 @fastapi_app.get("/api/memory/states")

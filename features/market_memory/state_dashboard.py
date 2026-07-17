@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
+from features.market_memory.market_state_ref import MarketStateRefQuery, resolve_market_state_ref
 from features.market_memory.memory import connect, init_db, list_states
 from features.market_memory.snapshot import current_market_state_snapshot
 
@@ -462,9 +464,20 @@ def dashboard_payload_from_snapshot(snapshot: dict) -> dict:
     return payload
 
 
-def market_state_dashboard_payload(db_path: str | Path = MARKET_MEMORY_DB_PATH, *, limit: int = 5) -> dict:
+def market_state_dashboard_payload(
+    db_path: str | Path = MARKET_MEMORY_DB_PATH,
+    *,
+    limit: int = 5,
+    ref_query: MarketStateRefQuery | None = None,
+) -> dict:
     snapshot = current_market_state_snapshot(db_path)
     if snapshot:
-        return _attach_freshness(dashboard_payload_from_snapshot(snapshot), db_path)
-    states = list_states(db_path, status="current", limit=30)
-    return _attach_freshness(summarize_market_state(states, limit=limit), db_path)
+        payload = dashboard_payload_from_snapshot(snapshot)
+    else:
+        states = list_states(db_path, status="current", limit=30)
+        payload = summarize_market_state(states, limit=limit)
+    query = ref_query or MarketStateRefQuery(
+        Path(db_path), Path(db_path).parent / "research-index.sqlite3", "GLOBAL", datetime.now(timezone.utc),
+    )
+    payload["marketStateRef"] = resolve_market_state_ref(query)
+    return _attach_freshness(payload, db_path)
