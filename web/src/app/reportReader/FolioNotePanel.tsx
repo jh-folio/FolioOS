@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getJson, postJson } from "../../api";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../../api";
 import { ReportBody } from "./ReportBody";
 
 type NoteTab = "chat" | "links";
@@ -34,7 +34,7 @@ type AgentResult = {
 
 type AgentJob = {
   id: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: AgentResult;
@@ -84,7 +84,7 @@ function sleep(ms: number) {
 
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }

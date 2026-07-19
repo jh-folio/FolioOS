@@ -17,15 +17,14 @@ from fastapi.staticfiles import StaticFiles
 
 from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.common.jobs import (
-    get_job,
     load_jobs,
-    recent_jobs,
     submit_job,
 )
+from features.common.jobs_routes import router as jobs_router
+from features.agent_mode.work_log_routes import router as work_log_router
 from features.agent_mode.bridge import (
     agent_preflight,
     bridge_status,
-    cancel_agent_task,
     submit_agent_task,
 )
 from features.agent_mode.chat import (
@@ -214,13 +213,13 @@ from features.topic_report.service import (
     attach_overlay_to_topic_report,
     delete_topic_report,
     evaluate_topic_report,
-    generate_topic_report,
     get_topic_report,
     list_topic_reports,
     preset_topics_list,
     save_topic_report,
 )
 from features.topic_report.routes import ApprovedRequestBoundary
+from features.topic_report.job_service import run_topic_report_job
 from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
@@ -375,6 +374,8 @@ TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(
 fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
 fastapi_app.include_router(SmartCollectionBoundary(SMART_COLLECTION_SERVICE).router())
 fastapi_app.include_router(create_market_state_router(DATA_DIR))
+fastapi_app.include_router(jobs_router)
+fastapi_app.include_router(work_log_router)
 
 
 @fastapi_app.exception_handler(Exception)
@@ -1243,11 +1244,6 @@ def api_investment_review_by_date(date: str):
     return get_investment_review(date)
 
 
-@fastapi_app.get("/api/jobs")
-def api_recent_jobs():
-    return recent_jobs()
-
-
 @fastapi_app.get("/api/agent-bridge/status")
 def api_agent_bridge_status(refresh: bool = False):
     return bridge_status(refresh=refresh)
@@ -1323,22 +1319,6 @@ def api_login_agent_cli(adapter: str):
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-
-
-@fastapi_app.post("/api/agent-bridge/jobs/{job_id}/cancel")
-def api_cancel_agent_bridge_job(job_id: str):
-    result = cancel_agent_task(job_id)
-    if not result.get("cancelled") and result.get("error") == "Job not found":
-        raise HTTPException(status_code=404, detail="Job not found")
-    return result
-
-
-@fastapi_app.get("/api/jobs/{job_id}")
-def api_get_job(job_id: str):
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job
 
 
 @fastapi_app.get("/api/index/documents")
@@ -1549,7 +1529,7 @@ def api_generate_topic_report(body: dict | None = Body(default=None)):
     quality_mode = normalize_quality_mode(body.get("qualityMode", "diagnose_only"))
     generation_mode = request_generation_mode(body)
     if generation_mode == "llm_cli":
-        return submit_agent_task("topic_report", {
+        job = submit_agent_task("topic_report", {
             "topic_key": body.get("topicKey", "weekly_market"),
             "custom_label": body.get("customLabel", ""),
             "user_context": body.get("userContext", ""),
@@ -1558,28 +1538,26 @@ def api_generate_topic_report(body: dict | None = Body(default=None)):
             "quality_mode": quality_mode,
             "deep_research": bool(body.get("deepResearch")),
         }, adapter=body.get("agentAdapter", ""))
-    report = generate_topic_report(
-        topic_key=body.get("topicKey", "weekly_market"),
-        custom_label=body.get("customLabel", ""),
-        user_context=body.get("userContext", ""),
-        web_search_override=bool_override(body.get("webSearch")),
-        llm_override=llm_override_for_mode(generation_mode),
-        date=body.get("date", ""),
-        use_planner=body.get("usePlanner", True) is not False,
-        custom_tickers=custom_tickers if isinstance(custom_tickers, dict) else None,
-        quality_mode=quality_mode,
-        deep_research=bool(body.get("deepResearch")),
+        return JSONResponse(status_code=202, content=job)
+    job = submit_job(
+        "topic_report",
+        "테마 분석",
+        run_topic_report_job,
+        {
+            "topic_key": body.get("topicKey", "weekly_market"),
+            "custom_label": body.get("customLabel", ""),
+            "user_context": body.get("userContext", ""),
+            "web_search_override": bool_override(body.get("webSearch")),
+            "llm_override": llm_override_for_mode(generation_mode),
+            "date": body.get("date", ""),
+            "use_planner": body.get("usePlanner", True) is not False,
+            "custom_tickers": custom_tickers if isinstance(custom_tickers, dict) else None,
+            "quality_mode": quality_mode,
+            "deep_research": bool(body.get("deepResearch")),
+        },
+        pass_job_id=True,
     )
-    try:
-        preflight = report.pop("qualityPreflight", None)
-        report = apply_quality_loop("topic_report", report, mode=quality_mode, preflight=preflight)
-    except Exception as exc:
-        report["qualityGeneration"] = {"mode": quality_mode, "repairApplied": False, "repairCount": 0, "warnings": [f"quality generation failed: {str(exc)[:120]}"]}
-    # 생성한 보고서를 자동 저장한다(같은 주제·같은 날은 최신본으로 덮어씀).
-    try:
-        return save_topic_report(report)
-    except Exception:
-        return report
+    return JSONResponse(status_code=202, content=job)
 
 
 @fastapi_app.post("/api/topic-reports/save")

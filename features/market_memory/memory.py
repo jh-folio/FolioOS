@@ -5,8 +5,11 @@ import datetime as dt
 import json
 import re
 import sqlite3
+from contextlib import nullcontext
 from pathlib import Path
+from typing import assert_never
 
+from features.common.sqlite_receipts import ensure_receipt_table
 from features.common.taxonomy import TAG_ALIASES, INDUSTRY_ALIASES, canonical_tag, canonical_industry
 
 CATEGORY_CHOICES = {"stock_bond", "geopolitics", "emerging"}
@@ -377,6 +380,20 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_taxonomy_type ON market_memory_taxonomy(term_type, count DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_story_links_from ON market_story_links(from_story, relation)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_story_family_suggestions ON market_story_family_suggestions(status, updated_at DESC)")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS market_state_snapshots (
+            snapshot_id TEXT PRIMARY KEY,
+            as_of TEXT NOT NULL,
+            horizon TEXT NOT NULL,
+            status TEXT NOT NULL,
+            headline TEXT NOT NULL,
+            payload_json TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_market_state_snapshots_as_of ON market_state_snapshots(as_of DESC)")
+    ensure_receipt_table(conn)
     conn.commit()
 
 
@@ -764,8 +781,8 @@ def _taxonomy_values(memory: dict) -> list[tuple[str, str, str]]:
     return [(a, b, c) for a, b, c in rows if a in TAXONOMY_TYPES and b]
 
 
-def update_taxonomy(conn: sqlite3.Connection, memory: dict) -> None:
-    now = dt.datetime.now(dt.timezone.utc).isoformat()
+def update_taxonomy(conn: sqlite3.Connection, memory: dict, observed_at: str | None = None) -> None:
+    now = observed_at or dt.datetime.now(dt.timezone.utc).isoformat()
     for term_type, term_key, label in _taxonomy_values(memory):
         conn.execute(
             """
@@ -780,7 +797,7 @@ def update_taxonomy(conn: sqlite3.Connection, memory: dict) -> None:
         )
 
 
-def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, relation: str, strength: float, evidence: str) -> None:
+def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, relation: str, strength: float, evidence: str, updated_at: str | None = None) -> None:
     import hashlib
 
     from_key = slug(from_story)
@@ -788,7 +805,7 @@ def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, 
     if not from_key or not to_key or from_key == to_key:
         return
     relation = normalize_choice(relation, STORY_RELATIONS, "same_family")
-    updated_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    updated_at = updated_at or dt.datetime.now(dt.timezone.utc).isoformat()
     link_id = hashlib.sha256(f"{from_key}:{to_key}:{relation}".encode("utf-8")).hexdigest()[:16]
     conn.execute(
         """
@@ -803,14 +820,14 @@ def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, 
     )
 
 
-def upsert_family_suggestion(conn: sqlite3.Connection, story: str, suggested_family: str, reason: str) -> None:
+def upsert_family_suggestion(conn: sqlite3.Connection, story: str, suggested_family: str, reason: str, observed_at: str | None = None) -> None:
     import hashlib
 
     story_key = slug(story)
     family_key = slug(suggested_family)
     if not story_key or not family_key or story_key == family_key:
         return
-    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    now = observed_at or dt.datetime.now(dt.timezone.utc).isoformat()
     suggestion_id = hashlib.sha256(f"{story_key}:{family_key}".encode("utf-8")).hexdigest()[:16]
     conn.execute(
         """
@@ -1361,13 +1378,27 @@ def state_conclusion(label: str, bias: str, net_effect: str, summary: str = "", 
     return f"판단: {name} 내러티브는 현재 {bias_label} 신호입니다. 결론은 가격 반응, 실적 기대, 수급 변화 중 어느 축으로 전이되는지에 달려 있습니다."
 
 
-def upsert_memory(db_path: str | Path, entry: dict) -> dict:
+def upsert_memory(
+    db_path: str | Path | sqlite3.Connection,
+    entry: dict,
+    *,
+    prepared_at: str | None = None,
+) -> dict:
     import hashlib
 
-    conn = connect(db_path)
-    init_db(conn)
+    match db_path:
+        case sqlite3.Connection() as connection:
+            conn = connection
+            owns_connection = False
+        case str() | Path():
+            conn = connect(db_path)
+            init_db(conn)
+            owns_connection = True
+        case unreachable:
+            assert_never(unreachable)
     entry = apply_canonical_state(entry or {})
-    date = str(entry.get("date") or dt.datetime.now(dt.timezone.utc).date().isoformat())[:10]
+    observed_at = prepared_at or dt.datetime.now(dt.timezone.utc).isoformat()
+    date = str(entry.get("date") or observed_at[:10])[:10]
     title = clean_text(entry.get("title", "")) or "시장 내러티브"
     story = normalize(entry.get("story", "")) or slug(title)
     summary = clean_text(entry.get("summary", ""))
@@ -1399,9 +1430,9 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
     source_kind = normalize(entry.get("sourceKind") or entry.get("source_kind") or "auto")
     dedupe_key = normalize(entry.get("dedupeKey") or entry.get("dedupe_key") or f"{entry_mode}:{date}:{story}:{event_kind}")
     memory_id = str(entry.get("id") or hashlib.sha256(dedupe_key.encode("utf-8")).hexdigest()[:16])
-    as_of = str(entry.get("asOf") or entry.get("as_of") or dt.datetime.now(dt.timezone.utc).isoformat())
-    created_at = dt.datetime.now(dt.timezone.utc).isoformat()
-    with conn:
+    as_of = str(entry.get("asOf") or entry.get("as_of") or observed_at)
+    created_at = observed_at
+    with nullcontext():
         conn.execute(
             """
             INSERT INTO market_memory (
@@ -1498,8 +1529,8 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
             "sources": sources,
             "dedupeKey": dedupe_key,
         }
-        update_taxonomy(conn, result)
-        upsert_story_link(conn, story, parent_story, story_relation, 0.72, story_thesis or summary)
+        update_taxonomy(conn, result, observed_at)
+        upsert_story_link(conn, story, parent_story, story_relation, 0.72, story_thesis or summary, observed_at)
         if story_relation == "branches_from":
             story_axis = display_memory_axis(story, tags + industries, f"{title} {summary} {story_thesis} {story_checkpoint}")
             parent_axis = display_memory_axis(parent_story, tags + industries, f"{title} {summary} {story_thesis} {story_checkpoint}")
@@ -1517,6 +1548,7 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
                     f"{story_axis} 이슈가 {parent_axis} 흐름과 같은 원인→영향 고리로 움직이는 것으로 보입니다 "
                     f"(겹치는 주제: {shared_scope})."
                 ),
+                observed_at,
             )
     result = {
         "id": memory_id,
@@ -1548,13 +1580,20 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
     }
     try:
         if should_derive_state(conn, result):
-            result["state"] = upsert_state_from_memory(conn, result)
+            result["state"] = upsert_state_from_memory(conn, result, observed_at)
+        if owns_connection:
+            conn.commit()
         return result
+    except sqlite3.Error:
+        if owns_connection:
+            conn.rollback()
+        raise
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
 
 
-def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict) -> dict:
+def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict, observed_at: str | None = None) -> dict:
     import hashlib
 
     memory = apply_canonical_state(memory)
@@ -1563,7 +1602,7 @@ def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict) -> dict:
     bias = normalize_choice(memory.get("stateBias", ""), STATE_BIAS_CHOICES, infer_bias(f"{memory.get('title', '')} {memory.get('summary', '')}"))
     state_key = normalize(memory.get("stateKey", "") or story)
     state_id = hashlib.sha256(f"{state_key}:{memory.get('date', '')}".encode("utf-8")).hexdigest()[:16]
-    updated_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    updated_at = observed_at or dt.datetime.now(dt.timezone.utc).isoformat()
     label = display_label(memory.get("stateLabel", "") or memory.get("storyFamily") or memory.get("title") or state_key)
     rationale = dedupe_sentences(memory.get("storyThesis", ""), 700) or dedupe_sentences(memory.get("summary", ""), 280)
     state = {
@@ -1586,7 +1625,7 @@ def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict) -> dict:
         "sourceMemoryId": memory.get("id", ""),
         "updatedAt": updated_at,
     }
-    with conn:
+    with nullcontext():
         if status in {"active", "watch"}:
             conn.execute(
                 """

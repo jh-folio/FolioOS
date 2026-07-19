@@ -79,7 +79,9 @@ from features.market_memory.snapshot import (
     MARKET_STATE_SNAPSHOT_PROMPT,
     build_market_state_context,
     save_market_state_snapshot,
+    validate_market_state_snapshot,
 )
+from features.daily_briefing.link_analysis import build_link_analysis
 from features.company_analysis.service import (
     ANALYSIS_REPORTS_DIR,
     build_company_analysis_charts,
@@ -221,7 +223,13 @@ def _briefing_headlines(groups):
     return headlines
 
 
-def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality_mode="diagnose_only", market_scope="both", briefing_type="default") -> tuple[dict, Path]:
+def _write_pack(pack: dict, owner_job_id: str | None) -> Path:
+    if owner_job_id is None:
+        return A.write_pack(pack)
+    return A.write_pack(pack, owner_job_id=owner_job_id)
+
+
+def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality_mode="diagnose_only", market_scope="both", briefing_type="default", owner_job_id: str | None = None) -> tuple[dict, Path]:
     date = date or kst_date()
     quality_mode = normalize_quality_mode(quality_mode)
     market_scope = normalize_market_scope(market_scope)
@@ -373,10 +381,10 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
             "visualScopeResults": visual_scope_results,
         },
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_briefing_from_markdown(pack: dict, markdown: str) -> dict:
+def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = True) -> dict:
     draft = dict(pack.get("draftArtifact") or {})
     date = draft.get("date") or pack.get("artifactId") or kst_date()
     market_scope = normalize_market_scope(draft.get("marketScope", "both"))
@@ -468,16 +476,18 @@ def write_briefing_from_markdown(pack: dict, markdown: str) -> dict:
         )
     except Exception as exc:
         briefing["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
-    if market_scope == "both":
+    if persist and market_scope == "both":
         try:
             for entry in build_memory_from_briefing(briefing, (pack.get("internal") or {}).get("groups") or []):
                 upsert_memory(MARKET_MEMORY_DB_PATH, entry)
         except Exception:
             briefing.setdefault("warnings", []).append("agent writeback skipped market memory update")
 
-    BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
+    if persist:
+        BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
     requested_scopes = ["us", "kr"] if market_scope == "both" else [market_scope]
     saved_reports = {}
+    visuals = {}
     sidecar = (pack.get("internal") or {}).get("visualSidecar") or {}
     for scope in requested_scopes:
         scoped_briefing = _single_market_briefing(briefing, scope)
@@ -487,29 +497,48 @@ def write_briefing_from_markdown(pack: dict, markdown: str) -> dict:
             legacy = read_json(BRIEFINGS_DIR / briefing_file_name(date), None)
             existing = briefing_scope_view(legacy, scope) if isinstance(legacy, dict) else None
         scoped_briefing = merge_briefing_report(scoped_briefing, existing, scope)
-        write_json(save_path, scoped_briefing)
-        saved_reports[scope] = scoped_briefing
+        if persist:
+            write_json(save_path, scoped_briefing)
         try:
             scoped_sidecar = _sidecar_for_market(sidecar, scope)
             if scoped_sidecar.get("snapshots"):
-                write_visual_sidecar(
-                    BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date, scope),
-                    scoped_sidecar,
-                    scope,
-                )
+                visuals[scope] = scoped_sidecar
+                if persist:
+                    write_visual_sidecar(
+                        BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date, scope),
+                        scoped_sidecar,
+                        scope,
+                    )
         except Exception as exc:
             scoped_briefing.setdefault("warnings", []).append(f"visual sidecar write failed: {str(exc)[:160]}")
-            write_json(save_path, scoped_briefing)
+            if persist:
+                write_json(save_path, scoped_briefing)
+        saved_reports[scope] = scoped_briefing
 
     if len(requested_scopes) == 1:
-        return saved_reports.get(requested_scopes[0], briefing)
-    briefing["briefings"] = {
-        scope: saved_reports[scope] for scope in requested_scopes if scope in saved_reports
-    }
-    return briefing_scope_view(briefing, market_scope)
+        result = saved_reports.get(requested_scopes[0], briefing)
+        link = None
+    else:
+        briefing["briefings"] = {
+            scope: saved_reports[scope] for scope in requested_scopes if scope in saved_reports
+        }
+        result = briefing_scope_view(briefing, market_scope)
+        link = {
+            "date": date,
+            "generatedAt": draft.get("generatedAt", ""),
+            **build_link_analysis(
+                saved_reports["us"],
+                saved_reports["kr"],
+                market_windows=briefing.get("marketWindows"),
+                market_tape=briefing.get("marketTape"),
+            ),
+        }
+    if persist:
+        return result
+    return {"result": result, "reports": saved_reports, "visuals": visuals, "link": link}
 
 
-def prepare_company_analysis_pack(query: str, *, quality_mode="diagnose_only", web_search=False, analysis_style="beginner") -> tuple[dict, Path]:
+def prepare_company_analysis_pack(query: str, *, quality_mode="diagnose_only", web_search=False, analysis_style="beginner", owner_job_id: str | None = None) -> tuple[dict, Path]:
     analysis_style = normalize_analysis_style(analysis_style)
     index = load_index()
     docs = search_documents(index, query=query, company=query, limit=30)
@@ -590,10 +619,10 @@ def prepare_company_analysis_pack(query: str, *, quality_mode="diagnose_only", w
         data_gaps=data_gaps.get("gaps", []),
         internal={"qualityMode": normalize_quality_mode(quality_mode), "qualityPreflight": quality_preflight, "analysisStyle": analysis_style},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_company_analysis_from_markdown(pack: dict, markdown: str) -> dict:
+def write_company_analysis_from_markdown(pack: dict, markdown: str, *, persist: bool = True) -> dict:
     report = dict(pack.get("draftArtifact") or {})
     report["markdown"] = str(markdown or "").strip()
     report["generation"] = A.agent_generation(len(report.get("sources") or []))
@@ -606,7 +635,7 @@ def write_company_analysis_from_markdown(pack: dict, markdown: str) -> dict:
         )
     except Exception as exc:
         report["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
-    return save_analysis_report(report)
+    return save_analysis_report(report) if persist else report
 
 
 def prepare_topic_report_pack(
@@ -618,6 +647,7 @@ def prepare_topic_report_pack(
     use_planner: bool = True,
     custom_tickers: dict | None = None,
     quality_mode: str = "diagnose_only",
+    owner_job_id: str | None = None,
 ) -> tuple[dict, Path]:
     date = date or kst_date()
     topic = get_topic_config(topic_key, custom_label=custom_label or None, custom_tickers=custom_tickers)
@@ -752,10 +782,10 @@ def prepare_topic_report_pack(
             "qualityPreflight": quality_preflight,
         },
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_topic_report_from_markdown(pack: dict, markdown: str) -> dict:
+def write_topic_report_from_markdown(pack: dict, markdown: str, *, persist: bool = True) -> dict:
     draft = dict(pack.get("draftArtifact") or {})
     internal = pack.get("internal") or {}
     docs = internal.get("docs") or []
@@ -811,7 +841,7 @@ def write_topic_report_from_markdown(pack: dict, markdown: str) -> dict:
         )
     except Exception:
         pass
-    return save_topic_report(report)
+    return save_topic_report(report) if persist else report
 
 
 def _load_canonical_for_overlay(report_kind: str, report_id: str) -> tuple[dict, Path, str]:
@@ -833,7 +863,7 @@ def _load_canonical_for_overlay(report_kind: str, report_id: str) -> tuple[dict,
     raise ValueError("report_kind must be briefing, analysis, or topic_report")
 
 
-def prepare_personal_overlay_pack(report_kind: str, report_id: str) -> tuple[dict, Path]:
+def prepare_personal_overlay_pack(report_kind: str, report_id: str, *, owner_job_id: str | None = None) -> tuple[dict, Path]:
     canonical, path, kind = _load_canonical_for_overlay(report_kind, report_id)
     if not canonical:
         raise FileNotFoundError(f"Report not found: {report_kind}/{report_id}")
@@ -856,10 +886,10 @@ def prepare_personal_overlay_pack(report_kind: str, report_id: str) -> tuple[dic
         draft_artifact={"canonical": {"id": report_id, "kind": kind, "title": canonical.get("title") or canonical.get("headline", "")}},
         internal={"reportKind": kind, "reportPath": str(path), "hypotheses": hypotheses},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_personal_overlay_from_json(pack: dict, overlay_payload: dict) -> dict:
+def write_personal_overlay_from_json(pack: dict, overlay_payload: dict, *, persist: bool = True) -> dict:
     if not isinstance(overlay_payload, dict):
         raise ValueError("personal_overlay writeback payload must be a JSON object")
     path = Path((pack.get("internal") or {}).get("reportPath") or pack.get("saveTarget"))
@@ -876,11 +906,12 @@ def write_personal_overlay_from_json(pack: dict, overlay_payload: dict) -> dict:
     overlay = overlay_schema.normalize_overlay(overlay_payload, linked_notes=linked_notes, markdown=str(overlay_payload.get("markdown") or ""))
     overlay["generation"] = A.agent_generation(len(pack.get("sources") or []))
     updated = with_overlay(canonical, overlay, status="ok_agent_authored")
-    write_json(path, updated)
+    if persist:
+        write_json(path, updated)
     return {"ok": True, "personalOverlay": updated["personalOverlay"], "path": str(path)}
 
 
-def prepare_thesis_delta_pack(ticker: str, *, period="90d", evidence_limit=12) -> tuple[dict, Path]:
+def prepare_thesis_delta_pack(ticker: str, *, period="90d", evidence_limit=12, owner_job_id: str | None = None) -> tuple[dict, Path]:
     thesis = get_thesis(ticker)
     if not thesis:
         raise FileNotFoundError(f"Thesis not found: {ticker}")
@@ -905,10 +936,10 @@ def prepare_thesis_delta_pack(ticker: str, *, period="90d", evidence_limit=12) -
         sources=evidence,
         internal={"thesis": thesis, "meta": meta, "evidence": evidence},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_thesis_delta_from_json(pack: dict, delta_payload: dict) -> dict:
+def prepare_thesis_delta_writeback(pack: dict, delta_payload: dict) -> tuple[str, dict]:
     if not isinstance(delta_payload, dict):
         raise ValueError("thesis_delta writeback payload must be a JSON object")
     thesis = (pack.get("internal") or {}).get("thesis") or (pack.get("draftArtifact") or {}).get("thesis")
@@ -919,15 +950,20 @@ def write_thesis_delta_from_json(pack: dict, delta_payload: dict) -> dict:
     delta = thesis_delta.normalize_delta(delta_payload, thesis=thesis, evidence=evidence, meta=meta)
     delta["generation"] = A.agent_generation(len(evidence))
     delta["company"] = thesis.get("company", "")
+    return str(thesis.get("ticker") or ""), delta
+
+
+def write_thesis_delta_from_json(pack: dict, delta_payload: dict) -> dict:
+    ticker, delta = prepare_thesis_delta_writeback(pack, delta_payload)
     conn = thesis_store.connect()
     try:
-        saved = thesis_store.save_delta(conn, thesis.get("ticker"), delta)
+        saved = thesis_store.save_delta(conn, ticker, delta)
     finally:
         conn.close()
     return {"ok": True, "delta": saved}
 
 
-def prepare_market_memory_pack(date: str | None = None) -> tuple[dict, Path]:
+def prepare_market_memory_pack(date: str | None = None, *, owner_job_id: str | None = None) -> tuple[dict, Path]:
     date = date or kst_date()
     context, used_docs, source_date = build_memory_llm_context(date)
     pack = A.build_pack(
@@ -947,10 +983,10 @@ def prepare_market_memory_pack(date: str | None = None) -> tuple[dict, Path]:
         sources=source_refs(used_docs, limit=12),
         internal={"date": date, "sourceDate": source_date, "usedDocs": used_docs},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_market_memory_from_json(pack: dict, payload: dict) -> dict:
+def prepare_market_memory_writeback(pack: dict, payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("market_memory_llm writeback payload must be a JSON object")
     internal = pack.get("internal") or {}
@@ -959,7 +995,7 @@ def write_market_memory_from_json(pack: dict, payload: dict) -> dict:
     entries = payload.get("entries") or []
     if not isinstance(entries, list):
         raise ValueError("market_memory_llm entries must be a list")
-    saved = []
+    prepared = []
     dropped = []
     for raw_entry in entries[:3]:
         entry, reason = normalize_llm_memory_entry(raw_entry, date, used_docs)
@@ -968,7 +1004,7 @@ def write_market_memory_from_json(pack: dict, payload: dict) -> dict:
             continue
         entry["sourceKind"] = "agent"
         entry["generation"] = A.agent_generation(len(entry.get("sources") or []))
-        saved.append(upsert_memory(MARKET_MEMORY_DB_PATH, entry))
+        prepared.append(entry)
     return {
         "ok": True,
         "status": "ok_agent_authored",
@@ -976,15 +1012,25 @@ def write_market_memory_from_json(pack: dict, payload: dict) -> dict:
         "rawEntryCount": len(entries),
         "droppedCount": len(dropped),
         "droppedReasons": dropped,
-        "saved": saved,
-        "message": f"AI 에이전트 시장 내러티브 {len(saved)}건을 저장했습니다.",
+        "entries": prepared,
+        "message": f"AI 에이전트 시장 내러티브 {len(prepared)}건을 준비했습니다.",
         "generation": A.agent_generation(len(used_docs)),
     }
 
 
-def prepare_market_state_snapshot_pack(date: str | None = None) -> tuple[dict, Path]:
+def write_market_memory_from_json(pack: dict, payload: dict) -> dict:
+    prepared = prepare_market_memory_writeback(pack, payload)
+    saved = [upsert_memory(MARKET_MEMORY_DB_PATH, entry) for entry in prepared.pop("entries")]
+    return {
+        **prepared,
+        "saved": saved,
+        "message": f"AI 에이전트 시장 내러티브 {len(saved)}건을 저장했습니다.",
+    }
+
+
+def prepare_market_state_snapshot_pack(date: str | None = None, *, owner_job_id: str | None = None, context_payload: dict | None = None) -> tuple[dict, Path]:
     date = date or kst_date()
-    context_payload = build_market_state_context(db_path=MARKET_MEMORY_DB_PATH)
+    context_payload = context_payload or build_market_state_context(db_path=MARKET_MEMORY_DB_PATH)
     context = json.dumps(context_payload, ensure_ascii=False, indent=2)
     pack = A.build_pack(
         task_type="market_state_snapshot",
@@ -1014,10 +1060,10 @@ def prepare_market_state_snapshot_pack(date: str | None = None) -> tuple[dict, P
         sources=context_payload.get("sourceRefs") or [],
         internal={"date": date, "sourceRefs": context_payload.get("sourceRefs") or []},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_market_state_snapshot_from_json(pack: dict, payload: dict) -> dict:
+def prepare_market_state_snapshot_writeback(pack: dict, payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("market_state_snapshot writeback payload must be a JSON object")
     snapshot_payload = dict(payload)
@@ -1025,7 +1071,12 @@ def write_market_state_snapshot_from_json(pack: dict, payload: dict) -> dict:
         context_payload = json.loads(pack.get("context") or "{}")
     except Exception:
         context_payload = {"sourceRefs": (pack.get("internal") or {}).get("sourceRefs") or []}
-    snapshot = save_market_state_snapshot(MARKET_MEMORY_DB_PATH, snapshot_payload, context=context_payload)
+    return validate_market_state_snapshot(snapshot_payload, context=context_payload)
+
+
+def write_market_state_snapshot_from_json(pack: dict, payload: dict) -> dict:
+    snapshot_payload = prepare_market_state_snapshot_writeback(pack, payload)
+    snapshot = save_market_state_snapshot(MARKET_MEMORY_DB_PATH, snapshot_payload)
     generation = A.agent_generation(len((pack.get("internal") or {}).get("sourceRefs") or snapshot.get("sourceRefs") or []))
     return {
         "ok": True,
@@ -1036,7 +1087,7 @@ def write_market_state_snapshot_from_json(pack: dict, payload: dict) -> dict:
     }
 
 
-def prepare_quality_repair_pack(artifact_type: str, artifact_id: str) -> tuple[dict, Path]:
+def prepare_quality_repair_pack(artifact_type: str, artifact_id: str, *, owner_job_id: str | None = None) -> tuple[dict, Path]:
     artifact_type = str(artifact_type or "").strip()
     artifact_id = str(artifact_id or "").strip()
     if artifact_type not in {"briefing", "company_analysis", "topic_report"}:
@@ -1074,10 +1125,10 @@ def prepare_quality_repair_pack(artifact_type: str, artifact_id: str) -> tuple[d
         market_tape=artifact.get("marketTape") or {},
         internal={"targetArtifactType": artifact_type, "targetArtifactId": artifact_id},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_quality_repair_from_markdown(pack: dict, markdown: str) -> dict:
+def write_quality_repair_from_markdown(pack: dict, markdown: str, *, persist: bool = True) -> dict:
     internal = pack.get("internal") or {}
     artifact_type = internal.get("targetArtifactType")
     artifact_id = internal.get("targetArtifactId")
@@ -1097,6 +1148,8 @@ def write_quality_repair_from_markdown(pack: dict, markdown: str) -> dict:
         "qualityAfter": artifact["quality"],
         "generation": A.agent_generation(len(artifact.get("sources") or [])),
     }
+    if not persist:
+        return artifact
     if artifact_type == "briefing":
         write_json(BRIEFINGS_DIR / f"{artifact_id}.json", artifact)
         return artifact
@@ -1111,6 +1164,7 @@ def prepare_investment_review_pack(
     include_portfolio: bool = True,
     include_watchlist: bool = True,
     include_obsidian: bool = True,
+    owner_job_id: str | None = None,
 ) -> tuple[dict, Path]:
     review = build_review(
         date=date,
@@ -1119,6 +1173,7 @@ def prepare_investment_review_pack(
         include_obsidian=include_obsidian,
         use_llm=False,
         force_refresh=True,
+        persist=owner_job_id is None,
     )
     date = review.get("date") or date or kst_date()
     context = json.dumps({
@@ -1141,22 +1196,24 @@ def prepare_investment_review_pack(
         checkpoints=review.get("keyCheckpoints") or [],
         market_tape=review.get("marketTape") or {},
     )
-    return pack, A.write_pack(pack)
+    return pack, _write_pack(pack, owner_job_id)
 
 
-def write_investment_review_from_markdown(pack: dict, markdown: str) -> dict:
+def write_investment_review_from_markdown(pack: dict, markdown: str, *, persist: bool = True) -> dict:
     review = dict(pack.get("draftArtifact") or {})
     date = review.get("date") or pack.get("artifactId") or kst_date()
     review["markdown"] = str(markdown or "").strip()
     review["mode"] = "agent"
     review["generation"] = A.agent_generation(0)
-    REVIEW_DIR.mkdir(parents=True, exist_ok=True)
-    write_json(REVIEW_DIR / f"{date}.json", review)
+    if persist:
+        REVIEW_DIR.mkdir(parents=True, exist_ok=True)
+        write_json(REVIEW_DIR / f"{date}.json", review)
     return review
 
 
 def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:
     task_type = A.normalize_task_type(task_type)
+    owner_job_id = kwargs.get("owner_job_id")
     if task_type == "briefing":
         return prepare_briefing_pack(
             kwargs.get("date"),
@@ -1164,6 +1221,7 @@ def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:
             quality_mode=kwargs.get("quality_mode", "diagnose_only"),
             market_scope=kwargs.get("market_scope", "both"),
             briefing_type=kwargs.get("briefing_type", "default"),
+            owner_job_id=owner_job_id,
         )
     if task_type == "company_analysis":
         return prepare_company_analysis_pack(
@@ -1171,6 +1229,7 @@ def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:
             quality_mode=kwargs.get("quality_mode", "diagnose_only"),
             web_search=bool(kwargs.get("web_search")),
             analysis_style=kwargs.get("analysis_style", "beginner"),
+            owner_job_id=owner_job_id,
         )
     if task_type == "topic_report":
         return prepare_topic_report_pack(
@@ -1180,23 +1239,25 @@ def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:
             date=kwargs.get("date"),
             use_planner=kwargs.get("use_planner", True),
             quality_mode=kwargs.get("quality_mode", "diagnose_only"),
+            owner_job_id=owner_job_id,
         )
     if task_type == "personal_overlay":
-        return prepare_personal_overlay_pack(kwargs.get("report_kind") or "", kwargs.get("report_id") or "")
+        return prepare_personal_overlay_pack(kwargs.get("report_kind") or "", kwargs.get("report_id") or "", owner_job_id=owner_job_id)
     if task_type == "thesis_delta":
-        return prepare_thesis_delta_pack(kwargs.get("ticker") or "", period=kwargs.get("period") or "90d", evidence_limit=kwargs.get("limit") or 12)
+        return prepare_thesis_delta_pack(kwargs.get("ticker") or "", period=kwargs.get("period") or "90d", evidence_limit=kwargs.get("limit") or 12, owner_job_id=owner_job_id)
     if task_type == "market_memory_llm":
-        return prepare_market_memory_pack(kwargs.get("date"))
+        return prepare_market_memory_pack(kwargs.get("date"), owner_job_id=owner_job_id)
     if task_type == "market_state_snapshot":
-        return prepare_market_state_snapshot_pack(kwargs.get("date"))
+        return prepare_market_state_snapshot_pack(kwargs.get("date"), owner_job_id=owner_job_id)
     if task_type == "quality_repair":
-        return prepare_quality_repair_pack(kwargs.get("artifact_type") or "", kwargs.get("artifact_id") or "")
+        return prepare_quality_repair_pack(kwargs.get("artifact_type") or "", kwargs.get("artifact_id") or "", owner_job_id=owner_job_id)
     if task_type == "investment_review":
         return prepare_investment_review_pack(
             kwargs.get("date"),
             include_portfolio=kwargs.get("include_portfolio", True),
             include_watchlist=kwargs.get("include_watchlist", True),
             include_obsidian=kwargs.get("include_obsidian", True),
+            owner_job_id=owner_job_id,
         )
     raise NotImplementedError(f"Prepare is not implemented for task type: {task_type}")
 

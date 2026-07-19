@@ -531,6 +531,7 @@ def build_review(
     include_obsidian: bool = True,
     use_llm: bool = False,
     force_refresh: bool = False,
+    persist: bool = True,
 ) -> dict:
     date = str(date or _today())
     if not force_refresh:
@@ -579,7 +580,8 @@ def build_review(
     }
     review["markdown"] = render_markdown(review)
     review = normalize_review(review, date=date)
-    _save_cache(date, review)
+    if persist:
+        _save_cache(date, review)
     return review
 
 

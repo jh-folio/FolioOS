@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { postJson } from "../api";
+import { isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
 import { RouteHero } from "./RouteHero";
 
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: Record<string, unknown>;
@@ -49,12 +49,12 @@ function resultMessage(result: MemoryResult) {
 
 function isAgentJob(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && isActiveJobStatus(job.status));
 }
 
 async function pollJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await fetch(`/api/jobs/${encodeURIComponent(current.id)}`).then((res) => {
       if (!res.ok) throw new Error(`/api/jobs/${encodeURIComponent(current.id)} failed: ${res.status}`);

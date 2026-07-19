@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { getJson, postJson } from "../api";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
 
 type AgentResult = {
@@ -18,7 +18,7 @@ type AgentProposal = {
 
 type AgentJob = {
   id: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: AgentResult;
@@ -159,7 +159,7 @@ function preferredModel(adapter: AgentAdapterSettings | null) {
 
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }

@@ -159,11 +159,17 @@ def agent_instructions(task_type: str) -> str:
     return "\n".join(f"- {line}" for line in base)
 
 
-def write_pack(pack: dict) -> Path:
+def write_pack(pack: dict, owner_job_id: str | None = None) -> Path:
     task_type = normalize_task_type(pack.get("taskType"))
     artifact_id = safe_slug(pack.get("artifactId"), fallback=task_type)
+    scrubbed = scrub_secrets(pack)
+    if owner_job_id is not None:
+        from features.common.jobs import write_job_pack
+
+        pack_id = f"{artifact_id}_{pack.get('packId')}"
+        return write_job_pack(owner_job_id, pack_id, scrubbed)
     path = task_dir(task_type) / f"{artifact_id}_{pack.get('packId')}.json"
-    path.write_text(json.dumps(scrub_secrets(pack), ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(scrubbed, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
 
@@ -172,7 +178,12 @@ def read_pack(path: str | Path) -> dict:
     if not p.is_absolute():
         p = ROOT / p
     resolved = p.resolve()
-    resolved.relative_to(ROOT)
+    try:
+        resolved.relative_to(ROOT)
+    except ValueError:
+        from features.common.jobs import data_root
+
+        resolved.relative_to((data_root() / "job-context").resolve())
     return json.loads(resolved.read_text(encoding="utf-8"))
 
 

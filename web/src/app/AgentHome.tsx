@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { getJson, postJson } from "../api";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { updateReactAgentContext } from "./agentContext";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
 
@@ -25,7 +25,7 @@ type AgentJob = {
   id: string;
   kind?: string;
   label?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   progress?: number;
   message?: string;
   error?: string;
@@ -198,7 +198,7 @@ function jobArtifactRoute(job: AgentJob) {
 
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }
@@ -238,7 +238,7 @@ function preferredModel(adapter: AgentAdapterSettings | null) {
 
 function isJobResponse(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && isActiveJobStatus(job.status));
 }
 
 function reportRoute(report: RecentReport) {

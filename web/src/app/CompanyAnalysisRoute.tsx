@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../api";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { openReactAgentDock, updateReactAgentContext } from "./agentContext";
 import { CompanyAnalysisBody } from "./reportReader/CompanyAnalysisBody";
 import { stableNoteKey } from "./reportReader/FolioNotePanel";
@@ -47,7 +47,7 @@ type DataGap = {
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: { reportId?: string; artifactId?: string };
@@ -76,12 +76,12 @@ function sleep(ms: number) {
 
 function isAgentJob(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && isActiveJobStatus(job.status));
 }
 
 async function pollJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }

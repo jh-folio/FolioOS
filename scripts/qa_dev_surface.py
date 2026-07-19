@@ -31,6 +31,7 @@ from qa_dev_surface_support import (
 )
 from qa_smart_collections import run as run_smart_collections
 from qa_market_state import run as run_market_state
+from qa_jobs_work_log import run as run_jobs_work_log
 from qa_proposal_writeback import run as run_proposal_writeback
 
 
@@ -52,6 +53,8 @@ def run_scenario(config: RunConfig) -> int:
         return run_market_state(config.sourceRoot, config.attemptDir)
     if config.scenario == "proposal-writeback":
         return run_proposal_writeback(config.sourceRoot, config.attemptDir)
+    if config.scenario == "jobs-work-log":
+        return run_jobs_work_log(config.sourceRoot, config.attemptDir)
     attempt = config.attemptDir.resolve()
     attempt.mkdir(parents=True, exist_ok=True)
     runtime = attempt / ".runtime"
@@ -215,7 +218,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="qa_dev_surface.py")
     commands = result.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run")
-    run.add_argument("--scenario", choices=["approved-request", "smart-collections", "market-state", "proposal-writeback"], required=True)
+    run.add_argument("--scenario", choices=["approved-request", "smart-collections", "market-state", "proposal-writeback", "jobs-work-log"], required=True)
     run.add_argument("--source-root", type=Path, required=True)
     run.add_argument("--attempt-dir", type=Path, required=True)
     server = commands.add_parser("serve")
