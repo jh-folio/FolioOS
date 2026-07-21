@@ -216,10 +216,8 @@ from features.topic_report.service import (
     get_topic_report,
     list_topic_reports,
     preset_topics_list,
-    save_topic_report,
 )
 from features.topic_report.routes import ApprovedRequestBoundary
-from features.topic_report.job_service import run_topic_report_job
 from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
@@ -1522,47 +1520,7 @@ def api_list_topic_reports():
 
 @fastapi_app.post("/api/topic-reports")
 def api_generate_topic_report(body: dict | None = Body(default=None)):
-    body = body or {}
-    if any(key in body for key in ("approvedRequest", "approval", "execution")):
-        return TOPIC_APPROVAL_BOUNDARY.preflight(body)
-    custom_tickers = body.get("customTickers")
-    quality_mode = normalize_quality_mode(body.get("qualityMode", "diagnose_only"))
-    generation_mode = request_generation_mode(body)
-    if generation_mode == "llm_cli":
-        job = submit_agent_task("topic_report", {
-            "topic_key": body.get("topicKey", "weekly_market"),
-            "custom_label": body.get("customLabel", ""),
-            "user_context": body.get("userContext", ""),
-            "date": body.get("date", ""),
-            "use_planner": body.get("usePlanner", True) is not False,
-            "quality_mode": quality_mode,
-            "deep_research": bool(body.get("deepResearch")),
-        }, adapter=body.get("agentAdapter", ""))
-        return JSONResponse(status_code=202, content=job)
-    job = submit_job(
-        "topic_report",
-        "테마 분석",
-        run_topic_report_job,
-        {
-            "topic_key": body.get("topicKey", "weekly_market"),
-            "custom_label": body.get("customLabel", ""),
-            "user_context": body.get("userContext", ""),
-            "web_search_override": bool_override(body.get("webSearch")),
-            "llm_override": llm_override_for_mode(generation_mode),
-            "date": body.get("date", ""),
-            "use_planner": body.get("usePlanner", True) is not False,
-            "custom_tickers": custom_tickers if isinstance(custom_tickers, dict) else None,
-            "quality_mode": quality_mode,
-            "deep_research": bool(body.get("deepResearch")),
-        },
-        pass_job_id=True,
-    )
-    return JSONResponse(status_code=202, content=job)
-
-
-@fastapi_app.post("/api/topic-reports/save")
-def api_save_topic_report(body: dict | None = Body(default=None)):
-    return save_topic_report(body or {})
+    return TOPIC_APPROVAL_BOUNDARY.preflight(body or {})
 
 
 @fastapi_app.get("/api/topic-reports/{report_id}")

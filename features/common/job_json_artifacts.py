@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from collections.abc import Callable, Sequence
 from datetime import datetime
 from pathlib import Path
@@ -45,6 +46,14 @@ class JobArtifactWorkspace:
         fault_hook: FaultHook | None = None,
     ) -> None:
         self.committer.commit(bundle, store, lifecycle, fault_hook=fault_hook)
+
+    def discard(self, bundle: StagedJobBundle) -> None:
+        staging_root = (self.stager.data_root / "job-staging").resolve(strict=False)
+        target = (staging_root / bundle.job.id).resolve(strict=False)
+        if target.parent != staging_root:
+            raise JobArtifactValidationError("staging discard target is invalid")
+        if target.exists():
+            shutil.rmtree(target)
 
 
 __all__ = [

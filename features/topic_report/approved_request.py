@@ -29,6 +29,7 @@ from features.topic_report.approved_schema import (
     PlanRequest,
 )
 from features.topic_report.planner import apply_deep_research_plan, build_topic_plan
+from features.topic_report.approved_research import PreparedResearch
 from features.topic_report.resolution_schema import ResearchPreview, ResolutionSnapshotV1, ZeroEvidence
 
 
@@ -38,7 +39,7 @@ class ApprovedRequestRuntime:
     clock: Callable[[], datetime]
     entropy: Callable[[int], bytes]
     uuidFactory: Callable[[], UUID]
-    resolver: Callable[[ApprovedRequest], ResolutionSnapshotV1]
+    resolver: Callable[[ApprovedRequest], ResolutionSnapshotV1 | PreparedResearch]
     collectionResolver: Callable[[str, int], ApprovedCollectionRef] | None = None
 
 
@@ -65,7 +66,7 @@ class EvidenceConfirmationRequiredError(ApprovedRequestError):
     preview: ResearchPreview
 
     def __init__(self, preview: ResearchPreview) -> None:
-        super().__init__(code="evidence_confirmation_required")
+        ApprovedRequestError.__init__(self, code="evidence_confirmation_required")
         object.__setattr__(self, "preview", preview)
 
 
@@ -74,14 +75,15 @@ class ResolutionChangedError(ApprovedRequestError):
     preview: ResearchPreview
 
     def __init__(self, preview: ResearchPreview) -> None:
-        super().__init__(code="resolution_changed")
+        ApprovedRequestError.__init__(self, code="resolution_changed")
         object.__setattr__(self, "preview", preview)
 
 
 @dataclass(frozen=True, slots=True)
 class ExecutionPreflight:
-    preview: ResearchPreview
+    preview: ResearchPreview | None
     replayJobId: str | None
+    preparedResearch: PreparedResearch | None
 
 
 class ApprovedRequestService:
@@ -95,6 +97,10 @@ class ApprovedRequestService:
                 uuidFactory=runtime.uuidFactory,
             )
         )
+
+    @property
+    def approval_store(self) -> ApprovalStore:
+        return self._store
 
     def hash_approved_payload(self, payload: dict[str, JsonValue]) -> str:
         preimage = {key: value for key, value in payload.items() if key != "planHash"}
@@ -174,8 +180,10 @@ class ApprovedRequestService:
         }
         return "rf1_" + sha256_hex(preimage)
 
-    def _preview(self, approved: ApprovedRequest) -> ResearchPreview:
-        resolution = self._runtime.resolver(approved)
+    def _preview(self, approved: ApprovedRequest) -> tuple[ResearchPreview, PreparedResearch | None]:
+        resolved = self._runtime.resolver(approved)
+        prepared = resolved if isinstance(resolved, PreparedResearch) else None
+        resolution = prepared.resolution if prepared is not None else resolved
         if resolution.selectedEvidenceIds:
             zero = ZeroEvidence(required=False, reasonCode=None, resolutionFingerprint=None)
         else:
@@ -191,14 +199,24 @@ class ApprovedRequestService:
                 reasonCode=reason,
                 resolutionFingerprint=self._fingerprint(approved, reason, resolution),
             )
-        return ResearchPreview(
-            resolution=resolution,
-            resolvedAt=utc_z(self._runtime.clock()),
-            zeroEvidence=zero,
+        return (
+            ResearchPreview(
+                resolution=resolution,
+                resolvedAt=utc_z(self._runtime.clock()),
+                zeroEvidence=zero,
+            ),
+            prepared,
         )
 
     def _proof(self, approved: ApprovedRequest, approval_id: str, token: str) -> ApprovalProof:
         return ApprovalProof(id=approval_id, token=token, planHash=approved.planHash)
+
+    def approval_proof(self, request: GenerateApprovedRequest) -> ApprovalProof:
+        return self._proof(
+            request.approvedRequest,
+            request.approval.id,
+            request.approval.token,
+        )
 
     def _validate_integrity(self, approved: ApprovedRequest) -> None:
         payload = approved.model_dump(mode="json")
@@ -207,7 +225,7 @@ class ApprovedRequestService:
 
     def plan(self, request: PlanRequest) -> PlanPreviewEnvelope:
         approved = self._approved(request)
-        preview = self._preview(approved)
+        preview, _prepared = self._preview(approved)
         grant = self._store.issue(approved.planHash)
         return PlanPreviewEnvelope(approvedRequest=approved, approval=grant, preview=preview)
 
@@ -216,7 +234,7 @@ class ApprovedRequestService:
         self._validate_integrity(approved)
         proof = self._proof(approved, request.approval.id, request.approval.token)
         self._store.authorize(proof)
-        preview = self._preview(approved)
+        preview, _prepared = self._preview(approved)
         zero = preview.zeroEvidence
         if (
             not zero.required
@@ -243,7 +261,13 @@ class ApprovedRequestService:
         self._validate_integrity(approved)
         proof = self._proof(approved, request.approval.id, request.approval.token)
         entry: ApprovalEntry = self._store.authorize(proof)
-        preview = self._preview(approved)
+        if entry.status == "consumed":
+            return ExecutionPreflight(
+                preview=None,
+                replayJobId=entry.jobId,
+                preparedResearch=None,
+            )
+        preview, prepared = self._preview(approved)
         confirmation = approved.degradedConfirmation
         if preview.zeroEvidence.required and confirmation is None:
             raise EvidenceConfirmationRequiredError(preview)
@@ -254,4 +278,8 @@ class ApprovedRequestService:
         ):
             self._store.supersede(proof)
             raise ResolutionChangedError(preview)
-        return ExecutionPreflight(preview=preview, replayJobId=entry.jobId)
+        return ExecutionPreflight(
+            preview=preview,
+            replayJobId=None,
+            preparedResearch=prepared,
+        )

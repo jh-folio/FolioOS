@@ -1,7 +1,26 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "uvicorn>=0.51.0",
+#     "fastapi>=0.139.0",
+# ]
+# ///
+
+# ─── How to run ───
+# 1. Install uv (if not installed):
+#      curl -LsSf https://astral.sh/uv/install.sh | sh
+# 2. Run directly (no venv, no pip install needed):
+#      uv run qa_dev_surface_support.py
+# 3. Or make executable and run:
+#      chmod +x qa_dev_surface_support.py && ./qa_dev_surface_support.py
+# ──────────────────
+
 from __future__ import annotations
 
-import json
 import gc
+import json
+import os
 import shutil
 import socket
 import subprocess
@@ -16,14 +35,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO
 
-import uvicorn
-from fastapi import FastAPI
-
-from features.common.jcs import JsonValue
-from features.topic_report.routes import ApprovedRequestBoundary
-from features.smart_collections.routes import SmartCollectionBoundary
-from features.smart_collections.service import SmartCollectionRuntime, SmartCollectionService
-from qa_market_state_server import create_qa_market_state_router
+JsonPrimitive = str | int | float | bool | None
+JsonValue = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +195,14 @@ def clock_from_file(path: Path) -> datetime:
 
 
 def serve(data_dir: Path, clock_file: Path, port: int) -> int:
+    from fastapi import FastAPI
+    import uvicorn
+
+    from features.smart_collections.routes import SmartCollectionBoundary
+    from features.smart_collections.service import SmartCollectionRuntime, SmartCollectionService
+    from features.topic_report.routes import ApprovedRequestBoundary
+    from qa_market_state_server import create_qa_market_state_router
+
     app = FastAPI()
     clock = lambda: clock_from_file(clock_file)
     collections = SmartCollectionService(SmartCollectionRuntime(dataDir=data_dir, clock=clock))
@@ -192,3 +213,45 @@ def serve(data_dir: Path, clock_file: Path, port: int) -> int:
     app.add_api_route("/health", lambda: {"ok": True}, methods=["GET"])
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
     return 0
+
+
+def _creation_flags() -> int:
+    return getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+
+
+def start_real_app(
+    workspace: Path,
+    port: int,
+    output: IO[str],
+    *,
+    environment: Mapping[str, str] | None = None,
+) -> subprocess.Popen[str]:
+    env = dict(os.environ)
+    env.update({str(key): str(value) for key, value in (environment or {}).items()})
+    env.update({"PORT": str(port), "FOLIO_HOST": "127.0.0.1"})
+    return subprocess.Popen(
+        [sys.executable, str((workspace / "app.py").resolve())],
+        cwd=str(workspace),
+        stdout=output,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env=env,
+        creationflags=_creation_flags(),
+    )
+
+
+def wait_real_app_ready(process: subprocess.Popen[str], base_url: str) -> None:
+    deadline = time.monotonic() + 30
+    paths = ("/api/health", "/health", "/openapi.json")
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise QaFailure("real_app_exited_before_ready")
+        for path in paths:
+            try:
+                with urllib.request.urlopen(base_url + path, timeout=1) as response:
+                    if response.status == 200:
+                        return
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError):
+                continue
+        time.sleep(0.05)
+    raise QaFailure("real_app_ready_timeout")

@@ -182,7 +182,11 @@ def job_progress(job_id: str):
         if isinstance(progress, int):
             changes["progress"] = max(0, min(progress, 99))
         for key in ("engine", "adapter", "attemptedEngine", "finalEngine", "fallbackReason", "proposalId"):
-            value = extra.get(key)
+            if key not in extra:
+                continue
+            value = extra[key]
+            if key in {"engine", "adapter"} and value is None:
+                continue
             if value is None or isinstance(value, str):
                 changes[key] = value
         if changes:

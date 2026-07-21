@@ -261,7 +261,7 @@ def test_work_log_migration_preview_and_confirm_http(
     assert (tmp_path / "jobs.json").is_file()
 
 
-def test_direct_topic_report_http_returns_accepted_shared_job(
+def test_unapproved_topic_report_http_is_rejected_without_shared_job(
     client: LiveClient,
     monkeypatch,
 ) -> None:
@@ -290,11 +290,9 @@ def test_direct_topic_report_http_returns_accepted_shared_job(
         {"topicKey": "weekly_market", "customLabel": "Direct topic"},
     )
 
-    assert response.status_code == 202
-    assert response.json()["taskType"] == "topic_report"
-    assert captured["kind"] == "topic_report"
-    assert captured["function"] is app.run_topic_report_job
-    assert captured["pass_job_id"] is True
+    assert response.status_code == 422
+    assert response.json() == {"error": "validation_error"}
+    assert captured == {}
 
 
 def test_jobs_and_work_log_fail_closed_on_corrupt_job_store(

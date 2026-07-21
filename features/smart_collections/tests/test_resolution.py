@@ -8,7 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from features.common.research_library.indexing.research_index import init_db
+from features.common.research_library.indexing import service as indexing_service
+from features.common.research_library.indexing.research_index import init_db, sync_index
 from features.common.research_library.rss.service import ensure_rss_cache
 from features.smart_collections.schema import CreateCollectionRequest, ResolveRequest
 from features.smart_collections.service import SmartCollectionService
@@ -147,6 +148,85 @@ def test_rss_fuses_with_index_and_unindexed_row_is_unusable(
     assert result["executionUniverseIds"] == ["doc-0000"]
     assert result["unusableCandidates"] == [
         {"candidateId": result["items"][1]["id"], "reason": "unindexed_rss"}
+    ]
+
+
+def test_indexed_rss_frontmatter_market_survives_and_maps_once(
+    service: SmartCollectionService,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "workspace"
+    rss_path = root / "research-inbox" / "rss" / "live.md"
+    rss_path.parent.mkdir(parents=True)
+    rss_path.write_text(
+        "---\ntitle: Live RSS 주가 Stock Market\nsource: Reuters\nmarkets: [\"US\"]\n"
+        "url: https://example.com/live\n---\n# Live RSS 주가 Stock Market\n\n"
+        "alpha live RSS 주가 stock market evidence\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(indexing_service, "ROOT", root)
+    document = indexing_service.build_document(rss_path)
+    assert document["marketRelevant"] is True
+    assert document["markets"] == ["US"]
+
+    db = tmp_path / "research-index.sqlite3"
+    sync_index(
+        db,
+        {"generatedAt": "2026-07-16T00:00:00Z", "documents": [document]},
+    )
+    seed_rss(db, "live.md", "https://example.com/live")
+    collection_id = empty_query_collection(service)
+    result = service.resolve(collection_id, ResolveRequest(expectedRevision=1, limit=120))
+
+    with sqlite3.connect(db) as connection:
+        raw_metadata = connection.execute(
+            "SELECT metadata_json FROM documents WHERE doc_id=?",
+            (document["id"],),
+        ).fetchone()
+    assert raw_metadata is not None
+    assert json.loads(raw_metadata[0])["markets"] == ["US"]
+    assert result["items"][0]["providerIds"] == [
+        {"provider": "index", "id": document["id"]},
+        {"provider": "rss", "id": "live.md"},
+    ]
+    assert result["executionUniverseIds"] == [document["id"]]
+    assert result["unusableCandidates"] == []
+
+
+def test_undated_unindexed_rss_is_sorted_as_oldest_candidate(
+    service: SmartCollectionService,
+    tmp_path: Path,
+) -> None:
+    db = tmp_path / "research-index.sqlite3"
+    seed_documents(db, 0)
+    seed_rss(db, "undated.md", "https://example.com/undated", "alpha live")
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            "UPDATE rss_feed_items SET timestamp='', timestamp_sort='0001-01-01T00:00:00'"
+        )
+    created = service.create(
+        CreateCollectionRequest(
+            name="Undated RSS",
+            query="live",
+            market="US",
+            sources=["Reuters"],
+            tickers=[],
+            tags=[],
+        )
+    )
+    collection = created["collection"]
+    assert isinstance(collection, dict)
+
+    result = service.resolve(
+        str(collection["id"]),
+        ResolveRequest(expectedRevision=1, limit=120),
+    )
+
+    assert result["total"] == 1
+    assert result["executionUniverseIds"] == []
+    assert result["unusableCandidates"] == [
+        {"candidateId": result["items"][0]["id"], "reason": "unindexed_rss"}
     ]
 
 

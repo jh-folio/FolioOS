@@ -108,7 +108,7 @@ from features.topic_report.service import (
 from features.topic_report.source_ledger import build_source_ledger
 from features.topic_report.templates import compose_prompt
 from features.topic_report.topic_config import get_topic_config
-from features.topic_report.planner import build_topic_plan
+from features.topic_report.planner import apply_deep_research_plan, build_topic_plan
 from features.topic_report.service import save_topic_report
 from features.llm_settings.client import bok_api_key, fred_api_key
 from features.personal_overlay import schema as overlay_schema
@@ -646,6 +646,7 @@ def prepare_topic_report_pack(
     date: str | None = None,
     use_planner: bool = True,
     custom_tickers: dict | None = None,
+    deep_research: bool = False,
     quality_mode: str = "diagnose_only",
     owner_job_id: str | None = None,
 ) -> tuple[dict, Path]:
@@ -678,6 +679,8 @@ def prepare_topic_report_pack(
                 if ticker not in merged and len(merged) < 12:
                     merged[ticker] = name
             topic["tickers"] = merged
+    if topic_plan and deep_research:
+        topic_plan = apply_deep_research_plan(topic_plan)
     market_data = fetch_topic_market_data(topic["tickers"], history_period=topic.get("history_period", "1y"))
     macro_data = fetch_macro_data(
         fred_series=topic.get("fred_series", []),
@@ -693,6 +696,7 @@ def prepare_topic_report_pack(
             search_docs=lambda queries, limit=12: topic_search_docs(list(queries), limit=limit),
             search_memories=lambda keywords, limit=20: topic_search_memories(list(keywords), limit=limit),
             date=date,
+            deep_research=deep_research,
         )
         docs = evidence_pack["items"]
         memories = evidence_pack["marketMemory"]
@@ -1238,6 +1242,8 @@ def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:
             user_context=kwargs.get("user_context") or "",
             date=kwargs.get("date"),
             use_planner=kwargs.get("use_planner", True),
+            custom_tickers=kwargs.get("custom_tickers"),
+            deep_research=kwargs.get("deep_research", False),
             quality_mode=kwargs.get("quality_mode", "diagnose_only"),
             owner_job_id=owner_job_id,
         )

@@ -4,12 +4,8 @@ import sqlite3
 from pathlib import Path
 
 from features.common.jcs import JsonValue, sha256_hex
-from features.common.research_library.indexing.research_index import hybrid_search
 from features.topic_report.approved_schema import ApprovedRequest
 from features.topic_report.resolution_schema import ProviderGenerations, ResolutionSnapshotV1
-
-
-_NEWS_PREFIXES = ("research-inbox/articles/", "research-inbox/rss/")
 
 
 def missing_index_snapshot() -> ResolutionSnapshotV1:
@@ -68,16 +64,6 @@ def resolve_null_collection(data_dir: Path, approved: ApprovedRequest) -> Resolu
         with sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=5) as connection:
             rows = _eligible_rows(connection)
         index_generation = sha256_hex(rows)
-        selected: list[str] = []
-        for query in approved.topicPlan.searchQueries or [approved.question]:
-            for hit in hybrid_search(path, query, limit=120, scope_prefixes=_NEWS_PREFIXES):
-                document_id = str(hit.get("id") or "")
-                if document_id and document_id not in selected:
-                    selected.append(document_id)
-                if len(selected) >= 120:
-                    break
-            if len(selected) >= 120:
-                break
     except (sqlite3.DatabaseError, OSError, ValueError, KeyError, TypeError):
         return missing_index_snapshot()
     generations: dict[str, JsonValue] = {
@@ -95,7 +81,7 @@ def resolve_null_collection(data_dir: Path, approved: ApprovedRequest) -> Resolu
         resolvedCandidateIds=[],
         executionUniverseIds=[],
         unusableCandidates=[],
-        selectedEvidenceIds=selected,
+        selectedEvidenceIds=[],
         providerGenerations=ProviderGenerations(indexGeneration=index_generation, rssGeneration=None),
         inputWatermark=sha256_hex(generations),
     )

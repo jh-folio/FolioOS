@@ -116,7 +116,7 @@ def best_row(rows: tuple[ProviderRow, ...]) -> ProviderRow:
 def valid_time(value: str) -> float:
     try:
         return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
-    except ValueError:
+    except (OSError, OverflowError, ValueError):
         return float("-inf")
 
 

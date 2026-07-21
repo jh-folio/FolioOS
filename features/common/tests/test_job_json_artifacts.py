@@ -281,6 +281,116 @@ def test_startup_completes_json_commit_after_every_commit_phase(
     assert not (data_root / "job-context" / job.id).exists()
 
 
+def test_startup_recovers_promoted_canonical_after_artifacts_written(tmp_path: Path) -> None:
+    # Given: a canonical report was promoted before the process stopped at artifacts_written.
+    data_root = tmp_path / "data"
+    store = SharedJobStore(data_root / "jobs-v2.json", data_root / "jobs.json", clock=_clock)
+    lifecycle = JobPrivateLifecycle(data_root / "job-context", clock=_clock)
+    job = _running_job(store, "topic_report")
+    lifecycle.write_pack(job.id, "pack", {"canary": "PRIVATE"})
+    target = data_root / "topic-reports" / "topic-01.json"
+    workspace = JobArtifactWorkspace(data_root, clock=_clock)
+    bundle = workspace.stage(
+        job,
+        [
+            CanonicalArtifactSpec(
+                artifact_type="topic_report",
+                artifact_id="topic-01",
+                report_kind=ReportKind.TOPIC_REPORT,
+                exact_path=target,
+                write_kind=WriteKind.CANONICAL,
+                candidate={"id": "topic-01", "markdown": "# Topic"},
+            )
+        ],
+        terminal_result={
+            "artifactId": "topic-01",
+            "reportId": "topic-01",
+            "date": "2026-07-18",
+            "title": "Topic",
+        },
+    )
+
+    def interrupt(phase: str) -> None:
+        if phase == "artifacts_written":
+            raise CommitInterruptedError(phase)
+
+    with pytest.raises(CommitInterruptedError):
+        workspace.commit(bundle, store, lifecycle, fault_hook=interrupt)
+    assert target.is_file()
+    assert not bundle.artifacts[0].staged_path.exists()
+    assert _status(store, job.id) == JobStatus.COMMITTING
+
+    # When: startup reconstructs the bundle from the durable intent and promoted target.
+    restarted = JobPrivateLifecycle(data_root / "job-context", clock=_clock)
+    recovered = recover_json_job(data_root, job.id, store, restarted, clock=_clock)
+
+    # Then: the report becomes done and all private commit residue is removed.
+    assert recovered is True
+    assert _status(store, job.id) == JobStatus.DONE
+    assert _read_json(target)["id"] == "topic-01"
+    assert not (data_root / "job-staging" / job.id).exists()
+    assert not (data_root / "job-commits" / f"{job.id}.json").exists()
+    assert not (data_root / "job-context" / job.id).exists()
+
+
+@pytest.mark.parametrize("target_state", ["missing", "marker_mismatch"])
+def test_promoted_canonical_recovery_fails_closed_when_target_is_not_exact(
+    tmp_path: Path,
+    target_state: str,
+) -> None:
+    # Given: canonical staging was consumed, but the promoted target is absent or no longer owned.
+    data_root = tmp_path / target_state / "data"
+    store = SharedJobStore(data_root / "jobs-v2.json", data_root / "jobs.json", clock=_clock)
+    lifecycle = JobPrivateLifecycle(data_root / "job-context", clock=_clock)
+    job = _running_job(store, "topic_report")
+    target = data_root / "topic-reports" / "topic-01.json"
+    workspace = JobArtifactWorkspace(data_root, clock=_clock)
+    bundle = workspace.stage(
+        job,
+        [
+            CanonicalArtifactSpec(
+                artifact_type="topic_report",
+                artifact_id="topic-01",
+                report_kind=ReportKind.TOPIC_REPORT,
+                exact_path=target,
+                write_kind=WriteKind.CANONICAL,
+                candidate={"id": "topic-01", "markdown": "# Topic"},
+            )
+        ],
+        terminal_result={
+            "artifactId": "topic-01",
+            "reportId": "topic-01",
+            "date": "2026-07-18",
+            "title": "Topic",
+        },
+    )
+
+    def interrupt(phase: str) -> None:
+        if phase == "artifacts_written":
+            raise CommitInterruptedError(phase)
+
+    with pytest.raises(CommitInterruptedError):
+        workspace.commit(bundle, store, lifecycle, fault_hook=interrupt)
+    if target_state == "missing":
+        target.unlink()
+        preserved = None
+    else:
+        changed = _read_json(target)
+        changed["jobCommit"] = {"jobId": "other-job", "operationId": "other-operation"}
+        target.write_text(json.dumps(changed), encoding="utf-8")
+        preserved = target.read_bytes()
+
+    # When: recovery validates the only possible durable source.
+    recovered = recover_json_job(data_root, job.id, store, lifecycle, clock=_clock)
+
+    # Then: it fails closed, never recreates or overwrites the non-exact target, and scrubs residue.
+    assert recovered is False
+    assert _status(store, job.id) == JobStatus.FAILED_COMMIT_RECOVERY
+    assert (target.read_bytes() if target.exists() else None) == preserved
+    assert not (data_root / "job-staging" / job.id).exists()
+    assert not (data_root / "job-commits" / f"{job.id}.json").exists()
+
+
 def test_failed_staging_removes_partial_private_bundle(tmp_path: Path) -> None:
     # Given: a running job and invalid artifact metadata discovered after stage root creation.
     data_root = tmp_path / "data"

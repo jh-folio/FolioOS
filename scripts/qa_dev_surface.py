@@ -1,3 +1,18 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["fastapi>=0.139.0", "uvicorn>=0.51.0"]
+# ///
+
+# ─── How to run ───
+# 1. Install uv (if not installed):
+#      curl -LsSf https://astral.sh/uv/install.sh | sh
+# 2. Run directly (no venv, no pip install needed):
+#      uv run qa_dev_surface.py run --scenario <id> --source-root <worktree> --attempt-dir <attempt-dir>
+# 3. Or make executable and run:
+#      chmod +x qa_dev_surface.py && ./qa_dev_surface.py run --scenario <id> --source-root <worktree> --attempt-dir <attempt-dir>
+# ──────────────────
+
 from __future__ import annotations
 
 import argparse
@@ -29,12 +44,6 @@ from qa_dev_surface_support import (
     stop_server,
     wait_ready,
 )
-from qa_smart_collections import run as run_smart_collections
-from qa_market_state import run as run_market_state
-from qa_jobs_work_log import run as run_jobs_work_log
-from qa_proposal_writeback import run as run_proposal_writeback
-
-
 @dataclass(frozen=True, slots=True)
 class RunConfig:
     scenario: str
@@ -47,13 +56,25 @@ def write_json(path: Path, payload: JsonValue) -> None:
 
 
 def run_scenario(config: RunConfig) -> int:
+    if config.scenario == "deep-research-execution":
+        from qa_deep_research_execution import run as run_deep_research
+
+        return run_deep_research(config.sourceRoot, config.attemptDir)
     if config.scenario == "smart-collections":
+        from qa_smart_collections import run as run_smart_collections
+
         return run_smart_collections(config.sourceRoot, config.attemptDir)
     if config.scenario == "market-state":
+        from qa_market_state import run as run_market_state
+
         return run_market_state(config.sourceRoot, config.attemptDir)
     if config.scenario == "proposal-writeback":
+        from qa_proposal_writeback import run as run_proposal_writeback
+
         return run_proposal_writeback(config.sourceRoot, config.attemptDir)
     if config.scenario == "jobs-work-log":
+        from qa_jobs_work_log import run as run_jobs_work_log
+
         return run_jobs_work_log(config.sourceRoot, config.attemptDir)
     attempt = config.attemptDir.resolve()
     attempt.mkdir(parents=True, exist_ok=True)
@@ -218,7 +239,7 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(prog="qa_dev_surface.py")
     commands = result.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run")
-    run.add_argument("--scenario", choices=["approved-request", "smart-collections", "market-state", "proposal-writeback", "jobs-work-log"], required=True)
+    run.add_argument("--scenario", choices=["approved-request", "smart-collections", "market-state", "proposal-writeback", "jobs-work-log", "deep-research-execution"], required=True)
     run.add_argument("--source-root", type=Path, required=True)
     run.add_argument("--attempt-dir", type=Path, required=True)
     server = commands.add_parser("serve")

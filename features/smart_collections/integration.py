@@ -56,7 +56,7 @@ def resolve_approved_collection(
         resolvedCandidateIds=candidates,
         executionUniverseIds=universe,
         unusableCandidates=unusable,
-        selectedEvidenceIds=universe,
+        selectedEvidenceIds=[],
         providerGenerations=ProviderGenerations(
             indexGeneration=str(resolved["indexGeneration"]) if resolved["indexGeneration"] else None,
             rssGeneration=str(resolved["rssGeneration"]) if resolved["rssGeneration"] else None,

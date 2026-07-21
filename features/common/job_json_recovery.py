@@ -7,6 +7,13 @@ from typing import Final
 
 from pydantic import ValidationError
 
+from features.common.canonical_report_state import (
+    canonical_content_hash,
+    load_report,
+    marker,
+    revision,
+    storage_hash,
+)
 from features.common.canonical_report_types import CanonicalConflictError, CanonicalValidationError, PreparedCanonicalWrite
 from features.common.job_json_commit import JobArtifactCommitter
 from features.common.job_json_cleanup import cleanup_json_recovery_residue, read_commit_journal
@@ -67,6 +74,30 @@ def _manifest_for_recovery(
     )
 
 
+def _canonical_recovery_bytes(
+    item: ManifestArtifact,
+    exact_path: Path,
+    staged_path: Path,
+    job_id: str,
+    operation_id: str,
+) -> bytes:
+    if staged_path.exists():
+        return staged_path.read_bytes()
+    current = load_report(exact_path)
+    current_revision = revision(current) if current is not None else None
+    expected_marker = {"jobId": job_id, "operationId": operation_id}
+    if (
+        current is None
+        or storage_hash(current) != item.expected.targetHash
+        or marker(current) != expected_marker
+        or current_revision is None
+        or current_revision[0] != item.expected.targetRevision
+        or canonical_content_hash(current) != item.canonicalContentHash
+    ):
+        raise JobArtifactConflictError("promoted canonical target does not match recovery intent")
+    return exact_path.read_bytes()
+
+
 def _load_recovery_bundle(data_root: Path, job_id: str, store: SharedJobStore) -> tuple[StagedJobBundle, JobCommitJournal | None]:
     current = store.get(job_id)
     if current is None or current.status != JobStatus.COMMITTING or current.commitIntent is None:
@@ -114,7 +145,13 @@ def _load_recovery_bundle(data_root: Path, job_id: str, store: SharedJobStore) -
                 target_revision=expected.targetRevision,
                 canonical_content_hash=item.canonicalContentHash,
                 canonical_changed=item.canonicalChanged,
-                serialized_bytes=staged_path.read_bytes() if staged_path.exists() else b"",
+                serialized_bytes=_canonical_recovery_bytes(
+                    item,
+                    exact_path,
+                    staged_path,
+                    job_id,
+                    manifest.operationId,
+                ),
                 operation_id=manifest.operationId,
                 target_marker=target_marker.model_dump(mode="json"),
             )

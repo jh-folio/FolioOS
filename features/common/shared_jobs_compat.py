@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from features.common.jcs import JsonValue
 from features.common.shared_jobs_private import TerminalLiveDetail
 from features.common.shared_jobs_schema import (
@@ -71,6 +73,15 @@ def worker_projection(result) -> dict[str, str | int | bool | None]:
         for key, value in result.items()
         if key in allowed and (value is None or isinstance(value, (str, int, bool)))
     }
+    generated_at = projected.get("generatedAt")
+    if isinstance(generated_at, str):
+        try:
+            parsed = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+        except ValueError:
+            pass
+        else:
+            if parsed.tzinfo is not None:
+                projected["generatedAt"] = parsed.astimezone(UTC).isoformat().replace("+00:00", "Z")
     proposal = result.get("proposal")
     if isinstance(proposal, dict) and isinstance(proposal.get("id"), str):
         projected["proposalId"] = proposal["id"]

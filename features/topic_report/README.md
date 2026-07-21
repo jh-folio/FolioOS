@@ -151,9 +151,9 @@ data/topic-reports/YYYY-MM-DD_<topic_key>_<id>.json
 ```text
 GET    /api/topic-reports/presets
 GET    /api/topic-reports
-POST   /api/topic-reports/plan                       # TopicPlan만 생성 (보고서 X)
-POST   /api/topic-reports                             # 보고서 생성 (usePlanner/customTickers/qualityMode 지원)
-POST   /api/topic-reports/save
+POST   /api/topic-reports/plan                       # 승인 가능한 TopicPlan + 자료 preview
+POST   /api/topic-reports/confirm-degraded           # zero-evidence 규칙 fallback 명시 확인
+POST   /api/topic-reports                             # 승인 envelope를 202 SharedJob으로 실행
 GET    /api/topic-reports/{report_id}?includePersonal # personalOverlay 포함 조회
 POST   /api/topic-reports/{report_id}/evaluate         # Quality Gate 재평가
 POST   /api/topic-reports/{report_id}/personal-overlay # 개인 해석 생성
@@ -162,25 +162,23 @@ POST   /api/export-notion/topic-report
 POST   /api/export-obsidian/topic-report
 ```
 
-`POST /api/topic-reports` 요청 본문:
+`POST /api/topic-reports`는 `/plan`에서 받은 `approvedRequest`와 approval을 수정 없이 사용한다. direct와 CLI 모두 같은 구조이며, 결과 보고서는 SharedJob의 committing 단계에서 내부 저장된다. 별도 공개 save API는 없다.
 
 ```json
 {
-  "topicKey": "custom",
-  "customLabel": "일본 금리 인상이 원화와 한국 금융주에 미치는 영향",
-  "userContext": "관심 방향 (사실 아님)",
-  "webSearch": true,
-  "usePlanner": true,
-  "customTickers": {"USDJPY=X": "USD/JPY"},
-  "date": "2026-06-12",
-  "qualityMode": "diagnose_only",
-  "deepResearch": true
+  "approvedRequest": {"schemaVersion": 1, "planRevision": 1, "...": "plan 응답 값"},
+  "approval": {"id": "apr_<uuid>", "token": "<43-char base64url>"},
+  "execution": {
+    "mode": "direct",
+    "adapter": "auto",
+    "fallbackPolicy": "rules_on_engine_failure"
+  }
 }
 ```
 
 ## 저장 JSON 주요 필드 (v2)
 
-`markdown`, `topicPlan`, `evidencePackSummary`, `evidenceItems`, `sourceLedger`, `checkpoints`, `dataGaps`, `marketTape`, `quality`, `qualityGeneration`, `personalOverlay`(기본 null), `generation`, `marketData`, `sources`, `deepResearch`.
+`markdown`, `topicPlan`, `evidencePackSummary`, `evidenceItems`, `sourceLedger`, `checkpoints`, `dataGaps`, `marketTape`, `quality`, `qualityGeneration`, `personalOverlay`(기본 null), `generation`, `marketData`, `sources`, `deepResearch`, `researchResolution`, `marketStateResolution`, `executionProvenance`.
 
 Step 6 Data Foundation Lite 이후 `checkpoints`/`evidenceItems`/`sourceLedger`/`dataGaps`/`marketTape`는 `features/common/research_schema/`와 `features/common/market_data/tape.py`의 공통 스키마를 사용한다. 기본 `markdown`은 구조화 필드 생성으로 바뀌지 않는다.
 Step 7 Research Quality 이후 기존 저장 보고서의 `quality`가 없거나 구버전이면 조회 시 공통 evaluator로 재평가해 최신 `sourceGrounding` 필드를 포함한다.

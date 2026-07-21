@@ -7,6 +7,26 @@ from features.agent_mode import chat
 from features.market_memory.snapshot import save_market_state_snapshot
 
 
+def test_topic_pack_dispatch_preserves_custom_tickers_and_deep_research():
+    captured = {}
+
+    def fake_prepare(topic_key, **kwargs):
+        captured["topic_key"] = topic_key
+        captured.update(kwargs)
+        return {"taskType": "topic_report"}, Path("pack.json")
+
+    with patch.object(service, "prepare_topic_report_pack", side_effect=fake_prepare):
+        service.prepare_pack(
+            "topic_report",
+            topic_key="custom",
+            custom_tickers={"NVDA": "NVIDIA"},
+            deep_research=True,
+        )
+
+    assert captured["custom_tickers"] == {"NVDA": "NVIDIA"}
+    assert captured["deep_research"] is True
+
+
 def test_market_memory_agent_writeback_uses_existing_normalizer():
     pack = {
         "artifactId": "2099-12-31",

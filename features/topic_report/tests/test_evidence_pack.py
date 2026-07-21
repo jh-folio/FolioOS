@@ -60,6 +60,46 @@ def test_pack_handles_search_failure():
     assert pack["dataGaps"], "검색 실패 시 데이터 갭으로 기록"
 
 
+def test_admission_normalizes_url_and_preserves_exact_document_id():
+    docs = [
+        {
+            "id": "doc-first",
+            "title": "First",
+            "source": "Reuters",
+            "date": "2026-06-10",
+            "url": "https://EXAMPLE.com/story/?utm_source=rss",
+            "path": "research-inbox/rss/first.md",
+        },
+        {
+            "id": "doc-duplicate",
+            "title": "Duplicate URL",
+            "source": "Reuters",
+            "date": "2026-06-10",
+            "url": "https://example.com/story",
+            "path": "research-inbox/rss/duplicate.md",
+        },
+        {
+            "id": "doc-path",
+            "title": "Path fallback",
+            "source": "Local",
+            "date": "2026-06-10",
+            "url": "",
+            "path": r"D:\\workspace\\research-inbox\\articles\\path.md",
+        },
+    ]
+
+    pack = E.build_evidence_pack(
+        _plan(),
+        search_docs=lambda _queries, limit=12: docs[:limit],
+        search_memories=lambda _keywords, limit=20: [],
+        date="2026-06-11",
+    )
+
+    assert [item["documentId"] for item in pack["items"]] == ["doc-first", "doc-path"]
+    assert pack["totalDocs"] == 2
+    assert sum(pack["roleCounts"].values()) == 2
+
+
 def test_source_ledger_dedupes_and_ids():
     pack = E.build_evidence_pack(_plan(), search_docs=_search_docs, search_memories=_search_memories, date="2026-06-11")
     ledger = build_source_ledger(pack["items"] + pack["items"])  # 중복 입력
