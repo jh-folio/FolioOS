@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { updateReactAgentContext, type AgentContextPatch } from "../agentContext";
 import { FolioNotePanel, type FolioNoteIdentity } from "./FolioNotePanel";
 
@@ -30,6 +30,7 @@ export function ReportReaderShell({
   onClose,
   children,
 }: ReportReaderShellProps) {
+  const [mobileNoteOpen, setMobileNoteOpen] = useState(false);
   const resolvedNoteSlot = noteSlot ?? (noteIdentity ? (
     <FolioNotePanel
       identity={noteIdentity}
@@ -75,9 +76,33 @@ export function ReportReaderShell({
             </aside>
           )}
         {resolvedNoteSlot && (
-          <aside className="report-note-panel is-open" aria-label="투자 노트">
-            <div className="report-note-inner">{resolvedNoteSlot}</div>
-          </aside>
+          <>
+            <button
+              className={mobileNoteOpen ? "report-note-grip is-open" : "report-note-grip"}
+              type="button"
+              aria-label="투자 노트 열기"
+              aria-controls="report-reader-note-panel"
+              aria-expanded={mobileNoteOpen}
+              onClick={() => setMobileNoteOpen(true)}
+            />
+            <aside
+              id="report-reader-note-panel"
+              className={mobileNoteOpen ? "report-note-panel is-open" : "report-note-panel"}
+              aria-label="투자 노트"
+            >
+              <div className="report-note-inner">
+                <button
+                  className="report-note-mobile-close"
+                  type="button"
+                  aria-label="투자 노트 닫기"
+                  onClick={() => setMobileNoteOpen(false)}
+                >
+                  ×
+                </button>
+                {resolvedNoteSlot}
+              </div>
+            </aside>
+          </>
         )}
       </div>
     </div>

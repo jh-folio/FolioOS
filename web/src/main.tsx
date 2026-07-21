@@ -1,7 +1,22 @@
+declare global {
+  interface ImportMeta {
+    readonly env: {
+      readonly DEV: boolean;
+      readonly VITE_DISABLE_REACT_DEVTOOLS?: string;
+    };
+  }
+}
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
 import { MarketStateDashboard } from "./islands/MarketStateDashboard";
+
+const reactDevToolsDisabled = import.meta.env.VITE_DISABLE_REACT_DEVTOOLS === "1";
+if (import.meta.env.DEV && !reactDevToolsDisabled) {
+  void import("react-grab");
+  void import("react-scan");
+}
 
 // Island registry: each entry mounts a React component into a pre-existing DOM
 // root rendered by the vanilla public/ shell. New surfaces are added here as
