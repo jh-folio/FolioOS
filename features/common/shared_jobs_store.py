@@ -5,7 +5,7 @@ import os
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from threading import RLock
 
@@ -85,8 +85,11 @@ class StoreState:
     recovered: bool = False
 
 
-@lru_cache(maxsize=64)
+@cache
 def store_lock(path: str) -> RLock:
+    # Production stores live under a finite set of configured data roots. Lock
+    # identity must remain stable for the process lifetime so path churn cannot
+    # create two writers for one durable store.
     return RLock()
 
 

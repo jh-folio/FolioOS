@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from features.agent_mode.proposal_schema import ProposalRecord
+from features.agent_mode.proposal_schema import ProposalIdError, ProposalRecord, parse_proposal_id
 from features.agent_mode.work_log_schema import (
     ProposalStatus,
     ResultStatus,
@@ -40,7 +40,11 @@ class WorkLogView:
     def _proposal_status(self, proposal_id: str | None) -> ProposalStatus | None:
         if proposal_id is None:
             return None
-        path = self.proposals_dir / f"{proposal_id}.json"
+        try:
+            safe_id = parse_proposal_id(proposal_id)
+        except ProposalIdError:
+            return ProposalStatus.UNAVAILABLE
+        path = self.proposals_dir / f"{safe_id}.json"
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError):

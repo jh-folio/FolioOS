@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from threading import RLock
 
@@ -31,8 +31,11 @@ class WorkLogState:
     recovered: bool = False
 
 
-@lru_cache(maxsize=64)
+@cache
 def work_log_lock(path: str) -> RLock:
+    # The configured Work Log paths are finite in production. Never evict a
+    # lock while a service may still hold it: same path means same lock for the
+    # entire process lifetime.
     return RLock()
 
 

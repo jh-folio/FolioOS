@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { updateReactAgentContext } from "./agentContext";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
+import { AgentWorkLog } from "./AgentWorkLog";
 
 type AgentProposal = {
   id: string;
@@ -99,7 +100,6 @@ const ATTACHMENT_MAX_BYTES = 200_000;
 const ATTACHMENT_TEXT_LIMIT = 4_000;
 const PROVIDERS = new Set(["codex", "claude", "antigravity"]);
 const AGENT_HOME_THREAD_STORAGE_KEY = "folio.agentHome.thread.v1";
-const AGENT_MANAGED_JOB_KINDS = new Set(["agent_bridge", "rss"]);
 const WELCOME_MESSAGE: AgentMessage = {
   id: "welcome",
   role: "assistant",
@@ -162,38 +162,6 @@ function persistStoredMessages(messages: AgentMessage[]) {
   } catch {
     // localStorage 용량/권한 문제는 대화 기능 자체를 막지 않는다.
   }
-}
-
-function isAgentManagedJob(job: AgentJob) {
-  const label = `${job.label || ""} ${job.message || ""}`;
-  return AGENT_MANAGED_JOB_KINDS.has(String(job.kind || "")) || /^LLM CLI|Agent/.test(label);
-}
-
-function formatJobTime(job: AgentJob) {
-  const value = job.finishedAt || job.updatedAt || job.createdAt || "";
-  if (!value) return "";
-  try {
-    return new Intl.DateTimeFormat("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(value));
-  } catch {
-    return value.slice(0, 16);
-  }
-}
-
-function jobArtifactRoute(job: AgentJob) {
-  const result = job.result || {};
-  const artifactType = result.artifactType || "";
-  const artifactId = result.artifactId || result.reportId || "";
-  const date = result.date || "";
-  if (artifactType === "briefing" && date) return `#/briefing/${date}/both`;
-  if (artifactType === "company_analysis" && artifactId) return `#/analysis/${encodeURIComponent(artifactId)}`;
-  if (artifactType === "topic_report" && artifactId) return `#/deep-research/${encodeURIComponent(artifactId)}`;
-  if (String(job.label || "").includes("RSS")) return "#/rss";
-  return "";
 }
 
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
@@ -278,9 +246,7 @@ export function AgentHome() {
   const [effort, setEffort] = useState("medium");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
-  const [recentJobs, setRecentJobs] = useState<AgentJob[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(false);
-  const [jobsOpen, setJobsOpen] = useState(false);
+  const [workLogRefreshKey, setWorkLogRefreshKey] = useState(0);
   const [quickBusy, setQuickBusy] = useState("");
   const [quickStatus, setQuickStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -360,20 +326,6 @@ export function AgentHome() {
     };
   }, []);
 
-  const loadRecentJobs = useCallback(async () => {
-    setJobsLoading(true);
-    try {
-      const payload = await getJson<AgentJob[]>("/api/jobs");
-      setRecentJobs((Array.isArray(payload) ? payload : []).filter(isAgentManagedJob).slice(0, 4));
-    } finally {
-      setJobsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadRecentJobs().catch(() => undefined);
-  }, [loadRecentJobs]);
-
   function startNewConversation() {
     setMessages([WELCOME_MESSAGE]);
     setInput("");
@@ -434,7 +386,7 @@ export function AgentHome() {
       });
       const done = await pollAgentJob(job);
       const result = done.result || {};
-      loadRecentJobs().catch(() => undefined);
+      setWorkLogRefreshKey((current) => current + 1);
       setMessages((current) =>
         current.map((item) =>
           item.id === assistantId
@@ -488,7 +440,7 @@ export function AgentHome() {
         setQuickStatus("RSS 수집을 시작했습니다.");
         const job = await postJson<AgentJob>("/api/rssarchive/import", {});
         if (isJobResponse(job)) await pollAgentJob(job);
-        loadRecentJobs().catch(() => undefined);
+        setWorkLogRefreshKey((current) => current + 1);
         setQuickStatus("RSS 수집이 끝났습니다.");
         window.location.hash = "#/rss";
         return;
@@ -506,7 +458,7 @@ export function AgentHome() {
       } else {
         date = response.date || "";
       }
-      loadRecentJobs().catch(() => undefined);
+      setWorkLogRefreshKey((current) => current + 1);
       setQuickStatus(date ? "오늘 브리핑을 생성했습니다." : "브리핑 생성이 끝났습니다.");
       window.location.hash = date ? `#/briefing/${date}/both` : "#/briefing";
     } catch (err) {
@@ -737,53 +689,7 @@ export function AgentHome() {
           </section>
         )}
 
-        <section className={`agent-home-jobs${jobsOpen ? " open" : ""}`} aria-label="AI Agent 작업">
-          <div className="agent-home-section-head">
-            <div>
-              <p className="section-kicker">Agent Work</p>
-              <h2>최근 작업</h2>
-            </div>
-            <div className="agent-home-jobs-actions">
-              {jobsOpen && (
-                <button type="button" onClick={() => loadRecentJobs().catch(() => undefined)} disabled={jobsLoading}>
-                  {jobsLoading ? "확인 중" : "새로고침"}
-                </button>
-              )}
-              <button type="button" onClick={() => setJobsOpen((current) => !current)} aria-expanded={jobsOpen}>
-                {jobsOpen ? "접기 ▲" : "펼치기 ▼"}
-              </button>
-            </div>
-          </div>
-          {!jobsOpen ? null : recentJobs.length > 0 ? (
-            <div className="agent-home-job-list">
-              {recentJobs.map((job) => {
-                const route = jobArtifactRoute(job);
-                return (
-                  <article key={job.id} className={`agent-home-job ${job.status}`}>
-                    <div>
-                      <strong>{job.label || job.kind || "작업"}</strong>
-                      <p>{job.message || job.error || "상태 메시지가 없습니다."}</p>
-                      <span className="agent-home-job-meta">
-                        {job.status}
-                        {typeof job.progress === "number" ? ` · ${job.progress}%` : ""}
-                        {formatJobTime(job) ? ` · ${formatJobTime(job)}` : ""}
-                      </span>
-                    </div>
-                    {route && (
-                      <button type="button" onClick={() => { window.location.hash = route; }}>
-                        열기
-                      </button>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="agent-home-empty">
-              아직 표시할 Agent 작업이 없습니다. Home에서 질문하거나 브리핑/RSS 빠른 실행을 사용하면 여기에 남습니다.
-            </p>
-          )}
-        </section>
+        <AgentWorkLog surface="home" pageSize={20} refreshKey={workLogRefreshKey} />
       </div>
     </div>
   );

@@ -175,6 +175,18 @@ Deep Research에서 선택한 Smart Collection은 frontend가 `collectionId`와 
 - **CLI가 없으면** 규칙 기반 companion 응답으로 fallback한다(`engine: "rules"`) — LLM 없이도 동작 원칙 유지.
 - 종합(`both`) 브리핑은 시장별 파일로 나뉘어 있어 단일 레거시 `{date}.json`이 있을 때만 수정 대상이 된다.
 
+## Agent Work Log
+
+Work Log는 SharedJob과 현재 proposal 파일에서 요청 시점에 파생되는 metadata-only 보기다. 별도 작업 본문을 복사해 저장하지 않으며, 각 entry는 엄격한 26개 필드만 반환한다. prompt/context, reply, Markdown, diff, 경로, traceback, operation/commit metadata와 report·artifact ID는 반환하지 않는다. Pending proposal의 본문이 필요하면 Work Log가 아니라 `GET /api/agent/proposals/{id}`로 다시 조회한다.
+
+- `GET /api/agent/work-log` — `kind=all|companion|task`, `limit`, `offset`으로 파생 목록을 조회한다.
+- `POST /api/agent/work-log/clear-preview` → `DELETE /api/agent/work-log` — preview token으로 현재 보이기만 숨긴다. SharedJob, 보고서, proposal 파일은 변경하거나 삭제하지 않는다.
+- `POST /api/agent/work-log/migration-preview` → `POST /api/agent/work-log/migration-confirm` — legacy `jobs.json`을 명시적으로 preview한 뒤 v2 job store로 이동한다.
+
+보존 표시는 최대 30일/200건이며, companion만 `category=companion`, artifact-producing task는 `category=task`다. 동기 direct Briefing/Company, index/RSS/setup/install은 Work Log에 들어가지 않는다. Direct Topic과 CLI/Agent Briefing·Company는 SharedJob이므로 포함된다.
+
+SharedJob/Work Log의 경로별 lock registry는 프로세스 수명 동안 항목을 퇴거하지 않는다. 실제 제품의 durable store 경로는 설정된 data root 아래의 유한한 집합이며, 오래 살아 있는 service와 새 service가 같은 경로에 서로 다른 lock을 받지 않도록 lock identity를 보존하는 것이 메모리 회수보다 우선한다.
+
 ## 구현 위치
 
 ```text

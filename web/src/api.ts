@@ -256,6 +256,115 @@ export type ConfirmDegradedRequest = {
   readonly confirmed: true;
 };
 
+export type WorkLogFilter = "all" | "companion" | "task";
+export type WorkLogProposalStatus = "pending" | "applying" | "applied" | "rejected" | "stale" | "conflict" | "failed_apply" | "unavailable";
+export type WorkLogEntry = {
+  readonly id: string;
+  readonly jobId: string;
+  readonly category: "companion" | "task";
+  readonly kind: "index" | "rss" | "setup" | "agent_bridge" | "agent_cli_install" | "briefing" | "company_analysis" | "topic_report" | "market_state_snapshot";
+  readonly taskType: "index" | "rss" | "setup" | "companion" | "briefing" | "company_analysis" | "topic_report" | "personal_overlay" | "thesis_delta" | "market_memory_llm" | "market_state_snapshot" | "market_memory_update" | "quality_repair" | "investment_review";
+  readonly labelCode: "index_rebuild" | "rss_import" | "setup" | "agent_chat" | "agent_cli_install" | "agent_task" | "briefing" | "company_analysis" | "topic_report" | "market_state";
+  readonly status: JobStatus;
+  readonly progress: number;
+  readonly messageCode: JobStatus;
+  readonly createdAt: string;
+  readonly startedAt: string | null;
+  readonly updatedAt: string;
+  readonly finishedAt: string | null;
+  readonly errorCode: "adapter_unavailable" | "adapter_failed" | "validation_failed" | "save_failed" | "cancel_failed" | "restart_interrupted" | "commit_recovery_failed" | "private_cleanup_failed" | "store_unavailable" | "internal_error" | null;
+  readonly generationMode: "llm_api" | "llm_cli" | "rules" | "none";
+  readonly adapter: "auto" | "codex" | "claude" | "antigravity" | "openai_api" | "gemini_api" | "claude_api" | "rules" | "none";
+  readonly requestedMode: "direct" | "cli" | null;
+  readonly mode: "collect" | "index" | "install" | "answer" | "generate" | "revise" | "fallback";
+  readonly attemptedEngine: "api" | "cli" | "rules" | "none" | null;
+  readonly finalEngine: "api" | "cli" | "rules" | "none" | null;
+  readonly fallbackReason: "engine_unavailable" | "engine_failed" | "confirmed_zero_evidence" | null;
+  readonly artifactTypes: readonly string[];
+  readonly artifactCount: number;
+  readonly proposalId: string | null;
+  readonly proposalStatus: WorkLogProposalStatus | null;
+  readonly resultStatus: "done" | "cancelled" | "failed" | null;
+};
+
+export type WorkLogList = {
+  readonly schemaVersion: 1;
+  readonly storeRevision: number;
+  readonly jobsStoreRevision: number;
+  readonly retention: { readonly maxEntries: 200; readonly maxDays: 30 };
+  readonly total: number;
+  readonly entries: readonly WorkLogEntry[];
+};
+export type WorkLogClearPreview = { readonly previewToken: string; readonly scope: WorkLogFilter; readonly count: number; readonly jobsStoreRevision: number; readonly expiresAt: string };
+export type WorkLogClearResponse = { readonly scope: WorkLogFilter; readonly hiddenCount: number; readonly jobsStoreRevision: number; readonly storeRevision: number };
+export type WorkLogMigrationPreview = { readonly previewToken: string; readonly legacyJobs: number; readonly migratableJobs: number; readonly collisions: readonly { readonly legacyId: string; readonly reason: "id_collision" }[]; readonly jobsStoreRevision: number; readonly expiresAt: string };
+export type WorkLogMigrationResponse = { readonly migratedJobs: number; readonly derivedVisibleEntries: number; readonly keptOriginal: boolean; readonly deletedOriginal: boolean; readonly jobsStoreRevision: number; readonly storeRevision: number };
+
+export type AgentProposalRecord = {
+  readonly schemaVersion: 2;
+  readonly id: string;
+  readonly reportKind: string;
+  readonly reportId: string;
+  readonly marketScope: "both" | "us" | "kr" | "none";
+  readonly status: Exclude<WorkLogProposalStatus, "unavailable">;
+  readonly summary: string | null;
+  readonly diff: string | null;
+  readonly revisedMarkdown: string | null;
+  readonly userRequest: string | null;
+};
+
+export const WORK_LOG_ENTRY_KEYS = ["id", "jobId", "category", "kind", "taskType", "labelCode", "status", "progress", "messageCode", "createdAt", "startedAt", "updatedAt", "finishedAt", "errorCode", "generationMode", "adapter", "requestedMode", "mode", "attemptedEngine", "finalEngine", "fallbackReason", "artifactTypes", "artifactCount", "proposalId", "proposalStatus", "resultStatus"] as const;
+const WORK_LOG_LIST_KEYS = ["schemaVersion", "storeRevision", "jobsStoreRevision", "retention", "total", "entries"] as const;
+const RETENTION_KEYS = ["maxEntries", "maxDays"] as const;
+const WORK_LOG_CATEGORIES = new Set(["companion", "task"]);
+const WORK_LOG_KINDS = new Set(["index", "rss", "setup", "agent_bridge", "agent_cli_install", "briefing", "company_analysis", "topic_report", "market_state_snapshot"]);
+const WORK_LOG_TASK_TYPES = new Set(["index", "rss", "setup", "companion", "briefing", "company_analysis", "topic_report", "personal_overlay", "thesis_delta", "market_memory_llm", "market_state_snapshot", "market_memory_update", "quality_repair", "investment_review"]);
+const WORK_LOG_LABEL_CODES = new Set(["index_rebuild", "rss_import", "setup", "agent_chat", "agent_cli_install", "agent_task", "briefing", "company_analysis", "topic_report", "market_state"]);
+const WORK_LOG_STATUSES = new Set(["queued", "running", "cancel_requested", "committing", "done", "cancelled", "failed", "failed_cancel", "failed_commit", "failed_restart", "failed_commit_recovery"]);
+const WORK_LOG_GENERATION_MODES = new Set(["llm_api", "llm_cli", "rules", "none"]);
+const WORK_LOG_ADAPTERS = new Set(["auto", "codex", "claude", "antigravity", "openai_api", "gemini_api", "claude_api", "rules", "none"]);
+const WORK_LOG_REQUESTED_MODES = new Set(["direct", "cli"]);
+const WORK_LOG_MODES = new Set(["collect", "index", "install", "answer", "generate", "revise", "fallback"]);
+const WORK_LOG_ENGINES = new Set(["api", "cli", "rules", "none"]);
+const WORK_LOG_FALLBACK_REASONS = new Set(["engine_unavailable", "engine_failed", "confirmed_zero_evidence"]);
+const WORK_LOG_ERROR_CODES = new Set(["adapter_unavailable", "adapter_failed", "validation_failed", "save_failed", "cancel_failed", "restart_interrupted", "commit_recovery_failed", "private_cleanup_failed", "store_unavailable", "internal_error"]);
+const WORK_LOG_PROPOSAL_STATUSES = new Set(["pending", "applying", "applied", "rejected", "stale", "conflict", "failed_apply", "unavailable"]);
+const WORK_LOG_RESULT_STATUSES = new Set(["done", "cancelled", "failed"]);
+const UTC_Z = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
+
+function hasExactKeys(value: unknown, keys: readonly string[]): value is Readonly<Record<string, unknown>> {
+  if (!isRecord(value)) return false;
+  const actual = Object.keys(value).sort();
+  const expected = [...keys].sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+}
+
+function isWorkLogEntry(value: unknown): value is WorkLogEntry {
+  if (!hasExactKeys(value, WORK_LOG_ENTRY_KEYS)) return false;
+  const nullableIn = (item: unknown, values: ReadonlySet<string>) => item === null || values.has(item as string);
+  const nullableUtc = (item: unknown) => item === null || (typeof item === "string" && UTC_Z.test(item));
+  return typeof value.id === "string" && /^wl_[0-9a-f]{24}$/.test(value.id) && typeof value.jobId === "string"
+    && WORK_LOG_CATEGORIES.has(value.category as string) && WORK_LOG_KINDS.has(value.kind as string)
+    && WORK_LOG_TASK_TYPES.has(value.taskType as string) && WORK_LOG_LABEL_CODES.has(value.labelCode as string)
+    && WORK_LOG_STATUSES.has(value.status as string) && Number.isInteger(value.progress) && (value.progress as number) >= 0 && (value.progress as number) <= 100
+    && WORK_LOG_STATUSES.has(value.messageCode as string) && typeof value.createdAt === "string" && UTC_Z.test(value.createdAt)
+    && typeof value.updatedAt === "string" && UTC_Z.test(value.updatedAt) && nullableUtc(value.startedAt) && nullableUtc(value.finishedAt)
+    && nullableIn(value.errorCode, WORK_LOG_ERROR_CODES) && WORK_LOG_GENERATION_MODES.has(value.generationMode as string)
+    && WORK_LOG_ADAPTERS.has(value.adapter as string) && nullableIn(value.requestedMode, WORK_LOG_REQUESTED_MODES)
+    && WORK_LOG_MODES.has(value.mode as string) && nullableIn(value.attemptedEngine, WORK_LOG_ENGINES) && nullableIn(value.finalEngine, WORK_LOG_ENGINES)
+    && nullableIn(value.fallbackReason, WORK_LOG_FALLBACK_REASONS) && Array.isArray(value.artifactTypes)
+    && value.artifactTypes.every((item) => typeof item === "string") && Number.isInteger(value.artifactCount) && (value.artifactCount as number) >= 0
+    && (value.proposalId === null || typeof value.proposalId === "string") && nullableIn(value.proposalStatus, WORK_LOG_PROPOSAL_STATUSES)
+    && nullableIn(value.resultStatus, WORK_LOG_RESULT_STATUSES);
+}
+
+export function parseWorkLogList(value: unknown): WorkLogList {
+  if (!hasExactKeys(value, WORK_LOG_LIST_KEYS) || value.schemaVersion !== 1 || !Number.isInteger(value.storeRevision) || !Number.isInteger(value.jobsStoreRevision) || !Number.isInteger(value.total) || !Array.isArray(value.entries) || !value.entries.every(isWorkLogEntry) || !hasExactKeys(value.retention, RETENTION_KEYS) || value.retention.maxEntries !== 200 || value.retention.maxDays !== 30) {
+    throw new Error("work_log_contract_invalid");
+  }
+  return value as WorkLogList;
+}
+
 export type ApiErrorPayload = Readonly<Record<string, unknown>>;
 
 export class ApiRequestError extends Error {

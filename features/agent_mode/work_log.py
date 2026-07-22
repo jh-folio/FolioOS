@@ -137,6 +137,10 @@ class WorkLogService:
         return matched, state
 
     def clear(self, scope: TokenScope | str, preview_token: str) -> JsonObject:
+        with self.job_store.lock, self.store.lock:
+            return self._clear_locked(scope, preview_token)
+
+    def _clear_locked(self, scope: TokenScope | str, preview_token: str) -> JsonObject:
         parsed_scope = TokenScope(scope)
         entries = self._visible(WorkLogFilter(parsed_scope.value))
         token, state = self._validated_token(preview_token, TokenPurpose.CLEAR, parsed_scope, len(entries))
@@ -168,6 +172,10 @@ class WorkLogService:
         }
 
     def migration_confirm(self, preview_token: str, action: str) -> JsonObject:
+        with self.job_store.lock, self.store.lock:
+            return self._migration_confirm_locked(preview_token, action)
+
+    def _migration_confirm_locked(self, preview_token: str, action: str) -> JsonObject:
         if action not in {"migrate_keep_original", "migrate_delete_original"}:
             raise WorkLogValidationError("migration_action_invalid")
         preview = self.job_store.legacy_preview()
