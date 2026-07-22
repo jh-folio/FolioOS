@@ -23,6 +23,7 @@ FORBIDDEN_KEY_SUFFIXES = {".pem", ".key"}
 EXCLUDED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "node_modules"}
 EXCLUDED_PARTS = {"tests"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
+HOST_ONLY_QA_HELPERS = {"qa_server_supervisor.py", "qa_fault_proxy.py"}
 
 
 def _path_parts(rel: str) -> tuple[str, ...]:
@@ -110,6 +111,8 @@ def find_forbidden_paths(release_dir: Path, manifest: dict) -> list[str]:
         if _is_dev_or_cache_file(rel, path):
             issues.append(f"Development/cache path exists: {rel}")
         if path.is_file():
+            if path.name.lower() in HOST_ONLY_QA_HELPERS:
+                issues.append(f"Host-only QA helper must not ship: {rel}")
             suffix = path.suffix.lower()
             if path.name.lower() == ".env":
                 issues.append(f"Forbidden environment file exists: {rel}")

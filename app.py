@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import Body, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from features.common.health import health_payload
 
 from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.common.jobs import (
@@ -374,6 +375,11 @@ fastapi_app.include_router(AgentCompanionBoundary(SMART_COLLECTION_SERVICE).rout
 fastapi_app.include_router(create_market_state_router(DATA_DIR))
 fastapi_app.include_router(jobs_router)
 fastapi_app.include_router(work_log_router)
+
+
+@fastapi_app.get("/api/health")
+def api_health():
+    return health_payload(ROOT)
 
 
 @fastapi_app.exception_handler(Exception)
