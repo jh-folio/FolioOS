@@ -13,6 +13,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -33,6 +34,15 @@ ADDITIONAL_SOURCE_FILES = {
     "defaults/config/kospi200_constituents.json",
     "defaults/config/rss_feeds.yaml",
     "defaults/config/sp500_constituents.json",
+}
+
+ALLOWED_LOCAL_CONFIG_PATHS = {
+    "company_aliases.json",
+    "company_master.json",
+    "evidence_sources.yaml",
+    "kospi200_constituents.json",
+    "rss_feeds.yaml",
+    "sp500_constituents.json",
 }
 
 EXCLUDED_DIR_NAMES = {
@@ -106,8 +116,8 @@ def copy_tree(src: Path, dst: Path, *, dry_run: bool, copied: list[str]) -> None
 
 def validate_version(version: str) -> str:
     version = str(version or "").strip()
-    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", version):
-        raise SystemExit("Version must contain only letters, numbers, dots, dashes, or underscores.")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._+-]{0,63}", version):
+        raise SystemExit("Version must contain only letters, numbers, dots, dashes, plus signs, or underscores.")
     if "/" in version or "\\" in version:
         raise SystemExit("Version must not contain path separators.")
     return version
@@ -135,15 +145,59 @@ def validate_artifact_path(output: Path) -> Path:
     return resolved
 
 
-def _remove_existing(package_dir: Path, package_zip: Path, *, force: bool) -> None:
+def _ensure_output_absent(package_dir: Path, package_zip: Path) -> None:
     if package_dir.exists():
-        if not force:
-            raise SystemExit(f"Output already exists: {package_dir}. Use --force to replace it.")
-        shutil.rmtree(validate_artifact_path(package_dir))
+        raise SystemExit(f"Output already exists: {package_dir}.")
     if package_zip.exists():
-        if not force:
-            raise SystemExit(f"Output already exists: {package_zip}. Use --force to replace it.")
-        validate_artifact_path(package_zip).unlink()
+        raise SystemExit(f"Output already exists: {package_zip}.")
+
+
+def _git_head() -> str:
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=ROOT,
+        text=True,
+        encoding="ascii",
+        capture_output=True,
+        check=False,
+    )
+    commit = result.stdout.strip().lower()
+    if result.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise SystemExit("Unable to derive the full release commit.")
+    return commit
+
+
+def _require_clean_release_inputs(manifest: dict) -> str:
+    if (ROOT / ".env").exists():
+        raise SystemExit("Private/local release input is present; refusing to package.")
+
+    config_root = ROOT / "config"
+    if config_root.exists():
+        local_paths = {
+            path.relative_to(config_root).as_posix()
+            for path in config_root.rglob("*")
+            if path.is_file()
+        }
+        has_nested_directory = any(path.is_dir() for path in config_root.rglob("*"))
+        if has_nested_directory or not local_paths.issubset(ALLOWED_LOCAL_CONFIG_PATHS):
+            raise SystemExit("Private/local release input is present; refusing to package.")
+
+    package_inputs = [
+        "release-manifest.json",
+        *manifest["runtimeFiles"],
+        *manifest["runtimeDirectories"],
+    ]
+    input_status = subprocess.run(
+        ["git", "status", "--porcelain=v1", "--untracked-files=all", "--", *package_inputs],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+    )
+    if input_status.returncode != 0:
+        raise SystemExit("Unable to audit tracked release inputs.")
+    if input_status.stdout:
+        raise SystemExit("Tracked release inputs are dirty or unreviewed; refusing to package.")
+    return _git_head()
 
 
 def _copy_manifest_entries(manifest: dict, package_dir: Path, *, dry_run: bool, copied: list[str]) -> None:
@@ -174,8 +228,11 @@ def _copy_manifest_entries(manifest: dict, package_dir: Path, *, dry_run: bool, 
 def write_zip(package_dir: Path, package_zip: Path) -> None:
     with zipfile.ZipFile(package_zip, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(package_dir.rglob("*")):
-            if path.is_file():
-                archive.write(path, path.relative_to(package_dir.parent).as_posix())
+            archive_name = path.relative_to(package_dir.parent).as_posix()
+            if path.is_dir():
+                archive.writestr(archive_name.rstrip("/") + "/", b"")
+            elif path.is_file():
+                archive.write(path, archive_name)
 
 
 def build_package(
@@ -184,7 +241,6 @@ def build_package(
     output_root: Path = DEFAULT_OUTPUT_ROOT,
     manifest_path: Path = DEFAULT_MANIFEST,
     dry_run: bool,
-    force: bool,
     skip_gitleaks: bool,
 ) -> tuple[list[str], Path, Path]:
     manifest = load_manifest(manifest_path)
@@ -197,35 +253,30 @@ def build_package(
 
     copied: list[str] = []
 
-    if not dry_run:
-        output_root.mkdir(parents=True, exist_ok=True)
-        _remove_existing(package_dir, package_zip, force=force)
-        package_dir.mkdir(parents=True, exist_ok=True)
+    if dry_run:
+        _copy_manifest_entries(manifest, package_dir, dry_run=True, copied=copied)
+        return copied, package_dir, package_zip
 
-    _copy_manifest_entries(manifest, package_dir, dry_run=dry_run, copied=copied)
-    if not dry_run:
-        commit_result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=ROOT,
-            text=True,
-            encoding="ascii",
-            capture_output=True,
-            check=False,
-        )
-        commit = commit_result.stdout.strip().lower()
-        if commit_result.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", commit):
-            raise SystemExit("Unable to derive the full release commit.")
+    _ensure_output_absent(package_dir, package_zip)
+    commit = _require_clean_release_inputs(manifest)
+    output_root.mkdir(parents=True, exist_ok=True)
+    staging_root = Path(tempfile.mkdtemp(prefix=".tmp-", dir=output_root))
+    staging_package = staging_root / package_dir.name
+    staging_zip = staging_root / package_zip.name
+    try:
+        staging_package.mkdir()
+        _copy_manifest_entries(manifest, staging_package, dry_run=False, copied=copied)
         built_at = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
         build = {"version": RELEASE_VERSION, "commit": commit, "builtAt": built_at}
-        (package_dir / "BUILD.json").write_text(
+        (staging_package / "BUILD.json").write_text(
             json.dumps(build, ensure_ascii=False, separators=(",", ":")) + "\n",
             encoding="utf-8",
         )
         copied.append("BUILD.json")
-        shutil.copy2(manifest_path, package_dir / "release-manifest.json")
+        shutil.copy2(manifest_path, staging_package / "release-manifest.json")
         copied.append("release-manifest.json")
         issues = verify_release(
-            package_dir,
+            staging_package,
             manifest_path,
             run_gitleaks=not skip_gitleaks,
             expected_commit=commit,
@@ -234,7 +285,20 @@ def build_package(
             for issue in issues:
                 print(issue)
             raise SystemExit("Release verification failed.")
-        write_zip(package_dir, package_zip)
+        write_zip(staging_package, staging_zip)
+        promoted_directory = False
+        try:
+            staging_package.replace(package_dir)
+            promoted_directory = True
+            staging_zip.replace(package_zip)
+        except BaseException:
+            if promoted_directory and package_dir.exists():
+                shutil.rmtree(package_dir, ignore_errors=True)
+            if package_zip.exists():
+                package_zip.unlink(missing_ok=True)
+            raise
+    finally:
+        shutil.rmtree(staging_root, ignore_errors=True)
 
     return copied, package_dir, package_zip
 
@@ -245,7 +309,6 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_ROOT, help="Output root under dist/.")
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST, help="Release manifest path.")
     parser.add_argument("--dry-run", action="store_true", help="Print what would be packaged without writing files.")
-    parser.add_argument("--force", action="store_true", help="Replace the versioned output directory and ZIP.")
     parser.add_argument("--skip-gitleaks", action="store_true", help="Skip Gitleaks scan for tests or diagnostics.")
     args = parser.parse_args()
 
@@ -254,7 +317,6 @@ def main() -> int:
         output_root=args.output,
         manifest_path=args.manifest,
         dry_run=args.dry_run,
-        force=args.force,
         skip_gitleaks=args.skip_gitleaks,
     )
     action = "Would package" if args.dry_run else "Packaged"

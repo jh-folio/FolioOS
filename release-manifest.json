@@ -11,6 +11,8 @@
     "docs/assets/screenshots/folio-os-home.png",
     "docs/assets/screenshots/folio-os-rss-feed.png",
     "installation.md",
+    "requirements-bootstrap.lock.txt",
+    "requirements.lock.py312.txt",
     "requirements.txt",
     "start.ps1",
     "start.sh",

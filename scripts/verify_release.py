@@ -13,6 +13,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 
 
@@ -24,6 +25,9 @@ EXCLUDED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cach
 EXCLUDED_PARTS = {"tests"}
 EXCLUDED_SUFFIXES = {".pyc", ".pyo"}
 HOST_ONLY_QA_HELPERS = {"qa_server_supervisor.py", "qa_fault_proxy.py"}
+GITLEAKS_VERSION = "8.30.1"
+GITLEAKS_TIMEOUT_SECONDS = 120
+GITLEAKS_REDACTION_MARKERS = {"REDACTED", "[REDACTED]"}
 
 
 def _path_parts(rel: str) -> tuple[str, ...]:
@@ -144,23 +148,79 @@ def find_unexpected_files(release_dir: Path, manifest: dict) -> list[str]:
     return issues
 
 
+def _gitleaks_report_is_redacted(report: list[object]) -> bool:
+    for finding in report:
+        if not isinstance(finding, dict):
+            return False
+        secret = finding.get("Secret")
+        match = finding.get("Match")
+        if not isinstance(secret, str) or secret.strip().upper() not in GITLEAKS_REDACTION_MARKERS:
+            return False
+        if not isinstance(match, str) or not any(marker in match.upper() for marker in GITLEAKS_REDACTION_MARKERS):
+            return False
+    return True
+
+
 def run_gitleaks_scan(release_dir: Path) -> list[str]:
     exe = shutil.which("gitleaks")
     if not exe:
         return ["Gitleaks is required for release verification but was not found on PATH."]
-    result = subprocess.run(
-        [exe, "dir", str(release_dir), "--redact=100"],
-        cwd=ROOT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        capture_output=True,
-        check=False,
-    )
-    if result.returncode == 0:
-        return []
-    detail = (result.stderr or result.stdout or "").strip()
-    return [f"Gitleaks found issues in release artifact: {detail}"]
+    try:
+        version_result = subprocess.run(
+            [exe, "version", "--redact=100"],
+            cwd=ROOT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+            timeout=GITLEAKS_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return ["Gitleaks version verification timed out; release verification failed closed."]
+    if version_result.returncode != 0 or version_result.stdout.strip() != GITLEAKS_VERSION:
+        return [f"Gitleaks {GITLEAKS_VERSION} is required for release verification."]
+
+    with tempfile.TemporaryDirectory(prefix="folio-gitleaks-report-") as temporary:
+        attempt_directory = Path(temporary)
+        (attempt_directory / ".folio-security-owned.json").write_text(
+            json.dumps({"owner": "verify_release", "state": "scanning"}, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        report_path = attempt_directory / "findings.json"
+        try:
+            result = subprocess.run(
+                [
+                    exe,
+                    "dir",
+                    "--redact=100",
+                    "--report-format=json",
+                    f"--report-path={report_path}",
+                    str(release_dir),
+                ],
+                cwd=ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=GITLEAKS_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired:
+            return ["Gitleaks artifact scan timed out; release verification failed closed."]
+
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            return ["Gitleaks did not produce a valid sanitized JSON report; release verification failed closed."]
+        if not isinstance(report, list):
+            return ["Gitleaks JSON report has an invalid shape; release verification failed closed."]
+        finding_count = len(report)
+        if finding_count and not _gitleaks_report_is_redacted(report):
+            return ["Gitleaks report failed redaction validation; release verification failed closed."]
+        if result.returncode == 0 and finding_count == 0:
+            return []
+        if finding_count:
+            return [f"Gitleaks found {finding_count} potential secret(s) in the release artifact."]
+        return ["Gitleaks scan failed without actionable sanitized findings; release verification failed closed."]
 
 
 def find_build_metadata_issues(release_dir: Path, expected_commit: str | None) -> list[str]:
@@ -194,6 +254,26 @@ def find_build_metadata_issues(release_dir: Path, expected_commit: str | None) -
     return issues
 
 
+def derive_source_commit() -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+            encoding="ascii",
+            errors="replace",
+            capture_output=True,
+            check=False,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    commit = result.stdout.strip().lower()
+    if result.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", commit):
+        return None
+    return commit
+
+
 def verify_release(
     release_dir: Path,
     manifest_path: Path = DEFAULT_MANIFEST,
@@ -208,7 +288,11 @@ def verify_release(
     issues = find_missing_required_paths(release_dir, manifest)
     issues.extend(find_forbidden_paths(release_dir, manifest))
     issues.extend(find_unexpected_files(release_dir, manifest))
-    issues.extend(find_build_metadata_issues(release_dir, expected_commit))
+    bound_commit = expected_commit or derive_source_commit()
+    if bound_commit is None:
+        issues.append("Unable to bind BUILD.json to the source workspace commit.")
+    else:
+        issues.extend(find_build_metadata_issues(release_dir, bound_commit))
     if run_gitleaks:
         issues.extend(run_gitleaks_scan(release_dir))
     return sorted(set(issues))
