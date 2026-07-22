@@ -224,7 +224,19 @@ def _spawn(manifest: dict[str, Any], log: Any, job: WindowsJob) -> tuple[subproc
     extracted = Path(manifest["extractRoot"]).resolve()
     if not _under(extracted, root) or not (extracted / "app.py").is_file():
         raise RuntimeError("invalid extracted app root")
-    command = [sys.executable, str(extracted / "app.py")]
+    launch_mode = str(manifest.get("launchMode", "app_main"))
+    if launch_mode == "app_main":
+        command = [sys.executable, str(extracted / "app.py")]
+    elif launch_mode == "asgi_no_startup_index":
+        # Normal ASGI deployment seam: imports the production FastAPI app and
+        # runs its lifespan, while deliberately not invoking app.py::main()
+        # (whose CLI convenience path eagerly loads/rebuilds the index).
+        command = [
+            sys.executable, "-m", "uvicorn", "app:fastapi_app", "--host", "127.0.0.1",
+            "--port", str(manifest["port"]),
+        ]
+    else:
+        raise RuntimeError("invalid packaged launch mode")
     env = os.environ.copy()
     env.update({
         "PORT": str(manifest["port"]), "FOLIO_HOST": "127.0.0.1",

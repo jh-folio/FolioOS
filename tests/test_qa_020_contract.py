@@ -429,6 +429,9 @@ def test_prepare_seeds_runtime_visible_strict_topic_report_and_wired_fixtures(tm
     assert (missing_root / "app.py").is_file()
     assert (missing_root / "BUILD.json").is_file()
     assert Path(identity["missingIndex"]["manifestPath"]).is_file()
+    variant_manifest = json.loads(Path(identity["missingIndex"]["manifestPath"]).read_text(encoding="utf-8"))
+    assert manifest["launchMode"] == "app_main"
+    assert variant_manifest["launchMode"] == "asgi_no_startup_index"
     assert len(manifest["auxiliaryPorts"]) == 1
     market_states = manifest["scenarioFixtures"]["MS-H1"]["states"]
     assert set(market_states) == {"current", "stale", "fallback", "empty"}
@@ -458,6 +461,7 @@ def test_lifecycle_help_exposes_fail_closed_commands() -> None:
         "proxy-start",
         "proxy-stop",
         "probe-fixtures",
+        "probe-gen-f1",
     ):
         assert command in result.stdout
 

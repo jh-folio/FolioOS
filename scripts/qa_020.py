@@ -779,6 +779,7 @@ def command_prepare(args: argparse.Namespace) -> int:
         "selectors": _scenario_selectors(selected),
         "requiredEvidencePaths": _required_evidence_paths(selected),
         "processesStarted": False,
+        "launchMode": "app_main",
     }
     manifest_path = run_root / "fixture-manifest.json"
     _write_json(manifest_path, manifest)
@@ -809,6 +810,7 @@ def command_prepare(args: argparse.Namespace) -> int:
                 "docs": f"{variant_base}/#/docs",
             },
             "processesStarted": False,
+            "launchMode": "asgi_no_startup_index",
         }
     )
     variant["auxiliaryPorts"] = [port]
@@ -834,6 +836,115 @@ def _health(url: str, timeout: float = 2.0) -> dict[str, Any]:
     if not isinstance(value, dict):
         _fail("HEALTH_MALFORMED", "Health response is not an object", EXIT_HEALTH)
     return value
+
+
+def _http_json(url: str, *, method: str = "GET", body: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8") if body is not None else None
+    request = urllib.request.Request(
+        url, data=data, method=method,
+        headers={"Content-Type": "application/json"} if data is not None else {},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            status, raw = response.status, response.read()
+    except urllib.error.HTTPError as error:
+        status, raw = error.code, error.read()
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        _fail("HTTP_JSON_INVALID", f"{url}: {error}")
+    if not isinstance(value, dict):
+        _fail("HTTP_JSON_INVALID", f"{url}: response is not an object")
+    return status, value
+
+
+def command_probe_gen_f1(args: argparse.Namespace) -> int:
+    payload, _ = _load_owned_manifest(args.manifest)
+    if payload.get("launchMode") != "asgi_no_startup_index":
+        _fail("GEN_F1_LAUNCH_MODE_INVALID", "GEN-F1 must use the normal ASGI deployment seam")
+    index_path = Path(payload["extractRoot"]) / "data" / "research-index.sqlite3"
+    if index_path.exists():
+        _fail("GEN_F1_INDEX_PRESENT", "GEN-F1 index exists before the first request")
+    base = str(payload["baseUrl"])
+    plan_status, envelope = _http_json(
+        f"{base}/api/topic-reports/plan", method="POST", body={"question": "QA missing index"}
+    )
+    zero = ((envelope.get("preview") or {}).get("zeroEvidence") or {})
+    resolution = ((envelope.get("preview") or {}).get("resolution") or {})
+    generations = resolution.get("providerGenerations") or {}
+    if plan_status != 200 or zero.get("reasonCode") != "no_index" or generations.get("indexGeneration") is not None:
+        _fail("GEN_F1_NOT_NO_INDEX", f"Unexpected first preview: {envelope}")
+    if index_path.exists():
+        _fail("GEN_F1_INDEX_RECREATED", "First plan request recreated the absent index")
+    execution = {
+        "approvedRequest": envelope["approvedRequest"],
+        "approval": {"id": envelope["approval"]["id"], "token": envelope["approval"]["token"]},
+        "execution": {"mode": "direct", "adapter": "auto", "fallbackPolicy": "rules_on_engine_failure"},
+    }
+    unconfirmed_status, unconfirmed = _http_json(f"{base}/api/topic-reports", method="POST", body=execution)
+    unconfirmed_zero = ((unconfirmed.get("preview") or {}).get("zeroEvidence") or {})
+    if (
+        unconfirmed_status != 409 or unconfirmed.get("error") != "evidence_confirmation_required"
+        or unconfirmed_zero.get("resolutionFingerprint") != zero.get("resolutionFingerprint")
+    ):
+        _fail("GEN_F1_CONFIRMATION_GATE_FAILED", f"Unexpected unconfirmed response: {unconfirmed}")
+    confirm_status, replacement = _http_json(
+        f"{base}/api/topic-reports/confirm-degraded", method="POST",
+        body={
+            "approvedRequest": envelope["approvedRequest"],
+            "approval": {"id": envelope["approval"]["id"], "token": envelope["approval"]["token"]},
+            "reasonCode": "no_index", "resolutionFingerprint": zero["resolutionFingerprint"], "confirmed": True,
+        },
+    )
+    replacement_zero = ((replacement.get("preview") or {}).get("zeroEvidence") or {})
+    if confirm_status != 200 or replacement_zero.get("reasonCode") != "no_index":
+        _fail("GEN_F1_CONFIRM_FAILED", f"Unexpected confirmation: {replacement}")
+    reports_dir = Path(payload["extractRoot"]) / "data" / "topic-reports"
+    before_reports = {path.resolve() for path in reports_dir.glob("*.json")}
+    confirmed_execution = {
+        "approvedRequest": replacement["approvedRequest"],
+        "approval": {"id": replacement["approval"]["id"], "token": replacement["approval"]["token"]},
+        "execution": execution["execution"],
+    }
+    generate_status, generated = _http_json(f"{base}/api/topic-reports", method="POST", body=confirmed_execution)
+    if generate_status != 202 or not isinstance(generated.get("job"), dict):
+        _fail("GEN_F1_GENERATE_FAILED", f"Unexpected generation response: {generated}")
+    job_id = str(generated["job"].get("id") or "")
+    deadline = time.monotonic() + args.timeout
+    job: dict[str, Any] = generated["job"]
+    while time.monotonic() < deadline and job.get("status") not in {"done", "failed", "cancelled"}:
+        time.sleep(0.1)
+        status, job = _http_json(f"{base}/api/jobs/{urllib.parse.quote(job_id, safe='')}")
+        if status != 200:
+            _fail("GEN_F1_JOB_READ_FAILED", job_id)
+    expected_job = ("done", "none", "rules", "confirmed_zero_evidence")
+    observed_job = tuple(job.get(key) for key in ("status", "attemptedEngine", "finalEngine", "fallbackReason"))
+    if observed_job != expected_job:
+        _fail("GEN_F1_RULES_FALLBACK_FAILED", f"Unexpected job: {job}")
+    after_reports = {path.resolve() for path in reports_dir.glob("*.json")}
+    created = sorted(after_reports - before_reports)
+    if len(created) != 1:
+        _fail("GEN_F1_REPORT_PERSIST_FAILED", f"Expected one report, found {len(created)}")
+    report = _read_json(created[0], code="GEN_F1_REPORT_INVALID")
+    report_zero = ((report.get("researchResolution") or {}).get("zeroEvidence") or {})
+    provenance = report.get("executionProvenance") or {}
+    if (
+        report_zero.get("reasonCode") != "no_index" or report.get("evidenceItems") != []
+        or tuple(provenance.get(key) for key in ("attemptedEngine", "finalEngine", "fallbackReason"))
+        != ("none", "rules", "confirmed_zero_evidence")
+    ):
+        _fail("GEN_F1_REPORT_CONTRACT_FAILED", f"Unexpected report: {created[0]}")
+    receipt = {
+        "probedAt": _utc_now(), "indexAbsentBefore": True, "indexAbsentAfterPlan": not index_path.exists(),
+        "plan": {"status": plan_status, "zeroEvidence": zero, "providerGenerations": generations},
+        "unconfirmed": {"status": unconfirmed_status, "error": unconfirmed.get("error"), "zeroEvidence": unconfirmed_zero},
+        "confirmed": {"status": confirm_status, "zeroEvidence": replacement_zero},
+        "job": job, "reportPath": str(created[0]), "reportProvenance": provenance,
+    }
+    output = Path(payload["runRoot"]) / "gen-f1-probe.json"
+    _write_json(output, receipt)
+    print(str(output))
+    return EXIT_OK
 
 
 def _assert_health(payload: dict[str, Any], observed: dict[str, Any], child_pid: int | None = None) -> None:
@@ -1672,6 +1783,11 @@ def build_parser() -> argparse.ArgumentParser:
     probe.add_argument("--manifest", required=True, type=Path)
     probe.add_argument("--output", type=Path)
     probe.set_defaults(handler=command_probe_fixtures)
+
+    gen_f1_probe = commands.add_parser("probe-gen-f1", help="Exercise the absent-index packaged HTTP flow.")
+    gen_f1_probe.add_argument("--manifest", required=True, type=Path)
+    gen_f1_probe.add_argument("--timeout", type=float, default=30.0)
+    gen_f1_probe.set_defaults(handler=command_probe_gen_f1)
     return parser
 
 
