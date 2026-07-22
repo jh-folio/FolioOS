@@ -30,6 +30,68 @@ export type CollectionRef = {
   readonly revision: number;
 };
 
+export const SMART_COLLECTION_MARKETS = ["ALL", "US", "KR", "GLOBAL", "UNKNOWN"] as const;
+export type SmartCollectionMarket = (typeof SMART_COLLECTION_MARKETS)[number];
+
+export type SmartCollectionFields = {
+  readonly name: string;
+  readonly query: string;
+  readonly market: SmartCollectionMarket;
+  readonly sources: readonly string[];
+  readonly tickers: readonly string[];
+  readonly tags: readonly string[];
+};
+
+export type SmartCollection = SmartCollectionFields & CollectionRef & {
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type SmartCollectionListEnvelope = {
+  readonly schemaVersion: 1;
+  readonly storeRevision: number;
+  readonly recovered: boolean;
+  readonly total: number;
+  readonly items: readonly SmartCollection[];
+};
+
+export type SmartCollectionMutationEnvelope = {
+  readonly storeRevision: number;
+  readonly collection: SmartCollection;
+};
+
+export type SmartCollectionProviderId = {
+  readonly provider: "index" | "rss";
+  readonly id: string;
+};
+
+export type SmartCollectionPreviewItem = {
+  readonly id: string;
+  readonly providerIds: readonly SmartCollectionProviderId[];
+  readonly title: string;
+  readonly url: string;
+  readonly source: string;
+  readonly markets: readonly string[];
+  readonly tickers: readonly string[];
+  readonly tags: readonly string[];
+  readonly publishedAt: string;
+  readonly score: number;
+  readonly snippet: string;
+  readonly usability: "indexed" | "unindexed_rss";
+};
+
+export type SmartCollectionPreview = {
+  readonly collectionId: string;
+  readonly revision: number;
+  readonly total: number;
+  readonly limit: number;
+  readonly items: readonly SmartCollectionPreviewItem[];
+};
+
+export type UpdateSmartCollectionRequest = SmartCollectionFields & { readonly expectedRevision: number };
+export type DeleteSmartCollectionRequest = { readonly expectedRevision: number };
+export type PreviewSmartCollectionRequest = { readonly expectedRevision: number; readonly limit: number };
+
 export type PlanRequest = {
   readonly question: string;
   readonly userContext: string;
@@ -253,6 +315,24 @@ export async function getJson<T>(path: string, options: JsonRequestOptions = {})
 export async function postJson<T>(path: string, body: unknown, options: JsonRequestOptions = {}): Promise<T> {
   return requestJson<T>(path, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+}
+
+export async function putJson<T>(path: string, body: unknown, options: JsonRequestOptions = {}): Promise<T> {
+  return requestJson<T>(path, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options.signal,
+  });
+}
+
+export async function deleteJson<T>(path: string, body: unknown, options: JsonRequestOptions = {}): Promise<T> {
+  return requestJson<T>(path, {
+    method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal: options.signal,

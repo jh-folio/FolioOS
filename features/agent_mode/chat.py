@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import difflib
+import functools
 import json
 import re
 from datetime import datetime, timezone
@@ -22,6 +23,8 @@ from features.agent_mode.companion import (
     normalize_agent_context,
     normalize_agent_options,
 )
+from features.agent_mode.collection_context import prepare_agent_context, render_collection_projection
+from features.smart_collections.service import SmartCollectionService
 from features.agent_mode.market_state_context import (
     MarketStateSelection,
     project_market_state,
@@ -144,6 +147,7 @@ def build_chat_prompt(message: str, context: dict, options: dict, markdown: str 
         "규칙: 제공된 자료(보고서 본문·첨부)에 없는 수치·출처를 만들어내지 않는다. 모르는 것은 data gap으로 명시한다. "
         "사용자 메모·첨부는 hypothesis(가설)이며 객관적 근거처럼 단정하지 않는다. 저장된 파일을 수정하라는 요청이라도 이 응답에서는 수정하지 말고 답변만 한다.",
         market_memory,
+        render_collection_projection(context),
         f"현재 화면 컨텍스트:\n{_context_block(context, markdown)}",
         attachments,
         f"사용자 질문:\n{message}",
@@ -252,16 +256,20 @@ def _revision_payload(output: str) -> dict:
 
 
 def run_agent_chat(message: str, context: dict | None = None, options: dict | None = None,
-                   *, progress=None, job_id: str = "") -> dict:
+                   *, progress=None, job_id: str = "",
+                   collection_service: SmartCollectionService | None = None) -> dict:
     progress = progress or (lambda *args, **kwargs: None)
-    normalized = normalize_agent_context(context)
+    normalized = prepare_agent_context(context, collection_service)
+    collection_projection = normalized.get("collection")
     normalized_options = normalize_agent_options(options)
     intent = classify_agent_intent(message)
 
     # CLI가 없으면 기존 규칙 기반 companion 응답으로 fallback(LLM 없이도 동작 원칙).
     status = bridge.bridge_status()
     if not status.get("available"):
-        fallback = agent_companion_reply(message, normalized, normalized_options)
+        fallback = agent_companion_reply(
+            message, normalized, normalized_options, collection_projection=collection_projection
+        )
         fallback["engine"] = "rules"
         fallback["reply"] = fallback.pop("message", "")
         fallback["notice"] = status.get("message") or "Agent CLI를 사용할 수 없어 규칙 기반으로 답합니다."
@@ -330,7 +338,9 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
         result = bridge.run_agent_prompt(prompt, model=normalized_options.get("model", ""), job_id=job_id)
     except Exception as exc:
         # 질문형은 규칙 기반으로 답을 이어가고, CLI 실패 사유는 정리해서 알려준다.
-        fallback = agent_companion_reply(message, normalized, normalized_options)
+        fallback = agent_companion_reply(
+            message, normalized, normalized_options, collection_projection=collection_projection
+        )
         fallback["engine"] = "rules"
         fallback["reply"] = fallback.pop("message", "")
         fallback["notice"] = f"Agent CLI 실행 실패로 규칙 기반으로 답합니다: {_clean_cli_error(exc)}"
@@ -353,11 +363,13 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
     }
 
 
-def submit_agent_chat(message: str, context: dict | None = None, options: dict | None = None) -> dict:
+def submit_agent_chat(message: str, context: dict | None = None, options: dict | None = None,
+                      *, collection_service: SmartCollectionService | None = None) -> dict:
+    runner = functools.partial(run_agent_chat, collection_service=collection_service)
     job = submit_job(
         "agent_bridge",
         "Agent 채팅",
-        run_agent_chat,
+        runner,
         message,
         context or {},
         options or {},

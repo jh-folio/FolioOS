@@ -33,9 +33,8 @@ from features.agent_mode.chat import (
     get_proposal,
     recover_proposals,
     reject_proposal,
-    submit_agent_chat,
 )
-from features.agent_mode.companion import agent_companion_reply
+from features.agent_mode.routes import AgentCompanionBoundary
 from features.agent_mode.proposal_schema import ProposalAction, ProposalActionRequest
 from features.agent_mode.generation_mode import (
     llm_override_for_mode,
@@ -371,6 +370,7 @@ TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(
 )
 fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
 fastapi_app.include_router(SmartCollectionBoundary(SMART_COLLECTION_SERVICE).router())
+fastapi_app.include_router(AgentCompanionBoundary(SMART_COLLECTION_SERVICE).router())
 fastapi_app.include_router(create_market_state_router(DATA_DIR))
 fastapi_app.include_router(jobs_router)
 fastapi_app.include_router(work_log_router)
@@ -1253,18 +1253,6 @@ def api_agent_bridge_preflight(adapter: str = ""):
         return agent_preflight(adapter=adapter)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@fastapi_app.post("/api/agent/companion")
-def api_agent_companion(body: dict | None = Body(default=None)):
-    body = body or {}
-    return agent_companion_reply(body.get("message", ""), body.get("context") or {}, body.get("options") or {})
-
-
-@fastapi_app.post("/api/agent/chat")
-def api_agent_chat(body: dict | None = Body(default=None)):
-    body = body or {}
-    return submit_agent_chat(body.get("message", ""), body.get("context") or {}, body.get("options") or {})
 
 
 @fastapi_app.get("/api/agent/proposals/{proposal_id}")

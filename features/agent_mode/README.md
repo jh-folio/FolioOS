@@ -162,6 +162,8 @@ When the user explicitly asks to revise, create, update, schedule, or write back
 
 `POST /api/agent/companion`은 `message`, `context` 외에 채팅 도구 옵션 `options{model, effort, attachments}`를 받는다. `companion.normalize_agent_options()`가 effort enum(`low/medium/high/max`), 모델 문자열 길이, 첨부(최대 5개, 이름 120자, 본문 4,000자)를 코드에서 정규화해 응답 `options` 필드로 되돌려준다. 첨부파일 본문은 사용자 참고 입력(hypothesis)일 뿐 evidence로 승격하지 않는다.
 
+Deep Research에서 선택한 Smart Collection은 frontend가 `collectionId`와 strict 정수 `collectionRevision`만 전달한다. 서버는 저장된 Collection을 다시 조회하고 revision을 검사한 뒤 live resolve 결과의 metadata-only projection(정의 hash, 결과/실행 universe ID, 개수, provider generation, watermark)만 Agent context에 넣는다. Collection 이름·query·filter·preview item·snippet·RSS description·evidence body는 Agent prompt에 넣지 않으며, 이 projection은 `saved_filter_metadata_not_evidence`로 표시한다.
+
 ## Agent Chat (실연결) + Task Mode Writeback
 
 도크 채팅의 실제 실행 경로는 `features/agent_mode/chat.py`다.

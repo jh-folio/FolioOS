@@ -41,6 +41,22 @@ test("React Agent Dock accepts contextual ask events and submits to chat", async
   assert.match(contextSource, /openReactAgentDock/);
 });
 
+test("Deep Research collection identity reaches the actual Agent chat submit boundary", async () => {
+  const dockSource = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
+  const deepResearchSource = await readFile(new URL("../src/app/DeepResearchRoute.tsx", import.meta.url), "utf8");
+
+  assert.match(deepResearchSource, /collectionId: selectedCollectionRef\?\.id \|\| null/);
+  assert.match(deepResearchSource, /collectionRevision: selectedCollectionRef\?\.revision \|\| null/);
+  assert.match(dockSource, /function collectionIdentityPatch\(/);
+  assert.match(dockSource, /\.\.\.contextRef\.current,\s*\.\.\.contextPatch,\s*\.\.\.collectionIdentityPatch\(window\.FolioAgent\?\.currentContext\)/s);
+  assert.match(dockSource, /context: requestContext/);
+  assert.doesNotMatch(dockSource, /\.\.\.window\.FolioAgent\?\.currentContext/);
+  const merge = dockSource.match(/const requestContext = \{([\s\S]*?)\};/)?.[1] || "";
+  assert.ok(merge.indexOf("...contextRef.current") < merge.indexOf("...contextPatch"), "explicit request patch must override Dock context");
+  assert.ok(merge.indexOf("...contextPatch") < merge.indexOf("...collectionIdentityPatch"), "latest global collection identity must win at submit");
+  assert.doesNotMatch(merge, /query|definition|body|items|snippet|providerIds/);
+});
+
 test("React Agent chat renders structured markdown and run status cards", async () => {
   const contentSource = await readFile(new URL("../src/app/AgentMessageContent.tsx", import.meta.url), "utf8");
   const styles = await readFile(new URL("../../public/styles.css", import.meta.url), "utf8");

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from features.agent_mode.schema import scrub_secrets
+from features.smart_collections.schema import COLLECTION_ID_PATTERN
 
 SAFE_CONTEXT_FIELDS = {
     "surface",
@@ -12,6 +15,28 @@ SAFE_CONTEXT_FIELDS = {
     "visibleSection",
     "portfolioLinked",
 }
+
+
+class AgentCollectionIdentity(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    collectionId: str = Field(pattern=f"^{COLLECTION_ID_PATTERN.pattern}$")
+    collectionRevision: int = Field(ge=1, strict=True)
+
+
+class OptionalAgentCollectionIdentity(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
+
+    collectionId: str | None = None
+    collectionRevision: int | None = Field(default=None, ge=1, strict=True)
+
+    @model_validator(mode="after")
+    def require_complete_pair(self):
+        if (self.collectionId is None) != (self.collectionRevision is None):
+            raise ValueError("collection_identity_pair_required")
+        if self.collectionId is not None:
+            AgentCollectionIdentity.model_validate(self.model_dump())
+        return self
 
 TASK_VERBS = (
     "수정",
@@ -35,6 +60,10 @@ TASK_VERBS = (
 
 def normalize_agent_context(raw: dict | None) -> dict:
     raw = scrub_secrets(raw or {})
+    identity = OptionalAgentCollectionIdentity.model_validate({
+        "collectionId": raw.get("collectionId"),
+        "collectionRevision": raw.get("collectionRevision"),
+    })
     out = {}
     for field in SAFE_CONTEXT_FIELDS:
         value = raw.get(field)
@@ -43,7 +72,7 @@ def normalize_agent_context(raw: dict | None) -> dict:
         else:
             out[field] = str(value or "").strip()[:2000]
     out.setdefault("portfolioLinked", False)
-    return {
+    normalized = {
         "surface": out.get("surface", ""),
         "viewId": out.get("viewId", ""),
         "reportKind": out.get("reportKind", ""),
@@ -53,6 +82,10 @@ def normalize_agent_context(raw: dict | None) -> dict:
         "visibleSection": out.get("visibleSection", ""),
         "portfolioLinked": bool(out.get("portfolioLinked")),
     }
+    if identity.collectionId is not None:
+        normalized["collectionId"] = identity.collectionId
+        normalized["collectionRevision"] = identity.collectionRevision
+    return normalized
 
 
 def classify_agent_intent(message: str) -> str:
@@ -109,8 +142,11 @@ def _surface_actions(context: dict) -> list[dict]:
     return actions
 
 
-def agent_companion_reply(message: str, context: dict | None = None, options: dict | None = None) -> dict:
+def agent_companion_reply(message: str, context: dict | None = None, options: dict | None = None,
+                          *, collection_projection: dict | None = None) -> dict:
     normalized = normalize_agent_context(context)
+    if collection_projection is not None:
+        normalized["collection"] = collection_projection
     normalized_options = normalize_agent_options(options)
     mode = classify_agent_intent(message)
     if mode == "task":

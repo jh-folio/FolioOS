@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import assert_never
@@ -40,6 +41,7 @@ COLLECTION_FAILURES = (
     CollectionStoreUnavailableError,
     CollectionSourceUnavailableError,
 )
+CANONICAL_QUERY_INTEGER = re.compile(r"(?:0|[1-9][0-9]*)\Z")
 
 
 def response(status: int, payload: dict[str, JsonValue]) -> JSONResponse:
@@ -81,13 +83,27 @@ def failure_response(error: CollectionFailure) -> JSONResponse:
             assert_never(unreachable)
 
 
+def list_query_payload(request: Request) -> dict[str, JsonValue]:
+    """Coerce only canonical URL decimal integers at the HTTP query boundary.
+
+    ListQuery remains strict so JSON and direct schema callers cannot gain string
+    coercion. Non-canonical values stay strings and fail normal Pydantic validation.
+    """
+    payload: dict[str, JsonValue] = dict(request.query_params)
+    for field in ("limit", "offset"):
+        value = payload.get(field)
+        if isinstance(value, str) and CANONICAL_QUERY_INTEGER.fullmatch(value):
+            payload[field] = int(value)
+    return payload
+
+
 class SmartCollectionBoundary:
     def __init__(self, service: SmartCollectionService) -> None:
         self.service = service
 
     def list(self, request: Request) -> JSONResponse:
         try:
-            query = ListQuery.model_validate(dict(request.query_params))
+            query = ListQuery.model_validate(list_query_payload(request))
             payload = self.service.list(query.limit, query.offset)
         except (ValidationError, CollectionStoreUnavailableError) as error:
             return failure_response(error)

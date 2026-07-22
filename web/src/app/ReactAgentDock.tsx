@@ -133,6 +133,46 @@ function elapsedSeconds(startedAt: number) {
   return `${Math.max(1, Math.round((Date.now() - startedAt) / 1000))}초`;
 }
 
+const GLOBAL_AGENT_CONTEXT_FIELDS = [
+  "surface",
+  "viewId",
+  "reportKind",
+  "reportId",
+  "marketScope",
+  "selectedText",
+  "visibleSection",
+  "portfolioLinked",
+] as const;
+
+function safeGlobalContextPatch(context: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!context) return {};
+  const patch: Record<string, unknown> = {};
+  for (const field of GLOBAL_AGENT_CONTEXT_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(context, field)) patch[field] = context[field];
+  }
+  return patch;
+}
+
+function collectionIdentityPatch(context: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!context) return {};
+  const hasId = Object.prototype.hasOwnProperty.call(context, "collectionId");
+  const hasRevision = Object.prototype.hasOwnProperty.call(context, "collectionRevision");
+  if (!hasId || !hasRevision) return {};
+  const collectionId = context.collectionId;
+  const collectionRevision = context.collectionRevision;
+  if (collectionId === null && collectionRevision === null) return { collectionId: null, collectionRevision: null };
+  if (
+    typeof collectionId === "string"
+    && collectionId.trim().length > 0
+    && typeof collectionRevision === "number"
+    && Number.isInteger(collectionRevision)
+    && collectionRevision >= 1
+  ) {
+    return { collectionId, collectionRevision };
+  }
+  return {};
+}
+
 function selectedAdapter(settings: AgentSettings | null): AgentAdapterSettings | null {
   const provider = settings?.provider && PROVIDERS.has(settings.provider)
     ? settings.provider
@@ -267,7 +307,12 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     const text = rawText.trim();
     if (!text || busy) return;
 
-    const requestContext = { ...contextRef.current, ...contextPatch };
+    const requestContext = {
+      ...safeGlobalContextPatch(window.FolioAgent?.currentContext),
+      ...contextRef.current,
+      ...contextPatch,
+      ...collectionIdentityPatch(window.FolioAgent?.currentContext),
+    };
     contextRef.current = requestContext;
     const assistantId = messageId();
     const startedAt = Date.now();
