@@ -37,7 +37,8 @@ test("React Agent Dock accepts contextual ask events and submits to chat", async
   assert.match(dockSource, /react-agent-welcome-card/);
   assert.match(dockSource, /새 채팅/);
   assert.match(contextSource, /window\.FolioAgent/);
-  assert.match(contextSource, /updateReactAgentContext/);
+  assert.match(contextSource, /setReactAgentContextScope/);
+  assert.match(contextSource, /activateReactAgentContextScope/);
   assert.match(contextSource, /openReactAgentDock/);
 });
 
@@ -48,13 +49,24 @@ test("Deep Research collection identity reaches the actual Agent chat submit bou
   assert.match(deepResearchSource, /collectionId: selectedCollectionRef\?\.id \|\| null/);
   assert.match(deepResearchSource, /collectionRevision: selectedCollectionRef\?\.revision \|\| null/);
   assert.match(dockSource, /function collectionIdentityPatch\(/);
-  assert.match(dockSource, /\.\.\.contextRef\.current,\s*\.\.\.contextPatch,\s*\.\.\.collectionIdentityPatch\(window\.FolioAgent\?\.currentContext\)/s);
+  assert.match(dockSource, /function withoutCollectionIdentity\(/);
+  assert.match(dockSource, /buildAgentRequestContext\(/);
+  assert.match(dockSource, /\.\.\.withoutCollectionIdentity\(scoped\.patch\),\s*\.\.\.withoutCollectionIdentity\(contextPatch\),\s*\.\.\.collectionIdentityPatch\(globalContext\)/s);
   assert.match(dockSource, /context: requestContext/);
   assert.doesNotMatch(dockSource, /\.\.\.window\.FolioAgent\?\.currentContext/);
-  const merge = dockSource.match(/const requestContext = \{([\s\S]*?)\};/)?.[1] || "";
-  assert.ok(merge.indexOf("...contextRef.current") < merge.indexOf("...contextPatch"), "explicit request patch must override Dock context");
-  assert.ok(merge.indexOf("...contextPatch") < merge.indexOf("...collectionIdentityPatch"), "latest global collection identity must win at submit");
+  const merge = dockSource.match(/export function buildAgentRequestContext\([\s\S]*?return \{([\s\S]*?)\};/)?.[1] || "";
+  assert.ok(merge.indexOf("withoutCollectionIdentity(scoped.patch)") < merge.indexOf("withoutCollectionIdentity(contextPatch)"), "same-surface explicit request patch must override Dock context");
+  assert.ok(merge.indexOf("withoutCollectionIdentity(contextPatch)") < merge.indexOf("...collectionIdentityPatch"), "latest global collection identity must win at submit");
   assert.doesNotMatch(merge, /query|definition|body|items|snippet|providerIds/);
+});
+
+test("React Agent Dock hard-resets local context ownership when the route surface changes", async () => {
+  const dockSource = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
+
+  assert.match(dockSource, /if \(state\.ownerSurface === surface\) return state;/);
+  assert.match(dockSource, /return \{ ownerSurface: surface, patch: \{\} \};/);
+  assert.match(dockSource, /contextRef\.current = resetDockContextForSurface\(contextRef\.current, surface\);/);
+  assert.doesNotMatch(dockSource, /contextRef\.current\s*=\s*requestContext/);
 });
 
 test("React Agent chat renders structured markdown and run status cards", async () => {
@@ -72,10 +84,14 @@ test("React Agent chat renders structured markdown and run status cards", async 
 
 test("React Agent Dock can approve or reject agent proposals", async () => {
   const dockSource = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
+  const lifecycleSource = await readFile(new URL("../src/app/agentProposalLifecycle.ts", import.meta.url), "utf8");
 
   assert.match(dockSource, /type AgentProposal/);
-  assert.match(dockSource, /proposalStatus: result\.proposal \? "pending" : ""/);
-  assert.match(dockSource, /\/api\/agent\/proposals\/\$\{encodeURIComponent\(proposalId\)\}/);
+  assert.match(dockSource, /hydrateAgentProposalFromResult/);
+  assert.doesNotMatch(dockSource, /result\.proposal\b/);
+  assert.match(dockSource, /proposalStatus: proposalHydration\.proposalStatus/);
+  assert.match(lifecycleSource, /\/api\/agent\/proposals\/\$\{encodeURIComponent\(proposalId\)\}/);
+  assert.match(dockSource, /notifyProposalLifecycle/);
   assert.match(dockSource, /handleProposalAction/);
   assert.match(dockSource, /agent-proposal/);
   assert.match(dockSource, /승인/);

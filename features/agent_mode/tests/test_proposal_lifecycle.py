@@ -247,7 +247,7 @@ def test_invalid_revision_terminalizes_without_report_mutation(
     assert saved["markdown"] == current
 
 
-def test_legacy_pending_normalizes_once_with_same_exact_id(
+def test_legacy_pending_get_is_read_only_and_action_still_normalizes(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -272,6 +272,7 @@ def test_legacy_pending_normalizes_once_with_same_exact_id(
         "adapter": "codex",
         "model": "legacy-model",
     }, ensure_ascii=False), encoding="utf-8")
+    before = (path.read_bytes(), proposal_path.read_bytes())
 
     first = chat.get_proposal(proposal_id)
     second = chat.get_proposal(proposal_id)
@@ -281,4 +282,10 @@ def test_legacy_pending_normalizes_once_with_same_exact_id(
     assert first["schemaVersion"] == 2
     assert first["id"] == proposal_id
     assert len(first["legacyNormalizationHash"]) == 64
-    assert json.loads(path.read_text(encoding="utf-8"))["canonicalRevision"]["number"] == 1
+    assert (path.read_bytes(), proposal_path.read_bytes()) == before
+
+    applied = chat.apply_proposal(proposal_id)
+
+    assert applied["status"] == "applied"
+    assert json.loads(path.read_text(encoding="utf-8"))["canonicalRevision"]["number"] == 2
+    assert json.loads(proposal_path.read_text(encoding="utf-8"))["schemaVersion"] == 2

@@ -78,7 +78,7 @@ test("Collection trust boundary sends identity only to plan and Agent context", 
   assert.doesNotMatch(contextEffect, /collectionRef/);
   assert.match(contextEffect, /collectionId: selectedCollectionRef\?\.id \|\| null/);
   assert.match(contextEffect, /collectionRevision: selectedCollectionRef\?\.revision \|\| null/);
-  assert.match(contextEffect, /updateReactAgentContext\(ownedCollectionIdentity\)/);
+  assert.match(contextEffect, /patchReactAgentContextScope\("deep-research", ownedCollectionIdentity\)/);
   assert.doesNotMatch(contextEffect, /items|snippet|providerIds|definitionSnapshot|sources|tickers|tags|query/);
   assert.doesNotMatch(route, /userContext:\s*(?:collection|preview)/i);
 });
@@ -126,12 +126,12 @@ test("Deep Research clears only the collection identity owned by its effect", as
 
   const effect = route.match(/useEffect\(\(\) => \{\s*const ownedCollectionIdentity([\s\S]*?)\}, \[selectedCollectionRef\]\);/)?.[1] || "";
   assert.ok(effect, "selection effect must capture its owned identity and provide cleanup");
-  assert.match(effect, /updateReactAgentContext\(ownedCollectionIdentity\)/);
+  assert.match(effect, /patchReactAgentContextScope\("deep-research", ownedCollectionIdentity\)/);
   assert.match(effect, /return \(\) => \{/);
   assert.match(effect, /window\.FolioAgent\?\.currentContext/);
   assert.match(effect, /current\?\.collectionId === ownedCollectionIdentity\.collectionId/);
   assert.match(effect, /current\.collectionRevision === ownedCollectionIdentity\.collectionRevision/);
-  assert.match(effect, /updateReactAgentContext\(\{ collectionId: null, collectionRevision: null \}\)/);
+  assert.match(effect, /patchReactAgentContextScope\("deep-research", \{ collectionId: null, collectionRevision: null \}\)/);
 });
 
 test("Smart Collections remain scoped to Deep Research and hidden navigation stays pinned", async () => {

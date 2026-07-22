@@ -1,8 +1,10 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
-import { updateReactAgentContext } from "./agentContext";
+import { resetReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
 import { AgentWorkLog } from "./AgentWorkLog";
+import { AgentPollTimeout, pollAgentJobBounded, releasePollController, replacePollController } from "./agentPolling";
+import { actOnProposal, boundedProposalDiff, boundedProposalSummary, hydrateAgentProposalFromResult, notifyProposalLifecycle } from "./agentProposalLifecycle";
 
 type AgentProposal = {
   id: string;
@@ -19,7 +21,7 @@ type AgentResult = {
   mode?: string;
   engine?: string;
   adapter?: string;
-  proposal?: AgentProposal | null;
+  proposalId?: string | null;
 };
 
 type AgentJob = {
@@ -47,9 +49,10 @@ type AgentMessage = {
   attachments?: string[];
   proposal?: AgentProposal | null;
   proposalStatus?: string;
-  runState?: "pending" | "done" | "error";
+  runState?: "pending" | "done" | "error" | "still-running";
   runTitle?: string;
   runMeta?: string;
+  jobId?: string;
   createdAt?: string;
 };
 
@@ -107,10 +110,6 @@ const WELCOME_MESSAGE: AgentMessage = {
   notice: "저장 변경은 proposal 승인 전에는 반영되지 않습니다.",
 };
 
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
 function messageId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -162,18 +161,6 @@ function persistStoredMessages(messages: AgentMessage[]) {
   } catch {
     // localStorage 용량/권한 문제는 대화 기능 자체를 막지 않는다.
   }
-}
-
-async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
-  let current = job;
-  while (isActiveJobStatus(current.status)) {
-    await sleep(1000);
-    current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
-  }
-  if (current.status !== "done") {
-    throw new Error(current.message || current.error || "Agent 작업에 실패했습니다.");
-  }
-  return current;
 }
 
 async function readAttachment(file: File): Promise<Attachment> {
@@ -252,9 +239,16 @@ export function AgentHome() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pollControllers = useRef(new Map<string, AbortController>());
 
   useEffect(() => {
-    updateReactAgentContext({ surface: "agent_home" });
+    setReactAgentContextScope("home", { surface: "agent_home", viewId: "home" });
+    return () => resetReactAgentContextScope("home");
+  }, []);
+
+  useEffect(() => () => {
+    for (const controller of pollControllers.current.values()) controller.abort();
+    pollControllers.current.clear();
   }, []);
 
   useEffect(() => {
@@ -374,6 +368,7 @@ export function AgentHome() {
     setError("");
     setBusy(true);
 
+    let controller: AbortController | null = null;
     try {
       const job = await postJson<AgentJob>("/api/agent/chat", {
         message,
@@ -384,8 +379,12 @@ export function AgentHome() {
           attachments,
         },
       });
-      const done = await pollAgentJob(job);
+      controller = new AbortController();
+      replacePollController(pollControllers.current, assistantId, controller);
+      const done = await pollAgentJobBounded(job, { signal: controller.signal });
+      releasePollController(pollControllers.current, assistantId, controller);
       const result = done.result || {};
+      const proposalHydration = await hydrateAgentProposalFromResult(result);
       setWorkLogRefreshKey((current) => current + 1);
       setMessages((current) =>
         current.map((item) =>
@@ -393,10 +392,10 @@ export function AgentHome() {
             ? {
                 ...item,
                 text: result.reply || done.message || "Agent가 응답을 반환하지 않았습니다.",
-                notice: result.notice,
+                notice: [result.notice, proposalHydration.notice].filter(Boolean).join(" "),
                 pending: false,
-                proposal: result.proposal || null,
-                proposalStatus: result.proposal ? "pending" : "",
+                proposal: proposalHydration.proposal,
+                proposalStatus: proposalHydration.proposalStatus,
                 runState: "done",
                 runTitle: `${providerLabel} 응답`,
                 runMeta: `${modelLabel} · ${effortLabel(effort)} · ${elapsedSeconds(startedAt)}`,
@@ -406,6 +405,19 @@ export function AgentHome() {
       );
       setAttachments([]);
     } catch (err) {
+      if (controller) releasePollController(pollControllers.current, assistantId, controller);
+      if (err instanceof AgentPollTimeout) {
+        setMessages((current) => current.map((item) => item.id === assistantId ? {
+          ...item,
+          text: err.message,
+          pending: false,
+          runState: "still-running",
+          runTitle: `${providerLabel} 계속 실행 중`,
+          runMeta: `${modelLabel} · ${effortLabel(effort)} · ${elapsedSeconds(startedAt)}`,
+          jobId: err.job.id,
+        } : item));
+        return;
+      }
       const messageText = err instanceof Error ? err.message : "Agent 요청에 실패했습니다.";
       setError(messageText);
       setMessages((current) =>
@@ -427,6 +439,44 @@ export function AgentHome() {
     }
   }
 
+  async function resumeAgentJob(messageIdValue: string, jobId: string) {
+    const controller = new AbortController();
+    replacePollController(pollControllers.current, messageIdValue, controller);
+    setMessages((current) => current.map((item) => item.id === messageIdValue ? {
+      ...item, pending: true, runState: "pending", runTitle: "Agent 상태 다시 확인 중",
+    } : item));
+    try {
+      const current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal });
+      const done = await pollAgentJobBounded(current, { signal: controller.signal });
+      const result = done.result || {};
+      const proposalHydration = await hydrateAgentProposalFromResult(result);
+      setWorkLogRefreshKey((value) => value + 1);
+      setMessages((messages) => messages.map((item) => item.id === messageIdValue ? {
+        ...item,
+        text: result.reply || done.message || "Agent가 응답을 반환하지 않았습니다.",
+        notice: [result.notice, proposalHydration.notice].filter(Boolean).join(" "),
+        proposal: proposalHydration.proposal,
+        proposalStatus: proposalHydration.proposalStatus,
+        pending: false,
+        runState: "done",
+        runTitle: "Agent 응답",
+        jobId: undefined,
+      } : item));
+    } catch (err) {
+      if (err instanceof AgentPollTimeout) {
+        setMessages((messages) => messages.map((item) => item.id === messageIdValue ? {
+          ...item, text: err.message, pending: false, runState: "still-running", runTitle: "Agent 계속 실행 중", jobId: err.job.id,
+        } : item));
+      } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setMessages((messages) => messages.map((item) => item.id === messageIdValue ? {
+          ...item, text: err instanceof Error ? err.message : "Agent 상태 확인에 실패했습니다.", pending: false, runState: "error", runTitle: "Agent 오류",
+        } : item));
+      }
+    } finally {
+      releasePollController(pollControllers.current, messageIdValue, controller);
+    }
+  }
+
   async function runQuickAction(action: "briefing" | "rss" | "analysis") {
     setError("");
     setQuickStatus("");
@@ -439,7 +489,7 @@ export function AgentHome() {
       if (action === "rss") {
         setQuickStatus("RSS 수집을 시작했습니다.");
         const job = await postJson<AgentJob>("/api/rssarchive/import", {});
-        if (isJobResponse(job)) await pollAgentJob(job);
+        if (isJobResponse(job)) await pollAgentJobBounded(job);
         setWorkLogRefreshKey((current) => current + 1);
         setQuickStatus("RSS 수집이 끝났습니다.");
         window.location.hash = "#/rss";
@@ -453,7 +503,7 @@ export function AgentHome() {
       });
       let date = "";
       if (isJobResponse(response)) {
-        const done = await pollAgentJob(response);
+        const done = await pollAgentJobBounded(response);
         date = done.result?.date || done.result?.artifactId || "";
       } else {
         date = response.date || "";
@@ -492,14 +542,16 @@ export function AgentHome() {
   async function handleProposalAction(messageIdValue: string, proposalId: string, action: "approve" | "reject") {
     setError("");
     try {
-      const result = await postJson<{ status?: string }>(`/api/agent/proposals/${encodeURIComponent(proposalId)}`, { action });
+      const result = await actOnProposal(proposalId, action);
       setMessages((current) =>
         current.map((item) =>
           item.id === messageIdValue
-            ? { ...item, proposalStatus: result.status || action }
+            ? { ...item, proposalStatus: result.status }
             : item,
         ),
       );
+      notifyProposalLifecycle(result);
+      setWorkLogRefreshKey((current) => current + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "제안 처리에 실패했습니다.");
     }
@@ -647,7 +699,12 @@ export function AgentHome() {
               {messages.map((message) => (
                 <article key={message.id} className={`agent-home-message ${message.role}${message.pending ? " pending" : ""}`}>
                   <div className="agent-home-message-body">
-                    {message.runTitle && <AgentRunCard state={message.runState} title={message.runTitle} meta={message.runMeta} />}
+                    {message.runTitle && <AgentRunCard state={message.runState === "still-running" ? "pending" : message.runState} title={message.runTitle} meta={message.runMeta} />}
+                    {message.runState === "still-running" && message.jobId && (
+                      <div data-qa="agent-job-still-running">
+                        <button type="button" data-qa="agent-job-resume" onClick={() => void resumeAgentJob(message.id, message.jobId!)}>상태 다시 확인</button>
+                      </div>
+                    )}
                     {message.text && <AgentMessageContent text={message.text} />}
                     {message.notice && <p className="agent-home-notice">{message.notice}</p>}
                     {(message.attachments || []).length > 0 && (
@@ -662,24 +719,24 @@ export function AgentHome() {
                         <strong>수정 제안</strong>
                         <span>{message.proposal.artifactKind} {message.proposal.artifactId}</span>
                       </div>
-                      {message.proposal.summary && <p>{message.proposal.summary}</p>}
-                      {message.proposal.diff && (
+                      {message.proposalStatus === "pending" && message.proposal.summary && <p data-qa="proposal-summary">{boundedProposalSummary(message.proposal.summary)}</p>}
+                      {message.proposalStatus === "pending" && message.proposal.diff && (
                         <details>
                           <summary>diff 보기</summary>
-                          <pre>{message.proposal.diff}</pre>
+                          <pre data-qa="proposal-diff">{boundedProposalDiff(message.proposal.diff)}</pre>
                         </details>
                       )}
                       {message.proposalStatus === "pending" ? (
                         <div className="agent-home-proposal-actions">
-                          <button type="button" onClick={() => handleProposalAction(message.id, message.proposal!.id, "approve")}>
+                          <button type="button" data-qa="proposal-approve" onClick={() => handleProposalAction(message.id, message.proposal!.id, "approve")}>
                             승인
                           </button>
-                          <button type="button" onClick={() => handleProposalAction(message.id, message.proposal!.id, "reject")}>
+                          <button type="button" data-qa="proposal-reject" onClick={() => handleProposalAction(message.id, message.proposal!.id, "reject")}>
                             거절
                           </button>
                         </div>
                       ) : (
-                        <p className="agent-home-notice">상태: {message.proposalStatus}</p>
+                        <p className="agent-home-notice" data-qa={message.proposalStatus === "applied" ? "wb-happy-applied" : message.proposalStatus === "rejected" ? "wb-f1-terminal-rejected" : message.proposalStatus === "stale" ? "wb-f1-terminal-stale" : "proposal-terminal"}>상태: {message.proposalStatus}</p>
                       )}
                     </div>
                   )}

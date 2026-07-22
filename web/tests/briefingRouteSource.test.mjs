@@ -91,7 +91,7 @@ test("Report Reader foundation mirrors the legacy inline reader contract", async
   assert.match(source, /noteIdentity/);
   assert.doesNotMatch(source, /proposalSurface/);
   assert.doesNotMatch(source, /report-proposal-surface/);
-  assert.match(source, /updateReactAgentContext/);
+  assert.match(source, /setReactAgentContextScope/);
   assert.match(source, /onClose/);
   assert.match(source, /report-reader-inline/);
   assert.match(source, /report-reader-stage/);

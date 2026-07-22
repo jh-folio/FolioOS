@@ -30,7 +30,8 @@ import {
   type TopicPlan,
   type UpdateSmartCollectionRequest,
 } from "../api";
-import { openReactAgentDock, updateReactAgentContext } from "./agentContext";
+import { openReactAgentDock, patchReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
+import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
 import { stableNoteKey } from "./reportReader/FolioNotePanel";
 import { ReaderActionButton, ReaderActionGroup } from "./reportReader/ReaderActions";
 import { ReportBody } from "./reportReader/ReportBody";
@@ -745,6 +746,7 @@ export function DeepResearchRoute() {
   const [readinessKind, setReadinessKind] = useState<"no-index" | "rss" | "api" | null>(null);
   const [status, setStatus] = useState("");
   const [actionBusy, setActionBusy] = useState("");
+  const [proposalReloadKey, setProposalReloadKey] = useState(0);
   const requestId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
 
@@ -769,7 +771,7 @@ export function DeepResearchRoute() {
       setReports(Array.isArray(payload) ? payload : []);
       setReadinessKind(null);
       setPhase((current) => current === "readiness" ? "draft" : current);
-      updateReactAgentContext({ surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "" });
+      setReactAgentContextScope("deep-research", { surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "", collectionId: null, collectionRevision: null });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(errorCopy("readiness", err));
@@ -794,14 +796,14 @@ export function DeepResearchRoute() {
       collectionId: selectedCollectionRef?.id || null,
       collectionRevision: selectedCollectionRef?.revision || null,
     };
-    updateReactAgentContext(ownedCollectionIdentity);
+    patchReactAgentContextScope("deep-research", ownedCollectionIdentity);
     return () => {
       const current = window.FolioAgent?.currentContext;
       if (
         current?.collectionId === ownedCollectionIdentity.collectionId
         && current.collectionRevision === ownedCollectionIdentity.collectionRevision
       ) {
-        updateReactAgentContext({ collectionId: null, collectionRevision: null });
+        patchReactAgentContextScope("deep-research", { collectionId: null, collectionRevision: null });
       }
     };
   }, [selectedCollectionRef]);
@@ -817,6 +819,18 @@ export function DeepResearchRoute() {
   }, []);
 
   useEffect(() => {
+    const handleProposalLifecycle = (event: Event) => {
+      const result = (event as CustomEvent<ProposalLifecycleResult>).detail;
+      if (proposalTargetsContext(result, window.FolioAgent?.currentContext)) {
+        setProposalReloadKey((value) => value + 1);
+        setWorkLogRefreshKey((value) => value + 1);
+      }
+    };
+    window.addEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+    return () => window.removeEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     requestController.current?.abort();
     const detailRequest = requestId.current + 1;
@@ -828,7 +842,7 @@ export function DeepResearchRoute() {
         if (controller.signal.aborted || requestId.current !== detailRequest) return;
         setSelected(report);
         setPhase("report");
-        updateReactAgentContext({ surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: report.id || reportId });
+        setReactAgentContextScope("deep-research", { surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: report.id || reportId, collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         if (controller.signal.aborted || requestId.current !== detailRequest) return;
@@ -846,11 +860,11 @@ export function DeepResearchRoute() {
     } else {
       setSelected(null);
       setPhase((current) => current === "report" ? "draft" : current);
-      updateReactAgentContext({ surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "" });
+      setReactAgentContextScope("deep-research", { surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "", collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
       setLoading(false);
     }
     return () => controller.abort();
-  }, [detailId]);
+  }, [detailId, proposalReloadKey]);
 
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -930,7 +944,7 @@ export function DeepResearchRoute() {
       setPhase("report");
       setStatus("딥 리서치를 생성하고 자동 저장했습니다.");
       setTopicHash(report.id);
-      updateReactAgentContext({ surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: report.id || "" });
+      setReactAgentContextScope("deep-research", { surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: report.id || "", collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
     } catch (err) {
       setWorkLogRefreshKey((current) => current + 1);
       if (err instanceof DOMException && err.name === "AbortError") return;

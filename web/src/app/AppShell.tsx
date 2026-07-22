@@ -12,6 +12,7 @@ import { SettingsRoute } from "./SettingsRoute";
 import { WatchlistRoute } from "./WatchlistRoute";
 import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } from "./routes";
 import { useShellStatus } from "./statusStore";
+import { activateReactAgentContextScope } from "./agentContext";
 
 const NAV_GROUPS: Array<{ title: string; routes: RouteId[] }> = [
   { title: "Home", routes: ["home"] },
@@ -146,6 +147,10 @@ export function AppShell() {
   const scrollByRouteRef = useRef<Record<string, number>>({});
   const agentVisible = active.id !== "home";
   const shellAgentClass = agentVisible && agentOpen ? " is-agent-open" : " is-agent-closed";
+
+  useEffect(() => {
+    activateReactAgentContextScope(active.id, { surface: `react_${active.id}`, viewId: active.id });
+  }, [active.id]);
 
   useEffect(() => {
     localStorage.setItem("folio.react.navCollapsed", navCollapsed ? "1" : "0");

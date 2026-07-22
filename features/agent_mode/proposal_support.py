@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -13,6 +13,7 @@ from features.agent_mode.proposal_schema import (
     ProposalMarketScope,
     ProposalRecord,
     ProposalStatus,
+    RevisionRef,
     SourceRefKind,
 )
 from features.agent_mode.proposal_store import ProposalPaths
@@ -20,6 +21,7 @@ from features.common.canonical_identity import CanonicalNotFoundError, ReportKin
 from features.common.canonical_json import JsonValue
 from features.common.canonical_report_state import load_report, revision
 from features.common.canonical_reports import WriteKind, commit_sync, prepare
+from features.common.jcs import sha256_hex
 from features.common.research_library.rss.policy import normalize_url
 
 
@@ -42,6 +44,43 @@ def now_utc_z() -> str:
 
 def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def normalize_line_endings(value: str) -> str:
+    return value.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def sha256_normalized_text(value: str) -> str:
+    return sha256_text(normalize_line_endings(value))
+
+
+def proposal_request_hash(
+    *,
+    report_kind: str,
+    report_id: str,
+    market_scope: str,
+    user_request: str,
+    summary: str,
+    base_revision: RevisionRef,
+    adapter: str,
+    model: str,
+    allowed_refs: Sequence[AllowedSourceRef],
+) -> str:
+    refs = sorted(
+        (item.model_dump(mode="json") for item in allowed_refs),
+        key=lambda item: (str(item["kind"]), str(item["value"])),
+    )
+    return sha256_hex({
+        "reportKind": report_kind,
+        "reportId": report_id,
+        "marketScope": market_scope,
+        "userRequest": user_request,
+        "summary": summary,
+        "baseRevision": base_revision.model_dump(mode="json"),
+        "adapter": adapter,
+        "model": model,
+        "allowedSourceRefs": refs,
+    })
 
 
 def parse_report_kind(value: str) -> ReportKind:

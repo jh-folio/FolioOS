@@ -16,7 +16,7 @@ test("Deep Research route owns topic report feed, form, and reader APIs", async 
   assert.match(source, /noteIdentity/);
   assert.doesNotMatch(source, /proposalSurface/);
   assert.match(source, /openReactAgentDock/);
-  assert.match(source, /updateReactAgentContext/);
+  assert.match(source, /setReactAgentContextScope/);
   assert.match(source, /noteType: "topic_review"/);
   assert.match(source, /reportKind: "topic_report"/);
 });

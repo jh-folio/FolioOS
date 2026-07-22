@@ -33,7 +33,8 @@ from features.agent_mode.proposal_support import (
     parse_market_scope,
     parse_report_kind,
     proposal_projection,
-    sha256_text,
+    proposal_request_hash,
+    sha256_normalized_text,
     terminal_record,
 )
 from features.common.canonical_json import JsonValue
@@ -74,6 +75,13 @@ def create_proposal(
     current_revision = revision(current)
     if current_revision is None:
         raise ProposalActionError("proposal_invalid", "보고서 revision이 없습니다.", 500)
+    base_revision = RevisionRef(number=current_revision[0], hash=current_revision[1])
+    user_request = message[:2000]
+    bounded_summary = summary[:1000]
+    bounded_diff = diff[:100_000]
+    bounded_adapter = adapter[:120]
+    bounded_model = model[:120]
+    source_refs = allowed_source_refs(current)
     proposal = ProposalRecord(
         id=uuid.uuid4().hex,
         reportKind=report_kind,
@@ -83,21 +91,31 @@ def create_proposal(
         createdAt=now_utc_z(),
         updatedAt=now_utc_z(),
         finishedAt=None,
-        baseRevision=RevisionRef(number=current_revision[0], hash=current_revision[1]),
+        baseRevision=base_revision,
         targetRevision=None,
         operationId=None,
         errorCode=None,
-        requestHash=sha256_text(message[:2000]),
-        revisedMarkdownHash=sha256_text(revised_markdown),
-        diffHash=sha256_text(diff),
+        requestHash=proposal_request_hash(
+            report_kind=report_kind.value,
+            report_id=report_id,
+            market_scope=scope.value,
+            user_request=user_request,
+            summary=bounded_summary,
+            base_revision=base_revision,
+            adapter=bounded_adapter,
+            model=bounded_model,
+            allowed_refs=source_refs,
+        ),
+        revisedMarkdownHash=sha256_normalized_text(revised_markdown),
+        diffHash=sha256_normalized_text(bounded_diff),
         legacyNormalizationHash=None,
-        userRequest=message[:2000],
-        summary=summary[:1000],
+        userRequest=user_request,
+        summary=bounded_summary,
         revisedMarkdown=revised_markdown,
-        diff=diff[:100_000],
-        adapter=adapter[:120],
-        model=model[:120],
-        allowedSourceRefs=allowed_source_refs(current),
+        diff=bounded_diff,
+        adapter=bounded_adapter,
+        model=bounded_model,
+        allowedSourceRefs=source_refs,
     )
     write_proposal(paths, proposal)
     return proposal
@@ -145,6 +163,8 @@ def _approve_locked(paths: ProposalPaths, proposal: ProposalRecord, phase_hook: 
             candidate=candidate,
             operation_id=operation_id,
         )
+    except ProposalActionError:
+        raise
     except CanonicalValidationError as exc:
         error_map = {
             "source_validation_failed": ProposalErrorCode.SOURCE_VALIDATION_FAILED,
@@ -153,6 +173,13 @@ def _approve_locked(paths: ProposalPaths, proposal: ProposalRecord, phase_hook: 
         error = error_map.get(exc.code, ProposalErrorCode.QUALITY_VALIDATION_FAILED)
         _persist_apply_failure(paths, proposal, ProposalStatus.FAILED_APPLY, error)
         raise ProposalActionError("proposal_validation_failed", str(exc), 409) from exc
+    except Exception as exc:
+        _persist_apply_failure(paths, proposal, ProposalStatus.FAILED_APPLY, ProposalErrorCode.INTERNAL_ERROR)
+        raise ProposalActionError(
+            "proposal_apply_failed",
+            "제안 적용 중 내부 오류가 발생했습니다.",
+            500,
+        ) from exc
     target_revision = RevisionRef(number=prepared.target_revision, hash=prepared.canonical_content_hash)
     if journal is None:
         journal = ProposalApplyJournal(
@@ -190,16 +217,10 @@ def _approve_locked(paths: ProposalPaths, proposal: ProposalRecord, phase_hook: 
     return proposal_projection(applied)
 
 
-def get_proposal(paths: ProposalPaths, proposal_id: str, phase_hook: PhaseHook = NO_PHASE_HOOK) -> ProposalRecord | None:
+def get_proposal(paths: ProposalPaths, proposal_id: str) -> ProposalRecord | None:
     proposal_id = _validated_proposal_id(proposal_id)
     with proposal_lock(paths, proposal_id):
-        proposal = read_normalized(paths, proposal_id)
-        if proposal is None:
-            return None
-        if read_journal(paths, proposal_id) is not None:
-            _approve_locked(paths, proposal, phase_hook)
-            proposal = read_normalized(paths, proposal_id)
-        return proposal
+        return read_normalized(paths, proposal_id, persist_legacy=False)
 
 
 def act_on_proposal(
@@ -213,6 +234,8 @@ def act_on_proposal(
         proposal = read_normalized(paths, proposal_id)
         if proposal is None:
             raise ProposalActionError("proposal_not_found", "제안을 찾을 수 없습니다.", 404)
+        if proposal.status == ProposalStatus.APPLYING:
+            raise ProposalActionError("proposal_action_conflict", "적용 중인 제안입니다.", 409)
         if proposal.status == ProposalStatus.APPLIED and action == ProposalAction.APPROVE:
             return proposal_projection(proposal)
         if proposal.status == ProposalStatus.REJECTED and action == ProposalAction.REJECT:

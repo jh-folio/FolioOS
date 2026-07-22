@@ -9,6 +9,7 @@ from typing import Final, TypeAlias, assert_never
 from features.common.canonical_json import JsonValue
 from features.common.canonical_reports import CanonicalValidationError, ReportKind
 from features.common.research_quality.evaluator import evaluate_artifact
+from features.common.research_schema.checkpoints import checkpoints_from_markdown
 
 MAX_REVISED_MARKDOWN_CHARS: Final = 200_000
 HEADING_PATTERN: Final = re.compile(r"^#{1,6}\s+(.+?)\s*$", re.MULTILINE)
@@ -79,7 +80,27 @@ def build_revision_candidate(
     candidate = deepcopy(dict(current))
     candidate["markdown"] = markdown
     if markdown != current_markdown_value.strip():
-        candidate["quality"] = evaluate_artifact(_artifact_type(report_kind), candidate)
+        artifact_type = _artifact_type(report_kind)
+        previous_quality = deepcopy(current.get("quality")) if isinstance(current.get("quality"), dict) else {}
+        candidate["checkpoints"] = checkpoints_from_markdown(
+            markdown,
+            artifact_type=artifact_type,
+            artifact_id=str(candidate.get("id") or candidate.get("date") or ""),
+            scope="company" if report_kind == ReportKind.COMPANY_ANALYSIS else "market",
+            ticker=str(candidate.get("ticker") or ""),
+            topic=str(candidate.get("title") or candidate.get("headline") or candidate.get("topicLabel") or ""),
+        )
+        candidate["quality"] = evaluate_artifact(artifact_type, candidate)
+        previous_generation = current.get("qualityGeneration")
+        candidate["qualityGeneration"] = {
+            **(deepcopy(previous_generation) if isinstance(previous_generation, dict) else {}),
+            "mode": "agent_proposal_revision",
+            "repairApplied": True,
+            "repairCount": 1,
+            "repairType": "agent_proposal",
+            "qualityBefore": previous_quality,
+            "qualityAfter": deepcopy(candidate["quality"]),
+        }
     return RevisionCandidate(report_kind, candidate, tuple(sorted(introduced_refs)))
 
 

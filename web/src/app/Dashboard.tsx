@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
-import { updateReactAgentContext } from "./agentContext";
+import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 
 type DashboardPayload = {
@@ -516,7 +516,7 @@ export function Dashboard() {
         getJson<InvestmentReview>("/api/investment-review"),
       ]);
       setData({ dashboard, review });
-      updateReactAgentContext({ surface: "dashboard", viewId: "dashboard", reportKind: "", reportId: "" });
+      setReactAgentContextScope("dashboard", { surface: "dashboard", viewId: "dashboard", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "대시보드를 불러오지 못했습니다.");
     } finally {
@@ -547,7 +547,7 @@ export function Dashboard() {
       }
       const dashboard = await getJson<DashboardPayload>("/api/dashboard");
       setData({ dashboard, review });
-      updateReactAgentContext({ surface: "dashboard", viewId: "dashboard", reportKind: "investment_review", reportId: review.date || "" });
+      setReactAgentContextScope("dashboard", { surface: "dashboard", viewId: "dashboard", reportKind: "investment_review", reportId: review.date || "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "투자 리뷰를 갱신하지 못했습니다.");
     } finally {

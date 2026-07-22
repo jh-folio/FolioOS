@@ -16,20 +16,22 @@ from features.common.canonical_revisions import build_revision_candidate
         (ReportKind.TOPIC_REPORT, {"id": "topic-01"}),
     ],
 )
-def test_three_revision_adapters_preserve_inputs_and_recompute_quality(
+def test_three_revision_adapters_preserve_inputs_and_recompute_structured_metadata(
     report_kind: ReportKind,
     identity: dict,
 ) -> None:
     # Given: a report with immutable evidence/context and two machine-visible sections.
     current = {
         **identity,
-        "markdown": "# Report\n\n## Evidence\nOriginal https://example.test/source\n\n## Risks\nOriginal risk",
+        "markdown": "# Report\n\n## Evidence\nOriginal https://example.test/source\n\n## Risks\nOriginal risk\n\n## 체크포인트\n- Original checkpoint detail",
         "financials": {"revenue": 10},
         "sourceLedger": [{"url": "https://example.test/source", "id": "src-1"}],
         "evidenceItems": [{"id": "ev-1"}],
         "context": {"market": "US"},
         "personalOverlay": {"stale": False},
         "quality": {"score": 1, "generatedAt": "old"},
+        "qualityGeneration": {"mode": "initial"},
+        "checkpoints": [{"checkpoint": "Original checkpoint detail"}],
     }
     before = deepcopy(current)
 
@@ -37,10 +39,10 @@ def test_three_revision_adapters_preserve_inputs_and_recompute_quality(
     result = build_revision_candidate(
         report_kind,
         current,
-        "# Report\n\n## Evidence\nUpdated https://example.test/source\n\n## Risks\nUpdated risk",
+        "# Report\n\n## Evidence\nUpdated https://example.test/source\n\n## Risks\nUpdated risk\n\n## 체크포인트\n- Updated checkpoint detail",
     )
 
-    # Then: only markdown/quality are recomputed and immutable layers are unchanged.
+    # Then: writable structured metadata is recomputed and immutable layers are unchanged.
     assert result.candidate["markdown"].startswith("# Report")
     assert result.candidate["financials"] == before["financials"]
     assert result.candidate["sourceLedger"] == before["sourceLedger"]
@@ -48,6 +50,10 @@ def test_three_revision_adapters_preserve_inputs_and_recompute_quality(
     assert result.candidate["context"] == before["context"]
     assert result.candidate["personalOverlay"] == before["personalOverlay"]
     assert result.candidate["quality"] != before["quality"]
+    assert result.candidate["checkpoints"] != before["checkpoints"]
+    assert result.candidate["qualityGeneration"]["mode"] == "agent_proposal_revision"
+    assert result.candidate["qualityGeneration"]["qualityBefore"] == before["quality"]
+    assert result.candidate["qualityGeneration"]["qualityAfter"] == result.candidate["quality"]
 
 
 def test_revision_adapter_rejects_missing_existing_section() -> None:

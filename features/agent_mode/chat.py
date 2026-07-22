@@ -191,7 +191,7 @@ def _proposal_paths() -> ProposalPaths:
 
 
 def get_proposal(proposal_id: str) -> dict | None:
-    proposal = get_stored_proposal(_proposal_paths(), str(proposal_id or ""), PROPOSAL_PHASE_HOOK)
+    proposal = get_stored_proposal(_proposal_paths(), str(proposal_id or ""))
     return proposal.model_dump(mode="json", exclude_none=True) if proposal is not None else None
 
 
@@ -219,15 +219,11 @@ def create_revision_proposal(*, kind: str, report_id: str, market_scope: str, me
 
 
 def apply_proposal(proposal_id: str) -> dict:
-    result = act_on_proposal(_proposal_paths(), proposal_id, ProposalAction.APPROVE, PROPOSAL_PHASE_HOOK)
-    result["ok"] = True
-    return result
+    return act_on_proposal(_proposal_paths(), proposal_id, ProposalAction.APPROVE, PROPOSAL_PHASE_HOOK)
 
 
 def reject_proposal(proposal_id: str) -> dict:
-    result = act_on_proposal(_proposal_paths(), proposal_id, ProposalAction.REJECT, PROPOSAL_PHASE_HOOK)
-    result["ok"] = True
-    return result
+    return act_on_proposal(_proposal_paths(), proposal_id, ProposalAction.REJECT, PROPOSAL_PHASE_HOOK)
 
 
 def recover_proposals() -> int:

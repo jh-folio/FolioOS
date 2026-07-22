@@ -1261,6 +1261,8 @@ def api_agent_proposal(proposal_id: str):
         proposal = get_proposal(proposal_id)
     except ProposalActionError as exc:
         raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"code": "proposal_read_failed"}) from exc
     if proposal is None:
         raise HTTPException(status_code=404, detail={"code": "proposal_not_found"})
     return proposal
@@ -1273,7 +1275,11 @@ def api_agent_proposal_action(proposal_id: str, body: ProposalActionRequest):
             return apply_proposal(proposal_id)
         return reject_proposal(proposal_id)
     except ProposalActionError as exc:
+        if exc.status_code >= 500:
+            raise HTTPException(status_code=exc.status_code, detail={"code": exc.code}) from exc
         raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"code": "proposal_apply_failed"}) from exc
 
 
 @fastapi_app.get("/api/agent-bridge/settings")

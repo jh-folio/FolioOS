@@ -14,6 +14,7 @@ import {
   type WorkLogMigrationPreview,
   type WorkLogMigrationResponse,
 } from "../api";
+import { boundedProposalDiff, boundedProposalSummary, PROPOSAL_LIFECYCLE_EVENT } from "./agentProposalLifecycle";
 
 type AgentWorkLogProps = {
   readonly surface: "home" | "deep-research";
@@ -91,6 +92,15 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
     void load();
     return () => activeController.current?.abort();
   }, [load, refreshKey]);
+
+  useEffect(() => {
+    const handleProposalLifecycle = () => {
+      setProposal(null);
+      void load();
+    };
+    window.addEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+    return () => window.removeEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+  }, [load]);
 
   useEffect(() => {
     if (!dialog) return;
@@ -257,7 +267,7 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
 
       {dialog === "clear" && clearPreview && <div className="work-log-dialog-backdrop"><div className="work-log-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="work-log-clear-title" data-qa="work-log-clear-dialog"><h3 id="work-log-clear-title">작업 기록 숨기기</h3><p data-qa="work-log-clear-count">현재 범위 {clearPreview.count}건</p><p>목록에서만 숨깁니다. 공유 작업, 보고서, 제안, 레거시 파일은 삭제하지 않습니다.</p><div className="work-log-dialog-actions"><button type="button" data-qa="work-log-clear-confirm" disabled={clearBusy} onClick={() => void confirmClear()}>숨기기 확인</button><button type="button" data-qa="work-log-clear-cancel" onClick={closeDialog}>취소</button></div></div></div>}
       {dialog === "migration" && migrationPreview && <div className="work-log-dialog-backdrop"><div className="work-log-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="work-log-migration-title" data-qa="work-log-migration-dialog"><h3 id="work-log-migration-title">이전 기록 가져오기</h3><p data-qa="work-log-migration-summary">이전 {migrationPreview.legacyJobs}건 · 가져올 수 있음 {migrationPreview.migratableJobs}건 · {displayTime(migrationPreview.expiresAt)}까지</p>{migrationPreview.collisions.length > 0 && <p className="react-dashboard-error" data-qa="work-log-migration-collisions">충돌 {migrationPreview.collisions.length}건이 있어 진행할 수 없습니다.</p>}<label><input type="radio" name="migration-action" data-qa="work-log-migration-keep" checked={migrationAction === "migrate_keep_original"} onChange={() => setMigrationAction("migrate_keep_original")} /> 원본 유지</label><label><input type="radio" name="migration-action" data-qa="work-log-migration-delete-original" checked={migrationAction === "migrate_delete_original"} onChange={() => setMigrationAction("migrate_delete_original")} /> 성공 후 이전 jobs 파일 삭제</label><div className="work-log-dialog-actions"><button type="button" data-qa="work-log-migration-confirm" disabled={migrationBusy || migrationPreview.collisions.length > 0} onClick={() => void confirmMigration()}>마이그레이션 확인</button><button type="button" data-qa="work-log-migration-cancel" onClick={closeDialog}>취소</button></div></div></div>}
-      {proposal && <aside className="work-log-proposal-surface" data-qa="proposal-approval-surface" aria-label="활성 제안 승인 검토"><div><p className="section-kicker">Approval required</p><h3>{proposal.summary || "저장 변경 제안"}</h3><p>이 내용은 작업 기록이 아니라 요청 시 별도로 불러온 승인 제안입니다.</p></div>{proposal.diff && <pre>{proposal.diff}</pre>}<button type="button" className="filter-btn clear" onClick={() => setProposal(null)}>닫기</button></aside>}
+      {proposal && <aside className="work-log-proposal-surface" data-qa="proposal-approval-surface" aria-label="활성 제안 승인 검토"><div><p className="section-kicker">Approval required</p><h3>{boundedProposalSummary(proposal.summary) || "저장 변경 제안"}</h3><p>이 내용은 작업 기록이 아니라 요청 시 별도로 불러온 승인 제안입니다.</p></div>{proposal.diff && <pre>{boundedProposalDiff(proposal.diff)}</pre>}<button type="button" className="filter-btn clear" onClick={() => setProposal(null)}>닫기</button></aside>}
     </section>
   );
 }

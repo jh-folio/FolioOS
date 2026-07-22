@@ -171,7 +171,9 @@ Deep Research에서 선택한 Smart Collection은 frontend가 `collectionId`와 
 - `POST /api/agent/chat` — `{message, context, options}`를 받아 `agent_bridge` job으로 제출한다(`submit_agent_chat`). CLI 실행이 오래 걸릴 수 있어 프론트는 `/api/jobs/{id}`를 폴링한다.
 - **Companion 질문**: 현재 화면 컨텍스트 + 열린 보고서 markdown 발췌(최대 24,000자) + 첨부 + 노력 단계 힌트로 프롬프트를 구성해 `bridge.run_agent_prompt()`(pack/writeback 없는 read-only 원샷 실행, 모델 오버라이드 지원)로 답을 받는다.
 - **Task 의도 + 저장 보고서 컨텍스트**(briefing/company_analysis/topic_report): CLI에 `{"summary", "revisedMarkdown"}` JSON으로 전체 수정본을 받아 unified diff와 함께 **제안(proposal)** 으로 `data/agent-proposals/{id}.json`에 저장한다. 이 시점에는 저장 보고서가 바뀌지 않는다.
-- `POST /api/agent/proposals/{id}` `{action: approve|reject}` — **승인 시에만** 해당 보고서 JSON의 `markdown`을 교체하고 `agentRevisions` 이력을 남긴다(personalOverlay 등 다른 필드 보존). 제안 생성 이후 저장본이 바뀌었으면(`baseMarkdownHash` 불일치) 적용을 거부하고 `stale`로 표시한다.
+- `GET /api/agent/proposals/{id}` — pending 제안의 bounded summary/diff/수정 본문을 승인 화면에서 다시 읽고, terminal 제안은 본문 필드가 제거된 상태/status projection으로 읽는다. 이 본문은 Work Log에 복사하지 않는다.
+- `POST /api/agent/proposals/{id}` `{action: approve|reject}` — **승인 시에만** Canonical coordinator가 `markdown`, `checkpoints`, `quality`, `qualityGeneration`, `canonicalRevision`, `agentRevisions`를 함께 갱신한다. `personalOverlay` 본문은 보존하고 Canonical 변경 시 stale marker만 추가한다. 제안 생성 이후 저장본의 `canonicalRevision` number/hash가 달라졌으면 보고서를 쓰지 않고 `stale`로 terminalize한다. approve/reject 응답은 `proposalId/status/reportKind/reportId/marketScope/targetRevision` 여섯 필드만 반환한다.
+- 제안 파일은 canonical revision과 정규화된 request/Markdown/diff hash를 묶고, apply journal로 prepared → applying → report_written → applied 순서를 복구한다. `applying` 상태의 외부 action은 409이며 startup recovery만 재개한다. 예상하지 못한 적용 오류는 private 예외 문자열을 노출하지 않고 safe error code로 응답한다.
 - **CLI가 없으면** 규칙 기반 companion 응답으로 fallback한다(`engine: "rules"`) — LLM 없이도 동작 원칙 유지.
 - 종합(`both`) 브리핑은 시장별 파일로 나뉘어 있어 단일 레거시 `{date}.json`이 있을 때만 수정 대상이 된다.
 

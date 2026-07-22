@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { updateReactAgentContext, type AgentContextPatch } from "../agentContext";
+import { setReactAgentContextScope, type AgentContextPatch } from "../agentContext";
 import { FolioNotePanel, type FolioNoteIdentity } from "./FolioNotePanel";
 
 type ReportReaderShellProps = {
@@ -47,7 +47,10 @@ export function ReportReaderShell({
   ].filter(Boolean).join(" ");
 
   useEffect(() => {
-    if (agentContextKey) updateReactAgentContext(agentContext || {});
+    if (!agentContextKey || !agentContext) return;
+    const viewId = String(agentContext.viewId || "");
+    const scope = viewId === "topicrpt" ? "deep-research" : viewId;
+    if (scope) setReactAgentContextScope(scope, agentContext);
   }, [agentContext, agentContextKey]);
 
   return (

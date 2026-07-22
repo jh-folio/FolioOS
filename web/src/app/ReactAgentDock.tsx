@@ -1,11 +1,13 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
+import { getJson, postJson, type JobStatus } from "../api";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
+import { AgentPollTimeout, pollAgentJobBounded, releasePollController, replacePollController } from "./agentPolling";
+import { actOnProposal, boundedProposalDiff, boundedProposalSummary, hydrateAgentProposalFromResult, notifyProposalLifecycle } from "./agentProposalLifecycle";
 
 type AgentResult = {
   reply?: string;
   notice?: string;
-  proposal?: AgentProposal | null;
+  proposalId?: string | null;
 };
 
 type AgentProposal = {
@@ -32,9 +34,10 @@ type AgentMessage = {
   proposal?: AgentProposal | null;
   proposalStatus?: string;
   pending?: boolean;
-  runState?: "pending" | "done" | "error";
+  runState?: "pending" | "done" | "error" | "still-running";
   runTitle?: string;
   runMeta?: string;
+  jobId?: string;
   createdAt?: string;
   variant?: "welcome";
 };
@@ -112,10 +115,6 @@ const PROVIDER_META: Record<string, { label: string; color: string; logo: string
   default: { label: "Folio Agent", color: "#c79a45", logo: DEFAULT_AGENT_LOGO, monoLogo: DEFAULT_AGENT_LOGO },
 };
 
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
 function messageId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -173,6 +172,50 @@ function collectionIdentityPatch(context: Record<string, unknown> | undefined): 
   return {};
 }
 
+function withoutCollectionIdentity(context: Record<string, unknown>): Record<string, unknown> {
+  const patch = { ...context };
+  delete patch.collectionId;
+  delete patch.collectionRevision;
+  return patch;
+}
+
+export type DockContextState = {
+  ownerSurface: string;
+  patch: Record<string, unknown>;
+};
+
+export function resetDockContextForSurface(state: DockContextState, surface: string): DockContextState {
+  if (state.ownerSurface === surface) return state;
+  return { ownerSurface: surface, patch: {} };
+}
+
+export function patchDockContextForSurface(
+  state: DockContextState,
+  surface: string,
+  contextPatch: Record<string, unknown>,
+): DockContextState {
+  const scoped = resetDockContextForSurface(state, surface);
+  return {
+    ownerSurface: surface,
+    patch: { ...scoped.patch, ...contextPatch, surface: String(contextPatch.surface || surface) },
+  };
+}
+
+export function buildAgentRequestContext(
+  globalContext: Record<string, unknown> | undefined,
+  state: DockContextState,
+  surface: string,
+  contextPatch: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const scoped = resetDockContextForSurface(state, surface);
+  return {
+    ...safeGlobalContextPatch(globalContext),
+    ...withoutCollectionIdentity(scoped.patch),
+    ...withoutCollectionIdentity(contextPatch),
+    ...collectionIdentityPatch(globalContext),
+  };
+}
+
 function selectedAdapter(settings: AgentSettings | null): AgentAdapterSettings | null {
   const provider = settings?.provider && PROVIDERS.has(settings.provider)
     ? settings.provider
@@ -197,18 +240,6 @@ function preferredModel(adapter: AgentAdapterSettings | null) {
   return choices.some((choice) => choice.value === adapter?.model) ? String(adapter?.model || "") : choices[0].value;
 }
 
-async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
-  let current = job;
-  while (isActiveJobStatus(current.status)) {
-    await sleep(1000);
-    current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
-  }
-  if (current.status !== "done") {
-    throw new Error(current.message || current.error || "Agent 작업에 실패했습니다.");
-  }
-  return current;
-}
-
 export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDockProps) {
   const [settings, setSettings] = useState<AgentSettings | null>(null);
   const [preflight, setPreflight] = useState<AgentPreflight | null>(null);
@@ -219,7 +250,13 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  const contextRef = useRef<Record<string, unknown>>({ surface });
+  const contextRef = useRef<DockContextState>({ ownerSurface: surface, patch: {} });
+  const pollControllers = useRef(new Map<string, AbortController>());
+
+  useEffect(() => () => {
+    for (const controller of pollControllers.current.values()) controller.abort();
+    pollControllers.current.clear();
+  }, []);
 
   const applySettings = useCallback((payload: AgentSettings, keepCurrent = false) => {
     const adapter = selectedAdapter(payload);
@@ -278,7 +315,7 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
   }, [messages, open]);
 
   useEffect(() => {
-    contextRef.current = { ...contextRef.current, surface };
+    contextRef.current = resetDockContextForSurface(contextRef.current, surface);
   }, [surface]);
 
   useEffect(() => {
@@ -307,13 +344,13 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     const text = rawText.trim();
     if (!text || busy) return;
 
-    const requestContext = {
-      ...safeGlobalContextPatch(window.FolioAgent?.currentContext),
-      ...contextRef.current,
-      ...contextPatch,
-      ...collectionIdentityPatch(window.FolioAgent?.currentContext),
-    };
-    contextRef.current = requestContext;
+    contextRef.current = resetDockContextForSurface(contextRef.current, surface);
+    const requestContext = buildAgentRequestContext(
+      window.FolioAgent?.currentContext,
+      contextRef.current,
+      surface,
+      contextPatch,
+    );
     const assistantId = messageId();
     const startedAt = Date.now();
     const createdAt = new Date(startedAt).toISOString();
@@ -337,23 +374,28 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     setBusy(true);
     setError("");
 
+    let controller: AbortController | null = null;
     try {
       const job = await postJson<AgentJob>("/api/agent/chat", {
         message: text,
         context: requestContext,
         options: { model, effort },
       });
-      const done = await pollAgentJob(job);
+      controller = new AbortController();
+      replacePollController(pollControllers.current, assistantId, controller);
+      const done = await pollAgentJobBounded(job, { signal: controller.signal });
+      releasePollController(pollControllers.current, assistantId, controller);
       const result = done.result || {};
+      const proposalHydration = await hydrateAgentProposalFromResult(result);
       setMessages((current) =>
         current.map((message) =>
           message.id === assistantId
             ? {
                 ...message,
                 text: result.reply || done.message || "Agent가 응답을 반환하지 않았습니다.",
-                notice: result.notice,
-                proposal: result.proposal || null,
-                proposalStatus: result.proposal ? "pending" : "",
+                notice: [result.notice, proposalHydration.notice].filter(Boolean).join(" "),
+                proposal: proposalHydration.proposal,
+                proposalStatus: proposalHydration.proposalStatus,
                 pending: false,
                 runState: "done",
                 runTitle: `${providerLabel} 응답`,
@@ -363,6 +405,19 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
         ),
       );
     } catch (err) {
+      if (controller) releasePollController(pollControllers.current, assistantId, controller);
+      if (err instanceof AgentPollTimeout) {
+        setMessages((current) => current.map((message) => message.id === assistantId ? {
+          ...message,
+          text: err.message,
+          pending: false,
+          runState: "still-running",
+          runTitle: `${providerLabel} 계속 실행 중`,
+          runMeta: `${modelLabel} · ${effortLabel(effort)} · ${elapsedSeconds(startedAt)}`,
+          jobId: err.job.id,
+        } : message));
+        return;
+      }
       const messageText = err instanceof Error ? err.message : "Agent 요청에 실패했습니다.";
       setError(messageText);
       setMessages((current) =>
@@ -382,13 +437,50 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     } finally {
       setBusy(false);
     }
-  }, [adapter?.label, adapter?.model, busy, effort, meta.label, model]);
+  }, [adapter?.label, adapter?.model, busy, effort, meta.label, model, surface]);
+
+  async function resumeAgentJob(messageIdValue: string, jobId: string) {
+    const controller = new AbortController();
+    replacePollController(pollControllers.current, messageIdValue, controller);
+    setMessages((current) => current.map((message) => message.id === messageIdValue ? {
+      ...message, pending: true, runState: "pending", runTitle: "Agent 상태 다시 확인 중",
+    } : message));
+    try {
+      const current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal });
+      const done = await pollAgentJobBounded(current, { signal: controller.signal });
+      const result = done.result || {};
+      const proposalHydration = await hydrateAgentProposalFromResult(result);
+      setMessages((messages) => messages.map((message) => message.id === messageIdValue ? {
+        ...message,
+        text: result.reply || done.message || "Agent가 응답을 반환하지 않았습니다.",
+        notice: [result.notice, proposalHydration.notice].filter(Boolean).join(" "),
+        proposal: proposalHydration.proposal,
+        proposalStatus: proposalHydration.proposalStatus,
+        pending: false,
+        runState: "done",
+        runTitle: "Agent 응답",
+        jobId: undefined,
+      } : message));
+    } catch (err) {
+      if (err instanceof AgentPollTimeout) {
+        setMessages((messages) => messages.map((message) => message.id === messageIdValue ? {
+          ...message, text: err.message, pending: false, runState: "still-running", runTitle: "Agent 계속 실행 중", jobId: err.job.id,
+        } : message));
+      } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setMessages((messages) => messages.map((message) => message.id === messageIdValue ? {
+          ...message, text: err instanceof Error ? err.message : "Agent 상태 확인에 실패했습니다.", pending: false, runState: "error", runTitle: "Agent 오류",
+        } : message));
+      }
+    } finally {
+      releasePollController(pollControllers.current, messageIdValue, controller);
+    }
+  }
 
   useEffect(() => {
     const handleAgentRequest = (event: Event) => {
       const detail = ((event as CustomEvent<AgentRequestDetail>).detail || {}) as AgentRequestDetail;
       const { message, prompt, autoSubmit, ...contextPatch } = detail;
-      contextRef.current = { ...contextRef.current, ...contextPatch, surface: String(contextPatch.surface || surface) };
+      contextRef.current = patchDockContextForSurface(contextRef.current, surface, contextPatch);
       const text = String(message || prompt || "");
       if (!text) return;
       if (autoSubmit) {
@@ -428,14 +520,15 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
 
   async function handleProposalAction(messageIdValue: string, proposalId: string, action: "approve" | "reject") {
     try {
-      const result = await postJson<{ status?: string }>(`/api/agent/proposals/${encodeURIComponent(proposalId)}`, { action });
+      const result = await actOnProposal(proposalId, action);
       setMessages((current) =>
         current.map((item) =>
           item.id === messageIdValue
-            ? { ...item, proposalStatus: result.status || action }
+            ? { ...item, proposalStatus: result.status }
             : item,
         ),
       );
+      notifyProposalLifecycle(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "제안 처리에 실패했습니다.");
     }
@@ -492,7 +585,12 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
                   <time>{formatTime(message.createdAt)}</time>
                 </div>
               )}
-              {message.runTitle && <AgentRunCard state={message.runState} title={message.runTitle} meta={message.runMeta} />}
+              {message.runTitle && <AgentRunCard state={message.runState === "still-running" ? "pending" : message.runState} title={message.runTitle} meta={message.runMeta} />}
+              {message.runState === "still-running" && message.jobId && (
+                <div data-qa="agent-job-still-running">
+                  <button type="button" data-qa="agent-job-resume" onClick={() => void resumeAgentJob(message.id, message.jobId!)}>상태 다시 확인</button>
+                </div>
+              )}
               {message.text && (
                 <div className={message.variant === "welcome" ? "react-agent-welcome-card" : ""}>
                   <AgentMessageContent text={message.text} />
@@ -505,24 +603,24 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
                     <strong>{message.proposal.artifactKind || "proposal"}</strong>
                     {message.proposal.artifactId && <span>{message.proposal.artifactId}</span>}
                   </div>
-                  {message.proposal.summary && <p>{message.proposal.summary}</p>}
-                  {message.proposal.diff && (
+                  {message.proposalStatus === "pending" && message.proposal.summary && <p data-qa="proposal-summary">{boundedProposalSummary(message.proposal.summary)}</p>}
+                  {message.proposalStatus === "pending" && message.proposal.diff && (
                     <details className="agent-proposal-diff">
                       <summary>diff 보기</summary>
-                      <pre>{message.proposal.diff}</pre>
+                      <pre data-qa="proposal-diff">{boundedProposalDiff(message.proposal.diff)}</pre>
                     </details>
                   )}
                   {message.proposalStatus === "pending" ? (
                     <div className="agent-actions">
-                      <button type="button" onClick={() => handleProposalAction(message.id, message.proposal!.id, "approve")}>
+                      <button type="button" data-qa="proposal-approve" onClick={() => handleProposalAction(message.id, message.proposal!.id, "approve")}>
                         승인
                       </button>
-                      <button type="button" onClick={() => handleProposalAction(message.id, message.proposal!.id, "reject")}>
+                      <button type="button" data-qa="proposal-reject" onClick={() => handleProposalAction(message.id, message.proposal!.id, "reject")}>
                         거절
                       </button>
                     </div>
                   ) : (
-                    <p className="agent-proposal-status">상태: {message.proposalStatus}</p>
+                    <p className="agent-proposal-status" data-qa={message.proposalStatus === "applied" ? "wb-happy-applied" : message.proposalStatus === "rejected" ? "wb-f1-terminal-rejected" : message.proposalStatus === "stale" ? "wb-f1-terminal-stale" : "proposal-terminal"}>상태: {message.proposalStatus}</p>
                   )}
                 </div>
               )}
@@ -533,6 +631,7 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
 
       <form className="react-agent-form" onSubmit={handleSubmit}>
         <textarea
+          data-qa="agent-input"
           value={input}
           onChange={(event) => setInput(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -558,7 +657,7 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
               <option value="max">노력 최대</option>
             </select>
           </div>
-          <button type="submit" disabled={busy || !input.trim()}>{busy ? "작업 중" : "보내기"}</button>
+          <button type="submit" data-qa="agent-submit" disabled={busy || !input.trim()}>{busy ? "작업 중" : "보내기"}</button>
         </div>
         {error && <p className="react-agent-error">{error}</p>}
       </form>

@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 
 from features.agent_mode.proposal_schema import ProposalApplyJournal, ProposalRecord
-from features.agent_mode.proposal_support import ProposalActionError, now_utc_z, sha256_text
+from features.agent_mode.proposal_support import ProposalActionError, sha256_text
 from features.common.canonical_json import JsonValue
 from features.common.canonical_report_state import revision
 from features.common.canonical_reports import canonical_content_hash
@@ -20,6 +20,24 @@ def report_matches_target(report: Mapping[str, JsonValue], journal: ProposalAppl
     )
 
 
+def _freeze_generated_quality_time(candidate: dict[str, JsonValue], timestamp: str) -> None:
+    quality = candidate.get("quality")
+    if isinstance(quality, dict):
+        frozen_quality = deepcopy(quality)
+        frozen_quality["generatedAt"] = timestamp
+        candidate["quality"] = frozen_quality
+    generation = candidate.get("qualityGeneration")
+    if not isinstance(generation, dict):
+        return
+    frozen_generation = deepcopy(generation)
+    quality_after = frozen_generation.get("qualityAfter")
+    if isinstance(quality_after, dict):
+        frozen_quality_after = deepcopy(quality_after)
+        frozen_quality_after["generatedAt"] = timestamp
+        frozen_generation["qualityAfter"] = frozen_quality_after
+    candidate["qualityGeneration"] = frozen_generation
+
+
 def approval_candidate(
     proposal: ProposalRecord,
     current: dict[str, JsonValue],
@@ -29,13 +47,14 @@ def approval_candidate(
         raise ProposalActionError("proposal_invalid", "제안 본문이 없습니다.", 500)
     allowed = tuple(item.model_dump(mode="json") for item in proposal.allowedSourceRefs)
     candidate = build_revision_candidate(proposal.reportKind, current, proposal.revisedMarkdown, allowed).candidate
+    _freeze_generated_quality_time(candidate, proposal.createdAt)
     revisions = candidate.get("agentRevisions")
     revision_items = deepcopy(revisions) if isinstance(revisions, list) else []
     current_revision = revision(current)
     if current_revision is None:
         raise ProposalActionError("proposal_invalid", "보고서 revision이 없습니다.", 500)
     revision_items.append({
-        "at": now_utc_z(),
+        "at": proposal.createdAt,
         "proposalId": proposal.id,
         "operationId": operation_id,
         "summaryHash": sha256_text(proposal.summary),
