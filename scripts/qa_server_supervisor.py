@@ -230,6 +230,15 @@ def _spawn(manifest: dict[str, Any], log: Any, job: WindowsJob) -> tuple[subproc
         "PORT": str(manifest["port"]), "FOLIO_HOST": "127.0.0.1",
         "FOLIO_WORKSPACE_IDENTITY": str(manifest["workspaceIdentity"]), "PYTHONUNBUFFERED": "1",
     })
+    allowed_runtime_environment = {"AGENT_CLI_PROVIDER", "FOLIO_AGENT_CODEX_COMMAND"}
+    runtime_environment = manifest.get("runtimeEnvironment", {})
+    if not isinstance(runtime_environment, dict) or set(runtime_environment) - allowed_runtime_environment:
+        raise RuntimeError("invalid runtime environment fixture keys")
+    for key, value in runtime_environment.items():
+        text = str(value)
+        if key == "FOLIO_AGENT_CODEX_COMMAND" and not _under(Path(text).resolve(), root):
+            raise RuntimeError("adapter executable is outside the owned run root")
+        env[key] = text
     flags = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt" else {"start_new_session": True}
     started_at = _now()
     child = subprocess.Popen(

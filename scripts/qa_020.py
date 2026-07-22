@@ -13,11 +13,13 @@ import ctypes
 import datetime as dt
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
 import signal
 import socket
+import sqlite3
 import subprocess
 import sys
 import time
@@ -26,6 +28,7 @@ import urllib.parse
 import urllib.request
 import uuid
 import zipfile
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +58,7 @@ SCENARIO_SETS = {
 RESTART_SCENARIOS = ["DR-H1", "WB-H1", "WL-H1"]
 OWNERSHIP_MARKER = ".folio-qa-owned"
 SCHEMA_VERSION = 1
-REPORT_ID = "2026-07-22:qa-contract:fixture"
+REPORT_ID = "qa-contract-fixture-20260722"
 INJECTED_CLOCK = "2026-07-22T12:00:00Z"
 VIEWPORTS = ("1440", "768", "390")
 CAPTURE_FILES = (
@@ -109,7 +112,9 @@ def _read_json(path: Path, *, code: str = "MALFORMED_MANIFEST") -> dict[str, Any
 
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    # Keep the atomic sibling name short: packaged QA roots are intentionally
+    # descriptive and can otherwise cross the legacy Windows MAX_PATH limit.
+    temporary = path.with_name(f".q{uuid.uuid4().hex[:8]}")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, path)
 
@@ -120,6 +125,49 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    def serialize(item: Any) -> str:
+        if item is None:
+            return "null"
+        if isinstance(item, bool):
+            return "true" if item else "false"
+        if isinstance(item, int):
+            return str(item)
+        if isinstance(item, float):
+            if not math.isfinite(item):
+                raise ValueError("canonical JSON rejects non-finite numbers")
+            if item == 0:
+                return "0"
+            magnitude, raw = abs(item), repr(item).lower()
+            if 1e-6 <= magnitude < 1e21:
+                fixed = format(Decimal(raw), "f")
+                return fixed.rstrip("0").rstrip(".") if "." in fixed else fixed
+            if "e" not in raw:
+                return raw
+            mantissa, exponent_text = raw.split("e", maxsplit=1)
+            exponent = int(exponent_text)
+            return f"{mantissa.rstrip('0').rstrip('.')}{'e+' if exponent >= 0 else 'e-'}{abs(exponent)}"
+        if isinstance(item, str):
+            return json.dumps(item, ensure_ascii=False, separators=(",", ":"))
+        if isinstance(item, list):
+            return "[" + ",".join(serialize(child) for child in item) + "]"
+        if isinstance(item, dict):
+            keys = sorted(item, key=lambda key: key.encode("utf-16be", errors="surrogatepass"))
+            return "{" + ",".join(
+                json.dumps(key, ensure_ascii=False, separators=(",", ":")) + ":" + serialize(item[key])
+                for key in keys
+            ) + "}"
+        raise TypeError(f"unsupported canonical JSON value: {type(item).__name__}")
+
+    return serialize(value).encode("utf-8")
+
+
+def _canonical_content_hash(report: dict[str, Any]) -> str:
+    excluded = {"canonicalRevision", "agentRevisions", "personalOverlay", "updatedAt", "jobCommit"}
+    content = {key: value for key, value in report.items() if key not in excluded}
+    return hashlib.sha256(_canonical_json_bytes(content)).hexdigest()
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:
@@ -279,7 +327,7 @@ def _required_evidence_paths(selected: list[str]) -> list[str]:
 
 
 def _scenario_selectors(selected: list[str]) -> dict[str, dict[str, str]]:
-    common = {"root": "[data-qa=app-shell]", "result": "[data-qa=scenario-result]"}
+    common = {"root": ".react-shell", "result": ".react-shell-main"}
     selectors = {scenario: dict(common) for scenario in selected}
     if "DR-H1" in selectors:
         selectors["DR-H1"].update(
@@ -292,6 +340,332 @@ def _scenario_selectors(selected: list[str]) -> dict[str, dict[str, str]]:
             }
         )
     return selectors
+
+
+def _seed_research_index(index_path: Path, article_path: Path, rss_path: Path) -> None:
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(index_path) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE documents (
+              doc_id TEXT PRIMARY KEY, path TEXT NOT NULL UNIQUE, title TEXT NOT NULL,
+              source TEXT NOT NULL, date TEXT NOT NULL, type TEXT NOT NULL, url TEXT NOT NULL,
+              market_relevance REAL NOT NULL DEFAULT 0, metadata_json TEXT NOT NULL DEFAULT '{}',
+              updated_at TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', content_updated_at TEXT
+            );
+            CREATE TABLE chunks (
+              chunk_id TEXT PRIMARY KEY, doc_id TEXT NOT NULL, chunk_index INTEGER NOT NULL,
+              text TEXT NOT NULL, embedding_json TEXT NOT NULL, UNIQUE(doc_id, chunk_index)
+            );
+            CREATE VIRTUAL TABLE chunks_fts USING fts5(
+              chunk_id UNINDEXED, doc_id UNINDEXED, title, source, text
+            );
+            CREATE TABLE file_manifest (
+              path TEXT PRIMARY KEY, file_signature TEXT NOT NULL DEFAULT '',
+              market_relevant INTEGER NOT NULL DEFAULT 0, doc_id TEXT NOT NULL DEFAULT '',
+              modified_at TEXT NOT NULL DEFAULT ''
+            );
+            CREATE TABLE rss_feed_items (
+              filename TEXT PRIMARY KEY, path TEXT NOT NULL, size INTEGER NOT NULL,
+              mtime_ns INTEGER NOT NULL, title TEXT NOT NULL, timestamp TEXT NOT NULL,
+              timestamp_sort TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL,
+              media TEXT NOT NULL, normalized_url TEXT NOT NULL DEFAULT '',
+              collector TEXT NOT NULL DEFAULT '', source_type TEXT NOT NULL DEFAULT '',
+              collection_status TEXT NOT NULL DEFAULT '', reliability_tier TEXT NOT NULL DEFAULT '',
+              markets TEXT NOT NULL DEFAULT '', visible INTEGER NOT NULL, parsed_at TEXT NOT NULL
+            );
+            """
+        )
+        metadata = json.dumps(
+            {"markets": ["US"], "tickers": ["QA"], "tags": ["qa-contract"], "collector": "manual"},
+            separators=(",", ":"),
+        )
+        document_rows = [
+            (
+                "qa-external-article", str(article_path), "Synthetic external evidence", "QA Wire",
+                "2026-07-22", "article", "https://example.invalid/qa-external", 1.0, metadata,
+                INJECTED_CLOCK, "EXTERNAL_EVIDENCE_CANARY source-grounded market evidence.", INJECTED_CLOCK,
+            ),
+            (
+                "qa-external-rss", str(rss_path), "Synthetic RSS evidence", "QA RSS",
+                "2026-07-22", "rss", "https://example.invalid/qa-rss", 1.0, metadata,
+                INJECTED_CLOCK, "EXTERNAL_EVIDENCE_CANARY RSS collection evidence.", INJECTED_CLOCK,
+            ),
+        ]
+        connection.executemany(
+            "INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?)", document_rows
+        )
+        for number, row in enumerate(document_rows):
+            chunk_id = f"qa-chunk-{number + 1}"
+            connection.execute(
+                "INSERT INTO chunks VALUES (?,?,?,?,?)",
+                (chunk_id, row[0], 0, row[10], "[0.0,1.0]"),
+            )
+            connection.execute(
+                "INSERT INTO chunks_fts VALUES (?,?,?,?,?)",
+                (chunk_id, row[0], row[2], row[3], row[10]),
+            )
+        stat = rss_path.stat()
+        connection.execute(
+            "INSERT INTO rss_feed_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                rss_path.name, str(rss_path), stat.st_size, stat.st_mtime_ns,
+                "Synthetic RSS evidence", "2026-07-22 12:00:00", "2026-07-22T12:00:00Z",
+                "https://example.invalid/qa-rss", "EXTERNAL_EVIDENCE_CANARY RSS collection evidence.",
+                "QA RSS", "https://example.invalid/qa-rss", "rss", "news",
+                "full_text", "1", '["US"]', 1, INJECTED_CLOCK,
+            ),
+        )
+
+
+def _seed_runtime_fixtures(extract_root: Path, run_root: Path) -> dict[str, Any]:
+    data_dir = extract_root / "data"
+    reports_dir = data_dir / "topic-reports"
+    articles_dir = extract_root / "research-inbox" / "articles"
+    rss_dir = extract_root / "research-inbox" / "rss"
+    for directory in (reports_dir, articles_dir, rss_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    article_path = articles_dir / "qa-external-evidence.md"
+    rss_path = rss_dir / "2026-07-22 12-00-00 - QA RSS - Synthetic RSS evidence.md"
+    article_path.write_text(
+        "# Synthetic external evidence\n\nEXTERNAL_EVIDENCE_CANARY source-grounded market evidence.\n",
+        encoding="utf-8",
+    )
+    rss_path.write_text(
+        "---\ncollector: rss\nsource_type: news\nnormalized_url: https://example.invalid/qa-rss\n"
+        "collection_status: full_text\nreliability_tier: 1\nmarkets: [US]\n---\n\n"
+        "# Synthetic RSS evidence\n\nEXTERNAL_EVIDENCE_CANARY RSS collection evidence.\n",
+        encoding="utf-8",
+    )
+    index_path = data_dir / "research-index.sqlite3"
+    _seed_research_index(index_path, article_path, rss_path)
+    _write_json(
+        data_dir / "index.json",
+        {"generatedAt": INJECTED_CLOCK, "count": 2, "incremental": True, "sqlite": str(index_path)},
+    )
+
+    canonical_hash = ""
+    report = {
+        "id": REPORT_ID,
+        "saved": True,
+        "filename": f"2026-07-22_qa_contract_{REPORT_ID}.json",
+        "date": "2026-07-22",
+        "generatedAt": INJECTED_CLOCK,
+        "topicKey": "qa_contract",
+        "reportType": "custom_research",
+        "topicLabel": "QA Contract Research",
+        "title": "QA Contract Research — 2026-07-22",
+        "markdown": (
+            "# QA Contract Research\n\n## 핵심 결론\n"
+            "EXTERNAL_EVIDENCE_CANARY는 합성 외부 근거이며 투자 판단용 실제 데이터가 아닙니다.\n\n"
+            "## 반대 근거와 불확실성\n합성 fixture이므로 실제 시장 일반화가 불가능합니다.\n\n"
+            "## 참고자료\n- [Synthetic external evidence](https://example.invalid/qa-external)\n"
+        ),
+        "topicPlan": {
+            "topic": "QA Contract Research", "reportType": "custom_research", "userIntent": "fixture verification",
+            "researchQuestions": ["외부 근거와 가설 레이어가 분리되는가?"],
+            "analysisAxes": [{"key": "layering", "label": "Layering", "questions": ["분리되는가?"]}],
+            "searchQueries": ["QA synthetic evidence"], "expectedSections": ["핵심 결론", "반대 근거와 불확실성"],
+            "dataGapsLikely": ["synthetic-only"],
+            "deepResearch": {"falsificationTriggers": ["private canary enters evidence"]},
+        },
+        "evidencePackSummary": {
+            "totalDocs": 2, "roleCounts": {"primary": 2},
+            "axisCoverage": {"layering": {"label": "Layering", "count": 2, "level": "covered"}},
+            "questionCoverage": {"q1": {"question": "분리되는가?", "count": 2, "level": "covered"}},
+            "dataGaps": ["synthetic-only"], "memoryCount": 0,
+        },
+        "evidenceItems": [
+            {
+                "id": "qa-external-article", "documentId": "qa-external-article",
+                "title": "Synthetic external evidence", "source": "QA Wire", "date": "2026-07-22",
+                "role": "primary", "axis": "layering", "confidence": "high",
+                "url": "https://example.invalid/qa-external", "artifactType": "topic_report", "artifactId": REPORT_ID,
+            }
+        ],
+        "sourceLedger": [
+            {
+                "sourceId": "qa-source-1", "title": "Synthetic external evidence", "source": "QA Wire",
+                "date": "2026-07-22", "evidenceRole": "primary", "reliability": "fixture",
+                "usedInSections": ["핵심 결론"], "url": "https://example.invalid/qa-external",
+                "artifactType": "topic_report", "artifactId": REPORT_ID, "path": str(article_path),
+                "axisKey": "layering", "researchQuestionId": "q1", "researchRound": 1,
+                "sourceLayer": "evidence",
+            }
+        ],
+        "researchResolution": {
+            "resolution": {
+                "schemaVersion": 1, "collectionId": "sc_00000000-0000-4000-8000-000000000016",
+                "collectionRevision": 1, "collectionDefinitionHash": "b" * 64,
+                "eligibleTotal": 2, "candidateCap": 20,
+                "resolvedCandidateIds": ["qa-external-article", "qa-external-rss"],
+                "executionUniverseIds": ["qa-external-article"],
+                "selectedEvidenceIds": ["qa-external-article"], "unusableCandidates": [],
+                "truncated": False, "providerGenerations": {"indexGeneration": "qa-index-1", "rssGeneration": "qa-rss-1"},
+                "inputWatermark": INJECTED_CLOCK,
+            },
+            "zeroEvidence": {"required": False, "reasonCode": "", "resolutionFingerprint": "c" * 64},
+            "resolvedAt": INJECTED_CLOCK,
+        },
+        "executionProvenance": {
+            "schemaVersion": 1, "approvalId": "qa-approval-1", "planHash": "d" * 64,
+            "requestedMode": "direct", "attemptedEngine": "api", "finalEngine": "rules",
+            "fallbackReason": "engine_failed", "adapter": "auto", "executedAt": INJECTED_CLOCK,
+        },
+        "marketStateResolution": {
+            "policy": "include_current", "requestedScope": "US", "resolvedScope": "US",
+            "injected": True, "reason": "current_injected",
+            "ref": {
+                "snapshotId": "mss_qa_fixture", "sourceKind": "snapshot", "scope": "US",
+                "asOf": INJECTED_CLOCK, "status": "current", "freshnessReason": "within_window",
+                "inputWatermark": INJECTED_CLOCK, "relevantEvidenceWatermark": INJECTED_CLOCK,
+                "invalidWatermarkRows": 0, "resolvedAt": INJECTED_CLOCK, "layer": "source-grounded",
+                "summary": "MARKET_CONTEXT_CANARY",
+            },
+        },
+        "dataGaps": [{"id": "qa-gap-1", "severity": "info", "description": "Synthetic fixture only", "suggestedAction": "Use real evidence", "resolved": False, "artifactId": REPORT_ID}],
+        "quality": {
+            "score": 92, "grade": "A", "status": "pass", "warnings": ["synthetic fixture"],
+            "suggestedFixes": [], "sourceGrounding": {"status": "pass"},
+        },
+        "qualityPreflight": {"status": "ready", "synthetic": True},
+        "qualityGeneration": {"mode": "diagnose_only", "repairApplied": False, "warnings": []},
+        "checkpoints": [{"id": "qa-checkpoint-1", "label": "Verify layer separation", "status": "open", "artifactId": REPORT_ID}],
+        "marketTape": {"asOf": INJECTED_CLOCK, "status": "snapshot"},
+        "generation": {"mode": "rules", "message": "Synthetic fixture", "generatedAt": INJECTED_CLOCK},
+        "sources": [{"source": "QA Wire", "date": "2026-07-22", "title": "Synthetic external evidence", "url": "https://example.invalid/qa-external", "path": str(article_path)}],
+        "docCount": 2,
+        "memoryCount": 0,
+        "userContext": "HYPOTHESIS_ONLY_CANARY",
+        "canonicalRevision": {"number": 1, "hash": canonical_hash},
+        "personalOverlay": {
+            "markdown": "## Personal Overlay\n\nHYPOTHESIS_ONLY_CANARY는 가설이며 외부 근거가 아닙니다.",
+            "stale": False, "staleReason": "", "canonicalRevision": {"number": 1, "hash": canonical_hash},
+            "linkedNotes": [], "counterEvidence": ["Synthetic evidence cannot validate a real thesis"],
+            "contradictions": [], "uncertainties": ["No real market data"], "personalQuestions": ["What real evidence is needed?"],
+        },
+    }
+    canonical_hash = _canonical_content_hash(report)
+    report["canonicalRevision"] = {
+        "number": 1, "hash": canonical_hash, "updatedAt": INJECTED_CLOCK, "lastOperationId": None,
+    }
+    report["personalOverlay"]["canonicalRevision"] = {"number": 1, "hash": canonical_hash}
+    report_path = reports_dir / report["filename"]
+    _write_json(report_path, report)
+
+    collection_path = data_dir / "smart-collections.json"
+    collection = {
+        "schemaVersion": 1, "storeRevision": 1, "updatedAt": INJECTED_CLOCK,
+        "collections": [{
+            "id": "sc_00000000-0000-4000-8000-000000000016", "revision": 1,
+            "createdAt": INJECTED_CLOCK, "updatedAt": INJECTED_CLOCK,
+            "name": "QA External Evidence", "query": "EXTERNAL_EVIDENCE_CANARY", "market": "US",
+            "sources": ["qa wire", "qa rss"], "tickers": [], "tags": ["qa-contract"],
+        }],
+    }
+    _write_json(collection_path, collection)
+
+    adapters_dir = run_root / "fixtures" / "adapters"
+    adapters_dir.mkdir(parents=True, exist_ok=True)
+    direct_adapter = adapters_dir / "fake-direct-http-500.json"
+    cli_adapter = adapters_dir / ("fake-cli-unavailable.cmd" if os.name == "nt" else "fake-cli-unavailable.sh")
+    _write_json(direct_adapter, {"transport": "qa_fault_proxy", "fault": "http-500", "expectedRequests": 1})
+    if os.name == "nt":
+        cli_adapter.write_text("@echo off\r\nexit /b 127\r\n", encoding="utf-8")
+    else:
+        cli_adapter.write_text("#!/bin/sh\nexit 127\n", encoding="utf-8")
+        cli_adapter.chmod(0o700)
+    long_script = extract_root / "exec"
+    login_script = extract_root / "login"
+    if os.name == "nt":
+        # The product deliberately invokes adapters with shell=False.  Batch
+        # files therefore cannot be the cancellable child on Windows.  Python
+        # executes this marker-owned `exec` file because it is the first
+        # argument produced by the normal Codex adapter command.
+        long_cli = adapters_dir / "python-long.exe"
+        shutil.copy2(sys.executable, long_cli)
+        long_script.write_text(
+            "import time\ntime.sleep(30)\nprint('{\\\"status\\\":\\\"done\\\"}')\n",
+            encoding="utf-8",
+        )
+        login_script.write_text("print('authenticated')\n", encoding="utf-8")
+    else:
+        long_cli = adapters_dir / "fake-cli-long-running.sh"
+        long_cli.write_text(
+            "#!/bin/sh\n[ \"$1\" = \"--version\" ] && { echo 'qa-long-cli 1.0'; exit 0; }\n"
+            "[ \"$1\" = \"login\" ] && exit 0\nsleep 30\nprintf '%s\\n' '{\"status\":\"done\"}'\n",
+            encoding="utf-8",
+        )
+        long_cli.chmod(0o700)
+        login_script.write_text("authenticated\n", encoding="utf-8")
+    clock_path = run_root / "fixtures" / "injected-clock.json"
+    _write_json(clock_path, {"now": INJECTED_CLOCK, "marketStateRef": report["marketStateResolution"]["ref"]})
+    market_states = _seed_market_state_fixtures(run_root / "fixtures" / "market-state")
+
+    # GEN-F1 is a real extracted-package variant, not an empty stand-in.  Copy
+    # after normal fixtures are installed, then remove only the copied index.
+    missing_root = run_root / "packages" / "g1"
+    shutil.copytree(extract_root, missing_root)
+    missing_index = missing_root / "data" / "research-index.sqlite3"
+    missing_index.unlink()
+    missing_manifest = run_root / "gen-f1-manifest.json"
+
+    return {
+        "reportPath": str(report_path),
+        "articlePath": str(article_path),
+        "rssPath": str(rss_path),
+        "indexPath": str(index_path),
+        "collectionPath": str(collection_path),
+        "directAdapter": str(direct_adapter),
+        "cliAdapter": str(cli_adapter),
+        "longCliAdapter": str(long_cli),
+        "longCliScript": str(long_script),
+        "loginCliScript": str(login_script),
+        "clockPath": str(clock_path),
+        "marketStates": market_states,
+        "missingIndexRoot": str(missing_root),
+        "missingIndexPath": str(missing_index),
+        "missingManifestPath": str(missing_manifest),
+    }
+
+
+def _seed_market_state_fixtures(root: Path) -> dict[str, dict[str, str]]:
+    fixtures: dict[str, dict[str, str]] = {}
+    snapshots = {
+        "current": ("mss_qa_current", "2026-07-22T11:00:00Z"),
+        "stale": ("mss_qa_stale", "2026-07-18T00:00:00Z"),
+    }
+    for name, (snapshot_id, as_of) in snapshots.items():
+        directory = root / name
+        directory.mkdir(parents=True, exist_ok=True)
+        market_db = directory / "market.sqlite3"
+        with sqlite3.connect(market_db) as connection:
+            connection.execute("CREATE TABLE market_state_snapshots (payload_json TEXT, status TEXT, as_of TEXT)")
+            payload = {"id": snapshot_id, "asOf": as_of, "inputWatermarks": {"US": None}}
+            connection.execute(
+                "INSERT INTO market_state_snapshots VALUES (?, 'active', ?)",
+                (json.dumps(payload, separators=(",", ":")), as_of),
+            )
+        fixtures[name] = {"marketDb": str(market_db), "researchDb": str(directory / "research.sqlite3")}
+
+    fallback_dir = root / "fallback"
+    fallback_dir.mkdir(parents=True, exist_ok=True)
+    fallback_db = fallback_dir / "market.sqlite3"
+    with sqlite3.connect(fallback_db) as connection:
+        connection.execute("CREATE TABLE market_narrative_states (status TEXT, updated_at TEXT)")
+        connection.execute("INSERT INTO market_narrative_states VALUES ('active','2026-07-22T10:00:00Z')")
+    fixtures["fallback"] = {
+        "marketDb": str(fallback_db), "researchDb": str(fallback_dir / "research.sqlite3")
+    }
+
+    empty_dir = root / "empty"
+    empty_dir.mkdir(parents=True, exist_ok=True)
+    empty_db = empty_dir / "market.sqlite3"
+    with sqlite3.connect(empty_db):
+        pass
+    fixtures["empty"] = {"marketDb": str(empty_db), "researchDb": str(empty_dir / "research.sqlite3")}
+    return fixtures
 
 
 def command_prepare(args: argparse.Namespace) -> int:
@@ -319,27 +693,10 @@ def command_prepare(args: argparse.Namespace) -> int:
 
     fixture_dir = run_root / "fixtures"
     fixture_dir.mkdir(parents=True, exist_ok=True)
-    adapters_dir = fixture_dir / "adapters"
-    adapters_dir.mkdir(parents=True, exist_ok=True)
-    direct_adapter = adapters_dir / "fake-direct-adapter.json"
-    cli_adapter = adapters_dir / "fake-cli-adapter.py"
-    clock_path = fixture_dir / "injected-clock.json"
-    _write_json(direct_adapter, {"mode": "fake-direct", "status": 500})
-    cli_adapter.write_text("raise SystemExit(127)\n", encoding="utf-8")
-    _write_json(clock_path, {"now": INJECTED_CLOCK})
+    seeded = _seed_runtime_fixtures(extract_root, run_root)
     sentinel = extract_root / "data" / "manual-pack-sentinel.bin"
     sentinel.parent.mkdir(parents=True, exist_ok=True)
     sentinel.write_bytes(b"FOLIO-QA-MANUAL-PACK-SENTINEL\n")
-    missing_index = extract_root / "data" / "research-index.sqlite3"
-    _write_json(
-        fixture_dir / "canonical-report.json",
-        {
-            "id": REPORT_ID,
-            "markdown": "# QA contract fixture\n\nEXTERNAL_EVIDENCE_CANARY",
-            "userContext": "HYPOTHESIS_ONLY_CANARY",
-            "marketContext": "MARKET_CONTEXT_CANARY",
-        },
-    )
     manifest = {
         "schemaVersion": SCHEMA_VERSION,
         "attemptId": attempt_id,
@@ -377,9 +734,39 @@ def command_prepare(args: argparse.Namespace) -> int:
         "reportId": REPORT_ID,
         "fixtureIdentity": {
             "manualPackSentinel": {"path": str(sentinel), "sha256": _sha256(sentinel)},
-            "missingIndex": {"path": str(missing_index), "expectedExists": False},
-            "adapters": {"direct": str(direct_adapter), "cli": str(cli_adapter)},
-            "injectedClock": {"path": str(clock_path), "value": INJECTED_CLOCK},
+            "savedReport": {"path": seeded["reportPath"], "id": REPORT_ID},
+            "missingIndex": {
+                "root": seeded["missingIndexRoot"], "path": seeded["missingIndexPath"],
+                "manifestPath": seeded["missingManifestPath"], "expectedExists": False
+            },
+            "externalEvidence": {
+                "articlePath": seeded["articlePath"], "rssPath": seeded["rssPath"],
+                "indexPath": seeded["indexPath"], "collectionPath": seeded["collectionPath"],
+            },
+            "adapters": {"direct": seeded["directAdapter"], "cli": seeded["cliAdapter"]},
+            "injectedClock": {"path": seeded["clockPath"], "value": INJECTED_CLOCK},
+        },
+        "runtimeEnvironment": {
+            "AGENT_CLI_PROVIDER": "codex",
+            "FOLIO_AGENT_CODEX_COMMAND": seeded["longCliAdapter"],
+        },
+        "scenarioFixtures": {
+            "GEN-F1": {
+                "root": seeded["missingIndexRoot"], "missingIndex": seeded["missingIndexPath"],
+                "manifest": seeded["missingManifestPath"],
+            },
+            "GEN-F2": {
+                "directFault": seeded["directAdapter"], "cliExecutable": seeded["cliAdapter"],
+                "proxyUrl": f"http://127.0.0.1:{proxy_port}",
+            },
+            "AG-H1": {
+                "longRunningCli": seeded["longCliAdapter"], "longRunningScript": seeded["longCliScript"],
+                "loginScript": seeded["loginCliScript"],
+            },
+            "WB-H1": {"proposalsDir": str(extract_root / "data" / "agent-proposals")},
+            "MS-H1": {"clock": seeded["clockPath"], "states": seeded["marketStates"]},
+            "DR-H1": {"index": seeded["indexPath"], "article": seeded["articlePath"]},
+            "COL-H1": {"collection": seeded["collectionPath"], "rss": seeded["rssPath"]},
         },
         "urls": {
             "health": f"{base_url}/api/health",
@@ -395,6 +782,38 @@ def command_prepare(args: argparse.Namespace) -> int:
     }
     manifest_path = run_root / "fixture-manifest.json"
     _write_json(manifest_path, manifest)
+    variant = json.loads(json.dumps(manifest))
+    variant_root = Path(seeded["missingIndexRoot"])
+    variant_port = _reserve_port()
+    while variant_port in {port, proxy_port}:
+        variant_port = _reserve_port()
+    variant_identity = _workspace_identity(attempt_id, str(artifact_sha256), variant_root)
+    manifest["auxiliaryPorts"] = [variant_port]
+    variant_base = f"http://127.0.0.1:{variant_port}"
+    variant.update(
+        {
+            "extractRoot": str(variant_root),
+            "workspaceIdentity": variant_identity,
+            "port": variant_port,
+            "baseUrl": variant_base,
+            "healthExpected": {
+                "status": "ok", "version": build["version"], "commit": build["commit"],
+                "workspaceIdentity": variant_identity,
+            },
+            "urls": {
+                "health": f"{variant_base}/api/health",
+                "root": f"{variant_base}/",
+                "deepResearch": f"{variant_base}/#/deep-research",
+                "report": f"{variant_base}/#/deep-research/{report_url_id}",
+                "home": f"{variant_base}/#/home",
+                "docs": f"{variant_base}/#/docs",
+            },
+            "processesStarted": False,
+        }
+    )
+    variant["auxiliaryPorts"] = [port]
+    _write_json(manifest_path, manifest)
+    _write_json(Path(seeded["missingManifestPath"]), variant)
     print(str(manifest_path))
     if not args.manifest_only:
         args.manifest = manifest_path
@@ -462,6 +881,16 @@ def command_start(args: argparse.Namespace) -> int:
     port = int(payload["port"])
     if _port_open(port):
         _fail("PORT_ALREADY_IN_USE", f"Port {port} is already open", EXIT_PROCESS)
+    run_root = Path(payload["runRoot"])
+    state_path = run_root / "server.json"
+    if state_path.is_file():
+        stale = _read_json(state_path, code="SUPERVISOR_STATE_INVALID")
+        if stale.get("state") not in {"stopped", "failed"}:
+            _fail("SUPERVISOR_ALREADY_ACTIVE", "Owned supervisor state is not terminal", EXIT_PROCESS)
+        _write_json(run_root / "server.previous.json", stale)
+        state_path.unlink()
+        for name in ("supervisor-control.json", "supervisor-response.json"):
+            (run_root / name).unlink(missing_ok=True)
     supervisor = Path(__file__).with_name("qa_server_supervisor.py")
     log_path = Path(payload["runRoot"]) / "supervisor-launch.log"
     with log_path.open("ab") as log:
@@ -474,7 +903,6 @@ def command_start(args: argparse.Namespace) -> int:
             close_fds=True,
             **_detached_flags(),
         )
-    state_path = Path(payload["runRoot"]) / "server.json"
     deadline = time.monotonic() + args.readiness_timeout + 2
     state: dict[str, Any] | None = None
     while time.monotonic() < deadline:
@@ -572,9 +1000,35 @@ def command_stop(args: argparse.Namespace) -> int:
         if state.get("state") != "stopped":
             state = _request_supervisor(payload, "stop", args.timeout)
             print(json.dumps(state, sort_keys=True))
+        supervisor_pid = int(state.get("supervisorPid", 0))
+        supervisor_create_time = str(state.get("supervisorCreateTime", ""))
+        if not _wait_process_gone(supervisor_pid, supervisor_create_time, args.timeout):
+            _fail("SUPERVISOR_STOP_TIMEOUT", "Supervisor remained alive after stopped state", EXIT_PROCESS)
+        _write_json(
+            Path(payload["runRoot"]) / "server-stop-receipt.json",
+            {
+                "supervisorPid": supervisor_pid, "supervisorCreateTime": supervisor_create_time,
+                "supervisorExited": True, "stoppedAt": _utc_now(),
+            },
+        )
     payload["processesStarted"] = False
     _write_json(manifest_path, payload)
     return EXIT_OK
+
+
+def _wait_process_gone(pid: int, expected_create_time: str, timeout: float) -> bool:
+    if pid <= 0 or not expected_create_time:
+        return True
+    deadline = time.monotonic() + max(0.0, timeout)
+    while True:
+        try:
+            if _process_create_time(pid) != expected_create_time:
+                return True
+        except (OSError, ProcessLookupError):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.05)
 
 
 def _process_create_time(pid: int) -> str:
@@ -613,7 +1067,18 @@ def _terminate_pid(pid: int, expected_create_time: str) -> None:
 
 def command_proxy_start(args: argparse.Namespace) -> int:
     payload, manifest_path = _load_owned_manifest(args.manifest)
-    state_path = Path(payload["runRoot"]) / "proxy.json"
+    run_root = Path(payload["runRoot"])
+    state_path = run_root / "proxy.json"
+    receipt_path = run_root / "proxy-stop-receipt.json"
+    if receipt_path.is_file():
+        receipt = _read_json(receipt_path, code="PROXY_STOP_RECEIPT_INVALID")
+        try:
+            old_alive = _process_create_time(int(receipt.get("pid", 0))) == str(receipt.get("createTime", ""))
+        except (OSError, ProcessLookupError):
+            old_alive = False
+        if old_alive or _port_open(int(receipt.get("port", 0))):
+            _fail("PROXY_STOP_RECEIPT_NOT_TERMINAL", "Prior proxy receipt is not terminal", EXIT_PROXY)
+        receipt_path.unlink()
     if state_path.is_file():
         old = _read_json(state_path, code="PROXY_STATE_INVALID")
         if _port_open(int(old.get("port", 0))):
@@ -642,7 +1107,15 @@ def command_proxy_stop(args: argparse.Namespace) -> int:
     state_path = Path(payload["runRoot"]) / "proxy.json"
     receipt_path = Path(payload["runRoot"]) / "proxy-stop-receipt.json"
     if receipt_path.is_file():
-        return EXIT_OK
+        receipt = _read_json(receipt_path, code="PROXY_STOP_RECEIPT_INVALID")
+        receipt_pid = int(receipt.get("pid", 0))
+        receipt_port = int(receipt.get("port", 0))
+        try:
+            receipt_pid_alive = _process_create_time(receipt_pid) == str(receipt.get("createTime", ""))
+        except (OSError, ProcessLookupError):
+            receipt_pid_alive = False
+        if not receipt_pid_alive and not _port_open(receipt_port):
+            return EXIT_OK
     if state_path.is_file():
         state = _read_json(state_path, code="PROXY_STATE_INVALID")
         process = _read_json(Path(payload["runRoot"]) / "proxy-process.json", code="PROXY_PROCESS_INVALID")
@@ -654,7 +1127,10 @@ def command_proxy_stop(args: argparse.Namespace) -> int:
             _fail("PROXY_STOP_FAILED", "Fault proxy port remained open", EXIT_PROXY)
         _write_json(
             receipt_path,
-            {"pid": state["pid"], "createTime": process["createTime"], "stoppedAt": _utc_now(), "portClosed": True},
+            {
+                "pid": state["pid"], "createTime": process["createTime"], "port": state["port"],
+                "stoppedAt": _utc_now(), "portClosed": True,
+            },
         )
     return EXIT_OK
 
@@ -845,6 +1321,288 @@ def command_verify(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _package_probe(extract_root: Path, source: str, arguments: list[str], environment: dict[str, str]) -> dict[str, Any]:
+    completed = subprocess.run(
+        [sys.executable, "-c", source, *arguments],
+        cwd=extract_root,
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=20,
+    )
+    if completed.returncode != 0:
+        _fail(
+            "FIXTURE_PROBE_FAILED",
+            f"Packaged probe exited {completed.returncode}: {(completed.stderr or completed.stdout)[-500:]}",
+        )
+    try:
+        value = json.loads(completed.stdout.strip().splitlines()[-1])
+    except (IndexError, json.JSONDecodeError) as exc:
+        _fail("FIXTURE_PROBE_MALFORMED", f"Packaged probe returned malformed JSON: {exc}")
+    if not isinstance(value, dict):
+        _fail("FIXTURE_PROBE_MALFORMED", "Packaged probe did not return an object")
+    return value
+
+
+def _validate_generation_probe(generation: dict[str, Any]) -> None:
+    expected_provenance = {
+        "direct": ("direct", "api", "rules", "engine_failed"),
+        "cli": ("cli", "cli", "rules", "engine_unavailable"),
+    }
+    for mode, expected in expected_provenance.items():
+        provenance = generation.get(mode, {}).get("provenance", {})
+        observed = tuple(provenance.get(key) for key in (
+            "requestedMode", "attemptedEngine", "finalEngine", "fallbackReason"
+        ))
+        if observed != expected or generation.get(mode, {}).get("saved") is not False:
+            _fail("FULL_GENERATION_PROVENANCE_FAILED", f"{mode}: {observed}")
+    if generation.get("sameEvidence") is not True or generation.get("sameResolution") is not True:
+        _fail("FULL_GENERATION_INPUT_DRIFT", "Direct and CLI did not use identical approved evidence")
+    if generation.get("orphanReport") is not False or generation.get("orphanJob") is not False:
+        _fail("FULL_GENERATION_ORPHAN", f"Unexpected persistence: {generation}")
+
+
+def command_probe_fixtures(args: argparse.Namespace) -> int:
+    payload, _ = _load_owned_manifest(args.manifest)
+    extract_root = Path(payload["extractRoot"])
+    environment = os.environ.copy()
+    environment.update({str(key): str(value) for key, value in payload["runtimeEnvironment"].items()})
+
+    cli_source = (
+        "import json; from features.agent_mode.bridge import _probe_adapter; "
+        "print(json.dumps(_probe_adapter('codex'), ensure_ascii=False))"
+    )
+    unavailable_environment = environment.copy()
+    unavailable_environment["FOLIO_AGENT_CODEX_COMMAND"] = str(
+        payload["scenarioFixtures"]["GEN-F2"]["cliExecutable"]
+    )
+    cli = _package_probe(extract_root, cli_source, [], unavailable_environment)
+    if cli.get("installed") is not False or cli.get("available") is not False:
+        _fail("CLI_UNAVAILABLE_SEAM_FAILED", "Configured marker CLI was not genuinely unavailable")
+
+    states = payload["scenarioFixtures"]["MS-H1"]["states"]
+    market_source = """
+import json, sys
+from datetime import datetime
+from pathlib import Path
+from features.market_memory.market_state_ref import MarketStateRefQuery, resolve_market_state_ref
+fixtures = json.loads(sys.argv[1]); now = datetime.fromisoformat(sys.argv[2].replace('Z', '+00:00'))
+out = {}
+for name, paths in fixtures.items():
+    out[name] = resolve_market_state_ref(MarketStateRefQuery(
+        market_db_path=Path(paths['marketDb']), research_db_path=Path(paths['researchDb']),
+        scope='US', now=now,
+    ))
+print(json.dumps(out, ensure_ascii=False))
+"""
+    market = _package_probe(extract_root, market_source, [json.dumps(states), INJECTED_CLOCK], environment)
+    observed_states = {name: value.get("status") for name, value in market.items()}
+    if observed_states != {"current": "current", "stale": "stale", "fallback": "fallback", "empty": "empty"}:
+        _fail("MARKET_STATE_TRUTH_TABLE_FAILED", f"Unexpected statuses: {observed_states}")
+
+    proxy_url = str(payload["scenarioFixtures"]["GEN-F2"]["proxyUrl"])
+    direct_environment = environment.copy()
+    direct_environment.update(
+        {
+            "OPENAI_API_KEY": "qa-synthetic-not-a-secret",
+            "LLM_PROVIDER": "openai",
+            "AI_AGENT_ENABLED": "1",
+            "USE_LLM_ANALYSIS": "1",
+            "LLM_TIMEOUT_SECONDS": "5",
+            "HTTPS_PROXY": proxy_url,
+            "https_proxy": proxy_url,
+            "NO_PROXY": "127.0.0.1,localhost",
+            "no_proxy": "127.0.0.1,localhost",
+        }
+    )
+    generation_source = """
+import hashlib, json, os, sys
+from datetime import UTC, datetime
+from pathlib import Path
+from uuid import UUID
+from features.agent_mode.bridge import invalidate_bridge_status
+from features.topic_report import approved_generation as generation
+from features.topic_report.approved_generation import ApprovedGenerationInput, build_approved_report
+from features.topic_report.approved_research import admit_research, prepare_market_state
+from features.topic_report.approved_request import ApprovedRequestRuntime, ApprovedRequestService
+from features.topic_report.approved_schema import PlanRequest
+from features.topic_report.resolution_schema import ProviderGenerations, ResearchPreview, ResolutionSnapshotV1, ZeroEvidence
+
+NOW = datetime(2026, 7, 22, 12, 0, 0, tzinfo=UTC)
+root = Path(sys.argv[1]); root.mkdir(parents=True, exist_ok=True); unavailable = sys.argv[2]
+def empty_resolution():
+    return ResolutionSnapshotV1(
+        schemaVersion=1, collectionId=None, collectionRevision=None, collectionDefinitionHash=None,
+        eligibleTotal=None, candidateCap=None, truncated=False, resolvedCandidateIds=[],
+        executionUniverseIds=[], unusableCandidates=[], selectedEvidenceIds=[],
+        providerGenerations=ProviderGenerations(indexGeneration='a' * 64, rssGeneration=None),
+        inputWatermark='b' * 64,
+    )
+runtime = ApprovedRequestRuntime(
+    dataDir=root, clock=lambda: NOW, entropy=lambda size: bytes(range(size)),
+    uuidFactory=lambda: UUID('12345678-1234-4567-9234-567812345678'),
+    resolver=lambda _approved: empty_resolution(),
+)
+approved = ApprovedRequestService(runtime).plan(PlanRequest(
+    question='QA synthetic evidence layer separation', userContext='HYPOTHESIS_ONLY_CANARY',
+    deepResearch=True, marketStatePolicy='exclude',
+)).approvedRequest
+document = {
+    'id':'qa-external-article', 'title':'Synthetic external evidence', 'source':'QA Wire',
+    'date':'2026-07-22', 'url':'https://example.invalid/qa-external',
+    'path':'research-inbox/articles/qa-external-evidence.md',
+    'snippet':'EXTERNAL_EVIDENCE_CANARY with counter-risk uncertainty.',
+}
+research = admit_research(approved, empty_resolution(),
+    search_docs=lambda _queries, _limit, _allowed: [document],
+    search_memories=lambda _keywords, _limit: [])
+preview = ResearchPreview(
+    resolution=research.resolution, resolvedAt='2026-07-22T12:00:00Z',
+    zeroEvidence=ZeroEvidence(required=False, reasonCode=None, resolutionFingerprint=None),
+)
+market = prepare_market_state(root, approved, lambda: NOW)
+generation._materials = lambda request, rows: (
+    generation._topic(request), {'tickers':{}, 'asOf':request.asOfDate}, {'ok':False}
+)
+def command(mode, approval):
+    return ApprovedGenerationInput(
+        approved=approved, approvalId=approval, requestedMode=mode,
+        adapter='codex' if mode == 'cli' else 'auto', preview=preview, research=research, marketState=market,
+    )
+reports_before = sorted(str(path) for path in Path('data/topic-reports').glob('*.json'))
+jobs_before = hashlib.sha256(Path('data/jobs-v2.json').read_bytes()).hexdigest() if Path('data/jobs-v2.json').is_file() else None
+direct = build_approved_report(command('direct', 'apr_00000000-0000-4000-8000-000000000021'), job_id=None, clock=lambda: NOW)
+os.environ['FOLIO_AGENT_CODEX_COMMAND'] = unavailable
+invalidate_bridge_status()
+packs_before = set(Path('data/agent-packs/topic_report').glob('*.json'))
+cli = build_approved_report(command('cli', 'apr_00000000-0000-4000-8000-000000000022'), job_id=None, clock=lambda: NOW)
+for path in set(Path('data/agent-packs/topic_report').glob('*.json')) - packs_before:
+    path.unlink()
+reports_after = sorted(str(path) for path in Path('data/topic-reports').glob('*.json'))
+jobs_after = hashlib.sha256(Path('data/jobs-v2.json').read_bytes()).hexdigest() if Path('data/jobs-v2.json').is_file() else None
+def result(outcome):
+    return {'provenance':outcome.report['executionProvenance'], 'evidenceItems':outcome.report['evidenceItems'],
+            'researchResolution':outcome.report['researchResolution'], 'saved':outcome.report['saved']}
+print(json.dumps({'direct':result(direct), 'cli':result(cli),
+                  'sameEvidence':direct.report['evidenceItems'] == cli.report['evidenceItems'],
+                  'sameResolution':direct.report['researchResolution'] == cli.report['researchResolution'],
+                  'orphanReport':reports_before != reports_after, 'orphanJob':jobs_before != jobs_after}))
+"""
+    generation = _package_probe(
+        extract_root, generation_source,
+        [str(Path(payload["runRoot"]) / "fixtures" / "approved-generation"), str(payload["scenarioFixtures"]["GEN-F2"]["cliExecutable"])],
+        direct_environment,
+    )
+    _validate_generation_probe(generation)
+    direct = {"failed": True, "statusCode": 500, "cause": "EngineFailedError"}
+
+    proposal_source = """
+import json
+from pathlib import Path
+from features.agent_mode.chat import create_revision_proposal, get_proposal
+from features.common.canonical_report_state import revision
+report_id = __import__('sys').argv[1]
+report_path, current = next(
+    (path, value) for path in Path('data/topic-reports').glob('*.json')
+    for value in [json.loads(path.read_text(encoding='utf-8'))] if value.get('id') == report_id
+)
+seed_revision = revision(current)
+if seed_revision is None or seed_revision[0] != 1:
+    raise RuntimeError('seeded canonical revision is invalid')
+markdown = current['markdown']
+out = {}
+for key, suffix in (
+    ('happyApprove', 'QA_WB_H1_APPROVE_CANDIDATE'),
+    ('rejectReplay', 'QA_WB_F1_REJECT_CANDIDATE'),
+    ('staleConflict', 'QA_WB_F1_STALE_CANDIDATE'),
+):
+    created = create_revision_proposal(
+        kind='topic_report', report_id=report_id, market_scope='', message='QA ' + key,
+        summary='Marker-owned canonical revision proposal: ' + key,
+        revised_markdown=markdown + '\\n\\n' + suffix, current_markdown=markdown,
+        adapter='qa-fixture', model='qa-fixture',
+    )
+    stored = get_proposal(created['id'])
+    out[key] = {'id': created['id'], 'status': stored['status'], 'reportId': stored['reportId']}
+print(json.dumps(out))
+"""
+    proposal = _package_probe(extract_root, proposal_source, [REPORT_ID], environment)
+    if set(proposal) != {"happyApprove", "rejectReplay", "staleConflict"} or any(
+        item.get("status") != "pending" or item.get("reportId") != REPORT_ID for item in proposal.values()
+    ):
+        _fail("PROPOSAL_CREATE_SEAM_FAILED", f"Unexpected proposal result: {proposal}")
+
+    long_environment = environment.copy()
+    long_environment["FOLIO_AGENT_CODEX_COMMAND"] = str(
+        payload["scenarioFixtures"]["AG-H1"]["longRunningCli"]
+    )
+    cancellation_source = """
+import json, os, time
+from features.agent_mode import bridge
+from features.common.jobs import FUTURES, get_job, submit_job
+
+def worker(*, progress=None, job_id='', adapter=''):
+    selected = {'id': 'codex', 'executable': os.environ['FOLIO_AGENT_CODEX_COMMAND']}
+    return {'generationMode': 'llm_cli', 'adapter': 'codex', 'mode': 'answer',
+            'output': bridge._invoke_agent_cli(selected, 'wait', 25, job_id)}
+
+job = submit_job('agent_bridge', 'QA cancellable adapter', worker, pass_job_id=True,
+                 dedicated_thread=True, adapter='codex')
+job_id = job['id']
+deadline = time.time() + 8
+while time.time() < deadline:
+    with bridge._PROCESS_LOCK:
+        proc = bridge._RUNNING_PROCESSES.get(job_id)
+    if proc is not None and (get_job(job_id) or {}).get('status') == 'running':
+        break
+    time.sleep(0.05)
+else:
+    raise RuntimeError('long-running adapter never registered')
+cancel = bridge.cancel_agent_task(job_id)
+deadline = time.time() + 8
+observed = get_job(job_id)
+while time.time() < deadline and observed.get('status') != 'cancelled':
+    time.sleep(0.05); observed = get_job(job_id)
+future = FUTURES.get(job_id)
+if hasattr(future, 'join'):
+    future.join(timeout=1)
+with bridge._PROCESS_LOCK:
+    registered = job_id in bridge._RUNNING_PROCESSES
+print(json.dumps({'id': job_id, 'cancelAccepted': cancel.get('cancelled'), 'status': observed.get('status'),
+                  'registryCleared': not registered, 'childExited': proc.poll() is not None}))
+"""
+    cancellation = _package_probe(extract_root, cancellation_source, [], long_environment)
+    if cancellation.get("cancelAccepted") is not True or cancellation.get("status") != "cancelled" or (
+        cancellation.get("registryCleared") is not True or cancellation.get("childExited") is not True
+    ):
+        _fail("LONG_TASK_CANCELLATION_FAILED", f"Unexpected cancellation result: {cancellation}")
+
+    missing = payload["fixtureIdentity"]["missingIndex"]
+    variant_root = Path(missing["root"])
+    gen_f1 = {
+        "appPresent": (variant_root / "app.py").is_file(),
+        "buildPresent": (variant_root / "BUILD.json").is_file(),
+        "indexAbsent": not Path(missing["path"]).exists(),
+        "manifest": missing["manifestPath"],
+    }
+    if gen_f1 != {**gen_f1, "appPresent": True, "buildPresent": True, "indexAbsent": True}:
+        _fail("GEN_F1_VARIANT_INVALID", f"Missing-index package variant is invalid: {gen_f1}")
+
+    receipt = {
+        "probedAt": _utc_now(), "extractRoot": str(extract_root), "direct": direct, "cli": cli,
+        "generation": generation, "marketState": market, "proposal": proposal,
+        "cancellation": cancellation, "genF1": gen_f1,
+    }
+    output = Path(args.output).resolve() if args.output else Path(payload["runRoot"]) / "fixture-probe.json"
+    if not _is_relative_to(output, Path(payload["runRoot"]).resolve()):
+        _fail("PROBE_OUTPUT_OUTSIDE_RUN_ROOT", "Fixture probe output must remain marker-owned", EXIT_OWNERSHIP)
+    _write_json(output, receipt)
+    print(str(output))
+    return EXIT_OK
+
+
 def command_cleanup(args: argparse.Namespace) -> int:
     payload, _ = _load_owned_manifest(args.manifest)
     run_root = Path(payload["runRoot"]).resolve()
@@ -854,7 +1612,10 @@ def command_cleanup(args: argparse.Namespace) -> int:
         if (run_root / "server.json").is_file():
             command_stop(args)
     finally:
-        ports = [int(payload.get("port", 0)), int(payload.get("proxyPort", 0))]
+        ports = [
+            int(payload.get("port", 0)), int(payload.get("proxyPort", 0)),
+            *(int(port) for port in payload.get("auxiliaryPorts", [])),
+        ]
         if any(port and _port_open(port) for port in ports):
             _fail("CLEANUP_PORT_STILL_OPEN", "An owned port remained open", EXIT_PROCESS)
         shutil.rmtree(run_root)
@@ -906,6 +1667,11 @@ def build_parser() -> argparse.ArgumentParser:
     proxy_stop.add_argument("--manifest", required=True, type=Path)
     proxy_stop.add_argument("--timeout", type=float, default=10.0)
     proxy_stop.set_defaults(handler=command_proxy_stop)
+
+    probe = commands.add_parser("probe-fixtures", help="Execute normal packaged seams against marker fixtures.")
+    probe.add_argument("--manifest", required=True, type=Path)
+    probe.add_argument("--output", type=Path)
+    probe.set_defaults(handler=command_probe_fixtures)
     return parser
 
 

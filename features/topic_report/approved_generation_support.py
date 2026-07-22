@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import urllib.error
 from dataclasses import dataclass
 
 from features.agent_mode import bridge as agent_bridge
@@ -104,7 +105,7 @@ def attempt_direct(prompt: str, context: str) -> EngineOutput:
             max_output_tokens=9000,
             include_usage=True,
         )
-    except LlmRequestError as error:
+    except (LlmRequestError, urllib.error.URLError, TimeoutError, OSError, ValueError) as error:
         raise EngineFailedError("api") from error
     if not str(text or "").strip():
         raise EngineFailedError("api")

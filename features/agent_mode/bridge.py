@@ -757,8 +757,16 @@ def submit_market_memory_update(params: dict | None = None, *, adapter: str = ""
 
 
 def cancel_agent_task(job_id: str) -> dict:
+    result = cancel_job(job_id)
+    if not result.get("cancelled"):
+        return result
     with _PROCESS_LOCK:
         proc = _RUNNING_PROCESSES.get(str(job_id))
     if proc and proc.poll() is None:
-        proc.terminate()
-    return cancel_job(job_id)
+        try:
+            proc.terminate()
+        except ProcessLookupError:
+            # The child can exit after poll() and before terminate(). The
+            # durable cancellation request has already been accepted.
+            pass
+    return result

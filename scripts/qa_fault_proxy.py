@@ -138,6 +138,10 @@ def _handler(
         do_PATCH = _serve
         do_DELETE = _serve
         do_HEAD = _serve
+        # urllib's normal HTTPS proxy path starts with CONNECT.  Returning the
+        # configured fault here exercises the real client transport without a
+        # product-only base URL or QA branch.
+        do_CONNECT = _serve
 
         def log_message(self, fmt: str, *args: object) -> None:
             print(f"{self.address_string()} {fmt % args}", flush=True)

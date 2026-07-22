@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import urllib.error
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
 import pytest
 
+from features.llm_settings import client as llm_client
 from features.topic_report import approved_generation as generation
+from features.topic_report import approved_generation_support as generation_support
 from features.topic_report.approved_generation import (
     ApprovedGenerationInput,
     EngineFailedError,
     EngineOutput,
+    EngineUnavailableError,
 )
 from features.topic_report.approved_research import admit_research, prepare_market_state
 from features.topic_report.approved_request import ApprovedRequestRuntime, ApprovedRequestService
@@ -104,6 +110,192 @@ def fake_materials(approved, rows):
         {"tickers": {}, "asOf": approved.asOfDate},
         {"ok": False},
     )
+
+
+def configure_direct_engine(monkeypatch: pytest.MonkeyPatch, request) -> None:
+    monkeypatch.setattr(generation_support, "selected_llm_config", lambda: {
+        "provider": "openai",
+        "apiKey": "synthetic-test-key",
+        "model": "test-model",
+    })
+    monkeypatch.setattr(generation_support, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(generation_support, "request_llm_text", request)
+
+
+def test_attempt_direct_preserves_normalized_http_error_as_engine_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    error = urllib.error.HTTPError(
+        "https://api.openai.com/v1/responses",
+        500,
+        "Synthetic upstream failure",
+        {},
+        io.BytesIO(b'{"error":"synthetic"}'),
+    )
+
+    monkeypatch.setattr(generation_support, "selected_llm_config", lambda: {
+        "provider": "openai",
+        "apiKey": "synthetic-test-key",
+        "model": "test-model",
+    })
+    monkeypatch.setattr(generation_support, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(llm_client.urllib.request, "urlopen", lambda *_args, **_kwargs: (_ for _ in ()).throw(error))
+
+    with pytest.raises(EngineFailedError) as caught:
+        generation_support.attempt_direct("Approved prompt", "Approved context")
+
+    assert caught.value.engine == "api"
+
+
+def test_attempt_direct_classifies_connect_500_url_error_as_engine_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_connect(*_args, **_kwargs):
+        raise urllib.error.URLError("Tunnel connection failed: 500")
+
+    configure_direct_engine(monkeypatch, fail_connect)
+
+    with pytest.raises(EngineFailedError) as caught:
+        generation_support.attempt_direct("Approved prompt", "Approved context")
+
+    assert caught.value.engine == "api"
+
+
+def test_attempt_direct_classifies_timeout_as_engine_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_timeout(*_args, **_kwargs):
+        raise TimeoutError("synthetic timeout detail")
+
+    configure_direct_engine(monkeypatch, fail_timeout)
+
+    with pytest.raises(EngineFailedError) as caught:
+        generation_support.attempt_direct("Approved prompt", "Approved context")
+
+    assert caught.value.engine == "api"
+
+
+def test_attempt_direct_missing_key_is_unavailable_without_transport_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(generation_support, "selected_llm_config", lambda: {
+        "provider": "openai",
+        "apiKey": "",
+        "model": "test-model",
+    })
+    monkeypatch.setattr(generation_support, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(
+        generation_support,
+        "request_llm_text",
+        lambda *_args, **_kwargs: pytest.fail("transport invoked without a key"),
+    )
+
+    with pytest.raises(EngineUnavailableError) as caught:
+        generation_support.attempt_direct("Approved prompt", "Approved context")
+
+    assert caught.value.engine == "api"
+
+
+@pytest.mark.parametrize(
+    ("text", "response_id"),
+    [
+        ("", ""),
+        ("   ", "misleading-success-response-id"),
+    ],
+    ids=["empty-response", "misleading-success"],
+)
+def test_attempt_direct_rejects_empty_or_misleading_success(
+    monkeypatch: pytest.MonkeyPatch,
+    text: str,
+    response_id: str,
+) -> None:
+    configure_direct_engine(monkeypatch, lambda *_args, **_kwargs: (text, response_id, {"totalTokens": 1}))
+
+    with pytest.raises(EngineFailedError) as caught:
+        generation_support.attempt_direct("Approved prompt", "Approved context")
+
+    assert caught.value.engine == "api"
+
+
+def test_connect_500_direct_transport_falls_back_to_rules_with_safe_provenance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_connect(*_args, **_kwargs):
+        raise urllib.error.URLError("Tunnel connection failed: 500")
+
+    configure_direct_engine(monkeypatch, fail_connect)
+    monkeypatch.setattr(generation, "_materials", fake_materials)
+    monkeypatch.setattr(generation, "_read_prompt", lambda: "Approved prompt")
+    monkeypatch.setattr(generation, "attempt_cli", lambda *_args, **_kwargs: pytest.fail("CLI invoked"))
+
+    outcome = generation.build_approved_report(
+        prepared_input(tmp_path, "direct"),
+        job_id="job-connect-fallback",
+        clock=lambda: NOW,
+    )
+
+    provenance = outcome.report["executionProvenance"]
+    assert outcome.attemptedEngine == "api"
+    assert outcome.finalEngine == "rules"
+    assert outcome.fallbackReason == "engine_failed"
+    assert provenance["requestedMode"] == "direct"
+    assert provenance["attemptedEngine"] == "api"
+    assert provenance["finalEngine"] == "rules"
+    assert provenance["fallbackReason"] == "engine_failed"
+    assert "Tunnel connection failed" not in json.dumps(outcome.report, ensure_ascii=False)
+
+
+def test_direct_transport_and_cli_unavailable_fallback_independently_on_same_evidence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = {"direct_transport": 0, "cli": 0}
+
+    def fail_normal_http_transport(*_args, **_kwargs):
+        calls["direct_transport"] += 1
+        raise urllib.error.URLError("Tunnel connection failed: 500")
+
+    def fail_cli(*_args, **_kwargs):
+        calls["cli"] += 1
+        raise EngineUnavailableError("cli")
+
+    monkeypatch.setattr(generation_support, "selected_llm_config", lambda: {
+        "provider": "openai",
+        "apiKey": "synthetic-test-key",
+        "model": "test-model",
+    })
+    monkeypatch.setattr(generation_support, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(llm_client.urllib.request, "urlopen", fail_normal_http_transport)
+    monkeypatch.setattr(generation, "_materials", fake_materials)
+    monkeypatch.setattr(generation, "_read_prompt", lambda: "Approved prompt")
+    monkeypatch.setattr(generation, "attempt_cli", fail_cli)
+
+    direct_command = prepared_input(tmp_path, "direct")
+    cli_command = replace(direct_command, requestedMode="cli", adapter="codex")
+    direct = generation.build_approved_report(direct_command, job_id="job-direct-fallback", clock=lambda: NOW)
+    cli = generation.build_approved_report(cli_command, job_id="job-cli-fallback", clock=lambda: NOW)
+
+    assert calls == {"direct_transport": 1, "cli": 1}
+    assert direct.report["evidenceItems"] == cli.report["evidenceItems"]
+    assert direct.report["researchResolution"] == cli.report["researchResolution"]
+    assert direct.report["saved"] is False
+    assert cli.report["saved"] is False
+    assert {
+        "requestedMode": direct.report["executionProvenance"]["requestedMode"],
+        "attemptedEngine": direct.attemptedEngine,
+        "finalEngine": direct.finalEngine,
+        "fallbackReason": direct.fallbackReason,
+    } == {
+        "requestedMode": "direct",
+        "attemptedEngine": "api",
+        "finalEngine": "rules",
+        "fallbackReason": "engine_failed",
+    }
+    assert {
+        "requestedMode": cli.report["executionProvenance"]["requestedMode"],
+        "attemptedEngine": cli.attemptedEngine,
+        "finalEngine": cli.finalEngine,
+        "fallbackReason": cli.fallbackReason,
+    } == {
+        "requestedMode": "cli",
+        "attemptedEngine": "cli",
+        "finalEngine": "rules",
+        "fallbackReason": "engine_unavailable",
+    }
+    assert "Tunnel connection failed" not in json.dumps(direct.report, ensure_ascii=False)
 
 
 def test_direct_and_cli_share_approved_structured_provenance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

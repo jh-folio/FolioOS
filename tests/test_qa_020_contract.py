@@ -3,9 +3,11 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -340,6 +342,108 @@ def test_prepare_help_exposes_manifest_only_contract() -> None:
         assert flag in result.stdout
 
 
+def test_prepare_seeds_runtime_visible_strict_topic_report_and_wired_fixtures(tmp_path: Path) -> None:
+    artifact = tmp_path / "FolioOS-v0.2.0.zip"
+    with zipfile.ZipFile(artifact, "w") as archive:
+        archive.writestr("FolioOS/VERSION", "0.2.0\n")
+        archive.writestr(
+            "FolioOS/BUILD.json",
+            json.dumps(
+                {
+                    "version": "0.2.0",
+                    "commit": "a" * 40,
+                    "builtAt": "2026-07-22T00:00:00Z",
+                }
+            ),
+        )
+        archive.writestr("FolioOS/app.py", "# fixture app\n")
+    attempt = tmp_path / "attempt"
+    result = _run(
+        QA_020,
+        "prepare",
+        "--artifact",
+        str(artifact),
+        "--attempt-dir",
+        str(attempt),
+        "--scenario-set",
+        "preExposure",
+        "--manifest-only",
+    )
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((attempt / "fixture-manifest.json").read_text(encoding="utf-8"))
+    extract_root = Path(manifest["extractRoot"])
+    report_id = manifest["reportId"]
+    assert re.fullmatch(r"[A-Za-z0-9_-]{1,160}", report_id)
+    saved = list((extract_root / "data" / "topic-reports").glob("*.json"))
+    assert len(saved) == 1
+    report = json.loads(saved[0].read_text(encoding="utf-8"))
+    assert report["id"] == report_id
+    assert report["saved"] is True
+    assert report["reportType"] == "custom_research"
+    assert report["topicPlan"]["reportType"] == "custom_research"
+    assert report["executionProvenance"] == {
+        "schemaVersion": 1,
+        "approvalId": "qa-approval-1",
+        "planHash": "d" * 64,
+        "requestedMode": "direct",
+        "attemptedEngine": "api",
+        "finalEngine": "rules",
+        "fallbackReason": "engine_failed",
+        "adapter": "auto",
+        "executedAt": "2026-07-22T12:00:00Z",
+    }
+    assert set(report["canonicalRevision"]) == {"number", "hash", "updatedAt", "lastOperationId"}
+    from features.common.canonical_report_state import canonical_content_hash, revision
+
+    assert report["canonicalRevision"]["hash"] == canonical_content_hash(report)
+    assert revision(report) == (1, report["canonicalRevision"]["hash"])
+    for key in (
+        "markdown",
+        "researchResolution",
+        "executionProvenance",
+        "evidenceItems",
+        "sourceLedger",
+        "marketStateResolution",
+        "quality",
+        "checkpoints",
+        "personalOverlay",
+        "canonicalRevision",
+    ):
+        assert key in report
+    external_json = json.dumps(
+        {"markdown": report["markdown"], "evidenceItems": report["evidenceItems"], "sourceLedger": report["sourceLedger"]}
+    )
+    assert "EXTERNAL_EVIDENCE_CANARY" in external_json
+    assert "HYPOTHESIS_ONLY_CANARY" not in external_json
+    assert "MARKET_CONTEXT_CANARY" not in external_json
+    assert report["userContext"] == "HYPOTHESIS_ONLY_CANARY"
+    assert report["marketStateResolution"]["ref"]["summary"] == "MARKET_CONTEXT_CANARY"
+    identity = manifest["fixtureIdentity"]
+    assert Path(identity["adapters"]["cli"]).is_file()
+    assert manifest["runtimeEnvironment"]["FOLIO_AGENT_CODEX_COMMAND"] == manifest["scenarioFixtures"]["AG-H1"]["longRunningCli"]
+    assert manifest["runtimeEnvironment"]["FOLIO_AGENT_CODEX_COMMAND"] != identity["adapters"]["cli"]
+    assert Path(identity["externalEvidence"]["articlePath"]).is_file()
+    assert Path(identity["externalEvidence"]["rssPath"]).is_file()
+    assert Path(identity["missingIndex"]["path"]).exists() is False
+    missing_root = Path(identity["missingIndex"]["root"])
+    assert (missing_root / "app.py").is_file()
+    assert (missing_root / "BUILD.json").is_file()
+    assert Path(identity["missingIndex"]["manifestPath"]).is_file()
+    assert len(manifest["auxiliaryPorts"]) == 1
+    market_states = manifest["scenarioFixtures"]["MS-H1"]["states"]
+    assert set(market_states) == {"current", "stale", "fallback", "empty"}
+    for fixture in market_states.values():
+        assert Path(fixture["marketDb"]).is_file()
+    assert manifest["scenarioFixtures"]["GEN-F2"]["proxyUrl"] == (
+        f"http://127.0.0.1:{manifest['proxyPort']}"
+    )
+    assert Path(manifest["scenarioFixtures"]["AG-H1"]["longRunningCli"]).is_file()
+    assert manifest["scenarioFixtures"]["AG-H1"]["longRunningCli"] != identity["adapters"]["cli"]
+    assert Path(manifest["scenarioFixtures"]["AG-H1"]["longRunningScript"]).is_file()
+    assert Path(manifest["scenarioFixtures"]["AG-H1"]["loginScript"]).is_file()
+    assert Path(manifest["scenarioFixtures"]["WB-H1"]["proposalsDir"]).parent == extract_root / "data"
+
+
 def test_lifecycle_help_exposes_fail_closed_commands() -> None:
     result = _run(QA_020, "--help")
 
@@ -353,8 +457,60 @@ def test_lifecycle_help_exposes_fail_closed_commands() -> None:
         "verify-evidence",
         "proxy-start",
         "proxy-stop",
+        "probe-fixtures",
     ):
         assert command in result.stdout
+
+
+def test_proxy_stop_does_not_trust_stale_receipt_when_owned_proxy_is_live(tmp_path: Path, monkeypatch) -> None:
+    module = _load_qa_020()
+    state = {"pid": 4242, "port": 9876, "state": "ready"}
+    process = {"pid": 4242, "createTime": "owned-create-time"}
+    (tmp_path / "proxy.json").write_text(json.dumps(state), encoding="utf-8")
+    (tmp_path / "proxy-process.json").write_text(json.dumps(process), encoding="utf-8")
+    (tmp_path / "proxy-stop-receipt.json").write_text(
+        json.dumps({"pid": 1111, "createTime": "old", "port": 9876, "portClosed": True}), encoding="utf-8"
+    )
+    stopped = {"value": False}
+    monkeypatch.setattr(module, "_load_owned_manifest", lambda _path: ({"runRoot": str(tmp_path)}, tmp_path / "m.json"))
+    monkeypatch.setattr(module, "_port_open", lambda _port: not stopped["value"])
+    monkeypatch.setattr(
+        module, "_terminate_pid", lambda pid, create: stopped.update(value=(pid, create) == (4242, "owned-create-time"))
+    )
+    args = type("Args", (), {"manifest": tmp_path / "m.json", "timeout": 0.1})()
+
+    assert module.command_proxy_stop(args) == 0
+    assert stopped["value"] is True
+    receipt = json.loads((tmp_path / "proxy-stop-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["pid"] == 4242
+    assert receipt["port"] == 9876
+    assert receipt["portClosed"] is True
+
+
+def test_cleanup_fails_closed_when_variant_port_is_still_open(tmp_path: Path, monkeypatch) -> None:
+    module = _load_qa_020()
+    payload = {"runRoot": str(tmp_path), "port": 8001, "proxyPort": 8002, "auxiliaryPorts": [8003]}
+    monkeypatch.setattr(module, "_load_owned_manifest", lambda _path: (payload, tmp_path / "manifest.json"))
+    monkeypatch.setattr(module, "_port_open", lambda port: port == 8003)
+    args = type("Args", (), {"manifest": tmp_path / "manifest.json", "timeout": 0.1})()
+
+    with pytest.raises(module.HarnessError, match="owned port remained open"):
+        module.command_cleanup(args)
+    assert tmp_path.exists()
+
+
+def test_wait_process_gone_requires_supervisor_identity_to_disappear(monkeypatch) -> None:
+    module = _load_qa_020()
+    observed = iter(["owned-create-time", "owned-create-time", ProcessLookupError()])
+    monkeypatch.setattr(module.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(
+        module, "_process_create_time",
+        lambda _pid: (_ for _ in ()).throw(value) if isinstance((value := next(observed)), Exception) else value,
+    )
+
+    assert module._wait_process_gone(4242, "owned-create-time", 1.0) is True
+    monkeypatch.setattr(module, "_process_create_time", lambda _pid: "owned-create-time")
+    assert module._wait_process_gone(4242, "owned-create-time", 0.0) is False
 
 
 def test_exact_named_scenario_sets_are_public_contract() -> None:
@@ -365,6 +521,36 @@ def test_exact_named_scenario_sets_are_public_contract() -> None:
         "postExposure": POST_EXPOSURE,
         "full": FULL,
     }
+
+
+def test_common_selectors_match_real_app_shell_classes() -> None:
+    module = _load_qa_020()
+    selectors = module._scenario_selectors(["GEN-F1"])["GEN-F1"]
+    source = (ROOT / "web" / "src" / "app" / "AppShell.tsx").read_text(encoding="utf-8")
+
+    assert selectors["root"] == ".react-shell"
+    assert selectors["result"] == ".react-shell-main"
+    assert 'className={`react-shell' in source
+    assert 'className="react-shell-main"' in source
+
+
+def test_full_generation_probe_receipt_requires_two_exact_independent_modes() -> None:
+    module = _load_qa_020()
+    receipt = {
+        "direct": {"saved": False, "provenance": {
+            "requestedMode": "direct", "attemptedEngine": "api", "finalEngine": "rules",
+            "fallbackReason": "engine_failed",
+        }},
+        "cli": {"saved": False, "provenance": {
+            "requestedMode": "cli", "attemptedEngine": "cli", "finalEngine": "rules",
+            "fallbackReason": "engine_unavailable",
+        }},
+        "sameEvidence": True, "sameResolution": True, "orphanReport": False, "orphanJob": False,
+    }
+    module._validate_generation_probe(receipt)
+    receipt["cli"]["provenance"]["attemptedEngine"] = "api"
+    with pytest.raises(module.HarnessError, match="cli"):
+        module._validate_generation_probe(receipt)
 
 
 def test_workspace_identity_golden_vector_uses_normative_nul_formula(tmp_path: Path) -> None:
