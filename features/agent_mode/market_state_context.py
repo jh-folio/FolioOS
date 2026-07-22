@@ -117,6 +117,12 @@ def render_market_state_projection(projection: MarketStateProjection) -> str:
         f"- reason: {projection.resolution['reason']}",
         f"- scope: {projection.resolution['resolvedScope']}",
     ]
+    if ref_dict is not None:
+        lines.extend([
+            f"- freshnessReason: {ref_dict['freshnessReason']}",
+            f"- sourceKind: {ref_dict['sourceKind']}",
+            f"- resolvedAt: {ref_dict['resolvedAt']}",
+        ])
     context = projection.context
     if context is None:
         return "\n".join(lines)

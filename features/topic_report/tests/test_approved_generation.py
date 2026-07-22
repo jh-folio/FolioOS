@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
@@ -21,6 +23,7 @@ from features.topic_report.resolution_schema import (
     ResolutionSnapshotV1,
     ZeroEvidence,
 )
+from features.market_memory.snapshot import save_market_state_snapshot
 
 
 NOW = datetime(2026, 7, 16, 3, 4, 5, tzinfo=UTC)
@@ -137,6 +140,66 @@ def test_direct_and_cli_share_approved_structured_provenance(tmp_path: Path, mon
     assert direct.report["marketStateResolution"]["reason"] == "policy_excluded"
     assert direct.attemptedEngine == "api"
     assert cli.attemptedEngine == "cli"
+
+
+def test_current_market_state_canary_never_changes_evidence_or_coverage_totals(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given identical admitted evidence / When current state context is included / Then it stays outside evidence ledgers.
+    base = prepared_input(tmp_path, "direct")
+    save_market_state_snapshot(tmp_path / "market-memory.sqlite3", {
+        "id": "mss_state_canary",
+        "asOf": "2026-07-16T03:00:00Z",
+        "headline": "STATE_CANARY_CONTEXT_ONLY",
+        "oneLineSummary": "State context must not become evidence.",
+        "marketRegime": "mixed",
+        "actionPosture": "check",
+        "keyDrivers": [{"title": "Driver", "summary": "Bounded", "sourceRefs": ["state:1"]}],
+        "watchItems": ["Checkpoint"],
+        "counterEvidence": ["Challenge"],
+        "uncertainties": ["Unknown"],
+        "sourceRefs": [{"id": "state:1", "title": "State source", "source": "Fixture"}],
+        "confidence": 0.7,
+        "inputWatermarks": {"GLOBAL": None, "US": None, "KR": None},
+    })
+    included_approved = base.approved.model_copy(update={"marketStatePolicy": "include_current"})
+    included = ApprovedGenerationInput(
+        approved=included_approved,
+        approvalId=base.approvalId,
+        requestedMode=base.requestedMode,
+        adapter=base.adapter,
+        preview=base.preview,
+        research=base.research,
+        marketState=prepare_market_state(tmp_path, included_approved, lambda: NOW),
+    )
+    monkeypatch.setattr(generation, "_materials", fake_materials)
+    monkeypatch.setattr(generation, "_read_prompt", lambda: "Approved prompt")
+    monkeypatch.setattr(
+        generation,
+        "attempt_direct",
+        lambda _prompt, _context: EngineOutput("# Same report", "openai_api", "openai", "fake", "r1"),
+    )
+
+    excluded_out = generation.build_approved_report(base, job_id="job-excluded", clock=lambda: NOW)
+    included_out = generation.build_approved_report(included, job_id="job-included", clock=lambda: NOW)
+
+    protected = ("evidenceItems", "sourceLedger", "evidencePackSummary", "docCount")
+    digest = lambda report, key: hashlib.sha256(  # noqa: E731 - compact exact canary assertion.
+        json.dumps(report[key], ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    assert {key: digest(excluded_out.report, key) for key in protected} == {
+        key: digest(included_out.report, key) for key in protected
+    }
+    assert excluded_out.report["qualityPreflight"]["requiredInputs"] == included_out.report["qualityPreflight"]["requiredInputs"]
+    assert excluded_out.report["qualityPreflight"]["requiredInputs"]["sourceCount"] == 1
+    assert {
+        key: value for key, value in excluded_out.report["quality"].items() if key != "generatedAt"
+    } == {
+        key: value for key, value in included_out.report["quality"].items() if key != "generatedAt"
+    }
+    assert included_out.report["marketStateResolution"]["injected"] is True
+    assert included_out.report["marketStateResolution"]["ref"]["layer"] == "source-grounded"
+    assert "STATE_CANARY_CONTEXT_ONLY" not in json.dumps(included_out.report["evidenceItems"])
 
 
 def test_collection_admission_filters_universe_and_counts_normalized_url_once(tmp_path: Path) -> None:

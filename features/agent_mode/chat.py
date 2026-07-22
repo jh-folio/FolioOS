@@ -47,6 +47,7 @@ from features.common.canonical_reports import (
 )
 from features.common.jobs import submit_job
 from features.common.utils import read_json
+from features.market_memory.attempt_store import AttemptStore
 from features.market_memory.market_state_ref import MarketStateRefQuery
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +70,22 @@ EFFORT_HINTS = {
     "high": "근거·반론·확인 포인트까지 깊이 있게 답한다.",
     "max": "가능한 모든 관점(근거, 반론, 리스크, 체크포인트)을 검토해 답한다.",
 }
+
+
+def _market_state_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _market_state_query() -> MarketStateRefQuery:
+    state = AttemptStore(MARKET_MEMORY_DB_PATH.parent / "market-state-update-attempts.json").load()
+    attempts = tuple(row.model_dump(mode="json") for row in state.attempts)
+    return MarketStateRefQuery(
+        MARKET_MEMORY_DB_PATH,
+        RESEARCH_INDEX_PATH,
+        "GLOBAL",
+        _market_state_now(),
+        attempts,
+    )
 
 
 def resolve_artifact_path(kind: str, report_id: str, market_scope: str = "") -> Path | None:
@@ -139,7 +156,7 @@ def build_chat_prompt(message: str, context: dict, options: dict, markdown: str 
     regions = ("US", "KR") if raw_scope == "BOTH" else ((raw_scope,) if raw_scope in {"US", "KR"} else ())
     market_memory = render_market_state_projection(project_market_state(
         MarketStateSelection("include_current", "AUTO", regions),
-        MarketStateRefQuery(MARKET_MEMORY_DB_PATH, RESEARCH_INDEX_PATH, "GLOBAL", datetime.now(timezone.utc)),
+        _market_state_query(),
     ))
     return "\n\n".join(filter(None, [
         "You are the Folio OS in-app research assistant. Folio OS is a local investment research workspace. Answer in Korean, in Markdown.",

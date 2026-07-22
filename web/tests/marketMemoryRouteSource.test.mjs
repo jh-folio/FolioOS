@@ -4,14 +4,26 @@ import assert from "node:assert/strict";
 
 test("Market Memory route owns the memory workflow shell", async () => {
   const source = await readFile(new URL("../src/app/MarketMemoryRoute.tsx", import.meta.url), "utf8");
+  const polling = await readFile(new URL("../src/app/agentPolling.ts", import.meta.url), "utf8");
 
   assert.match(source, /data-market-memory-route/);
   assert.match(source, /MarketStateDashboard/);
   assert.match(source, /\/api\/memory\/update/);
   assert.doesNotMatch(source, /\/api\/memory\/llm/);
   assert.doesNotMatch(source, /\/api\/memory\/state-snapshot/);
-  assert.match(source, /\/api\/jobs\/\$\{encodeURIComponent\(current\.id\)\}/);
+  assert.match(polling, /\/api\/jobs\/\$\{encodeURIComponent\(current\.id\)\}/);
   assert.match(source, /시장 메모리 업데이트/);
+  assert.match(source, /pollAgentJobBounded/);
+  assert.match(source, /AgentPollTimeout/);
+  assert.match(source, /data-qa="market-state-job-still-running"/);
+  assert.match(source, /data-qa="market-state-job-resume"/);
+  assert.match(source, /recoverMarketMemoryJob/);
+  assert.match(source, /persistMarketMemoryJobId/);
+  assert.match(source, /clearMarketMemoryJobId/);
+  assert.match(source, /MARKET_MEMORY_ACTIVE_JOB_KEY|marketMemoryJobResume/);
+  assert.doesNotMatch(source, /localStorage\.setItem\([^,]+,\s*JSON\.stringify/);
+  assert.doesNotMatch(source, /["']DELETE["']|\/cancel\b/i);
+  assert.doesNotMatch(source, /while \(isActiveJobStatus/);
   assert.doesNotMatch(source, /시장 상태 정리/);
   assert.doesNotMatch(source, /내러티브 누적/);
 });

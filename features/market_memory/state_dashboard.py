@@ -47,22 +47,22 @@ def _latest_memory_meta(db_path: str | Path) -> dict:
     }
 
 
-def _is_after(left: str, right: str) -> bool:
-    if not left or not right:
-        return False
-    return str(left) > str(right)
-
-
 def _attach_freshness(payload: dict, db_path: str | Path) -> dict:
     meta = _latest_memory_meta(db_path)
     snapshot = payload.get("snapshot") if isinstance(payload.get("snapshot"), dict) else {}
     snapshot_as_of = str(snapshot.get("asOf") or "")
     latest_at = str(meta.get("createdAt") or meta.get("asOf") or "")
+    ref = payload.get("marketStateRef") if isinstance(payload.get("marketStateRef"), dict) else {}
     payload["freshness"] = {
+        "status": ref.get("status"),
+        "reason": ref.get("freshnessReason"),
+        "asOf": ref.get("asOf"),
+        "sourceKind": ref.get("sourceKind"),
+        "resolvedAt": ref.get("resolvedAt"),
         "snapshotAsOf": snapshot_as_of,
         "latestMemoryAt": latest_at,
         "latestMemoryTitle": meta.get("title", ""),
-        "stale": bool(snapshot_as_of and latest_at and _is_after(latest_at, snapshot_as_of)),
+        "stale": ref.get("status") == "stale",
     }
     return payload
 

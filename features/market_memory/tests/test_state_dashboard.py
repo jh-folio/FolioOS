@@ -2,7 +2,10 @@ import json
 import os
 import sqlite3
 import tempfile
+from datetime import UTC, datetime
+from pathlib import Path
 
+from features.market_memory.market_state_ref import MarketStateRefQuery
 from features.market_memory.snapshot import (
     build_market_state_context,
     current_market_state_snapshot,
@@ -296,6 +299,7 @@ def test_dashboard_payload_ignores_newer_rss_digest_for_agent_snapshot_staleness
             "counterEvidence": ["금리 부담"],
             "sourceRefs": [{"id": "rss:1", "title": "Rates", "source": "Reuters"}],
             "confidence": 0.7,
+            "inputWatermarks": {"GLOBAL": None, "US": None, "KR": None},
         })
         conn = sqlite3.connect(db_path)
         conn.execute(
@@ -318,7 +322,15 @@ def test_dashboard_payload_ignores_newer_rss_digest_for_agent_snapshot_staleness
         conn.commit()
         conn.close()
 
-        payload = market_state_dashboard_payload(db_path)
+        payload = market_state_dashboard_payload(
+            db_path,
+            ref_query=MarketStateRefQuery(
+                market_db_path=Path(db_path),
+                research_db_path=Path(tmp) / "research-index.sqlite3",
+                scope="GLOBAL",
+                now=datetime(2026, 7, 7, 6, tzinfo=UTC),
+            ),
+        )
 
         assert payload["freshness"]["stale"] is False
         assert payload["freshness"]["latestMemoryTitle"] == ""

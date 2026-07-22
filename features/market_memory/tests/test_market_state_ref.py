@@ -16,6 +16,7 @@ from features.agent_mode.market_state_context import (
 )
 from features.market_memory.market_state_ref import (
     MarketStateRefQuery,
+    capture_input_watermarks,
     resolve_market_state_ref,
     resolve_market_state_scope,
 )
@@ -121,6 +122,33 @@ def test_freshness_uses_exact_injected_utc_boundary(
     assert ref["resolvedAt"] == NOW_TEXT
 
 
+@pytest.mark.parametrize(("as_of", "watermarks", "live", "attempts", "expected"), [
+    ("not-a-time", {"US": None}, "2026-07-16T00:00:00Z", ({"scope": "GLOBAL", "status": "failed", "finishedAt": NOW_TEXT},), "invalid_as_of"),
+    ("2026-07-17T12:00:01Z", {"US": None}, "2026-07-16T00:00:00Z", (), "future_as_of"),
+    ("2026-07-15T12:00:00Z", {"US": None}, "2026-07-16T00:00:00Z", (), "missing_input_watermark"),
+    ("2026-07-14T11:59:59Z", {"GLOBAL": "2026-07-14T00:00:00Z", "US": None, "KR": None}, "2026-07-16T00:00:00Z", ({"scope": "GLOBAL", "status": "failed", "finishedAt": NOW_TEXT},), "age_exceeded"),
+    ("2026-07-15T12:00:00Z", {"GLOBAL": "2026-07-15T00:00:00Z", "US": None, "KR": None}, "2026-07-16T00:00:00Z", ({"scope": "GLOBAL", "status": "failed", "finishedAt": NOW_TEXT},), "new_relevant_evidence"),
+    ("2026-07-15T12:00:00Z", {"GLOBAL": "2026-07-16T00:00:00Z", "US": None, "KR": None}, "2026-07-16T00:00:00Z", ({"scope": "GLOBAL", "status": "failed", "finishedAt": NOW_TEXT},), "update_failed"),
+    ("2026-07-14T12:00:00Z", {"GLOBAL": "2026-07-16T00:00:00Z", "US": None, "KR": None}, "2026-07-16T00:00:00Z", (), "within_window"),
+])
+def test_freshness_reason_priority_is_total_and_deterministic(
+    tmp_path: Path,
+    as_of: str,
+    watermarks: dict,
+    live: str,
+    attempts: tuple[dict, ...],
+    expected: str,
+) -> None:
+    # Given multiple simultaneous stale causes / When resolved / Then the normative priority table has one winner.
+    _seed_snapshot(tmp_path / "market.sqlite3", as_of=as_of, watermarks=watermarks)
+    _seed_index(tmp_path / "research.sqlite3", [("global", '{"markets":["GLOBAL"]}', live)])
+
+    ref = resolve_market_state_ref(_query(tmp_path, attempts=attempts))
+
+    assert ref["freshnessReason"] == expected
+    assert ref["status"] == ("current" if expected == "within_window" else "stale")
+
+
 def test_relevant_watermark_is_per_scope_and_strictly_later(tmp_path: Path) -> None:
     # Given US/KR/GLOBAL evidence / When each scope resolves / Then only relevant later evidence stales it.
     watermark = "2026-07-14T12:00:00Z"
@@ -140,15 +168,64 @@ def test_relevant_watermark_is_per_scope_and_strictly_later(tmp_path: Path) -> N
     assert global_ref["relevantEvidenceWatermark"] == "2026-07-16T00:00:00Z"
 
 
+def test_evidence_watermark_is_canonical_utc_z_for_current_stale_fallback_and_capture(tmp_path: Path) -> None:
+    # Given equivalent +00:00 storage / When every public/captured watermark resolves / Then all emit canonical Z.
+    raw = "2026-07-16T10:14:38+00:00"
+    canonical = "2026-07-16T10:14:38Z"
+
+    current_root = tmp_path / "current"
+    current_root.mkdir()
+    _seed_snapshot(
+        current_root / "market.sqlite3",
+        as_of="2026-07-16T12:00:00Z",
+        watermarks={"GLOBAL": canonical, "US": canonical, "KR": None},
+    )
+    _seed_index(current_root / "research.sqlite3", [("current", '{"markets":["GLOBAL"]}', raw)])
+    current = resolve_market_state_ref(_query(current_root, "US"))
+
+    stale_root = tmp_path / "stale"
+    stale_root.mkdir()
+    _seed_snapshot(
+        stale_root / "market.sqlite3",
+        as_of="2026-07-16T12:00:00Z",
+        watermarks={"GLOBAL": "2026-07-16T10:14:37Z", "US": "2026-07-16T10:14:37Z", "KR": None},
+    )
+    _seed_index(stale_root / "research.sqlite3", [("stale", '{"markets":["US"]}', raw)])
+    stale = resolve_market_state_ref(_query(stale_root, "US"))
+
+    fallback_root = tmp_path / "fallback"
+    fallback_root.mkdir()
+    with sqlite3.connect(fallback_root / "market.sqlite3") as connection:
+        connection.execute("CREATE TABLE market_narrative_states (status TEXT, updated_at TEXT)")
+        connection.execute("INSERT INTO market_narrative_states VALUES ('active','2026-07-16T11:00:00Z')")
+    _seed_index(fallback_root / "research.sqlite3", [("fallback", '{"markets":["GLOBAL"]}', raw)])
+    fallback = resolve_market_state_ref(_query(fallback_root))
+
+    assert (current["status"], current["freshnessReason"]) == ("current", "within_window")
+    assert (stale["status"], stale["freshnessReason"]) == ("stale", "new_relevant_evidence")
+    assert (fallback["status"], fallback["freshnessReason"]) == ("fallback", "state_fallback")
+    assert current["relevantEvidenceWatermark"] == canonical
+    assert stale["relevantEvidenceWatermark"] == canonical
+    assert fallback["relevantEvidenceWatermark"] == canonical
+    assert capture_input_watermarks(current_root / "research.sqlite3") == {
+        "GLOBAL": canonical,
+        "US": canonical,
+        "KR": canonical,
+    }
+
+
 def test_noop_reindex_timestamp_does_not_change_content_watermark(tmp_path: Path) -> None:
     # Given unchanged content_updated_at / When unrelated indexing time changes / Then freshness stays current.
     watermark = "2026-07-14T12:00:00Z"
     _seed_snapshot(tmp_path / "market.sqlite3", watermarks={"GLOBAL": watermark, "US": watermark, "KR": watermark})
-    _seed_index(tmp_path / "research.sqlite3", [("same", '{"markets":["GLOBAL"]}', watermark)])
+    _seed_index(tmp_path / "research.sqlite3", [("same", '{"markets":["GLOBAL"]}', "2026-07-14T12:00:00+00:00")])
     with sqlite3.connect(tmp_path / "research.sqlite3") as connection:
         connection.execute("ALTER TABLE documents ADD COLUMN updated_at TEXT")
         connection.execute("UPDATE documents SET updated_at='2026-07-17T11:00:00Z'")
-    assert resolve_market_state_ref(_query(tmp_path))["freshnessReason"] == "within_window"
+    ref = resolve_market_state_ref(_query(tmp_path))
+    assert ref["freshnessReason"] == "within_window"
+    assert ref["relevantEvidenceWatermark"] == watermark
+    assert capture_input_watermarks(tmp_path / "research.sqlite3")["GLOBAL"] == watermark
 
 
 @pytest.mark.parametrize(("scope", "finished", "expected"), [
@@ -187,6 +264,30 @@ def test_fallback_and_empty_refs_are_auditable(tmp_path: Path) -> None:
     )
 
 
+def test_fallback_offset_timestamp_is_exposed_as_canonical_utc_z(tmp_path: Path) -> None:
+    # Given a legacy/local-offset state timestamp / When fallback resolves / Then the public ref is strict UTC-Z.
+    market_db = tmp_path / "market.sqlite3"
+    with sqlite3.connect(market_db) as connection:
+        connection.execute("CREATE TABLE market_narrative_states (status TEXT, updated_at TEXT)")
+        connection.executemany(
+            "INSERT INTO market_narrative_states VALUES (?, ?)",
+            [
+                ("active", "2026-07-22T18:42:27.346086+09:00"),
+                ("watch", "2026-07-22T09:40:00Z"),
+            ],
+        )
+
+    ref = resolve_market_state_ref(_query(tmp_path))
+
+    assert ref["status"] == "fallback"
+    assert ref["freshnessReason"] == "state_fallback"
+    assert ref["asOf"] == "2026-07-22T09:42:27.346086Z"
+    assert set(ref) == {
+        "snapshotId", "sourceKind", "scope", "asOf", "status", "freshnessReason", "inputWatermark",
+        "relevantEvidenceWatermark", "invalidWatermarkRows", "resolvedAt", "layer",
+    }
+
+
 @pytest.mark.parametrize(("watermarks", "expected_input"), [
     ({"US": None, "KR": None}, None),
     ({"GLOBAL": "malformed", "US": None, "KR": None}, None),
@@ -220,6 +321,20 @@ def test_policy_status_projection_controls_context_body(
     assert ("CANARY_CONTEXT_ONLY" in rendered) is injected
     assert "EVIDENCE_CANARY" not in rendered
     assert "status:" in rendered and "asOf:" in rendered and "reason:" in rendered
+
+
+def test_stale_projection_renders_exact_freshness_for_agent_and_deep_research(tmp_path: Path) -> None:
+    # Given an age-stale snapshot / When rendered for model context / Then the auditable cause is not collapsed.
+    _seed_snapshot(tmp_path / "market.sqlite3", as_of="2026-07-14T11:59:59Z")
+    projection = project_market_state(MarketStateSelection("include_current", "GLOBAL"), _query(tmp_path))
+
+    rendered = render_market_state_projection(projection)
+
+    assert "- status: stale" in rendered
+    assert "- freshnessReason: age_exceeded" in rendered
+    assert "- sourceKind: snapshot" in rendered
+    assert f"- resolvedAt: {NOW_TEXT}" in rendered
+    assert "## Market State Context" not in rendered
 
 
 @pytest.mark.parametrize(("kind", "status", "reason"), [
@@ -266,6 +381,25 @@ def test_dashboard_projects_the_normative_full_reference(tmp_path: Path) -> None
         "current", "within_window",
     )
     assert payload["marketStateRef"]["asOf"] == "2026-07-14T12:00:00Z"
+
+
+def test_dashboard_freshness_is_derived_from_the_normative_stale_ref(tmp_path: Path) -> None:
+    # Given no newer Market Memory row but a snapshot older than 72h / When projected / Then freshness cannot disagree.
+    _seed_snapshot(tmp_path / "market.sqlite3", as_of="2026-07-14T11:59:59Z")
+
+    payload = market_state_dashboard_payload(tmp_path / "market.sqlite3", ref_query=_query(tmp_path))
+
+    assert payload["marketStateRef"]["freshnessReason"] == "age_exceeded"
+    assert {key: payload["freshness"][key] for key in (
+        "status", "reason", "asOf", "sourceKind", "resolvedAt", "stale",
+    )} == {
+        "status": "stale",
+        "reason": "age_exceeded",
+        "asOf": "2026-07-14T11:59:59Z",
+        "sourceKind": "snapshot",
+        "resolvedAt": NOW_TEXT,
+        "stale": True,
+    }
 
 
 @pytest.mark.parametrize(("policy", "scope"), [("bad", "AUTO"), ("exclude", "EU")])

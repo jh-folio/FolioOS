@@ -38,6 +38,7 @@ import { ReportBody } from "./reportReader/ReportBody";
 import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
 import { AgentWorkLog } from "./AgentWorkLog";
+import { marketStateContextProjection, readMarketStateRef } from "./marketStateContext";
 
 type DeepResearchPhase =
   | "readiness"
@@ -92,6 +93,29 @@ type ExportResult = {
 type OverlayResult = {
   personalOverlay?: { markdown?: string } | null;
 };
+
+export function MarketStateReportContext({ resolution }: { resolution?: Record<string, unknown> }) {
+  if (!resolution) return null;
+  const ref = readMarketStateRef(resolution);
+  const reason = typeof resolution.reason === "string" ? resolution.reason : "";
+  const injected = resolution.injected === true;
+  const status = ref?.status || (reason === "policy_excluded" ? "excluded" : "unknown");
+  const statusCopy = status === "current" && injected
+    ? "생성 시점의 현재 상태를 별도 시장 배경으로 포함했습니다."
+    : status === "stale" ? "최신성이 만료되어 보고서 판단에는 주입하지 않았습니다."
+      : status === "fallback" ? "참고용 대체 상태이며 현재 투자 자세로 사용하지 않았습니다."
+        : status === "empty" ? "사용 가능한 시장 상태가 없어 보고서 판단에 포함하지 않았습니다."
+          : status === "excluded" ? "요청 정책에 따라 시장 상태를 제외했습니다."
+            : "시장 상태 참조를 확인할 수 없습니다.";
+  return (
+    <aside className={`topicrpt-market-state-context state-${status}`} data-qa="dr-market-state-context" data-status={status} aria-label="별도 Market State 컨텍스트">
+      <div><span>Market State · source-grounded context</span><strong>{status}</strong></div>
+      <p>{statusCopy}</p>
+      {ref ? <dl><div><dt>기준 시각</dt><dd>{ref.asOf || "없음"}</dd></div><div><dt>최신성</dt><dd>{ref.freshnessReason}</dd></div><div><dt>출처</dt><dd>{ref.sourceKind}</dd></div><div><dt>범위</dt><dd>{ref.scope}</dd></div></dl> : null}
+      <small>이 컨텍스트는 외부 근거 목록·인용·가설에 포함되지 않습니다.</small>
+    </aside>
+  );
+}
 
 const TOPIC_PRESETS = [{ key: "custom", label: "질문 중심" }] as const;
 const PRESET_LABELS: Record<string, string> = { custom: "질문 중심" };
@@ -680,7 +704,7 @@ function PlanReview({
             </p>
           )}
           <span className="topicrpt-plan-label">Market State</span>
-          <p>{approvedRequest.marketStatePolicy} · scope {approvedRequest.marketStateScope}</p>
+          <p>{approvedRequest.marketStatePolicy} · scope {approvedRequest.marketStateScope}<br /><small>실행 시 status · as-of · freshness · source를 별도 컨텍스트로 기록합니다.</small></p>
         </div>
       </div>
       {zeroEvidence.required && reason && zeroEvidence.resolutionFingerprint && (
@@ -1075,6 +1099,7 @@ export function DeepResearchRoute() {
 
   const readerContent = splitReportTitle(selected?.markdown || "", reportLabel(selected || {}));
   const sources = selected?.sources || [];
+  const selectedMarketStateContext = marketStateContextProjection(selected?.marketStateResolution);
 
   if (selected && phase === "report") {
     return (
@@ -1085,7 +1110,7 @@ export function DeepResearchRoute() {
           eyebrow={`DEEP RESEARCH${selected.date ? ` · ${selected.date}` : ""}`}
           title={readerContent.title}
           meta={`${reportLabel(selected)} · 뉴스 ${selected.docCount || 0}건 · 내러티브 ${selected.memoryCount || 0}건`}
-          agentContext={{ surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: selected.id || "", topic: reportLabel(selected) }}
+          agentContext={{ surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: selected.id || "", topic: reportLabel(selected), marketState: selectedMarketStateContext }}
           breadcrumb={(
             <>
               <button type="button" onClick={() => setTopicHash()}>딥 리서치</button>
@@ -1113,6 +1138,7 @@ export function DeepResearchRoute() {
           noteLinkedTitle={readerContent.title}
           noteOverlayMarkdown={selected.personalOverlay?.markdown || ""}
         >
+          <MarketStateReportContext resolution={selected.marketStateResolution} />
           <ReportBody markdown={readerContent.body || selected.markdown || ""} />
           {sources.length > 0 && (
             <section className="source-panel react-topic-sources">

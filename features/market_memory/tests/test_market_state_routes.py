@@ -8,6 +8,7 @@ from features.market_memory.http_service import (
     MarketStateStorage,
 )
 from features.market_memory.routes import MarketStateBoundary, MarketStateRouteAdapters
+from features.market_memory.memory import connect, init_db, upsert_state_from_memory
 from features.market_memory.tests.live_http import LiveHttpClient
 from features.market_memory.tests.market_state_http_fixtures import NOW, CrashHook, RecordingBackend
 
@@ -73,6 +74,54 @@ def test_context_route_enforces_policy_and_never_returns_evidence_fields(tmp_pat
         "marketStateContext": None,
     }
     assert not ({"evidenceItems", "sourceLedger", "citations", "coverage"} & set(included.json()))
+
+
+def test_dashboard_route_canonicalizes_offset_fallback_as_of(tmp_path) -> None:
+    # Given a locally stored offset timestamp / When the HTTP fallback ref is serialized / Then it is strict UTC-Z.
+    app, _backend, storage = _app(tmp_path)
+    connection = connect(storage.marketDbPath)
+    try:
+        init_db(connection)
+        upsert_state_from_memory(
+            connection,
+            {
+                "id": "memory-offset",
+                "date": "2026-07-22",
+                "title": "Offset fallback",
+                "summary": "Fallback context",
+                "story": "offset_fallback",
+                "stateStatus": "active",
+            },
+            observed_at="2026-07-22T18:42:27.346086+09:00",
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    with connect(storage.researchDbPath) as research:
+        research.execute(
+            "CREATE TABLE documents (path TEXT,type TEXT,market_relevance REAL,metadata_json TEXT,content_updated_at TEXT)"
+        )
+        research.execute(
+            "INSERT INTO documents VALUES (?,?,?,?,?)",
+            (
+                "research-inbox/rss/offset.md",
+                "article",
+                1,
+                '{"markets":["GLOBAL"]}',
+                "2026-07-22T10:14:38+00:00",
+            ),
+        )
+
+    with LiveHttpClient(app) as client:
+        response = client.get("/api/memory/state-dashboard", params={"scope": "GLOBAL", "limit": 5})
+
+    assert response.status_code == 200
+    ref = response.json()["marketStateRef"]
+    assert (ref["status"], ref["freshnessReason"], ref["sourceKind"]) == (
+        "fallback", "state_fallback", "state_fallback",
+    )
+    assert ref["asOf"] == "2026-07-22T09:42:27.346086Z"
+    assert ref["relevantEvidenceWatermark"] == "2026-07-22T10:14:38Z"
 
 
 def test_combined_manual_update_uses_the_same_attempt_lifecycle(tmp_path) -> None:

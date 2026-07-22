@@ -19,6 +19,9 @@ MarketStateRef: TypeAlias = dict[str, JsonValue]
 MarketStateResolution: TypeAlias = dict[str, JsonValue]
 
 _INSTANT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$")
+_STORED_OFFSET_INSTANT = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +55,20 @@ def _utc_text(value: datetime) -> str:
     if value.utcoffset() != timedelta(0):
         raise MarketStateContractError("now", str(value))
     return value.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def _stored_offset_instant(value: JsonValue) -> datetime | None:
+    if not isinstance(value, str) or not _STORED_OFFSET_INSTANT.fullmatch(value):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.utcoffset() is not None else None
+
+
+def _canonical_utc_z(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _token(value: str) -> str:
@@ -111,8 +128,8 @@ def _fallback_as_of(path: Path) -> str | None:
             ).fetchall()
     except (OSError, sqlite3.Error):
         return None
-    valid = [(parsed, str(row[0])) for row in rows if (parsed := _instant(str(row[0])))]
-    return max(valid)[1] if valid else ("" if rows else None)
+    valid = [parsed for row in rows if (parsed := _stored_offset_instant(str(row[0])))]
+    return _canonical_utc_z(max(valid)) if valid else ("" if rows else None)
 
 
 def _markets(raw: str) -> set[str]:
@@ -138,7 +155,7 @@ def _watermark(path: Path, scope: Scope) -> tuple[str | None, int]:
             ).fetchall()
     except (OSError, sqlite3.Error):
         return None, 0
-    valid: list[tuple[datetime, str]] = []
+    valid: list[datetime] = []
     invalid = 0
     for row in rows:
         normalized_path = str(row[0] or "").replace("\\", "/")
@@ -152,8 +169,8 @@ def _watermark(path: Path, scope: Scope) -> tuple[str | None, int]:
         if parsed is None:
             invalid += 1
         else:
-            valid.append((parsed, timestamp))
-    return (max(valid)[1] if valid else None), invalid
+            valid.append(parsed)
+    return (_canonical_utc_z(max(valid)) if valid else None), invalid
 
 
 def capture_input_watermarks(path: Path) -> dict[str, JsonValue]:
