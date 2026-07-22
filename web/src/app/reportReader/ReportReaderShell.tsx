@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { setReactAgentContextScope, type AgentContextPatch } from "../agentContext";
 import { FolioNotePanel, type FolioNoteIdentity } from "./FolioNotePanel";
 
@@ -31,6 +31,11 @@ export function ReportReaderShell({
   children,
 }: ReportReaderShellProps) {
   const [mobileNoteOpen, setMobileNoteOpen] = useState(false);
+  const readerRef = useRef<HTMLElement>(null);
+  const noteTriggerRef = useRef<HTMLButtonElement>(null);
+  const notePanelRef = useRef<HTMLElement>(null);
+  const noteCloseRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
   const resolvedNoteSlot = noteSlot ?? (noteIdentity ? (
     <FolioNotePanel
       identity={noteIdentity}
@@ -53,14 +58,64 @@ export function ReportReaderShell({
     if (scope) setReactAgentContextScope(scope, agentContext);
   }, [agentContext, agentContextKey]);
 
+  useEffect(() => {
+    readerRef.current?.focus({ preventScroll: true });
+  }, [title]);
+
+  const closeMobileNote = useCallback(() => {
+    setMobileNoteOpen(false);
+    window.requestAnimationFrame(() => noteTriggerRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  useEffect(() => {
+    if (!mobileNoteOpen) return;
+    noteCloseRef.current?.focus({ preventScroll: true });
+    const panel = notePanelRef.current;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        closeMobileNote();
+        return;
+      }
+      if (event.key !== "Tab" || !panel) return;
+      const controls = Array.from(panel.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+        .filter((item) => item.getClientRects().length > 0);
+      if (!controls.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [closeMobileNote, mobileNoteOpen]);
+
+  useEffect(() => {
+    const handleReaderEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || mobileNoteOpen || !onClose) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('[role="dialog"][aria-modal="true"]')) return;
+      event.preventDefault();
+      onClose();
+    };
+    document.addEventListener("keydown", handleReaderEscape);
+    return () => document.removeEventListener("keydown", handleReaderEscape);
+  }, [mobileNoteOpen, onClose]);
+
   return (
     <div className="report-reader-shell report-reader-inline" data-report-reader-shell>
       <div className="reader-breadcrumb report-reader-breadcrumb">{breadcrumb}</div>
       <div className={stageClass}>
-        <main className="report-reader-dialog report-reader-main" aria-label="보고서 리더">
+        <section ref={readerRef} className="report-reader-dialog report-reader-main" aria-labelledby={titleId} tabIndex={-1}>
           <div className="report-reader-head">
             {onClose && (
-              <button className="icon-btn" type="button" onClick={onClose} aria-label="리더 닫기" data-tooltip="닫기" data-tooltip-pos="left">
+              <button className="icon-btn" type="button" onClick={onClose} aria-label="리더 닫기" data-qa="dr-report-close" data-tooltip="닫기" data-tooltip-pos="left">
                 ×
               </button>
             )}
@@ -68,11 +123,11 @@ export function ReportReaderShell({
           <div className="report-reader-body">
             <section className="report-hero react-report-hero">
               {eyebrow && <p className="report-kicker">{eyebrow}</p>}
-              <h1>{title}</h1>
+              <h1 id={titleId}>{title}</h1>
             </section>
-            <article className="headline react-report-card">{children}</article>
+            <div className="headline react-report-card">{children}</div>
           </div>
-        </main>
+        </section>
           {actionSlot && (
             <aside className="report-reader-rail" aria-label="보고서 조작 패널">
               {actionSlot}
@@ -81,24 +136,31 @@ export function ReportReaderShell({
         {resolvedNoteSlot && (
           <>
             <button
+              ref={noteTriggerRef}
               className={mobileNoteOpen ? "report-note-grip is-open" : "report-note-grip"}
               type="button"
               aria-label="투자 노트 열기"
               aria-controls="report-reader-note-panel"
               aria-expanded={mobileNoteOpen}
+              data-qa="reader-note-open"
               onClick={() => setMobileNoteOpen(true)}
             />
             <aside
+              ref={notePanelRef}
               id="report-reader-note-panel"
               className={mobileNoteOpen ? "report-note-panel is-open" : "report-note-panel"}
               aria-label="투자 노트"
+              role={mobileNoteOpen ? "dialog" : undefined}
+              aria-modal={mobileNoteOpen ? true : undefined}
             >
               <div className="report-note-inner">
                 <button
+                  ref={noteCloseRef}
                   className="report-note-mobile-close"
                   type="button"
                   aria-label="투자 노트 닫기"
-                  onClick={() => setMobileNoteOpen(false)}
+                  data-qa="reader-note-close"
+                  onClick={closeMobileNote}
                 >
                   ×
                 </button>

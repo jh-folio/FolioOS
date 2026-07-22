@@ -27,7 +27,6 @@ import {
   type SmartCollectionMarket,
   type SmartCollectionMutationEnvelope,
   type SmartCollectionPreview,
-  type TopicPlan,
   type UpdateSmartCollectionRequest,
 } from "../api";
 import { openReactAgentDock, patchReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
@@ -39,6 +38,7 @@ import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
 import { AgentWorkLog } from "./AgentWorkLog";
 import { marketStateContextProjection, readMarketStateRef } from "./marketStateContext";
+import { parseTopicReportPayload, parseTopicReportSummaries, type MarketStateResolutionPayload, type TopicReport, type TopicReportSummary } from "./deepResearchPayload";
 
 type DeepResearchPhase =
   | "readiness"
@@ -50,26 +50,6 @@ type DeepResearchPhase =
   | "recoverable-error";
 
 type ErrorKind = "validation" | "readiness" | "plan" | "degraded" | "generation" | "report";
-
-type TopicReport = {
-  id?: string;
-  topicKey?: string;
-  topicLabel?: string;
-  date?: string;
-  generatedAt?: string;
-  mode?: string;
-  saved?: boolean;
-  markdown?: string;
-  docCount?: number;
-  memoryCount?: number;
-  userContext?: string;
-  generation?: { message?: string; mode?: string; generatedAt?: string };
-  sources?: Array<{ source?: string; date?: string; title?: string; url?: string; path?: string }>;
-  personalOverlay?: { markdown?: string } | null;
-  topicPlan?: TopicPlan;
-  researchResolution?: PlanPreviewEnvelope["preview"];
-  marketStateResolution?: Record<string, unknown>;
-};
 
 type AgentJob = {
   readonly id: string;
@@ -94,7 +74,151 @@ type OverlayResult = {
   personalOverlay?: { markdown?: string } | null;
 };
 
-export function MarketStateReportContext({ resolution }: { resolution?: Record<string, unknown> }) {
+function EmptyProvenance({ children = "저장된 구조화 정보가 없습니다." }: { readonly children?: string }) {
+  return <p className="topicrpt-provenance-empty">{children}</p>;
+}
+
+function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
+  const plan = report.topicPlan;
+  const coverage = report.evidencePackSummary;
+  const resolution = report.researchResolution;
+  const overlay = report.personalOverlay;
+  const userContext = typeof report.userContext === "string" ? report.userContext.trim() : report.userContext ? "생성 요청에 사용자 컨텍스트가 포함되었습니다." : "";
+  return (
+    <section className="topicrpt-provenance" aria-labelledby="dr-provenance-heading">
+      <div className="topicrpt-provenance-heading">
+        <p className="section-kicker">PROVENANCE</p>
+        <h2 id="dr-provenance-heading">리서치 근거 추적</h2>
+        <p>승인 계획, 외부 근거, 자료 공백과 개인 가설을 서로 다른 레이어로 확인합니다.</p>
+      </div>
+      {report.contractWarnings.length > 0 && (
+        <div className="topicrpt-contract-warning" role="status">
+          일부 구조화 필드가 올바르지 않아 안전한 빈 상태로 표시했습니다.
+        </div>
+      )}
+      <div className="topicrpt-provenance-grid">
+        <section className="topicrpt-provenance-panel" data-qa="dr-approved-plan" aria-labelledby="dr-approved-plan-heading">
+          <h3 id="dr-approved-plan-heading">승인된 계획</h3>
+          {plan ? (
+            <>
+              <dl className="topicrpt-provenance-facts">
+                <div><dt>주제</dt><dd>{plan.topic || "미기록"}</dd></div>
+                <div><dt>보고서 유형</dt><dd>{plan.reportType || "미기록"}</dd></div>
+                <div><dt>사용자 의도</dt><dd>{plan.userIntent || "미기록"}</dd></div>
+              </dl>
+              <h4>리서치 질문</h4>{renderList(plan.researchQuestions)}
+              <h4>반증 조건</h4>{renderList(plan.falsificationTriggers)}
+            </>
+          ) : <EmptyProvenance />}
+        </section>
+
+        <section className="topicrpt-provenance-panel" data-qa="dr-evidence-coverage" aria-labelledby="dr-evidence-coverage-heading">
+          <h3 id="dr-evidence-coverage-heading">근거 커버리지</h3>
+          {coverage ? (
+            <>
+              <dl className="topicrpt-provenance-facts">
+                <div><dt>외부 문서</dt><dd>{coverage.totalDocs}건</dd></div>
+                <div><dt>메모리 참조</dt><dd>{coverage.memoryCount}건</dd></div>
+              </dl>
+              {Object.keys(coverage.roleCounts).length > 0 && <><h4>근거 역할</h4><ul className="topicrpt-provenance-list">{Object.entries(coverage.roleCounts).map(([role, count]) => <li key={role}><strong>{role}</strong><span>{count}건</span></li>)}</ul></>}
+              {Object.keys(coverage.axisCoverage).length ? (
+                <ul className="topicrpt-provenance-list">
+                  {Object.entries(coverage.axisCoverage).map(([key, row]) => <li key={key}><strong>{row.label || key}</strong><span>{row.count}건 · {row.level || "수준 미상"}</span></li>)}
+                </ul>
+              ) : <EmptyProvenance>분석 축별 커버리지가 없습니다.</EmptyProvenance>}
+              {Object.keys(coverage.questionCoverage).length > 0 && <details><summary>리서치 질문 커버리지</summary><ul className="topicrpt-provenance-list">{Object.entries(coverage.questionCoverage).map(([key, row]) => <li key={key}><strong>{row.question || key}</strong><span>{row.count}건 · {row.level || "수준 미상"}</span></li>)}</ul></details>}
+              {report.evidenceItems.length > 0 && (
+                <details>
+                  <summary>선별된 근거 {report.evidenceItems.length}건</summary>
+                  <ul className="topicrpt-provenance-list">{report.evidenceItems.map((item) => <li key={item.id}><strong>{item.title}</strong><span>{[item.source, item.role, item.confidence].filter(Boolean).join(" · ")}</span></li>)}</ul>
+                </details>
+              )}
+            </>
+          ) : <EmptyProvenance />}
+        </section>
+
+        <section className="topicrpt-provenance-panel topicrpt-provenance-wide" data-qa="dr-source-ledger" aria-labelledby="dr-source-ledger-heading">
+          <h3 id="dr-source-ledger-heading">외부 근거 원장</h3>
+          <p className="topicrpt-layer-note">이 목록만 보고서의 권위 있는 외부 출처 원장입니다.</p>
+          {report.sourceLedger.length ? (
+            <ol className="topicrpt-source-ledger">
+              {report.sourceLedger.map((source) => (
+                <li key={source.sourceId}>
+                  <div><strong>{source.title || "제목 미상"}</strong><span>{[source.source, source.date, source.evidenceRole, source.reliability, source.artifactType].filter(Boolean).join(" · ")}</span></div>
+                  {source.usedInSections.length > 0 && <small>사용 섹션: {source.usedInSections.join(", ")}</small>}
+                  {(source.axisKey || source.researchQuestionId || source.researchRound !== null) && <small>추적: {[source.axisKey, source.researchQuestionId, source.researchRound === null ? "" : `round ${source.researchRound}`].filter(Boolean).join(" · ")}</small>}
+                  {source.url && <a href={source.url} target="_blank" rel="noopener noreferrer">원문 열기</a>}
+                </li>
+              ))}
+            </ol>
+          ) : <EmptyProvenance>확인 가능한 외부 근거 원장이 없습니다.</EmptyProvenance>}
+        </section>
+
+        <section className="topicrpt-provenance-panel" data-qa="dr-data-gaps" aria-labelledby="dr-data-gaps-heading">
+          <h3 id="dr-data-gaps-heading">자료 공백</h3>
+          {report.dataGaps.length ? (
+            <ul className="topicrpt-provenance-list">{report.dataGaps.map((gap) => <li key={gap.id} data-severity={gap.severity}><strong>{gap.description}</strong><span>{gap.resolved ? "해결됨" : gap.suggestedAction || "추가 확인 필요"}</span></li>)}</ul>
+          ) : <EmptyProvenance>기록된 자료 공백이 없습니다.</EmptyProvenance>}
+        </section>
+
+        <section className="topicrpt-provenance-panel" data-qa="dr-quality" aria-labelledby="dr-quality-heading">
+          <h3 id="dr-quality-heading">품질과 경고</h3>
+          {report.quality ? (
+            <>
+              <dl className="topicrpt-provenance-facts">
+                <div><dt>평가</dt><dd>{report.quality.score ?? "—"}점 · {report.quality.grade || "등급 미상"}</dd></div>
+                <div><dt>상태</dt><dd>{report.quality.status || "미기록"}</dd></div>
+              </dl>
+              <h4>경고</h4>{renderList(report.quality.warnings, "경고 없음")}
+              <h4>보완 제안</h4>{renderList(report.quality.suggestedFixes, "제안 없음")}
+            </>
+          ) : <EmptyProvenance />}
+        </section>
+
+        <section className="topicrpt-provenance-panel topicrpt-provenance-wide" data-qa="dr-collection-resolution" aria-labelledby="dr-collection-resolution-heading">
+          <h3 id="dr-collection-resolution-heading">Collection 실행 스냅샷</h3>
+          {resolution ? (
+            <>
+              <dl className="topicrpt-provenance-facts topicrpt-provenance-facts-wide">
+                <div><dt>Collection</dt><dd>{resolution.collectionId || "직접 범위"}</dd></div>
+                <div><dt>Revision</dt><dd>{resolution.collectionRevision ?? "—"}</dd></div>
+                <div><dt>후보</dt><dd>{resolution.eligibleTotal ?? "—"}건</dd></div>
+                <div><dt>선택 근거</dt><dd>{resolution.selectedEvidenceIds.length}건</dd></div>
+                <div><dt>후보 상한</dt><dd>{resolution.candidateCap ?? "—"}</dd></div>
+                <div><dt>해결 / 실행</dt><dd>{resolution.resolvedCandidateIds.length} / {resolution.executionUniverseIds.length}건</dd></div>
+              </dl>
+              <details><summary>재현성 세부 정보</summary><dl className="topicrpt-provenance-facts topicrpt-provenance-facts-wide"><div><dt>Definition hash</dt><dd>{resolution.collectionDefinitionHash || "—"}</dd></div><div><dt>Input watermark</dt><dd>{resolution.inputWatermark || "—"}</dd></div><div><dt>Index generation</dt><dd>{resolution.providerGenerations.indexGeneration || "—"}</dd></div><div><dt>RSS generation</dt><dd>{resolution.providerGenerations.rssGeneration || "—"}</dd></div><div><dt>Fingerprint</dt><dd>{resolution.resolutionFingerprint || "—"}</dd></div><div><dt>Resolved at</dt><dd>{resolution.resolvedAt || "—"}</dd></div></dl></details>
+              {resolution.unusableCandidates.length > 0 && <p className="topicrpt-layer-note">사용 제외 {resolution.unusableCandidates.length}건 · {resolution.unusableCandidates.map((row) => row.reason).join(", ")}</p>}
+              {resolution.zeroEvidenceRequired && <p className="topicrpt-contract-warning">근거 부족 확인: {resolution.zeroEvidenceReason || "사유 미기록"}</p>}
+            </>
+          ) : <EmptyProvenance />}
+        </section>
+
+        <aside className="topicrpt-hypothesis-panel" data-qa="dr-user-context-hypothesis" aria-labelledby="dr-user-context-heading">
+          <p className="section-kicker">HYPOTHESIS · 근거 아님</p>
+          <h3 id="dr-user-context-heading">사용자 컨텍스트</h3>
+          <p>{userContext || "이 보고서에는 사용자 컨텍스트가 기록되지 않았습니다."}</p>
+        </aside>
+
+        <aside className="topicrpt-hypothesis-panel topicrpt-provenance-wide" data-qa="dr-overlay-hypothesis" aria-labelledby="dr-overlay-heading">
+          <p className="section-kicker">PERSONAL OVERLAY · HYPOTHESIS</p>
+          <h3 id="dr-overlay-heading">개인 해석</h3>
+          {overlay ? (
+            <>
+              {overlay.stale && <div className="topicrpt-overlay-stale" data-qa="dr-overlay-stale" role="status"><strong>이 Overlay는 오래된 Canonical 기준입니다.</strong><span>현재 보고서 revision과 생성 당시 revision이 다르므로 다시 연결해 확인하세요.</span></div>}
+              {!overlay.canonicalRevision && !overlay.stale && <p className="topicrpt-layer-note">생성 기준 revision을 확인할 수 없는 레거시 Overlay입니다.</p>}
+              {overlay.markdown ? <ReportBody markdown={overlay.markdown} /> : <EmptyProvenance>저장된 개인 해석 본문이 없습니다.</EmptyProvenance>}
+              <h4>반대 근거와 충돌</h4>{renderList([...overlay.counterEvidence, ...overlay.contradictions], "기록 없음")}
+              <h4>불확실성과 다음 질문</h4>{renderList([...overlay.uncertainties, ...overlay.personalQuestions], "기록 없음")}
+            </>
+          ) : <EmptyProvenance>생성된 Personal Overlay가 없습니다.</EmptyProvenance>}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+export function MarketStateReportContext({ resolution }: { resolution?: MarketStateResolutionPayload }) {
   if (!resolution) return null;
   const ref = readMarketStateRef(resolution);
   const reason = typeof resolution.reason === "string" ? resolution.reason : "";
@@ -199,11 +323,11 @@ function splitReportTitle(markdown = "", fallback = "딥 리서치") {
   return { title: titleMatch[1], body: lines.slice(firstContentIndex + 1).join("\n").trim() };
 }
 
-function reportLabel(report: TopicReport) {
+function reportLabel(report: TopicReport | TopicReportSummary) {
   return report.topicLabel || report.topicKey || "딥 리서치";
 }
 
-function presetLabel(report: TopicReport) {
+function presetLabel(report: TopicReport | TopicReportSummary) {
   const key = String(report.topicKey || "").trim();
   return PRESET_LABELS[key] || key || "기타";
 }
@@ -213,21 +337,18 @@ function displayDate(value?: string) {
   return value.slice(0, 10) || value;
 }
 
-function sourceLabel(source: NonNullable<TopicReport["sources"]>[number]) {
-  return [source.source, source.date].filter(Boolean).join(" · ");
-}
-
-function sourceTitle(source: NonNullable<TopicReport["sources"]>[number]) {
-  return source.title || source.url || source.path || "자료";
-}
-
 function setTopicHash(reportId?: string) {
   window.location.hash = reportId ? `#/deep-research/${encodeURIComponent(reportId)}` : "#/deep-research";
 }
 
-function readTopicDetailId() {
+function readTopicDetailId(): { id: string; malformed: boolean } {
   const match = window.location.hash.match(/^#\/?deep-research\/(.+)$/);
-  return match ? decodeURIComponent(match[1]) : "";
+  if (!match) return { id: "", malformed: false };
+  try {
+    return { id: decodeURIComponent(match[1]), malformed: false };
+  } catch {
+    return { id: "", malformed: true };
+  }
 }
 
 function isDeepResearchHash() {
@@ -749,9 +870,11 @@ function PlanReview({
 
 export function DeepResearchRoute() {
   const [workLogRefreshKey, setWorkLogRefreshKey] = useState(0);
-  const [reports, setReports] = useState<TopicReport[]>([]);
+  const [reports, setReports] = useState<TopicReportSummary[]>([]);
   const [selected, setSelected] = useState<TopicReport | null>(null);
-  const [detailId, setDetailId] = useState(() => readTopicDetailId());
+  const initialDetail = useMemo(() => readTopicDetailId(), []);
+  const [detailId, setDetailId] = useState(initialDetail.id);
+  const [malformedRoute, setMalformedRoute] = useState(initialDetail.malformed);
   const [question, setQuestion] = useState("");
   const [userContext, setUserContext] = useState("");
   const [marketStatePolicy, setMarketStatePolicy] = useState<MarketStatePolicy>("include_current");
@@ -773,6 +896,9 @@ export function DeepResearchRoute() {
   const [proposalReloadKey, setProposalReloadKey] = useState(0);
   const requestId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
+  const listHeadingRef = useRef<HTMLHeadingElement>(null);
+  const openingReportId = useRef("");
+  const restoreFocusPending = useRef(false);
 
   const topicKey = TOPIC_PRESETS[0].key;
   const customLabel = question;
@@ -791,8 +917,8 @@ export function DeepResearchRoute() {
   const loadReports = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const payload = await getJson<TopicReport[]>("/api/topic-reports", { signal });
-      setReports(Array.isArray(payload) ? payload : []);
+      const payload = await getJson<unknown>("/api/topic-reports", { signal });
+      setReports(parseTopicReportSummaries(payload));
       setReadinessKind(null);
       setPhase((current) => current === "readiness" ? "draft" : current);
       setReactAgentContextScope("deep-research", { surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "", collectionId: null, collectionRevision: null });
@@ -835,12 +961,41 @@ export function DeepResearchRoute() {
   useEffect(() => {
     const handleHashChange = () => {
       if (!isDeepResearchHash()) return;
-      setDetailId(readTopicDetailId());
+      const route = readTopicDetailId();
+      setMalformedRoute(route.malformed);
+      setDetailId(route.id);
+      if (route.malformed) {
+        setSelected(null);
+        setError("보고서 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요.");
+        setErrorKind("report");
+        setErrorReason("malformed_report_id");
+        setPhase("recoverable-error");
+      }
     };
     window.addEventListener("hashchange", handleHashChange);
     handleHashChange();
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
+
+  const returnToReportList = useCallback(() => {
+    restoreFocusPending.current = true;
+    setSelected(null);
+    setMalformedRoute(false);
+    setError("");
+    setErrorKind(null);
+    setErrorReason("");
+    setTopicHash();
+  }, []);
+
+  useEffect(() => {
+    if (detailId || malformedRoute || !restoreFocusPending.current) return;
+    restoreFocusPending.current = false;
+    window.requestAnimationFrame(() => {
+      const reportId = openingReportId.current.replace(/["\\]/g, "");
+      const opener = reportId ? document.querySelector<HTMLElement>("[data-report-id=\"" + reportId + "\"]") : null;
+      (opener || listHeadingRef.current)?.focus({ preventScroll: true });
+    });
+  }, [detailId, malformedRoute, phase]);
 
   useEffect(() => {
     const handleProposalLifecycle = (event: Event) => {
@@ -861,9 +1016,13 @@ export function DeepResearchRoute() {
     requestId.current = detailRequest;
     async function loadDetail(reportId: string) {
       setLoading(true);
+      setError("");
+      setErrorKind(null);
+      setErrorReason("");
       try {
-        const report = await getJson<TopicReport>(`/api/topic-reports/${encodeURIComponent(reportId)}?includePersonal=true`, { signal: controller.signal });
+        const payload = await getJson<unknown>(`/api/topic-reports/${encodeURIComponent(reportId)}?includePersonal=true`, { signal: controller.signal });
         if (controller.signal.aborted || requestId.current !== detailRequest) return;
+        const report = parseTopicReportPayload(payload);
         setSelected(report);
         setPhase("report");
         setReactAgentContextScope("deep-research", { surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: report.id || reportId, collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
@@ -879,16 +1038,16 @@ export function DeepResearchRoute() {
         if (!controller.signal.aborted && requestId.current === detailRequest) setLoading(false);
       }
     }
-    if (detailId) {
+    if (detailId && !malformedRoute) {
       void loadDetail(detailId);
-    } else {
+    } else if (!malformedRoute) {
       setSelected(null);
       setPhase((current) => current === "report" ? "draft" : current);
       setReactAgentContextScope("deep-research", { surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "", collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
       setLoading(false);
     }
     return () => controller.abort();
-  }, [detailId, proposalReloadKey]);
+  }, [detailId, malformedRoute, proposalReloadKey]);
 
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -961,7 +1120,7 @@ export function DeepResearchRoute() {
       if (!isCurrentRequest(request.id)) return;
       const reportId = done.result?.reportId || done.result?.artifactId || "";
       if (!reportId) throw new Error("생성된 보고서 ID를 확인하지 못했습니다.");
-      const report = await getJson<TopicReport>(`/api/topic-reports/${encodeURIComponent(reportId)}?includePersonal=true`, { signal: request.signal });
+      const report = parseTopicReportPayload(await getJson<unknown>(`/api/topic-reports/${encodeURIComponent(reportId)}?includePersonal=true`, { signal: request.signal }));
       if (!isCurrentRequest(request.id)) return;
       setReports((current) => [report, ...current.filter((item) => item.id !== report.id)]);
       setSelected(report);
@@ -1031,7 +1190,7 @@ export function DeepResearchRoute() {
     }
   };
 
-  async function deleteReport(report: TopicReport) {
+  async function deleteReport(report: TopicReportSummary) {
     if (!report.id || !window.confirm(`${reportLabel(report)} 보고서를 삭제할까요?`)) return;
     setActionBusy(`delete-${report.id}`);
     setError("");
@@ -1075,7 +1234,7 @@ export function DeepResearchRoute() {
     try {
       const response = await postJson<OverlayResult | AgentJob>(`/api/topic-reports/${encodeURIComponent(selected.id)}/personal-overlay`, {});
       if (isAgentJob(response)) await pollJob(response, new AbortController().signal);
-      const updated = await getJson<TopicReport>(`/api/topic-reports/${encodeURIComponent(selected.id)}?includePersonal=true`);
+      const updated = parseTopicReportPayload(await getJson<unknown>(`/api/topic-reports/${encodeURIComponent(selected.id)}?includePersonal=true`));
       setSelected(updated);
       setStatus("내 노트와 연결했습니다.");
     } catch (err) {
@@ -1086,7 +1245,7 @@ export function DeepResearchRoute() {
   }
 
   const groupedReports = useMemo(() => {
-    const groups = new Map<string, TopicReport[]>();
+    const groups = new Map<string, TopicReportSummary[]>();
     for (const report of reports) {
       const key = presetLabel(report);
       if (!groups.has(key)) groups.set(key, []);
@@ -1097,9 +1256,39 @@ export function DeepResearchRoute() {
       .sort((a, b) => String(b.rows[0]?.generatedAt || b.rows[0]?.date || "").localeCompare(String(a.rows[0]?.generatedAt || a.rows[0]?.date || "")));
   }, [reports]);
 
-  const readerContent = splitReportTitle(selected?.markdown || "", reportLabel(selected || {}));
-  const sources = selected?.sources || [];
+  const readerContent = splitReportTitle(selected?.markdown || "", selected ? reportLabel(selected) : "딥 리서치");
   const selectedMarketStateContext = marketStateContextProjection(selected?.marketStateResolution);
+
+  if (detailId && !selected && !(phase === "recoverable-error" && errorKind === "report")) {
+    return (
+      <div className="react-deep-research-route" data-deep-research-route>
+        <section className="topicrpt-report-state" data-qa="dr-report-loading" role="status" aria-live="polite" aria-busy="true">
+          <p className="section-kicker">DEEP RESEARCH</p>
+          <h1 tabIndex={-1}>저장된 리포트를 여는 중입니다</h1>
+          <p>Canonical 보고서와 구조화된 근거 원장을 함께 확인하고 있습니다.</p>
+        </section>
+      </div>
+    );
+  }
+
+  if ((detailId || malformedRoute) && !selected && (malformedRoute || (phase === "recoverable-error" && errorKind === "report"))) {
+    const notFound = errorReason === "topic_report_not_found" || errorReason === "not_found";
+    return (
+      <div className="react-deep-research-route" data-deep-research-route>
+        <section
+          className="topicrpt-report-state is-error"
+          data-qa={notFound ? "dr-report-not-found" : "dr-report-error"}
+          role="alert"
+          aria-live="assertive"
+        >
+          <p className="section-kicker">DEEP RESEARCH</p>
+          <h1>{notFound ? "저장된 리포트를 찾을 수 없습니다" : "리포트를 열 수 없습니다"}</h1>
+          <p data-qa={notFound ? "dr-not-found" : undefined}>{error || "보고서 주소나 저장 데이터를 확인한 뒤 목록에서 다시 여세요."}</p>
+          <button className="filter-btn clear" type="button" data-qa="dr-report-return" onClick={returnToReportList}>딥 리서치 목록으로 돌아가기</button>
+        </section>
+      </div>
+    );
+  }
 
   if (selected && phase === "report") {
     return (
@@ -1113,18 +1302,18 @@ export function DeepResearchRoute() {
           agentContext={{ surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: selected.id || "", topic: reportLabel(selected), marketState: selectedMarketStateContext }}
           breadcrumb={(
             <>
-              <button type="button" onClick={() => setTopicHash()}>딥 리서치</button>
+              <button type="button" data-qa="dr-report-return" onClick={returnToReportList}>딥 리서치</button>
               <span>{readerContent.title}</span>
             </>
           )}
-          onClose={() => setTopicHash()}
+          onClose={returnToReportList}
           actionSlot={(
             <>
               <ReaderActionGroup title="AI">
                 <ReaderActionButton icon="agent" onClick={() => openReactAgentDock({ surface: "topic_report_reader", reportKind: "topic_report", reportId: selected.id || "", topic: reportLabel(selected), message: `${readerContent.title}의 핵심 결론, 반대 근거, 더 발전시킬 분석 방향을 정리해줘.`, autoSubmit: true })}>Agent에게 묻기</ReaderActionButton>
               </ReaderActionGroup>
               <ReaderActionGroup title="노트">
-                <ReaderActionButton icon="link" disabled={actionBusy === "overlay" || !selected.id} onClick={generatePersonalOverlay}>{actionBusy === "overlay" ? "연결 중" : "내 노트와 연결"}</ReaderActionButton>
+                <ReaderActionButton icon="link" data-qa="dr-overlay-generate" disabled={actionBusy === "overlay" || !selected.id} onClick={generatePersonalOverlay}>{actionBusy === "overlay" ? "연결 중" : "내 노트와 연결"}</ReaderActionButton>
               </ReaderActionGroup>
               <ReaderActionGroup title="내보내기">
                 <ReaderActionButton icon="notion" disabled={actionBusy === "notion"} onClick={() => exportTopicReport("notion")}>{actionBusy === "notion" ? "내보내는 중" : "Notion으로 내보내기"}</ReaderActionButton>
@@ -1140,19 +1329,7 @@ export function DeepResearchRoute() {
         >
           <MarketStateReportContext resolution={selected.marketStateResolution} />
           <ReportBody markdown={readerContent.body || selected.markdown || ""} />
-          {sources.length > 0 && (
-            <section className="source-panel react-topic-sources">
-              <h4>참고자료</h4>
-              <div className="sources">
-                {sources.map((source) => (
-                  <div className="meta" key={`${sourceTitle(source)}-${source.url || source.path || source.date || source.source || "source"}`}>
-                    <span>{sourceLabel(source)}</span>
-                    {source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer">{sourceTitle(source)}</a> : <span>{sourceTitle(source)}</span>}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
+          <DeepResearchProvenance report={selected} />
         </ReportReaderShell>
       </div>
     );
@@ -1240,7 +1417,7 @@ export function DeepResearchRoute() {
       {status && phase !== "generation" && phase !== "report" && <p className="react-dashboard-warning" data-qa="dr-status" role="status">{status}</p>}
 
       <div className="section-head compact analysis-archive-head topicrpt-saved-panel">
-        <div><h2 className="section-title">저장된 리포트</h2><p className="section-subtitle">카드를 누르면 원문·근거·개인 레이어를 확인할 수 있습니다.</p></div>
+        <div><h2 ref={listHeadingRef} className="section-title" tabIndex={-1}>저장된 리포트</h2><p className="section-subtitle">카드를 누르면 원문·근거·개인 레이어를 확인할 수 있습니다.</p></div>
       </div>
       <div className="report-feed">
         {groupedReports.length ? groupedReports.map((group) => (
@@ -1251,14 +1428,14 @@ export function DeepResearchRoute() {
                 const deleting = actionBusy === `delete-${report.id}`;
                 return (
                   <div className="report-feed-card-wrap" key={report.id || `${reportLabel(report)}-${report.date}`}>
-                    <button className="report-feed-card is-topic" type="button" onClick={() => report.id && setTopicHash(report.id)}><span className="report-feed-card-meta">{report.mode && <span className="report-feed-badge">{String(report.mode).toUpperCase()}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">{displayDate(report.date || report.generatedAt)}</span></button>
+                    <button className="report-feed-card is-topic" type="button" data-report-id={report.id} onClick={() => { if (report.id) { openingReportId.current = report.id; setTopicHash(report.id); } }}><span className="report-feed-card-meta">{report.mode && <span className="report-feed-badge">{String(report.mode).toUpperCase()}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">{displayDate(report.date || report.generatedAt)}</span></button>
                     <button type="button" className="report-feed-card-delete" disabled={deleting} onClick={() => void deleteReport(report)} aria-label={`${reportLabel(report)} 삭제`} data-tooltip="삭제"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" /></svg></button>
                   </div>
                 );
               })}
             </div>
           </section>
-        )) : <div className="report-feed-empty">저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요.</div>}
+        )) : <div className="report-feed-empty" data-qa="dr-report-list-empty">저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요.</div>}
       </div>
       <AgentWorkLog surface="deep-research" pageSize={20} defaultFilter="task" refreshKey={workLogRefreshKey} />
     </div>

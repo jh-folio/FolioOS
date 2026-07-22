@@ -9920,6 +9920,181 @@ body.watchlist-detail-open #watchlist > :not(.watchlist-detail-inline) {
   font-weight: 700;
 }
 
+.report-reader-dialog:focus-visible,
+.section-title[tabindex="-1"]:focus-visible {
+  outline: 2px solid var(--folio-surface-dark);
+  outline-offset: 4px;
+}
+
+.topicrpt-report-state {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  width: min(720px, 100%);
+  margin: clamp(32px, 8vh, 96px) auto;
+  padding: clamp(24px, 5vw, 48px);
+  border: 1px solid var(--folio-border);
+  border-left: 4px solid var(--folio-gold);
+  border-radius: var(--folio-radius);
+  background: var(--folio-surface-clean);
+  box-shadow: var(--elev-1);
+}
+
+.topicrpt-report-state h1,
+.topicrpt-report-state p {
+  margin: 0;
+}
+
+.topicrpt-report-state.is-error {
+  border-left-color: var(--folio-burgundy);
+}
+
+.topicrpt-provenance {
+  display: grid;
+  gap: 18px;
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 3px double var(--folio-border-strong);
+}
+
+.topicrpt-provenance-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.topicrpt-provenance-heading h2,
+.topicrpt-provenance-heading p,
+.topicrpt-provenance-panel h3,
+.topicrpt-provenance-panel h4,
+.topicrpt-hypothesis-panel h3,
+.topicrpt-hypothesis-panel h4 {
+  margin: 0;
+}
+
+.topicrpt-provenance-heading > p:last-child,
+.topicrpt-layer-note,
+.topicrpt-provenance-empty {
+  color: var(--folio-ink-muted);
+}
+
+.topicrpt-provenance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.topicrpt-provenance-panel,
+.topicrpt-hypothesis-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--folio-border);
+  border-radius: var(--folio-radius);
+  background: var(--folio-surface-clean);
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.topicrpt-provenance-panel {
+  border-top: 3px solid var(--folio-surface-dark-2);
+}
+
+.topicrpt-provenance-wide {
+  grid-column: 1 / -1;
+}
+
+.topicrpt-hypothesis-panel {
+  border-color: color-mix(in srgb, var(--folio-purple) 38%, var(--folio-border));
+  border-top: 3px solid var(--folio-purple);
+  background: color-mix(in srgb, var(--folio-purple-soft) 42%, var(--folio-surface-clean));
+}
+
+.topicrpt-hypothesis-panel .section-kicker {
+  color: var(--folio-purple);
+}
+
+.topicrpt-provenance-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.topicrpt-provenance-facts-wide {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.topicrpt-provenance-facts div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topicrpt-provenance-facts dt {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+
+.topicrpt-provenance-facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.topicrpt-provenance-list,
+.topicrpt-source-ledger {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topicrpt-provenance-list li,
+.topicrpt-source-ledger li {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--folio-border-strong);
+  background: var(--folio-surface);
+}
+
+.topicrpt-provenance-list span,
+.topicrpt-source-ledger span,
+.topicrpt-source-ledger small {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.topicrpt-source-ledger li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.topicrpt-source-ledger a {
+  width: fit-content;
+  font-weight: 700;
+}
+
+.topicrpt-contract-warning,
+.topicrpt-overlay-stale {
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--folio-burgundy) 30%, var(--folio-border));
+  border-radius: var(--folio-radius);
+  background: var(--folio-red-soft);
+  color: var(--folio-ink);
+}
+
+.topicrpt-overlay-stale span {
+  color: var(--folio-ink-muted);
+}
+
 /* 데스크톱 인라인 리더 = grid 2열: [본문][우측 컬럼(조작 레일 위 + 투자 노트 아래)].
    리더가 열리면 main-content 폭 캡을 풀어 본문~우측 컬럼이 도크 직전까지 빈틈없이 채운다. */
 @media (min-width: 761px) {
@@ -10150,11 +10325,23 @@ body.watchlist-detail-open #watchlist > :not(.watchlist-detail-inline) {
   .briefing-reader-inline .briefing-reader-dialog,
   .report-reader-inline .report-reader-dialog {
     max-height: none;
+    height: auto;
+    overflow-y: visible;
   }
 
   .briefing-reader-inline .briefing-reader-body,
   .report-reader-inline .report-reader-body {
     overflow: visible;
+  }
+
+  .topicrpt-provenance-grid,
+  .topicrpt-provenance-facts,
+  .topicrpt-provenance-facts-wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .topicrpt-provenance-wide {
+    grid-column: auto;
   }
 }
 
