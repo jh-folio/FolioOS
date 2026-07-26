@@ -477,11 +477,11 @@ export function AgentHome() {
     }
   }
 
-  async function runQuickAction(action: "briefing" | "rss" | "analysis") {
+  async function runQuickAction(action: "briefing" | "rss" | "analysis" | "deep-research") {
     setError("");
     setQuickStatus("");
-    if (action === "analysis") {
-      window.location.hash = "#/analysis";
+    if (action === "analysis" || action === "deep-research") {
+      window.location.hash = action === "analysis" ? "#/analysis" : "#/deep-research";
       return;
     }
     setQuickBusy(action);
@@ -661,6 +661,7 @@ export function AgentHome() {
               {quickBusy === "rss" ? "수집 중" : "RSS 수집"}
             </button>
             <button className="launch-tile" type="button" onClick={() => runQuickAction("analysis")}>기업 분석</button>
+            <button className="launch-tile" data-qa="home-deep-research" type="button" onClick={() => runQuickAction("deep-research")}>딥 리서치</button>
           </div>
 
           {recentReports.length > 0 && (

@@ -1,6 +1,6 @@
-# Smart Collections v0
+# Smart Collections v1
 
-Smart Collections는 로컬 Research Library의 외부 자료를 다시 찾기 위한 결정적 저장 필터입니다. 컬렉션 자체는 evidence가 아니며, 사용자 노트·첨부·생성 보고서·가설을 결과에 포함하지 않습니다.
+Smart Collections는 0.2 Deep Research 안에서 로컬 Research Library의 외부 자료를 다시 찾기 위한 결정적 저장 필터입니다. 별도 기본 navigation 화면은 없으며 Deep Research plan과 Agent context에는 collection ID/revision 및 서버가 다시 계산한 metadata-only projection만 전달합니다. 컬렉션 자체는 evidence가 아니며, 사용자 노트·첨부·생성 보고서·가설을 결과에 포함하지 않습니다.
 
 ## 저장과 동시성
 

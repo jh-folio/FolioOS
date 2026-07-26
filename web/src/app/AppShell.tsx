@@ -17,7 +17,7 @@ import { activateReactAgentContextScope } from "./agentContext";
 const NAV_GROUPS: Array<{ title: string; routes: RouteId[] }> = [
   { title: "Home", routes: ["home"] },
   { title: "News", routes: ["briefing", "rss", "market-memory"] },
-  { title: "Research", routes: ["analysis"] },
+  { title: "Research", routes: ["analysis", "deep-research"] },
   { title: "System", routes: ["settings"] },
 ];
 
@@ -182,6 +182,7 @@ export function AppShell() {
       scrollByRouteRef.current[previousRoute] = host.scrollTop;
       window.requestAnimationFrame(() => {
         host.scrollTop = scrollByRouteRef.current[routeId] || 0;
+        host.focus({ preventScroll: true });
       });
     }
     previousRouteRef.current = routeId;
@@ -290,6 +291,7 @@ export function AppShell() {
                       <button
                         type="button"
                         data-tooltip={route.label}
+                        data-qa={route.id === "deep-research" ? "nav-deep-research" : undefined}
                         className={`react-left-nav-item${route.id === active.id ? " active" : ""}`}
                         onClick={() => {
                           navigateToRoute(route.id);
@@ -308,7 +310,7 @@ export function AppShell() {
       </aside>
 
       <main className="react-shell-main">
-        <section className="react-route-host" data-route={active.id} ref={routeHostRef}>
+        <section className="react-route-host" data-route={active.id} ref={routeHostRef} tabIndex={-1}>
           {ROUTES.filter((route) => visitedRoutes.has(route.id)).map((route) => (
             <div
               className="react-route-pane"

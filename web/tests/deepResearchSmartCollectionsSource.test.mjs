@@ -134,11 +134,14 @@ test("Deep Research clears only the collection identity owned by its effect", as
   assert.match(effect, /patchReactAgentContextScope\("deep-research", \{ collectionId: null, collectionRevision: null \}\)/);
 });
 
-test("Smart Collections remain scoped to Deep Research and hidden navigation stays pinned", async () => {
+test("Smart Collections remain scoped to the exposed Deep Research route", async () => {
   const shell = await source("app/AppShell.tsx");
   const routes = await source("app/routes.ts");
 
   assert.doesNotMatch(shell, /SmartCollections/);
-  assert.match(routes, /id: "deep-research", label: "딥 리서치", group: "research", visibleInNav: false/);
+  assert.match(routes, /id: "deep-research", label: "딥 리서치", group: "research" \}/);
+  assert.doesNotMatch(routes, /id: "deep-research"[^\n]+visibleInNav: false/);
+  assert.match(routes, /id: "dashboard"[^\n]+visibleInNav: false/);
+  assert.match(routes, /id: "watchlist"[^\n]+visibleInNav: false/);
   assert.doesNotMatch(routes, /id: "smart-collections"/);
 });

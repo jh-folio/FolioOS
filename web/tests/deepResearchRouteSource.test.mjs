@@ -55,18 +55,21 @@ test("deep-research route no longer falls back to the legacy topicrpt view", asy
   assert.doesNotMatch(source, /id: "deep-research", label: "딥 리서치", group: "research", legacyViewId: "topicrpt"/);
 });
 
-test("Deep Research stays routable but is hidden from the default 0.1 surface", async () => {
+test("Deep Research is exposed on the 0.2 nav, Home, and command palette only", async () => {
   const routeSource = await readFile(new URL("../src/app/routes.ts", import.meta.url), "utf8");
   const shellSource = await readFile(new URL("../src/app/AppShell.tsx", import.meta.url), "utf8");
   const homeSource = await readFile(new URL("../src/app/AgentHome.tsx", import.meta.url), "utf8");
   const paletteSource = await readFile(new URL("../src/app/CommandPalette.tsx", import.meta.url), "utf8");
 
-  assert.match(routeSource, /id: "deep-research", label: "딥 리서치", group: "research", visibleInNav: false/);
+  assert.match(routeSource, /id: "deep-research", label: "딥 리서치", group: "research"/);
+  assert.doesNotMatch(routeSource, /id: "deep-research"[^\n]+visibleInNav: false/);
   assert.match(routeSource, /id: "dashboard", label: "대시보드", group: "home", visibleInNav: false/);
   assert.match(routeSource, /id: "watchlist", label: "워치리스트", group: "home", visibleInNav: false/);
   assert.match(routeSource, /export const NAV_ROUTES = ROUTES\.filter/);
-  assert.doesNotMatch(shellSource, /routes: \["analysis", "deep-research"\]/);
+  assert.match(shellSource, /routes: \["analysis", "deep-research"\]/);
   assert.doesNotMatch(shellSource, /routes: \["home", "dashboard", "watchlist"\]/);
-  assert.doesNotMatch(homeSource, /runQuickAction\("deep-research"\)/);
+  assert.match(homeSource, /runQuickAction\("deep-research"\)/);
+  assert.match(homeSource, /data-qa="home-deep-research"/);
   assert.match(paletteSource, /NAV_ROUTES\.map/);
+  assert.match(paletteSource, /command-deep-research/);
 });

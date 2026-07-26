@@ -38,11 +38,20 @@ def test_release_cli_defaults_to_version_file() -> None:
     assert "FolioOS-v0.2.0" in result.stdout
 
 
-def test_deep_research_navigation_remains_hidden() -> None:
+def test_deep_research_navigation_is_exposed_for_020() -> None:
     route_source = (ROOT / "web" / "src" / "app" / "routes.ts").read_text(encoding="utf-8")
     shell_source = (ROOT / "web" / "src" / "app" / "AppShell.tsx").read_text(encoding="utf-8")
     home_source = (ROOT / "web" / "src" / "app" / "AgentHome.tsx").read_text(encoding="utf-8")
+    palette_source = (ROOT / "web" / "src" / "app" / "CommandPalette.tsx").read_text(encoding="utf-8")
 
-    assert re.search(r'id: "deep-research"[^\n]+visibleInNav: false', route_source)
-    assert 'routes: ["analysis", "deep-research"]' not in shell_source
-    assert 'runQuickAction("deep-research")' not in home_source
+    assert re.search(r'id: "deep-research"[^\n]+group: "research"', route_source)
+    assert not re.search(r'id: "deep-research"[^\n]+visibleInNav: false', route_source)
+    assert 'routes: ["analysis", "deep-research"]' in shell_source
+    assert 'runQuickAction("deep-research")' in home_source
+    assert 'data-qa="home-deep-research"' in home_source
+    assert 'command-deep-research' in palette_source
+    assert "host.focus({ preventScroll: true })" in shell_source
+    assert 'tabIndex={-1}' in shell_source
+
+    assert re.search(r'id: "dashboard"[^\n]+visibleInNav: false', route_source)
+    assert re.search(r'id: "watchlist"[^\n]+visibleInNav: false', route_source)

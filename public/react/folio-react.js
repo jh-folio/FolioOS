@@ -7158,8 +7158,8 @@ function yt() {
 		}
 	}
 	async function P(e) {
-		if (E(""), S(""), e === "analysis") {
-			window.location.hash = "#/analysis";
+		if (E(""), S(""), e === "analysis" || e === "deep-research") {
+			window.location.hash = e === "analysis" ? "#/analysis" : "#/deep-research";
 			return;
 		}
 		b(e);
@@ -7382,6 +7382,13 @@ function yt() {
 									type: "button",
 									onClick: () => P("analysis"),
 									children: "기업 분석"
+								}),
+								/* @__PURE__ */ (0, W.jsx)("button", {
+									className: "launch-tile",
+									"data-qa": "home-deep-research",
+									type: "button",
+									onClick: () => P("deep-research"),
+									children: "딥 리서치"
 								})
 							]
 						}),
@@ -8851,8 +8858,7 @@ var mn = [
 	{
 		id: "deep-research",
 		label: "딥 리서치",
-		group: "research",
-		visibleInNav: !1
+		group: "research"
 	},
 	{
 		id: "watchlist",
@@ -8912,6 +8918,7 @@ function Cn() {
 			title: e.label,
 			subtitle: bn(e.id),
 			type: "화면",
+			qa: e.id === "deep-research" ? "command-deep-research" : void 0,
 			run: () => {
 				window.location.hash = vn(e.id);
 			}
@@ -9021,6 +9028,7 @@ function Cn() {
 					children: d.length ? d.map((e, t) => /* @__PURE__ */ (0, W.jsxs)("button", {
 						className: `command-item${t === i ? " active" : ""}`,
 						type: "button",
+						"data-qa": e.qa,
 						role: "option",
 						"aria-selected": t === i,
 						onMouseEnter: () => a(t),
@@ -15830,7 +15838,7 @@ var bo = [
 	},
 	{
 		title: "Research",
-		routes: ["analysis"]
+		routes: ["analysis", "deep-research"]
 	},
 	{
 		title: "System",
@@ -16010,7 +16018,7 @@ function To() {
 	}, [e, t]), (0, c.useEffect)(() => {
 		let e = _.current, n = v.current;
 		e && (y.current[n] = e.scrollTop, window.requestAnimationFrame(() => {
-			e.scrollTop = y.current[t] || 0;
+			e.scrollTop = y.current[t] || 0, e.focus({ preventScroll: !0 });
 		})), v.current = t;
 	}, [t]), (0, c.useEffect)(() => {
 		let e = window.FolioBridge ?? {}, t = e.openAgentDock;
@@ -16107,6 +16115,7 @@ function To() {
 									}), /* @__PURE__ */ (0, W.jsxs)("button", {
 										type: "button",
 										"data-tooltip": r.label,
+										"data-qa": r.id === "deep-research" ? "nav-deep-research" : void 0,
 										className: `react-left-nav-item${r.id === n.id ? " active" : ""}`,
 										onClick: () => {
 											C(r.id);
@@ -16132,6 +16141,7 @@ function To() {
 					className: "react-route-host",
 					"data-route": n.id,
 					ref: _,
+					tabIndex: -1,
 					children: mn.filter((e) => l.has(e.id)).map((e) => /* @__PURE__ */ (0, W.jsx)("div", {
 						className: "react-route-pane",
 						"data-route-pane": e.id,
