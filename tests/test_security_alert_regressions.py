@@ -185,6 +185,7 @@ def test_agent_cli_never_prints_credential_shaped_payload(capsys) -> None:
 
 def test_agent_bridge_probe_does_not_return_raw_exception_text(monkeypatch) -> None:
     marker = "SYNTHETIC_PRIVATE_BRIDGE_EXCEPTION_DETAIL"
+    monkeypatch.setattr(agent_bridge.shutil, "which", lambda _binary: "/usr/bin/codex")
     monkeypatch.setattr(
         agent_bridge.subprocess,
         "run",
@@ -274,6 +275,20 @@ def test_legacy_dotenv_secrets_migrate_to_secret_store(tmp_path: Path, monkeypat
     assert marker not in env_text
     assert "OPENAI_API_KEY=" not in env_text
     assert "OPENAI_MODEL=gpt-security-test" in env_text
+
+
+def test_portfolio_price_cache_path_is_one_bounded_child(monkeypatch, tmp_path: Path) -> None:
+    cache_root = tmp_path / "portfolio-price-cache"
+    monkeypatch.setattr(portfolio_service, "PORTFOLIO_PRICE_CACHE_DIR", cache_root)
+
+    path = portfolio_service._series_cache_path(
+        "AAPL",
+        "../../outside",
+        "2026-01-01/../../escaped",
+    )
+
+    assert path.parent == cache_root
+    assert ".." not in path.name
 
 
 def test_failed_secret_migration_preserves_legacy_dotenv_value(tmp_path: Path, monkeypatch) -> None:

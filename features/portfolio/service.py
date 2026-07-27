@@ -921,13 +921,14 @@ def preset_from_current_portfolio(name="현재 포트폴리오 목표 비중"):
 # ---------------------------------------------------------------------------
 
 def _series_cache_path(symbol: str, start: str, end: str) -> Path:
-    safe = re.sub(r"[^0-9A-Za-z._=-]+", "_", symbol)
-    return PORTFOLIO_PRICE_CACHE_DIR / f"{safe}_{start}_{end}.json"
+    safe = re.sub(r"[^0-9A-Za-z._=-]+", "_", f"{symbol}_{start}_{end}")
+    safe = re.sub(r"\.{2,}", "_", safe)
+    return PORTFOLIO_PRICE_CACHE_DIR / f"{safe}.json"
 
 
 def _download_adjusted_close(symbol: str, start: str, end: str):
     cache_path = _series_cache_path(symbol, start, end)
-    cached = read_json(cache_path)
+    cached = read_json(cache_path, None, root=PORTFOLIO_PRICE_CACHE_DIR)
     if isinstance(cached, dict) and cached.get("series"):
         return cached["series"], cached.get("source", "cache")
     try:
@@ -944,7 +945,11 @@ def _download_adjusted_close(symbol: str, start: str, end: str):
         if not series:
             raise ValueError(f"{symbol} 종가 데이터가 없습니다.")
         PORTFOLIO_PRICE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        write_json(cache_path, {"symbol": symbol, "start": start, "end": end, "series": series, "source": "yfinance", "updatedAt": now_iso()})
+        write_json(
+            cache_path,
+            {"symbol": symbol, "start": start, "end": end, "series": series, "source": "yfinance", "updatedAt": now_iso()},
+            root=PORTFOLIO_PRICE_CACHE_DIR,
+        )
         return series, "yfinance"
     except Exception as exc:
         if isinstance(cached, dict) and cached.get("series"):

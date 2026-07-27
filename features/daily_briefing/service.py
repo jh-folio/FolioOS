@@ -3,6 +3,7 @@ import os
 import re
 from pathlib import Path
 
+from features.common.canonical_report_io import safe_child_path
 from features.common.dataframe_ops import top_records
 from features.common.utils import normalize, kst_date
 from features.common.market_calendar import briefing_market_windows, doc_market_bucket, doc_analysis_priority
@@ -1277,10 +1278,7 @@ def _read_briefing_json(path):
     import json
 
     try:
-        candidate = Path(path).resolve(strict=False)
-        candidate.relative_to(BRIEFINGS_DIR.resolve(strict=False))
-        # candidate is constrained to the configured briefing storage root.
-        # codeql[py/path-injection]
+        candidate = safe_child_path(BRIEFINGS_DIR, Path(path).name)
         return json.loads(candidate.read_text(encoding="utf-8"))
     except Exception:
         return None

@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from features.common.canonical_report_io import safe_child_path
+
 
 def strip_html_text(value, *, separator=" "):
     """Return visible text without executable/style elements."""
@@ -56,10 +58,7 @@ def kst_date():
 
 
 def _bounded_path(path, root):
-    candidate = Path(path).resolve(strict=False)
-    resolved_root = Path(root).resolve(strict=False)
-    candidate.relative_to(resolved_root)
-    return candidate
+    return safe_child_path(Path(root), Path(path).name)
 
 
 def read_json(path, fallback, *, root=None):
@@ -80,7 +79,10 @@ def write_json(path, data, *, root=None):
     # Sensitive feature payloads are redacted at their owning schema boundary.
     # codeql[py/path-injection]
     # codeql[py/clear-text-storage-sensitive-data]
-    candidate.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    candidate.write_text(  # lgtm[py/clear-text-storage-sensitive-data]
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def clean_brief_text(text, limit=420):

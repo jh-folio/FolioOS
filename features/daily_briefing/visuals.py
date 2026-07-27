@@ -569,19 +569,19 @@ def load_visual_sidecar(date, base_dir=None, market_scope=None):
 def _load_visual_report(root, date_text, market_scope=""):
     scope = str(market_scope or "").strip().lower()
     if scope in {"us", "kr"}:
-        scoped = read_json(root / briefing_file_name(date_text, scope), None)
+        scoped = read_json(root / briefing_file_name(date_text, scope), None, root=root)
         if isinstance(scoped, dict):
             return briefing_scope_view(scoped, scope)
-        legacy = read_json(root / briefing_file_name(date_text), None)
+        legacy = read_json(root / briefing_file_name(date_text), None, root=root)
         if isinstance(legacy, dict):
             return briefing_scope_view(legacy, scope)
         return None
 
-    legacy = read_json(root / briefing_file_name(date_text), None)
+    legacy = read_json(root / briefing_file_name(date_text), None, root=root)
     if isinstance(legacy, dict):
         return legacy
     scoped_reports = {
-        key: read_json(root / briefing_file_name(date_text, key), None)
+        key: read_json(root / briefing_file_name(date_text, key), None, root=root)
         for key in ("us", "kr")
     }
     if not any(isinstance(value, dict) for value in scoped_reports.values()):

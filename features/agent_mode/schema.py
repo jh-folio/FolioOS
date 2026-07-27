@@ -210,7 +210,10 @@ def update_pack_status(path: str | Path, *, status: str, result: dict | None = N
     scrubbed = scrub_secrets(pack)
     # scrub_secrets removes credential-shaped keys and values before persistence.
     # codeql[py/clear-text-storage-sensitive-data]
-    resolved.write_text(json.dumps(scrubbed, ensure_ascii=False, indent=2), encoding="utf-8")
+    resolved.write_text(  # lgtm[py/clear-text-storage-sensitive-data]
+        json.dumps(scrubbed, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     return scrubbed
 
 

@@ -30,7 +30,9 @@ def _read_json_arg(value: str) -> dict:
 def _print_json(payload: dict) -> None:
     # scrub_secrets is the CLI's mandatory final output boundary.
     # codeql[py/clear-text-logging-sensitive-data]
-    print(json.dumps(schema.scrub_secrets(payload), ensure_ascii=False, indent=2))
+    print(  # lgtm[py/clear-text-logging-sensitive-data]
+        json.dumps(schema.scrub_secrets(payload), ensure_ascii=False, indent=2)
+    )
 
 
 def _result_summary(result: Any) -> dict:
