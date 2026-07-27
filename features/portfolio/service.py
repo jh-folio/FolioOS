@@ -2,6 +2,7 @@
 import datetime as dt
 import hashlib
 import json
+import os
 import re
 import urllib.parse
 import urllib.request
@@ -1544,22 +1545,32 @@ def list_portfolio_backtests():
     return items
 
 
-def get_portfolio_backtest(backtest_id):
-    backtest_id = str(backtest_id or "")
-    if not BACKTEST_ID_RE.fullmatch(backtest_id):
+def _portfolio_backtest_path(backtest_id):
+    identifier = str(backtest_id or "")
+    if not BACKTEST_ID_RE.fullmatch(identifier):
         return None
-    path = BACKTESTS_DIR / f"{backtest_id}.json"
+    root = os.path.realpath(BACKTESTS_DIR)
+    path = os.path.realpath(os.path.join(root, f"{identifier}.json"))
+    if not path.startswith(root + os.sep):
+        return None
+    return Path(path)
+
+
+def get_portfolio_backtest(backtest_id):
+    path = _portfolio_backtest_path(backtest_id)
+    if path is None:
+        return None
     if not path.exists():
         return None
     return read_json(path, None)
 
 
 def delete_portfolio_backtest(backtest_id):
-    backtest_id = str(backtest_id or "")
-    if not BACKTEST_ID_RE.fullmatch(backtest_id):
-        return {"deleted": False, "id": backtest_id}
-    path = BACKTESTS_DIR / f"{backtest_id}.json"
+    identifier = str(backtest_id or "")
+    path = _portfolio_backtest_path(identifier)
+    if path is None:
+        return {"deleted": False, "id": identifier}
     if path.exists():
         path.unlink()
-        return {"deleted": True, "id": backtest_id}
-    return {"deleted": False, "id": backtest_id}
+        return {"deleted": True, "id": identifier}
+    return {"deleted": False, "id": identifier}

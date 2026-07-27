@@ -80,6 +80,21 @@ def test_portfolio_backtest_ids_cannot_escape_storage_root(tmp_path: Path, monke
     assert outside.exists()
 
 
+def test_portfolio_backtest_valid_id_stays_readable_and_deletable(tmp_path: Path, monkeypatch) -> None:
+    storage = tmp_path / "portfolio-backtests"
+    storage.mkdir()
+    saved = storage / "valid-id_1.json"
+    saved.write_text('{"id":"valid-id_1"}', encoding="utf-8")
+    monkeypatch.setattr(portfolio_service, "BACKTESTS_DIR", storage)
+
+    assert portfolio_service.get_portfolio_backtest("valid-id_1") == {"id": "valid-id_1"}
+    assert portfolio_service.delete_portfolio_backtest("valid-id_1") == {
+        "deleted": True,
+        "id": "valid-id_1",
+    }
+    assert not saved.exists()
+
+
 def test_obsidian_filename_rejects_dot_segments_and_control_characters() -> None:
     assert safe_filename(".") == "Untitled"
     assert safe_filename("..") == "Untitled"
