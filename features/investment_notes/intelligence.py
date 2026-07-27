@@ -243,4 +243,3 @@ __all__ = [
     "IntelligenceServiceError",
     "checkpoint_counts",
 ]
-

@@ -101,4 +101,3 @@ def test_checkpoint_projection_is_bounded_sorted_and_body_free() -> None:
     assert all(row["layer"] == "hypothesis" for row in rows)
     assert all(row["reuseAsEvidence"] is False for row in rows)
     assert all("evidenceCount" not in row for row in rows)
-

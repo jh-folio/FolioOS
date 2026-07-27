@@ -85,4 +85,3 @@ def test_legacy_note_intelligence_gets_safe_defaults_only_via_adapter() -> None:
     assert normalized.checkpoints == ()
     assert normalized.layer == "hypothesis"
     assert normalized.reuseAsEvidence is False
-

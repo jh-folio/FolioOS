@@ -75,4 +75,3 @@ def test_legacy_collection_health_derives_safe_default_without_timestamp() -> No
     assert empty.health is CollectionHealth.EMPTY
     assert empty.observedAt is None
     assert empty.addedIds == ()
-

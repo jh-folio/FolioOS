@@ -51,4 +51,3 @@ def test_default_ticker_context_never_leaks_private_portfolio_or_note_fields() -
         "비공개 메모",
     ):
         assert forbidden not in encoded
-

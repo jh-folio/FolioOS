@@ -57,4 +57,3 @@ def test_checkpoint_projection_does_not_rewrite_watchlist(tmp_path: Path) -> Non
         "checkpoints": [],
     }
     assert watchlist_path.read_bytes() == original
-

@@ -96,4 +96,3 @@ def test_context_rejects_invalid_target_ticker() -> None:
         assert str(error) == "invalid_ticker"
     else:
         raise AssertionError("invalid ticker was accepted")
-

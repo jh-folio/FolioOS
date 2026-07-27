@@ -122,4 +122,3 @@ __all__ = [
     "IntelligenceBoundary",
     "create_intelligence_router",
 ]
-
