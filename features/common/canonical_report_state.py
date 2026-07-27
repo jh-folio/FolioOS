@@ -66,10 +66,10 @@ def marker(report: Mapping[str, JsonValue] | None) -> dict[str, JsonValue] | Non
 
 def load_report(path: Path) -> dict[str, JsonValue] | None:
     path = safe_child_path(path.parent, path.name)
-    if not path.exists():
+    if not path.exists():  # lgtm[py/path-injection] safe_child_path-bound
         return None
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"))  # lgtm[py/path-injection] safe_child_path-bound
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise CanonicalValidationError("canonical_json_invalid", f"cannot read canonical report: {path}") from exc
     if not isinstance(value, dict):

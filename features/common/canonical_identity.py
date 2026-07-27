@@ -62,7 +62,7 @@ def _briefing_identity(report_id: str, market_scope: str | None) -> tuple[str, s
 def _read_report_id(folder: Path, filename: str) -> str | None:
     try:
         path = safe_child_path(folder, filename)
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"))  # lgtm[py/path-injection] safe_child_path-bound
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
     if not isinstance(value, dict):
@@ -82,14 +82,14 @@ def resolve_exact_report_path(
             date_text, scope = _briefing_identity(report_id, market_scope)
             filename = f"{date_text}.{scope}.json" if scope is not None else f"{date_text}.json"
             candidate = safe_child_path(data_root / "briefings", filename)
-            if candidate.is_file():
+            if candidate.is_file():  # lgtm[py/path-injection] fixed folder plus validated date/scope
                 return candidate
         case ReportKind.COMPANY_ANALYSIS:
             if SAFE_ID_PATTERN.fullmatch(report_id) is None:
                 raise CanonicalIdentityError("company_report_id_invalid", "company report id is invalid")
             filename = f"{report_id}.json"
             candidate = safe_child_path(data_root / "company-analysis", filename)
-            if candidate.is_file() and _read_report_id(candidate.parent, candidate.name) in {None, report_id}:
+            if candidate.is_file() and _read_report_id(candidate.parent, candidate.name) in {None, report_id}:  # lgtm[py/path-injection] validated safe ID
                 return candidate
         case ReportKind.TOPIC_REPORT:
             if SAFE_ID_PATTERN.fullmatch(report_id) is None:

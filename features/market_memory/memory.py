@@ -408,14 +408,48 @@ def normalize(text: str) -> str:
     return " ".join(str(text or "").split())
 
 
+def _strip_markup(value: str) -> str:
+    output: list[str] = []
+    inside_tag = False
+    for character in value:
+        if character == "<":
+            inside_tag = True
+            output.append(" ")
+        elif character == ">" and inside_tag:
+            inside_tag = False
+            output.append(" ")
+        elif not inside_tag:
+            output.append(character)
+    return "".join(output)
+
+
+def _strip_urls(value: str) -> str:
+    output: list[str] = []
+    index = 0
+    lowered = value.lower()
+    while index < len(value):
+        if lowered.startswith("http://", index) or lowered.startswith("https://", index):
+            while index < len(value) and not value[index].isspace():
+                index += 1
+            output.append(" ")
+            continue
+        output.append(value[index])
+        index += 1
+    return "".join(output)
+
+
 def clean_text(text: str) -> str:
-    value = re.sub(r"<[^>]*(?:>|$)", " ", str(text or ""))
+    value = _strip_markup(str(text or ""))
     value = value.replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", '"').replace("&#x27;", "'")
-    value = re.sub(r"Original link:\s*https?://\S+", " ", value, flags=re.I)
-    value = re.sub(r"https?://\S+", " ", value)
-    value = re.sub(r"(^|\s)#\s*", " ", value)
-    value = re.sub(r"\s+-\s+Reuters\s*$", "", value, flags=re.I)
-    return normalize(value)
+    value = _strip_urls(value.replace("Original link:", " "))
+    value = "".join(
+        " " if character == "#" and (index == 0 or value[index - 1].isspace()) else character
+        for index, character in enumerate(value)
+    )
+    normalized = normalize(value)
+    if normalized.casefold().endswith(" - reuters"):
+        normalized = normalized[:-len(" - Reuters")]
+    return normalize(normalized)
 
 
 def slug(text: str) -> str:

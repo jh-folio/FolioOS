@@ -246,7 +246,9 @@ def _load_owned_manifest(path: Path) -> tuple[dict[str, Any], Path]:
 
 def _reserve_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        listener.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        exclusive_address_use = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+        if exclusive_address_use is not None:
+            listener.setsockopt(socket.SOL_SOCKET, exclusive_address_use, 1)
         listener.bind(("127.0.0.1", 0))
         return int(listener.getsockname()[1])
 
