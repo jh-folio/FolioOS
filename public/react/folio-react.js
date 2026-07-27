@@ -569,7 +569,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	});
 	function S(e, t, n, r) {
 		var i = y.hasOwnProperty(t) ? y[t] : null;
-		(i === null ? r || !(2 < t.length) || t[0] !== "o" && t[0] !== "O" || t[1] !== "n" && t[1] !== "N" : i.type !== 0) && (_(t, n, i, r) && (n = null), r || i === null ? h(t) && (n === null ? e.removeAttribute(t) : e.setAttribute(t, "" + n)) : i.mustUseProperty ? e[i.propertyName] = n === null ? i.type === 3 ? !1 : "" : n : (t = i.attributeName, r = i.attributeNamespace, n === null ? e.removeAttribute(t) : (i = i.type, n = i === 3 || i === 4 && !0 === n ? "" : "" + n, r ? e.setAttributeNS(r, t, n) : e.setAttribute(t, n))));
+		(i === null ? r || !(2 < t.length) || t[0] !== "o" && t[0] !== "O" || t[1] !== "n" && t[1] !== "N" : i.type !== 0) && (_(t, n, i, r) && (n = null), r || i === null ? h(t) && (n === null ? e.removeAttribute(t) : e.setAttribute(t, "" + n)) : i.mustUseProperty ? e[i.propertyName] = n === null ? i.type !== 3 && "" : n : (t = i.attributeName, r = i.attributeNamespace, n === null ? e.removeAttribute(t) : (i = i.type, n = i === 3 || i === 4 && !0 === n ? "" : "" + n, r ? e.setAttributeNS(r, t, n) : e.setAttribute(t, n))));
 	}
 	var C = t.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED, w = Symbol.for("react.element"), T = Symbol.for("react.portal"), E = Symbol.for("react.fragment"), D = Symbol.for("react.strict_mode"), O = Symbol.for("react.profiler"), k = Symbol.for("react.provider"), A = Symbol.for("react.context"), j = Symbol.for("react.forward_ref"), M = Symbol.for("react.suspense"), N = Symbol.for("react.suspense_list"), P = Symbol.for("react.memo"), F = Symbol.for("react.lazy"), I = Symbol.for("react.offscreen"), L = Symbol.iterator;
 	function R(e) {
@@ -3558,7 +3558,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	function ks(e) {
 		do {
 			var t;
-			if ((t = e.tag === 13) && (t = e.memoizedState, t = t === null ? !0 : t.dehydrated !== null), t) return e;
+			if ((t = e.tag === 13) && (t = e.memoizedState, t = t === null || t.dehydrated !== null), t) return e;
 			e = e.return;
 		} while (e !== null);
 		return null;
@@ -6337,7 +6337,7 @@ function Be(e) {
 	window.dispatchEvent(new CustomEvent(ue, { detail: e }));
 }
 function Ve(e, t) {
-	return e.status !== "applied" || !t || t.reportKind !== e.reportKind || String(t.reportId || "") !== e.reportId ? !1 : e.reportKind === "briefing" ? String(t.marketScope || "") === e.marketScope : !0;
+	return e.status !== "applied" || !t || t.reportKind !== e.reportKind || String(t.reportId || "") !== e.reportId ? !1 : e.reportKind !== "briefing" || String(t.marketScope || "") === e.marketScope;
 }
 //#endregion
 //#region src/app/AgentWorkLog.tsx
@@ -8432,14 +8432,14 @@ function pn() {
 		let e = cn(C);
 		return ne.filter((t) => {
 			let n = on(t), r = sn(t), i = t.briefingType || "default";
-			return T !== "all" && r !== T || D !== "all" && i !== D || k && n && n < k || j && n && n > j ? !1 : e ? cn([
+			return T !== "all" && r !== T || D !== "all" && i !== D || k && n && n < k || j && n && n > j ? !1 : !e || cn([
 				t.title,
 				n,
 				t.sessionDate,
 				t.generatedAt,
 				i,
 				...t.tags || []
-			].filter(Boolean).join(" ")).includes(e) : !0;
+			].filter(Boolean).join(" ")).includes(e);
 		});
 	}, [
 		j,
