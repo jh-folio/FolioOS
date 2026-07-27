@@ -600,6 +600,7 @@ def _seed_runtime_fixtures(extract_root: Path, run_root: Path) -> dict[str, Any]
             encoding="utf-8",
         )
         long_cli.chmod(0o700)
+        long_script = long_cli
         login_script.write_text("authenticated\n", encoding="utf-8")
     clock_path = run_root / "fixtures" / "injected-clock.json"
     _write_json(clock_path, {"now": INJECTED_CLOCK, "marketStateRef": report["marketStateResolution"]["ref"]})
