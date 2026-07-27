@@ -1,0 +1,2 @@
+defaults/config/*.json text eol=lf
+defaults/config/*.yaml text eol=lf
