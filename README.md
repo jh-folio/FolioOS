@@ -146,7 +146,7 @@ You can export generated reports to a local Obsidian Vault. Obsidian is optional
 
 ### Notion
 
-You can export generated reports to a Notion database after configuring `NOTION_TOKEN` and `NOTION_DB_ID` in settings or `.env`.
+You can export generated reports to a Notion database after configuring `NOTION_TOKEN` and `NOTION_DB_ID` in settings. The token is stored in the operating system credential store.
 
 ---
 
@@ -156,7 +156,7 @@ Folio OS is local-first:
 
 - Source files live under `research-inbox/`.
 - Generated reports, notes, databases, and caches live under `data/`.
-- API keys live in `.env`.
+- API keys and tokens live in the operating system credential store; `.env` retains non-secret settings.
 - Cloud storage is not required.
 
 
@@ -168,7 +168,7 @@ When Notion export with chart images is configured with `IMGBB_API_KEY`, chart i
 
 When AI/LLM features are enabled, selected report context or summarized evidence may be sent to the configured provider or CLI tool. Disable AI features if you want rule-based local fallback only.
 
-Never share `.env` or paste real API keys into documentation, issues, or chat logs.
+Legacy `.env` secrets are removed only after a successful credential-store migration. Never share `.env` or paste real API keys into documentation, issues, or chat logs.
 
 ---
 

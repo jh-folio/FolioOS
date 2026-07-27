@@ -75,8 +75,8 @@ def schedule_startup_regime_refresh(db_path: str | Path = MARKET_MEMORY_DB_PATH)
         try:
             result = refresh_all_regimes(db_path, status=status, limit=limit, days=days)
             print(f"Regime Tracker startup refresh complete: {result.get('count', 0)} states")
-        except Exception as exc:
-            print(f"Regime Tracker startup refresh failed: {exc}", file=sys.stderr)
+        except Exception:
+            print("Regime Tracker startup refresh failed.", file=sys.stderr)
 
     thread = threading.Thread(target=worker, name="regime-startup-refresh", daemon=True)
     thread.start()
@@ -373,8 +373,8 @@ def run_llm_market_memory(date=None):
             "saved": saved,
             "message": detail,
         }
-    except Exception as exc:
-        return {"ok": False, "status": f"error: {exc}", "saved": [], "message": f"LLM 시장 내러티브 생성 실패: {exc}"}
+    except Exception:
+        return {"ok": False, "status": "generation_failed", "saved": [], "message": "LLM 시장 내러티브 생성에 실패했습니다."}
 
 
 MARKET_STATE_SCOPES = ("overall", "us", "kr")
@@ -489,5 +489,5 @@ def run_llm_market_state_snapshot(date=None):
             "tokenUsage": token_usage,
             "estimatedInputTokens": estimated_input_tokens,
         }
-    except Exception as exc:
-        return {"ok": False, "status": f"error: {exc}", "message": f"LLM 시장 상태 스냅샷 생성 실패: {exc}"}
+    except Exception:
+        return {"ok": False, "status": "generation_failed", "message": "LLM 시장 상태 스냅샷 생성에 실패했습니다."}

@@ -117,15 +117,15 @@ def gather_company_material_evidence(thesis: dict, docs: list[dict], *, artifact
             "officialEvidenceCount": len(evidence),
         }
         return evidence, gaps, meta
-    except Exception as exc:
+    except Exception:
         gap = normalize_data_gap(
             {
                 "category": "official_materials",
-                "message": f"company_analysis materials 재사용 중 오류가 발생했습니다: {str(exc)[:160]}",
+                "message": "company_analysis materials 재사용 중 오류가 발생했습니다.",
                 "severity": "medium",
                 "suggestedAction": "기업 ticker/CIK 매핑과 SEC/DART 설정을 확인하고, 공식 공시 파일을 research-inbox/filings/에 추가하세요.",
             },
             artifact_type="thesis_delta",
             artifact_id=artifact_id,
         )
-        return [], [gap], {"source": "company_analysis_materials", "error": str(exc)[:200], "officialEvidenceCount": 0}
+        return [], [gap], {"source": "company_analysis_materials", "error": "materials_reuse_failed", "officialEvidenceCount": 0}

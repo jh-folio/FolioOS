@@ -338,13 +338,13 @@ def fetch_market_valuation_data(company: dict, ttl_hours: int = 6) -> dict:
         }
         _write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "data": data})
         return data
-    except Exception as exc:
+    except Exception:
         fallback = cached.get("data") if cached else None
         if fallback:
             fallback = dict(fallback)
-            fallback["warning"] = f"using cached market data after yfinance error: {exc}"
+            fallback["warning"] = "using cached market data after provider error"
             return fallback
-        return {"ok": False, "reason": str(exc)}
+        return {"ok": False, "reason": "market_data_provider_unavailable"}
 
 
 def _judge(value: float | None, good: float, okay: float, reverse: bool = False) -> str:

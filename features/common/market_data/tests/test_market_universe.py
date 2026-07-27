@@ -290,7 +290,7 @@ def test_kospi_failure_uses_last_good_cache_without_symbol_fanout(tmp_path):
     assert result["freshness"] == "stale"
     assert result["asOf"] == "2026-06-18"
     assert result["rows"] == cached["rows"]
-    assert "non-json response" in result["warnings"][-1]
+    assert result["warnings"][-1] == "KRX unavailable; last-good snapshot used"
 
 
 def test_kospi_failure_without_cache_uses_static_fallback_universe(tmp_path):
@@ -324,7 +324,10 @@ def test_kospi_failure_without_cache_uses_static_fallback_universe(tmp_path):
     assert result["coverage"] == {"requested": 2, "returned": 2, "ratio": 1.0, "status": "complete"}
     assert [row["ticker"] for row in result["rows"]] == ["005930", "000660"]
     assert result["rows"][0]["close"] is None
-    assert "KRX unavailable" in result["warnings"][-1]
+    assert result["warnings"][-1] == (
+        "krx_unavailable; static KOSPI fallback universe used. "
+        "Live prices/change rates are unavailable."
+    )
 
 
 def test_kospi200_primary_uses_embedded_universe_and_toss_prices_before_krx(tmp_path):

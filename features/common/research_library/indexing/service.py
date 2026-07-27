@@ -279,8 +279,8 @@ def read_pdf(path):
         text = normalize("\n".join(pages))[:900000]
         write_json(cache, {"text": text, "pages": len(reader.pages), "extractedAt": now_iso()})
         return text, len(reader.pages)
-    except Exception as exc:
-        write_json(cache, {"text": "", "pages": 0, "error": str(exc), "extractedAt": now_iso()})
+    except Exception:
+        write_json(cache, {"text": "", "pages": 0, "error": "pdf_extraction_failed", "extractedAt": now_iso()})
         return "", 0
 
 
@@ -469,12 +469,12 @@ def build_index(incremental=True, progress=None):
             progress("SQLite/FTS 검색 인덱스를 동기화하는 중입니다.", progress=82)
         try:
             index["sqlite"] = sync_index(RESEARCH_DB_PATH, index)
-        except Exception as exc:
-            index["sqlite"] = {"error": str(exc), "dbPath": str(RESEARCH_DB_PATH)}
+        except Exception:
+            index["sqlite"] = {"error": "sqlite_index_failed"}
         try:
             write_manifest(RESEARCH_DB_PATH, file_manifest)
-        except Exception as exc:
-            index.setdefault("sqlite", {})["manifestError"] = str(exc)
+        except Exception:
+            index.setdefault("sqlite", {})["manifestError"] = "manifest_update_failed"
         # Write slim status JSON — no documents or fileManifest
         write_json(DATA_DIR / "index.json", {
             "generatedAt": index["generatedAt"],

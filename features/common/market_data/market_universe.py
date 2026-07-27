@@ -386,8 +386,8 @@ def build_us_heatmap_snapshot(
     requested = collapse_share_class_universe(ranked)
     try:
         prices = (price_fetcher or fetch_toss_then_bulk_daily_prices)([row["ticker"] for row in ranked], str(date)[:10])
-    except Exception as exc:
-        result = unavailable_snapshot("US", date, "sp500+yfinance", str(exc))
+    except Exception:
+        result = unavailable_snapshot("US", date, "sp500+yfinance", "market_data_unavailable")
         result["coverage"] = _coverage(len(requested), 0)
         return result
     rows = [heatmap_row(meta, prices.get(meta["ticker"])) for meta in ranked]
@@ -621,12 +621,12 @@ def build_kospi_heatmap_snapshot(
             "KRX returned no KOSPI200 rows",
             fallback_price_fetcher,
         )
-    except Exception as exc:
+    except Exception:
         cached = load_last_good_snapshot(cache_path)
         if not cached or not cached.get("rows"):
-            return _kospi_static_fallback_snapshot(date, fallback_constituents, str(exc)[:120], fallback_price_fetcher)
+            return _kospi_static_fallback_snapshot(date, fallback_constituents, "krx_unavailable", fallback_price_fetcher)
         cached["freshness"] = "stale"
         cached.setdefault("warnings", []).append(
-            f"KRX unavailable; last-good snapshot used: {str(exc)[:120]}"
+            "KRX unavailable; last-good snapshot used"
         )
         return cached

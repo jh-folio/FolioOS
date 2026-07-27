@@ -128,10 +128,9 @@ def _probe_adapter(adapter: str) -> dict:
             result["authenticated"] = True
             result["available"] = True
         else:
-            detail = (auth.stdout or auth.stderr or "로그인이 필요합니다.").strip().splitlines()
-            result["error"] = detail[-1][:300] if detail else "로그인이 필요합니다."
-    except Exception as exc:
-        result["error"] = str(exc)[:300]
+            result["error"] = "로그인이 필요합니다."
+    except Exception:
+        result["error"] = "CLI 상태를 확인하지 못했습니다."
     return result
 
 
@@ -556,8 +555,8 @@ def run_agent_task(
                         "Agent CLI 브리핑이 출력 계약을 충족하지 못했습니다: "
                         + "; ".join(violations)
                     )
-        except Exception as exc:
-            schema.update_pack_status(pack_path, status="failed", result={"error": str(exc)[:2000]})
+        except Exception:
+            schema.update_pack_status(pack_path, status="failed", result={"error": "agent_task_failed"})
             raise
         progress("Agent 결과를 기존 저장소에 반영하고 있습니다.", 85, adapter=selected["id"])
         output_format = (pack.get("outputContract") or {}).get("format", "markdown")
@@ -668,10 +667,10 @@ def run_market_memory_update_task(
                     tuple(memory_prepared["entries"]),
                     lambda _projected: snapshot_payload,
                 )
-            except Exception as exc:
+            except Exception:
                 for path in (locals().get("memory_path"), locals().get("snapshot_path")):
                     if isinstance(path, Path) and path.exists():
-                        schema.update_pack_status(path, status="failed", result={"error": str(exc)[:2000]})
+                        schema.update_pack_status(path, status="failed", result={"error": "agent_task_failed"})
                 raise
         result = {
             "generationMode": "llm_cli",

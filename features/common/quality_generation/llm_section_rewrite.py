@@ -233,10 +233,10 @@ def improve_sections_with_llm(
             "formatGuard": {"mode": guard.mode, "issues": guard.issues[:6]},
             "warnings": guard.warnings,
         }
-    except Exception as exc:
+    except Exception:
         return {
             "artifact": artifact,
             "repairApplied": False,
             "repairReason": "llm_section_rewrite_error",
-            "warnings": [f"LLM 섹션 개선 실패: {clean_brief_text(str(exc), 220)}"],
+            "warnings": ["LLM 섹션 개선에 실패했습니다."],
         }

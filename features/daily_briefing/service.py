@@ -3,6 +3,7 @@ import os
 import re
 from pathlib import Path
 
+from features.common.canonical_report_io import safe_child_path
 from features.common.dataframe_ops import top_records
 from features.common.utils import normalize, kst_date
 from features.common.market_calendar import briefing_market_windows, doc_market_bucket, doc_analysis_priority
@@ -825,8 +826,8 @@ def generate_llm_briefing(date, source_date, docs, groups, market_drivers=None, 
             "webSearch": web_search,
             "tokenUsage": normalize_token_usage(usage, prompt=prompt, context=context, output=text, max_output_tokens=max_tokens),
         }, f"ok_{web_status}"
-    except Exception as exc:
-        return None, f"error: {exc}"
+    except Exception:
+        return None, "generation_failed"
 
 
 _LINK_LLM_SYSTEM_PROMPT = (
@@ -1277,7 +1278,8 @@ def _read_briefing_json(path):
     import json
 
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+        candidate = safe_child_path(BRIEFINGS_DIR, Path(path).name)
+        return json.loads(candidate.read_text(encoding="utf-8"))
     except Exception:
         return None
 
@@ -1390,9 +1392,9 @@ def _with_nasdaq_composite_index_visuals(report):
             fixed_snapshots.append(migrated)
         out["visualSnapshots"] = fixed_snapshots
         return out
-    except Exception as exc:
+    except Exception:
         warnings = list(out.get("visualWarnings") or [])
-        warnings.append(f"nasdaq composite visual backfill failed: {str(exc)[:160]}")
+        warnings.append("nasdaq_composite_visual_backfill_failed")
         out["visualWarnings"] = warnings
         return out
 
@@ -1431,10 +1433,10 @@ def _with_leading_company_visuals(report):
         if not aligned.get("visualSnapshots"):
             return report
         return replace_leading_company_visuals(report, aligned)
-    except Exception as exc:
+    except Exception:
         out = dict(report)
         warnings = list(out.get("visualWarnings") or [])
-        warnings.append(f"leading company visual backfill failed: {str(exc)[:160]}")
+        warnings.append("leading_company_visual_backfill_failed")
         out["visualWarnings"] = warnings
         return out
 

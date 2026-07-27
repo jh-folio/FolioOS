@@ -749,8 +749,8 @@ def generate_llm_company_analysis(query, docs, web_search_override=None, llm_ove
             "webSearch": web_search,
             "tokenUsage": normalize_token_usage(usage, prompt=prompt, context=context, output=text, max_output_tokens=max_tokens),
         }, f"ok_{web_status}"
-    except Exception as exc:
-        return None, f"error: {exc}"
+    except Exception:
+        return None, "generation_failed"
 
 
 def analysis_status_message(generation):
@@ -819,7 +819,7 @@ def delete_analysis_report(report_id):
     except CanonicalNotFoundError:
         return {"deleted": False, "error": "Analysis report not found"}
     except CanonicalIdentityError as exc:
-        raise ValueError(str(exc)) from exc
+        raise ValueError("analysis report identifier is invalid") from exc
     outcome = execute_report_delete(DeleteRequest(
         root=ANALYSIS_REPORTS_DIR,
         identity=f"company:{safe_id}",

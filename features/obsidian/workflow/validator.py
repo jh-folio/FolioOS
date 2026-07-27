@@ -82,7 +82,7 @@ def validate_vault(*, limit: int = 300) -> dict:
     for path in sorted(vault.rglob("*.md"))[:limit]:
         try:
             rows.append(validate_note(path, vault))
-        except Exception as exc:
+        except Exception:
             rows.append({
                 "path": str(path),
                 "relPath": path.relative_to(vault).as_posix(),
@@ -91,7 +91,7 @@ def validate_vault(*, limit: int = 300) -> dict:
                 "layer": "unknown",
                 "importable": False,
                 "status": "needs_fix",
-                "issues": [{"severity": "error", "message": f"노트를 읽거나 파싱하지 못했습니다: {str(exc)[:160]}", "suggestedAction": "파일 인코딩과 frontmatter를 확인하세요."}],
+                "issues": [{"severity": "error", "message": "노트를 읽거나 파싱하지 못했습니다.", "suggestedAction": "파일 인코딩과 frontmatter를 확인하세요."}],
             })
     ok = sum(1 for r in rows if r["status"] == "ok")
     needs_fix = len(rows) - ok

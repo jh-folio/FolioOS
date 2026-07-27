@@ -114,10 +114,10 @@ def test_deferred_routes_remain_hidden() -> None:
     assert re.search(r'id: "watchlist"[^\n]+visibleInNav: false', routes)
 
 
-def test_machine_version_authority_remains_020() -> None:
+def test_machine_version_authority_matches_024_release() -> None:
     version = _source("VERSION").strip()
     package = json.loads(_source("web/package.json"))
-    assert version == "0.2.0"
+    assert version == "0.2.4"
     assert package["version"] == version
 
 
@@ -127,8 +127,8 @@ def test_documented_020_scope_matches_english_and_korean() -> None:
 
     english = _source("README.md")
     korean = _source("README.ko.md")
-    assert "What You Can Do In 0.2" in english
-    assert "0.2에서 할 수 있는 일" in korean
+    assert "What You Can Do In 0.2.4" in english
+    assert "0.2.4에서 할 수 있는 일" in korean
     for text in (english, korean):
         assert "Deep Research" in text
         assert "Smart Collection" in text

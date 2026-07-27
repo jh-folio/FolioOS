@@ -45,8 +45,8 @@ def fetch_topic_market_data(tickers: dict[str, str], history_period: str = "3y")
     """
     try:
         import yfinance as yf
-    except Exception as exc:
-        return {"ok": False, "error": f"yfinance unavailable: {exc}", "tickers": {}, "correlations": []}
+    except Exception:
+        return {"ok": False, "error": "yfinance_unavailable", "tickers": {}, "correlations": []}
 
     raw_closes: dict[str, list[float]] = {}
     result_tickers: dict[str, dict] = {}
@@ -54,8 +54,8 @@ def fetch_topic_market_data(tickers: dict[str, str], history_period: str = "3y")
     for symbol, label in tickers.items():
         try:
             hist = yf.Ticker(symbol).history(period=history_period, interval="1d", auto_adjust=False)
-        except Exception as exc:
-            result_tickers[symbol] = {"label": label, "error": str(exc)}
+        except Exception:
+            result_tickers[symbol] = {"label": label, "error": "market_data_unavailable"}
             continue
         if hist is None or hist.empty or "Close" not in hist:
             result_tickers[symbol] = {"label": label, "error": "no price data"}

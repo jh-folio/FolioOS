@@ -45,10 +45,10 @@ def safe_float(value) -> float | None:
 def fetch_market_snapshot(period: str = "1mo") -> dict:
     try:
         import yfinance as yf
-    except Exception as exc:
+    except Exception:
         return {
             "ok": False,
-            "error": f"yfinance unavailable: {exc}",
+            "error": "market_data_provider_unavailable",
             "asOfKst": dt.datetime.now(tz=KST).isoformat(),
             "tickers": {},
             "signals": [],
@@ -58,8 +58,8 @@ def fetch_market_snapshot(period: str = "1mo") -> dict:
     for ticker, label in MARKET_TICKERS.items():
         try:
             hist = yf.Ticker(ticker).history(period=period, interval="1d", auto_adjust=False)
-        except Exception as exc:
-            tickers[ticker] = {"label": label, "error": str(exc)}
+        except Exception:
+            tickers[ticker] = {"label": label, "error": "market_data_unavailable"}
             continue
         if hist is None or hist.empty or "Close" not in hist:
             tickers[ticker] = {"label": label, "error": "no price data"}

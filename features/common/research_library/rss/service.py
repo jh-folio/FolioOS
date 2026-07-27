@@ -574,8 +574,8 @@ def import_rssarchive(run_collection=True, progress=None):
                 output.append(proc.stdout.strip())
             if proc.stderr.strip():
                 output.append(proc.stderr.strip())
-        except Exception as exc:
-            output.append(f"RSS collection failed: {exc}")
+        except Exception:
+            output.append("RSS collection failed.")
     after = len(list(RSS_INBOX_DIR.glob("*.md")))
     output.append(f"RSS collection finished. Added {max(after - before, 0)}, total {after}.")
     output.append(f"RSS folder: {RSS_INBOX_DIR}")

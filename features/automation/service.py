@@ -131,13 +131,13 @@ def run_briefing_prerequisites(*, now: dt.datetime | None = None, memory_max_age
                 "result": memory,
             })
             prerequisites["marketMemory"] = memory
-        except Exception as exc:
+        except Exception:
             _append_run({
                 "kind": "marketMemory",
                 "status": "failed",
                 "startedAt": started,
                 "finishedAt": now_iso(),
-                "error": str(exc),
+                "error": "market_memory_prerequisite_failed",
             })
             raise
     return prerequisites
@@ -196,8 +196,8 @@ def run_automation_once(kind: str) -> dict:
         row = {"kind": kind, "status": "done", "startedAt": started, "finishedAt": now_iso(), "result": result}
         _append_run(row)
         return {"ok": True, **row}
-    except Exception as exc:
-        row = {"kind": kind, "status": "failed", "startedAt": started, "finishedAt": now_iso(), "error": str(exc)}
+    except Exception:
+        row = {"kind": kind, "status": "failed", "startedAt": started, "finishedAt": now_iso(), "error": "automation_failed"}
         _append_run(row)
         return {"ok": False, **row}
 
@@ -228,13 +228,13 @@ def schedule_automation_loop(interval_seconds: int = 60) -> bool:
         while True:
             try:
                 run_due_automations()
-            except Exception as exc:
+            except Exception:
                 _append_run({
                     "kind": "scheduler",
                     "status": "failed",
                     "startedAt": now_iso(),
                     "finishedAt": now_iso(),
-                    "error": str(exc),
+                    "error": "scheduler_iteration_failed",
                 })
             time.sleep(max(10, int(interval_seconds)))
 

@@ -168,8 +168,8 @@ def generate_overlay(canonical: dict, hypotheses: list, *, kind="briefing", llm_
             "tokenUsage": normalize_token_usage(usage, prompt=prompt, context=context, output=text),
         }
         return overlay, "ok"
-    except Exception as exc:
-        return _fallback_overlay(hypotheses), f"error: {exc}"
+    except Exception:
+        return _fallback_overlay(hypotheses), "generation_failed"
 
 
 # ---------------------------------------------------------------------------

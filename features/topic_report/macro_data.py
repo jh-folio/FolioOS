@@ -91,8 +91,8 @@ def fetch_fred_data(series_ids: list[str], api_key: str) -> dict:
         except urllib.error.HTTPError as exc:
             errors.append(f"{sid}: HTTP {exc.code}")
             continue
-        except Exception as exc:
-            errors.append(f"{sid}: {exc}")
+        except Exception:
+            errors.append(f"{sid}: macro_data_unavailable")
             continue
 
         if not obs:
@@ -196,8 +196,8 @@ def fetch_bok_data(series_ids: list[str], api_key: str) -> dict:
             continue
         try:
             obs = _fetch_bok_one(sid, meta, api_key)
-        except Exception as exc:
-            errors.append(f"{sid}: {exc}")
+        except Exception:
+            errors.append(f"{sid}: macro_data_unavailable")
             continue
 
         if not obs:

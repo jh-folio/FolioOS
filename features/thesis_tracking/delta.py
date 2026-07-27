@@ -279,8 +279,8 @@ def normalize_delta(raw, *, thesis: dict, evidence: list, meta: dict, fallback_m
     out["generatedAt"] = now_iso()
     try:
         out["quality"] = evaluate_artifact("thesis_delta", out)
-    except Exception as exc:
-        out["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+    except Exception:
+        out["quality"] = {"status": "warn", "warnings": ["quality_evaluation_failed"]}
     return out
 
 
@@ -391,8 +391,8 @@ def generate_delta(thesis: dict, *, period: str = PERIOD_DEFAULT, llm_override=N
             "tokenUsage": normalize_token_usage(usage, prompt=prompt, context=context, output=text, max_output_tokens=3500),
         }
         return delta, "ok"
-    except Exception as exc:
-        return fallback_delta(thesis, evidence, meta, status=f"error: {exc}"), f"error: {exc}"
+    except Exception:
+        return fallback_delta(thesis, evidence, meta, status="generation_failed"), "generation_failed"
 
 
 def build_markdown(thesis: dict, delta: dict, evidence: list, meta: dict) -> str:

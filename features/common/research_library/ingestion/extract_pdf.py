@@ -4,8 +4,8 @@ from pathlib import Path
 
 try:
     from pypdf import PdfReader
-except Exception as exc:
-    print(json.dumps({"ok": False, "error": f"pypdf import failed: {exc}"}))
+except Exception:
+    print(json.dumps({"ok": False, "error": "pypdf_import_failed"}))
     sys.exit(0)
 
 
@@ -15,8 +15,8 @@ def extract(path):
     for i, page in enumerate(reader.pages):
         try:
             text = page.extract_text() or ""
-        except Exception as exc:
-            text = f"\n[Page {i + 1} extraction failed: {exc}]\n"
+        except Exception:
+            text = f"\n[Page {i + 1} extraction failed]\n"
         pages.append(text)
     return "\n\n".join(pages)
 
@@ -34,6 +34,6 @@ try:
         "pages": len(PdfReader(str(pdf_path)).pages),
         "text": text
     }, ensure_ascii=False))
-except Exception as exc:
-    print(json.dumps({"ok": False, "path": str(pdf_path), "error": str(exc)}, ensure_ascii=False))
+except Exception:
+    print(json.dumps({"ok": False, "error": "pdf_extraction_failed"}, ensure_ascii=False))
 
