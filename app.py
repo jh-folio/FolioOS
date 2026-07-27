@@ -570,7 +570,7 @@ def api_delete_briefing(date: str, market: str = ""):
     try:
         result = delete_briefing(date, market=market or None)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid briefing identifier or market scope") from exc
     if not result["deleted"]:
         raise HTTPException(status_code=404, detail="Briefing not found")
     return result
