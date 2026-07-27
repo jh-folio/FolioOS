@@ -16,11 +16,11 @@ web/src/islands/       # reusable React surfaces consumed by routes
 public/react/          # committed Vite build output
 ```
 
-- React owns routing, navigation, Agent Home, Dashboard, report readers, RSS,
-  Market Memory, Company Analysis, Watchlist, and Settings.
-- Deep Research remains routable for saved topic-report/deeplink compatibility,
-  but is hidden from the default 0.1 nav, Home quick actions, and command
-  palette.
+- React owns routing, navigation, Agent Home, Deep Research, report readers,
+  RSS, Market Memory, Company Analysis, Dashboard, Watchlist, and Settings.
+- Deep Research is a default 0.2 surface in the left navigation, Home quick
+  actions, and command palette. Dashboard and Watchlist remain routable for
+  compatibility but stay hidden from those default surfaces.
 - `public/app.js` no longer owns view routing. It remains as a compatibility
   bridge for `FolioBridge` methods such as `renderMarkdown`,
   `briefingSourcePanelHtml`, `renderBriefingVisuals`, `updateAgentContext`, and

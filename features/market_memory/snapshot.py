@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 from pathlib import Path
+from typing import assert_never
 
 from features.common.utils import now_iso
 from features.common.market_calendar import infer_doc_markets
 from features.market_memory.digest import build_rss_digest
 from features.market_memory.market_context import build_market_macro_context
+from features.market_memory.market_state_ref import capture_input_watermarks
 from features.market_memory.memory import connect, init_db, list_states
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -426,12 +429,18 @@ def validate_market_state_snapshot(payload: dict, context: dict | None = None) -
         "confidence": _confidence(payload.get("confidence")),
         "freshness": _text(payload.get("freshness"), 120) or "latest_available",
     }
+    snapshot.update({
+        key: payload[key] if key in payload else context[key]
+        for key in ("inputWatermarks", "updateAttemptRef", "inputGraphBaseHash", "inputGraphTargetHash")
+        if key in payload or isinstance(context, dict) and key in context
+    })
     snapshot["marketViews"] = _market_views(payload, snapshot, source_lookup)
     return snapshot
 
 
-def ensure_snapshot_table(conn) -> None:
-    init_db(conn)
+def ensure_snapshot_table(conn: sqlite3.Connection, *, initialize_graph: bool = True) -> None:
+    if initialize_graph:
+        init_db(conn)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS market_state_snapshots (
@@ -447,13 +456,25 @@ def ensure_snapshot_table(conn) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_state_snapshots_as_of ON market_state_snapshots(as_of DESC)")
 
 
-def save_market_state_snapshot(db_path: str | Path, payload: dict, context: dict | None = None) -> dict:
+def save_market_state_snapshot(
+    db_path: str | Path | sqlite3.Connection,
+    payload: dict,
+    context: dict | None = None,
+) -> dict:
     snapshot = validate_market_state_snapshot(payload, context=context)
     snapshot_id = snapshot.get("id") or "mss_" + re.sub(r"[^0-9A-Za-z]+", "", snapshot["asOf"])[:24]
     snapshot["id"] = snapshot_id
-    conn = connect(db_path)
+    match db_path:
+        case sqlite3.Connection() as connection:
+            conn = connection
+            owns_connection = False
+        case str() | Path():
+            conn = connect(db_path)
+            owns_connection = True
+        case unreachable:
+            assert_never(unreachable)
     try:
-        ensure_snapshot_table(conn)
+        ensure_snapshot_table(conn, initialize_graph=owns_connection)
         conn.execute(
             """
             INSERT OR REPLACE INTO market_state_snapshots
@@ -469,16 +490,28 @@ def save_market_state_snapshot(db_path: str | Path, payload: dict, context: dict
                 json.dumps(snapshot, ensure_ascii=False),
             ),
         )
-        conn.commit()
+        if owns_connection:
+            conn.commit()
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
     return snapshot
 
 
-def current_market_state_snapshot(db_path: str | Path = MARKET_MEMORY_DB_PATH) -> dict | None:
-    conn = connect(db_path)
+def current_market_state_snapshot(
+    db_path: str | Path | sqlite3.Connection = MARKET_MEMORY_DB_PATH,
+) -> dict | None:
+    match db_path:
+        case sqlite3.Connection() as connection:
+            conn = connection
+            owns_connection = False
+        case str() | Path():
+            conn = connect(db_path)
+            owns_connection = True
+        case unreachable:
+            assert_never(unreachable)
     try:
-        ensure_snapshot_table(conn)
+        ensure_snapshot_table(conn, initialize_graph=owns_connection)
         row = conn.execute(
             """
             SELECT snapshot_id, payload_json
@@ -489,7 +522,8 @@ def current_market_state_snapshot(db_path: str | Path = MARKET_MEMORY_DB_PATH) -
             """
         ).fetchone()
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
     if not row:
         return None
     try:
@@ -613,6 +647,7 @@ def build_market_state_context(
         "macroSnapshot": macro_context.get("macroSnapshot") or {},
         "existingStates": [_compact_state(state) for state in (states or [])[:12]],
         "sourceRefs": source_refs,
+        "inputWatermarks": capture_input_watermarks(Path(db_path).parent / "research-index.sqlite3"),
     }
 
 

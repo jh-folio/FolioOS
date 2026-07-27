@@ -20,6 +20,7 @@ type CommandItem = {
   title: string;
   subtitle: string;
   type: string;
+  qa?: string;
   run: () => void;
 };
 
@@ -81,6 +82,7 @@ export function CommandPalette() {
       title: route.label,
       subtitle: routeSubtitle(route.id),
       type: "화면",
+      qa: route.id === "deep-research" ? "command-deep-research" : undefined,
       run: () => {
         window.location.hash = toHash(route.id);
       },
@@ -196,6 +198,7 @@ export function CommandPalette() {
             <button
               className={`command-item${index === activeIndex ? " active" : ""}`}
               type="button"
+              data-qa={item.qa}
               role="option"
               aria-selected={index === activeIndex}
               key={item.id}

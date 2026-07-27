@@ -2,6 +2,8 @@
 
 시장 내러티브 메모리는 일일 브리핑에서 반복적으로 등장하는 테마를 단기 기사와 분리해 누적하고, 현재 유효한 투자 내러티브 상태를 관리하는 기능입니다.
 
+0.2 Deep Research는 현재 Market State를 `current|stale|fallback|empty`의 별도 source-grounded context로 참조할 수 있습니다. 이 참조는 보고서의 `evidenceItems`, `sourceLedger`, 인용, evidence coverage, 사용자 hypothesis를 바꾸지 않습니다.
+
 ## 담당 기능
 
 - 브리핑 생성 시 주요 이슈 묶음을 `data/market-memory.sqlite3`에 저장합니다.

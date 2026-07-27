@@ -3,11 +3,9 @@ import datetime as dt
 import json
 import re
 from functools import lru_cache
-from pathlib import Path
-
+from features.common.config_bootstrap import resolve_config
 from features.common.utils import normalize
 
-_COMPANY_MASTER_PATH = Path(__file__).resolve().parents[2] / "config" / "company_master.json"
 # 한국 기사 관행: 종목명 뒤 6자리 종목코드 대괄호 표기(예: 셀트리온[068270]).
 _KR_STOCK_CODE_RE = re.compile(r"\[\d{6}\]")
 
@@ -313,7 +311,7 @@ def _company_market_matchers():
     쓴다. ASCII 별칭은 단어 경계로, 한글 별칭은 부분 문자열로 매칭한다.
     """
     try:
-        data = json.loads(_COMPANY_MASTER_PATH.read_text(encoding="utf-8"))
+        data = json.loads(resolve_config("company_master.json").read_text(encoding="utf-8"))
     except Exception:
         return ()
     matchers = []

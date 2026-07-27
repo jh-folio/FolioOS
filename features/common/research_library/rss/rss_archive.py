@@ -13,6 +13,7 @@ import os
 import sys
 from pathlib import Path
 
+from features.common.config_bootstrap import resolve_config
 from features.common.research_library.rss.article import collect_article_body
 from features.common.research_library.rss.collectors import (
     collect_official_items,
@@ -51,6 +52,10 @@ def find_project_root(start=None):
         if any((candidate / marker).exists() for marker in PROJECT_ROOT_MARKERS):
             return candidate
     return Path(__file__).resolve().parents[4]
+
+
+def resolve_cli_config(argument: str | None, default_name: str) -> Path:
+    return Path(argument) if argument else resolve_config(default_name)
 
 
 def configure_output_encoding():
@@ -156,8 +161,8 @@ def main():
     project_root = find_project_root()
     archive_dir = Path(args.archive_dir) if args.archive_dir else project_root / "research-inbox" / "rss"
     evidence_db = project_root / "data" / "research-index.sqlite3"
-    rss_config = Path(args.rss_config) if args.rss_config else project_root / "config" / "rss_feeds.yaml"
-    evidence_config = Path(args.evidence_config) if args.evidence_config else project_root / "config" / "evidence_sources.yaml"
+    rss_config = resolve_cli_config(args.rss_config, "rss_feeds.yaml")
+    evidence_config = resolve_cli_config(args.evidence_config, "evidence_sources.yaml")
     selected_collectors = {x.strip().lower() for x in str(args.collectors or "rss").split(",") if x.strip()}
     feeds = load_rss_feeds(rss_config) if "rss" in selected_collectors else []
     store_full_text = should_store_full_text(args.save_full_text, args.public_mode)

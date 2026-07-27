@@ -2,6 +2,7 @@
   "packageName": "FolioOS",
   "runtimeFiles": [
     ".env.example",
+    "VERSION",
     "app.py",
     "LICENSE",
     "README.md",
@@ -10,6 +11,8 @@
     "docs/assets/screenshots/folio-os-home.png",
     "docs/assets/screenshots/folio-os-rss-feed.png",
     "installation.md",
+    "requirements-bootstrap.lock.txt",
+    "requirements.lock.py312.txt",
     "requirements.txt",
     "start.ps1",
     "start.sh",
@@ -19,7 +22,7 @@
   "runtimeDirectories": [
     "features",
     "public",
-    "config"
+    "defaults"
   ],
   "emptyDirectories": [
     "data",
@@ -39,6 +42,7 @@
   ],
   "forbiddenPaths": [
     ".env",
+    "config",
     ".git",
     "README.dev.md",
     "roadmap",

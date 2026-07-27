@@ -32,7 +32,7 @@ test("Watchlist route integrates legacy TradingView detail renderer and Agent co
   assert.match(source, /FolioTradingViewWidgets\?\.cleanup/);
   assert.match(source, /surface: "watchlist_detail"/);
   assert.match(source, /openReactAgentDock/);
-  assert.match(source, /updateReactAgentContext/);
+  assert.match(source, /setReactAgentContextScope/);
 });
 
 test("AppShell renders WatchlistRoute on the watchlist route", async () => {

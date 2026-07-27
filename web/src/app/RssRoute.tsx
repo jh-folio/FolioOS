@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../api";
-import { updateReactAgentContext } from "./agentContext";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
+import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 
 type RssItem = {
@@ -54,7 +54,7 @@ type SearchDocument = {
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: Record<string, unknown>;
@@ -122,7 +122,7 @@ function normalizeMarketTags(item: Pick<RssItem, "markets" | "market">) {
 
 async function pollJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }
@@ -181,7 +181,7 @@ export function RssRoute() {
       setPage(nextPage);
       setFilters(nextFilters);
       setDraftFilters(nextFilters);
-      updateReactAgentContext({ surface: "rss", viewId: "rssfeed", reportKind: "", reportId: "" });
+      setReactAgentContextScope("rss", { surface: "rss", viewId: "rssfeed", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "RSS 피드를 불러오지 못했습니다.");
     } finally {
@@ -252,7 +252,7 @@ export function RssRoute() {
       });
       setPage(1);
       setStatus(`뉴스 검색 결과 ${rows.length}개`);
-      updateReactAgentContext({ surface: "rss", viewId: "rssfeed", reportKind: "news_search", reportId: query });
+      setReactAgentContextScope("rss", { surface: "rss", viewId: "rssfeed", reportKind: "news_search", reportId: query });
     } catch (err) {
       setError(err instanceof Error ? err.message : "뉴스 검색에 실패했습니다.");
     } finally {

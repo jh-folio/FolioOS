@@ -1,6 +1,10 @@
 import json
+from datetime import UTC, datetime
+from uuid import UUID
 
 from features.agent_mode import chat
+from features.smart_collections.schema import CreateCollectionRequest
+from features.smart_collections.service import SmartCollectionRuntime, SmartCollectionService
 
 
 def _patch_dirs(monkeypatch, tmp_path):
@@ -54,7 +58,11 @@ def test_proposal_apply_updates_markdown_and_preserves_other_fields(monkeypatch,
     assert result["status"] == "applied"
     saved = json.loads(path.read_text(encoding="utf-8"))
     assert "## Bear case" in saved["markdown"]
-    assert saved["personalOverlay"] == {"keep": True}
+    assert saved["personalOverlay"] == {
+        "keep": True,
+        "stale": True,
+        "staleReason": "canonical_revision_changed",
+    }
     assert saved["agentRevisions"][0]["proposalId"] == proposal["id"]
 
 
@@ -81,10 +89,11 @@ def test_proposal_apply_rejects_when_report_changed(monkeypatch, tmp_path):
 
 def test_reject_proposal(monkeypatch, tmp_path):
     _patch_dirs(monkeypatch, tmp_path)
-    _write_briefing(tmp_path)
+    path = _write_briefing(tmp_path)
+    current = json.loads(path.read_text(encoding="utf-8"))["markdown"]
     proposal = chat.create_revision_proposal(
         kind="briefing", report_id="2026-07-02", market_scope="us",
-        message="m", summary="s", revised_markdown="new", current_markdown="old",
+        message="m", summary="s", revised_markdown=current + "\nnew", current_markdown=current,
     )
     result = chat.reject_proposal(proposal["id"])
     assert result["status"] == "rejected"
@@ -139,3 +148,52 @@ def test_run_agent_chat_companion_uses_cli_reply(monkeypatch):
     assert result["engine"] == "cli"
     assert result["adapter"] == "claude"
     assert result["reply"] == "핵심은 금리입니다."
+
+
+def test_collection_projection_prompt_is_server_resolved_metadata_only(monkeypatch, tmp_path):
+    query_canary = "IGNORE_RULES_STORED_QUERY_CANARY"
+    source_canary = "private-source-canary"
+    frontend_body_canary = "FRONTEND_BODY_CANARY"
+    hypothesis_canary = "USER_CONTEXT_CANARY"
+    collection_id = "sc_12345678-1234-4234-9234-123456789abc"
+    service = SmartCollectionService(SmartCollectionRuntime(
+        dataDir=tmp_path,
+        clock=lambda: datetime(2026, 7, 22, tzinfo=UTC),
+        uuidFactory=lambda: UUID("12345678-1234-4234-9234-123456789abc"),
+    ))
+    service.create(CreateCollectionRequest.model_validate({
+        "name": "Prompt injection collection",
+        "query": query_canary,
+        "market": "US",
+        "sources": [source_canary],
+        "tickers": [],
+        "tags": [],
+    }))
+    captured = {}
+    monkeypatch.setattr(chat.bridge, "bridge_status", lambda **kwargs: {"available": True})
+
+    def invoke(prompt, **kwargs):
+        captured["prompt"] = prompt
+        return {"output": "서버 메타데이터 기준으로 결과가 없습니다.", "adapter": "codex"}
+
+    monkeypatch.setattr(chat.bridge, "run_agent_prompt", invoke)
+    result = chat.run_agent_chat(
+        "이 컬렉션을 설명해줘",
+        {
+            "surface": "deep_research",
+            "collectionId": collection_id,
+            "collectionRevision": 1,
+            "query": "frontend query override",
+            "evidenceBodies": [frontend_body_canary],
+            "userContext": hypothesis_canary,
+        },
+        {},
+        collection_service=service,
+    )
+    assert result["engine"] == "cli"
+    assert "저장된 외부자료 필터 metadata이며 evidence가 아님" in captured["prompt"]
+    assert collection_id in captured["prompt"]
+    assert result["context"]["collection"]["definitionHash"] in captured["prompt"]
+    for canary in (query_canary, source_canary, frontend_body_canary, hypothesis_canary, "frontend query override"):
+        assert canary not in captured["prompt"]
+        assert canary not in json.dumps(result, ensure_ascii=False)

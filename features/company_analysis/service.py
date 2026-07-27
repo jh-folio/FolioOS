@@ -7,6 +7,10 @@ import re
 from pathlib import Path
 
 from features.common.dataframe_ops import sort_records
+from features.common.canonical_identity import ReportKind
+from features.common.canonical_report_state import load_report
+from features.common.canonical_report_types import WriteKind
+from features.common.canonical_reports import commit_sync, prepare
 from features.common.utils import normalize, now_iso, read_json, write_json
 from features.company_analysis import financial_engine
 from features.company_analysis.dart_client import build_dart_summary
@@ -787,26 +791,43 @@ def save_analysis_report(report):
     report["id"] = report.get("id") or rid
     report["saved"] = True
     path = ANALYSIS_REPORTS_DIR / f"{report['id']}.json"
-    # 덮어쓰기 시 기존에 사용자가 붙인 personalOverlay는 보존한다(개인 해석 유실 방지).
-    if report.get("personalOverlay") is None and path.exists():
-        try:
-            existing = read_json(path, None)
-            if isinstance(existing, dict) and existing.get("personalOverlay"):
-                report["personalOverlay"] = existing["personalOverlay"]
-        except Exception:
-            pass
-    write_json(path, report)
-    return report
+    prepared = prepare(
+        report_kind=ReportKind.COMPANY_ANALYSIS,
+        exact_path=path,
+        write_kind=WriteKind.CANONICAL,
+        candidate=report,
+    )
+    commit_sync(prepared)
+    committed = load_report(path)
+    if committed is None:
+        raise RuntimeError("canonical company report commit did not persist the report")
+    return committed
 
 
 def delete_analysis_report(report_id):
-    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", str(report_id or ""))
-    if not safe_id:
-        return {"deleted": False, "error": "Invalid report id"}
-    path = ANALYSIS_REPORTS_DIR / f"{safe_id}.json"
-    if not path.exists():
+    from features.agent_mode.report_delete import DeleteRequest, execute_report_delete
+    from features.common.canonical_reports import (
+        CanonicalIdentityError,
+        CanonicalNotFoundError,
+        ReportKind,
+        resolve_exact_report_path,
+    )
+
+    safe_id = str(report_id or "")
+    try:
+        path = resolve_exact_report_path(ANALYSIS_REPORTS_DIR.parent, ReportKind.COMPANY_ANALYSIS, safe_id)
+    except CanonicalNotFoundError:
         return {"deleted": False, "error": "Analysis report not found"}
-    path.unlink()
+    except CanonicalIdentityError as exc:
+        raise ValueError(str(exc)) from exc
+    outcome = execute_report_delete(DeleteRequest(
+        root=ANALYSIS_REPORTS_DIR,
+        identity=f"company:{safe_id}",
+        primary_names=(path.name,),
+        target_names=(path.name,),
+    ))
+    if not outcome.deleted:
+        return {"deleted": False, "error": "Analysis report not found"}
     return {"deleted": True, "id": safe_id}
 
 

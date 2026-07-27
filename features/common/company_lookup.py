@@ -5,17 +5,15 @@ import re
 import urllib.request
 from pathlib import Path
 
+from features.common.config_bootstrap import resolve_config
 from features.common.utils import normalize, read_json, write_json
 from features.llm_settings.client import sec_user_agent
 from features.company_analysis.dart_client import dart_api_key, resolve_dart_company
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data"
-CONFIG_DIR = ROOT / "config"
 SEC_CACHE_DIR = DATA_DIR / "sec-cache"
 SEC_TICKER_CACHE_PATH = SEC_CACHE_DIR / "company_tickers.json"
-COMPANY_MASTER_PATH = CONFIG_DIR / "company_master.json"
-COMPANY_ALIASES_PATH = CONFIG_DIR / "company_aliases.json"
 
 # Module-level SEC index caches — populated lazily on first use
 _SEC_TICKER_IDX = None  # ticker -> entry dict
@@ -144,19 +142,7 @@ def read_company_rows(path):
 
 
 def ensure_company_files():
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    if not COMPANY_MASTER_PATH.exists():
-        write_json(COMPANY_MASTER_PATH, {
-            "description": "Company master used for local tagging. Add listed companies here when you want deterministic matching.",
-            "companies": COMPANIES,
-        })
-    if not COMPANY_ALIASES_PATH.exists():
-        write_json(COMPANY_ALIASES_PATH, {
-            "description": "User corrections and aliases. Entries here override/extend company_master.json.",
-            "companies": [
-                {"name": "McKesson Corporation", "ticker": "MCK", "sector": "Healthcare", "market": "US", "cik": "0000927653", "aliases": ["McKesson", "NYSE:MCK", "MCK"]},
-            ],
-        })
+    return resolve_config("company_master.json"), resolve_config("company_aliases.json")
 
 
 def _load_sec_indexes():
@@ -279,9 +265,9 @@ def _find_sec_companies_in_text(text):
 
 
 def company_universe():
-    ensure_company_files()
+    company_master_path, company_aliases_path = ensure_company_files()
     merged = {}
-    for row in [*COMPANIES, *read_company_rows(COMPANY_MASTER_PATH), *read_company_rows(COMPANY_ALIASES_PATH)]:
+    for row in [*COMPANIES, *read_company_rows(company_master_path), *read_company_rows(company_aliases_path)]:
         c = normalize_company_entry(row)
         key = c.get("ticker") or c.get("name")
         if not key:

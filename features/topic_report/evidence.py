@@ -9,6 +9,8 @@ from __future__ import annotations
 import datetime as dt
 import re
 
+from features.common.research_library.rss.policy import normalize_url
+from features.smart_collections.providers import inbox_path
 from features.topic_report.topic_schema import normalize_evidence_role
 
 _POSITIVE_TERMS = (
@@ -87,6 +89,22 @@ def _coverage_level(count: int) -> str:
     return "none"
 
 
+def _admission_key(doc: dict) -> str:
+    raw_url = str(doc.get("url") or "").strip()
+    if raw_url:
+        normalized_url = normalize_url(raw_url)
+        if normalized_url:
+            return f"url:{normalized_url}"
+    raw_path = str(doc.get("path") or "").strip()
+    if raw_path:
+        return f"path:{inbox_path(raw_path)}"
+    document_id = str(doc.get("id") or doc.get("documentId") or "").strip()
+    if document_id:
+        return f"id:{document_id}"
+    title = str(doc.get("title") or "").strip()
+    return f"legacy:{title}" if title else ""
+
+
 def build_evidence_pack(
     plan: dict,
     *,
@@ -116,12 +134,12 @@ def build_evidence_pack(
         research_round: int = 0,
     ) -> bool:
         nonlocal counter
-        dedupe = doc.get("url") or doc.get("path") or doc.get("title")
+        dedupe = _admission_key(doc)
         if not dedupe or dedupe in seen_keys:
             return False
         seen_keys.add(dedupe)
         counter += 1
-        text = " ".join(str(doc.get(k, "") or "") for k in ("title", "summary", "searchSnippet", "content"))[:800]
+        text = " ".join(str(doc.get(k, "") or "") for k in ("title", "summary", "searchSnippet", "snippet", "content"))[:800]
         age = _age_days(doc.get("date"), as_of=date)
         tokens = {t.lower() for q in queries for t in re.findall(r"[A-Za-z가-힣0-9]{2,}", q)}
         item = {
@@ -130,7 +148,7 @@ def build_evidence_pack(
             "source": doc.get("source", ""),
             "date": str(doc.get("date", ""))[:10],
             "title": str(doc.get("title", ""))[:200],
-            "summary": str(doc.get("summary") or doc.get("searchSnippet") or "")[:400],
+            "summary": str(doc.get("summary") or doc.get("searchSnippet") or doc.get("snippet") or "")[:400],
             "url": doc.get("url", ""),
             "path": doc.get("path", ""),
             "relevance": _relevance(doc, tokens),
@@ -139,6 +157,9 @@ def build_evidence_pack(
             "confidence": "medium",
             "freshness": _freshness(age),
         }
+        document_id = str(doc.get("id") or doc.get("documentId") or "").strip()
+        if document_id:
+            item["documentId"] = document_id
         if research_question_id:
             item["researchQuestionId"] = research_question_id
         if research_round:

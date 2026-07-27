@@ -4,11 +4,12 @@ import assert from "node:assert/strict";
 
 test("Agent Home source exposes the React-owned chat workspace contract", async () => {
   const source = await readFile(new URL("../src/app/AgentHome.tsx", import.meta.url), "utf8");
+  const lifecycle = await readFile(new URL("../src/app/agentProposalLifecycle.ts", import.meta.url), "utf8");
 
   assert.match(source, /data-agent-home/);
   assert.match(source, /\/api\/agent\/chat/);
   assert.match(source, /\/api\/jobs\//);
-  assert.match(source, /\/api\/agent\/proposals\//);
+  assert.match(lifecycle, /\/api\/agent\/proposals\//);
   assert.match(source, /\/api\/agent-bridge\/settings/);
   assert.match(source, /\/api\/dashboard/);
   assert.match(source, /\/api\/investment-review/);
@@ -30,6 +31,9 @@ test("Agent Home source exposes the React-owned chat workspace contract", async 
   assert.match(source, /세션 시작/);
   assert.match(source, /응답/);
   assert.match(source, /requestSubmit/);
+  assert.match(source, /hydrateAgentProposalFromResult/);
+  assert.doesNotMatch(source, /result\.proposal\b/);
+  assert.match(source, /proposalStatus: proposalHydration\.proposalStatus/);
 });
 
 test("AppShell renders AgentHome on the home route instead of the placeholder", async () => {

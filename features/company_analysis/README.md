@@ -166,7 +166,7 @@ POST /api/export-notion/analysis
 
 `analysisStyle` query parameter는 보고서 모드를 고릅니다. 기본값은 `beginner`입니다.
 
-품질 관련 preflight와 evidence coverage 평가는 내부적으로 자동 수행됩니다. 0.1 UI에서는 사용자가 품질 모드를 직접 선택하지 않습니다.
+품질 관련 preflight와 evidence coverage 평가는 내부적으로 자동 수행됩니다. 0.2 UI에서는 사용자가 품질 모드를 직접 선택하지 않습니다.
 
 `POST /api/export-notion/analysis`는 요청 본문으로 저장된 보고서 JSON을 받아 Notion 데이터베이스 페이지로 내보냅니다. `NOTION_TOKEN`과 `NOTION_DB_ID`가 설정되어 있어야 합니다.
 

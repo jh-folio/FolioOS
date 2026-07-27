@@ -23,7 +23,7 @@
 브리핑이 기사 표현에만 의존하지 않도록 시장 데이터 provider 경계를 둡니다.
 
 - `MarketDataProvider`: 날짜별 시장 수치를 가져오는 인터페이스입니다.
-- `TossOpenApiKoreaMarketProvider`: 0.1 사용자 표면에서는 숨긴 내부 검증 adapter입니다. `FOLIO_ENABLE_TOSS_OPEN_API=1`이 켜진 경우에만 설정 상태를 확인하고, 공식 OpenAPI에서 KOSPI/KOSDAQ aggregate 지수·투자자 수급 endpoint가 확인되지 않으면 경고를 남기고 다음 provider로 넘깁니다.
+- `TossOpenApiKoreaMarketProvider`: 0.2 사용자 표면에서는 숨긴 내부 검증 adapter입니다. `FOLIO_ENABLE_TOSS_OPEN_API=1`이 켜진 경우에만 설정 상태를 확인하고, 공식 OpenAPI에서 KOSPI/KOSDAQ aggregate 지수·투자자 수급 endpoint가 확인되지 않으면 경고를 남기고 다음 provider로 넘깁니다.
 - `PyKrxKoreaMarketProvider`: `pykrx`가 설치되어 있으면 KOSPI/KOSDAQ/KOSPI200, 거래대금, 투자자별 수급, 주요 업종 등락률을 조회합니다.
 - `YFinanceKoreaMarketProvider`: pykrx 미지원·실패 시 KOSPI/KOSDAQ 등 지수 종가·등락률을 가능한 범위에서 보완합니다.
 - `fetch_korea_market_data(date)`: provider chain을 실행하고, 별도 FX 보조 경로로 원·달러 환율(`USDKRW=X`)을 붙입니다.

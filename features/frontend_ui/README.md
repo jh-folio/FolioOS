@@ -4,17 +4,17 @@
 
 ## 현재 프론트엔드 구조
 
-**React SPA가 기본 프론트엔드다.** 기본 URL(`/`)에서 `web/`(Vite+React+TS, 빌드 산출물 `public/react/folio-react.js`)의 React shell이 렌더되고, route(home/dashboard/watchlist/briefing/rss/market-memory/analysis/deep-research/settings)는 React 네이티브다. 0.1 기본 nav에는 home/briefing/rss/market-memory/analysis/settings만 노출하고 dashboard/watchlist/deep-research는 딥링크 호환 route로 유지한다. `public/index.html`은 `#folioReactRoot`와 script/style 로딩만 갖는 최소 entrypoint이며, `public/app.js`는 React가 재사용하는 bridge-only 파일이다(`FolioBridge`: `renderMarkdown`, `splitReportTitle`, `briefingSourcePanelHtml`, `renderBriefingVisuals`, `updateAgentContext`, `openAgentDock` 등).
+**React SPA가 기본 프론트엔드다.** 기본 URL(`/`)에서 `web/`(Vite+React+TS, 빌드 산출물 `public/react/folio-react.js`)의 React shell이 렌더되고, route(home/dashboard/watchlist/briefing/rss/market-memory/analysis/deep-research/settings)는 React 네이티브다. 0.2 기본 nav에는 home/briefing/rss/market-memory/analysis/deep-research/settings를 노출하고 dashboard/watchlist는 딥링크 호환 route로 유지한다. `public/index.html`은 `#folioReactRoot`와 script/style 로딩만 갖는 최소 entrypoint이며, `public/app.js`는 React가 재사용하는 bridge-only 파일이다(`FolioBridge`: `renderMarkdown`, `splitReportTitle`, `briefingSourcePanelHtml`, `renderBriefingVisuals`, `updateAgentContext`, `openAgentDock` 등).
 
 우측 전역 Action Panel은 제거되었다. 보고서 조작은 리더 내부 조작 레일과 노트 패널에서 처리한다.
 
 ## React SPA 전환 방향
 
-`web/` React/TypeScript SPA가 routing, navigation, Agent Home, Dashboard, Report Reader, Notes, Settings를 소유한다. `public/app.js`는 더 이상 화면 상태나 view 전환을 관리하지 않고, 검증된 Markdown/visual/source 렌더러를 React에 제공하는 bridge-only 역할만 맡는다. React 전환 자체는 [REACT_SPA_REWRITE_PLAN.md](../../roadmap/completed/REACT_SPA_REWRITE_PLAN.md)에 완료 이력으로 남기고, 이후 제품 순서는 [0.1 Release Plan](../../roadmap/release/0.1_RELEASE_PLAN.md)과 [0.2+ Product Roadmap](../../roadmap/release/0.2_PLUS_PLAN.md)을 따른다.
+`web/` React/TypeScript SPA가 routing, navigation, Agent Home, Deep Research, Dashboard, Report Reader, Notes, Settings를 소유한다. `public/app.js`는 더 이상 화면 상태나 view 전환을 관리하지 않고, 검증된 Markdown/visual/source 렌더러를 React에 제공하는 bridge-only 역할만 맡는다. React 전환 자체는 [REACT_SPA_REWRITE_PLAN.md](../../roadmap/completed/REACT_SPA_REWRITE_PLAN.md)에 완료 이력으로 남긴다.
 
 `#/home`은 React가 직접 렌더하는 Agent Home이다. Home은 큰 `Folio OS` hero, 빠른 실행, 최근 보고서 칩 디자인을 유지하면서 hero와 빠른 실행 사이에 Codex/검색 메인 화면형 프롬프트 박스를 둔다. 프롬프트 전송은 `/api/agent/chat`으로 job을 만들고 `/api/jobs/{id}`를 polling하며, 수정 proposal은 `/api/agent/proposals/{id}` 승인/거절 API를 사용한다. 모델 선택은 `/api/agent-bridge/settings`의 현재 provider/adapter `modelChoices`를 따른다. 대화 로그는 보고서 evidence와 분리해 브라우저 localStorage에 저장하고, 사용자가 `새 대화`로 즉시 비울 수 있다. Home 하단에는 `/api/jobs` 기반 최근 Agent/빠른 실행 작업 목록을 표시한다. Home에서는 전역 Agent Dock을 표시하지 않는다.
 
-`#/dashboard`는 React monitoring route지만 0.1 기본 사용자 nav에서는 숨긴다. `/api/dashboard`로 인덱스·최근 보고서 현황을, `/api/investment-review`로 투자 리뷰 요약·체크포인트·포트폴리오 영향을 읽고, `/api/market-widgets/settings`를 `FolioTradingViewWidgets.renderDashboardBoard()`에 넘겨 Current Market 위젯 보드를 렌더한다. 투자 리뷰 갱신은 `POST /api/investment-review/generate`를 사용한다. 위젯 추가/수정/초기화는 React route가 `/api/market-widgets/settings`에 저장한다.
+`#/dashboard`는 React monitoring route지만 0.2 기본 사용자 nav에서는 숨긴다. `/api/dashboard`로 인덱스·최근 보고서 현황을, `/api/investment-review`로 투자 리뷰 요약·체크포인트·포트폴리오 영향을 읽고, `/api/market-widgets/settings`를 `FolioTradingViewWidgets.renderDashboardBoard()`에 넘겨 Current Market 위젯 보드를 렌더한다. 투자 리뷰 갱신은 `POST /api/investment-review/generate`를 사용한다. 위젯 추가/수정/초기화는 React route가 `/api/market-widgets/settings`에 저장한다.
 
 `#/briefing`은 React 저장 브리핑 route다. 목록 화면은 공통 `RouteHero`와 브리핑 생성 설정 패널, 저장 브리핑 검색 패널을 사용한다. 검색 패널은 `/api/briefings/index`의 `q`, `marketScope`, `briefingType`, `dateFrom`, `dateTo` 파라미터를 직접 사용한다. `#/briefing/{date}/{us|kr|both}` detail hash에서는 `/api/briefings/{date}?includePersonal=true&marketScope=...`를 호출해 `ReportReaderShell` 안에서 Canonical markdown을 표시한다. 브리핑 detail action rail은 AI/노트/내보내기 그룹으로 분류하고, Personal Overlay 생성, Agent 문의, Notion/Obsidian export를 직접 처리한다. note slot은 Native Notes API(`/api/investment-notes`)에 `market_memo`를 저장하고 linked notes를 조회한다. 리더 본문(`ReportBody`)은 별도 파서를 두지 않고 `FolioBridge`의 `renderMarkdown()`·`splitReportTitle()`·`briefingSourcePanelHtml()`·`renderBriefingVisuals()`를 재사용해 표·링크·리스트·가격 차트·히트맵·소스패널 parity를 확보한다.
 
@@ -24,15 +24,15 @@
 
 `#/analysis`는 React Company Analysis route다. `/api/analysis-reports`로 저장 피드를 읽고, `/api/analyze?q=...&analysisStyle=beginner|advanced`로 기업 분석을 생성하며, Agent job 응답이면 `/api/jobs/{id}`를 polling한 뒤 저장 보고서를 다시 연다. 저장 카드 클릭은 `#/analysis/{reportId}` detail hash로 공통 `ReportReaderShell` 기반 reader를 열고, route 안에서 삭제와 목록 복귀를 처리한다. 저장 보고서의 `analysisCharts`는 reader 안에서 기업 분석 시각화 카드로 렌더한다.
 
-React Shell은 레거시 shell과 같은 큰 구조를 직접 렌더한다: dark topbar, 접을 수 있는 floating 좌측 navigation rail, 가운데 scrollable route host, 우측 Agent Dock. 0.1 노출 화면인 브리핑·RSS 피드·시장 내러티브·기업분석·설정 목록 화면은 공통 `RouteHero`를 사용한다. 대시보드·딥리서치·워치리스트도 route 구현은 유지하지만 0.1 nav에는 노출하지 않는다. 레거시 기업분석 탭과 같은 흰색 hero 카드(골드 eyebrow, 제목, 설명, 우측 액션 슬롯)를 기준으로 맞추며, 브리핑 목록은 hero 아래에 레거시 브리핑 탭의 생성/검색 패널을 유지하고, 보고서 reader 내부의 dark report hero와 본문 레이아웃은 별도로 유지한다.
+React Shell은 레거시 shell과 같은 큰 구조를 직접 렌더한다: dark topbar, 접을 수 있는 floating 좌측 navigation rail, 가운데 scrollable route host, 우측 Agent Dock. 0.2 노출 화면인 브리핑·RSS 피드·시장 내러티브·기업분석·딥리서치·설정 목록 화면은 공통 `RouteHero`를 사용한다. 대시보드·워치리스트 route 구현은 유지하지만 기본 nav에는 노출하지 않는다. 레거시 기업분석 탭과 같은 흰색 hero 카드(골드 eyebrow, 제목, 설명, 우측 액션 슬롯)를 기준으로 맞추며, 브리핑 목록은 hero 아래에 레거시 브리핑 탭의 생성/검색 패널을 유지하고, 보고서 reader 내부의 dark report hero와 본문 레이아웃은 별도로 유지한다.
 
 React Shell의 타이포그래피는 새 값을 만들지 않고 레거시 토큰을 따른다. 좌측 navigation title/item은 `--fs-base`, 그룹 라벨은 `--fs-xs`, route hero 제목은 `--fs-xl`, 설명은 `--fs-base`를 사용한다. 홈 화면의 큰 `Folio OS` title은 레거시 `.home-hero` display scale을 유지하되, React Home에서는 prompt 위치를 고정하고 hero만 위로 당겨 title과 prompt 사이 여백을 확보한다.
 
 좌측 navigation 아이콘은 알파벳 배지가 아니라 탭 의미에 맞춘 outline SVG를 사용한다. 개별 아이콘 선택은 실제 UI 디자인에서 지정한 매핑을 따른다.
 
-`#/deep-research`는 React Deep Research route다. 0.1 기본 사용자 표면에서는 좌측 nav/Home 빠른 실행/command palette에 노출하지 않지만, 저장 topic report 딥링크와 내부 artifact 라우팅 호환을 위해 route 자체는 유지한다. `/api/topic-reports`로 저장 피드를 읽고, `POST /api/topic-reports`로 주제 리서치를 생성하며, Agent job 응답이면 `/api/jobs/{id}`를 polling한 뒤 저장 보고서를 다시 연다. 저장 카드 클릭은 `#/deep-research/{reportId}` detail hash로 공통 `ReportReaderShell` 기반 reader를 열고, route 안에서 삭제와 목록 복귀를 처리한다. 폼과 저장 피드는 `topicrpt-*`, `report-feed-*`, `input-panel`, `filter-btn` 클래스를 재사용해 기존 디자인 언어를 유지한다.
+`#/deep-research`는 React Deep Research route이며 0.2 좌측 nav/Home 빠른 실행/command palette에 노출된다. `/api/topic-reports/plan`에서 승인 계획과 자료 preview를 받고, 승인된 envelope만 `POST /api/topic-reports` SharedJob으로 실행한다. `/api/topic-reports`로 저장 피드를 읽고 `/api/jobs/{id}`를 bounded polling한 뒤 저장 보고서를 다시 연다. 저장 카드 클릭은 `#/deep-research/{reportId}` detail hash로 공통 `ReportReaderShell` 기반 reader를 열고, route 안에서 삭제와 목록 복귀를 처리한다. 폼과 저장 피드는 `topicrpt-*`, `report-feed-*`, `input-panel`, `filter-btn` 클래스를 재사용해 기존 디자인 언어를 유지한다.
 
-`#/watchlist`는 React Watchlist route지만 0.1 기본 사용자 nav에서는 숨긴다. `/api/watchlist`로 저장 목록을 읽고 저장하며, `/api/watchlist/resolve`로 티커/회사명을 정규화하고, `/api/watchlist/overview`로 카드용 태그·뉴스 카운트를 읽는다. 카드 클릭은 `#/watchlist/{item}` detail hash로 상세 화면을 열고, `/api/watchlist/detail` 결과를 `FolioTradingViewWidgets.renderWatchlistDetail()`에 넘겨 TradingView 위젯 parity를 유지한다. 카드와 상세 화면은 `watchlist-*`, `compact-item`, `input-panel`, `filter-btn` 클래스를 재사용한다.
+`#/watchlist`는 React Watchlist route지만 0.2 기본 사용자 nav에서는 숨긴다. `/api/watchlist`로 저장 목록을 읽고 저장하며, `/api/watchlist/resolve`로 티커/회사명을 정규화하고, `/api/watchlist/overview`로 카드용 태그·뉴스 카운트를 읽는다. 카드 클릭은 `#/watchlist/{item}` detail hash로 상세 화면을 열고, `/api/watchlist/detail` 결과를 `FolioTradingViewWidgets.renderWatchlistDetail()`에 넘겨 TradingView 위젯 parity를 유지한다. 카드와 상세 화면은 `watchlist-*`, `compact-item`, `input-panel`, `filter-btn` 클래스를 재사용한다.
 
 `#/settings`는 React Settings route다. `/api/settings`, `/api/agent-bridge/settings`, `/api/obsidian/settings`, `/api/automation/settings`를 직접 소비하며, AI Agent/API/Notion/Obsidian/자동화 설정을 `settings-panel`, `input-panel`, `settings-grid`, `filter-btn` 클래스 위에 렌더한다. AI Agent 설정은 ON/OFF와 LLM CLI/API 모드 토글을 한 패널에서 관리한다. 모델 필드는 마지막으로 불러온 `modelChoices`를 select로 표시하며, 새로고침은 `/api/settings?refresh=true`와 `/api/agent-bridge/settings?refresh=true`로 model catalog를 강제 갱신한다.
 
@@ -50,7 +50,7 @@ React Shell의 타이포그래피는 새 값을 만들지 않고 레거시 토�
 
 ## 담당 범위
 
-- 0.1 노출 범위: Home / 브리핑 / RSS 피드(뉴스 검색 포함) / 기업 분석 / 시장 내러티브 / 설정
+- 0.2 노출 범위: Home / 브리핑 / RSS 피드(뉴스 검색 포함) / 기업 분석 / 딥 리서치 / 시장 내러티브 / 설정
 - 브리핑 탭은 생성 컨트롤과 저장 보고서 피드가 **한 화면으로 통합**되어 있다(과거 `생성`/`목록` 하위 탭·사이드바 하위 탭 제거). 생성 박스는 단일 패널(`브리핑 설정`: 시장 범위 세그먼트·브리핑 유형)과 하단 액션 바(`새로고침` → `오늘 브리핑 생성` → 날짜 입력 → `이 날짜로 생성`)다. 저장 피드는 최신순 카드(제목·기준일·생성 시각)에 시장·유형·날짜·텍스트 필터와 `시장별/날짜별` 보기 모드를 제공하고, 카드별 휴지통으로 확인 후 삭제(`DELETE /api/briefings/{date}`)한다. 브리핑은 **생성 결과·카드 클릭 모두 React `ReportReaderShell`** 로 브리핑 탭 본문 자리에서 열린다(노션식). 리더가 열리면 목록/생성 패널은 숨고, 상단 브레드크럼(`브리핑 › {날짜}`)·브라우저 뒤로가기·좌측 nav의 브리핑 클릭으로 목록에 돌아온다. URL 해시 `#/briefing/{date}/{us|kr|both}`가 리더 상태의 source of truth라 새로고침·딥링크가 복원된다. 데스크톱 리더는 grid 2열: 본문이 좌측 사이드바 옆부터 우측 컬럼 앞까지 채우고, 우측 컬럼은 **조작 레일(위) + 투자 노트(아래, 상시 표시·저장 노트 자동 로드)** 다(책갈피 손잡이 제거). 기업분석·딥리서치도 React route에서는 공통 reader를 사용한다.
 - 좌측 navigation, Agent Dock, 보고서 hero
 - Markdown 렌더링, Notion/Obsidian/HTML 내보내기 버튼

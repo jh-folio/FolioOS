@@ -4,38 +4,27 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, and company analysis with optional AI assistance.
+Folio OS 0.2 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## Visual Preview
-
-These screenshots were captured from a clean sample workspace with no private research material, reports, portfolio data, or API keys.
-
-<img src="docs/assets/screenshots/folio-os-home.png" alt="Folio OS Home screen with the AI Agent entry point" width="920">
-
-<img src="docs/assets/screenshots/folio-os-briefing.png" alt="Folio OS Briefing screen with empty-state briefing controls" width="920">
-
-<img src="docs/assets/screenshots/folio-os-rss-feed.png" alt="Folio OS RSS Feed screen with empty-state feed filters" width="920">
-
----
-
-## What You Can Do In 0.1
+## What You Can Do In 0.2
 
 - Chat with the Folio OS AI Agent from the Home screen.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
 - Generate company analysis reports from local evidence and official data where available.
+- Run question-first Deep Research: review an evidence plan before execution, reuse Smart Collections, and reopen reports with provenance, gaps, quality, and Market State shown as separate layers.
+- Review a metadata-only Agent Work Log and explicitly approve or reject report revision proposals.
 - Write report-side Folio Notes.
 - Export generated reports to Obsidian or Notion.
 - Configure LLM CLI/API, model choices, RSS, automation, and export settings.
 
-Deferred from the 0.1 user surface:
+Deferred from the 0.2 user surface:
 
-- Deep Research as a full Agent workspace.
 - Dashboard widgets and watchlist workflows.
 - Advanced portfolio workflows.
 - Advanced personal note analysis workflows.
@@ -125,6 +114,16 @@ Market Memory summarizes the medium-term market state as one current situation w
 ### Company Analysis
 
 Generate company analysis reports from official data and local research material. For US companies, Folio OS prioritizes SEC ticker/CIK lookup, companyfacts, and 10-K/10-Q style evidence where available.
+
+### Deep Research
+
+Start with an investment question, inspect the proposed research plan and live evidence preview, then approve execution. Smart Collections are reusable local filters stored in `data/smart-collections.json`; they are metadata, not evidence. Saved reports live under `data/topic-reports/` and record the approved plan, resolved external evidence, execution provenance, data gaps, quality, and a separate Market State reference. User context and report-side notes remain hypotheses and never become citations or evidence counts.
+
+Direct API and selected CLI execution use the same approved request. If an engine is unavailable, Folio OS may fall back to a rules-based report and records that fallback. A report with no usable external evidence requires explicit confirmation and is clearly labelled as evidence-limited. Existing Canonical Markdown changes only through an explicit revision proposal approval.
+
+### Agent Work Log
+
+Home and Deep Research share a bounded, metadata-only Work Log. It stores task type, status, timing, engine/fallback metadata, artifact counts, and proposal state—not prompts, chat transcripts, report Markdown, diffs, attachments, local paths, credentials, or raw provider output.
 
 ### Settings
 

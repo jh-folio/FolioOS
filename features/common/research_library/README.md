@@ -1,6 +1,6 @@
 # Research Library
 
-Research Library는 Folio OS가 자료를 읽고 찾는 공통 기반입니다. 사용자가 넣은 기사·RSS·리포트·공시·PDF를 스캔해 `research-index.sqlite3`에 저장하고, 브리핑·RSS 피드·뉴스 검색·기업분석·테마분석·Thesis Delta가 같은 자료 기반을 읽도록 해줍니다.
+Research Library는 Folio OS가 자료를 읽고 찾는 공통 기반입니다. 사용자가 넣은 기사·RSS·리포트·공시·PDF를 스캔해 `research-index.sqlite3`에 저장하고, 브리핑·RSS 피드·뉴스 검색·기업분석·0.2 Deep Research·Thesis Delta가 같은 자료 기반을 읽도록 해줍니다.
 
 ## 사용 흐름
 
@@ -41,7 +41,7 @@ research-inbox/
 | RSS 피드 | `rss` 파일과 `rss_feed_items` 캐시 |
 | 뉴스 검색 | 기본 `articles`, `rss`; `scope=all`일 때 전체 검색 |
 | 기업 분석 | `filings > reports > articles > rss > 기타` 순서 |
-| 테마 분석 | RSS/기사 하이브리드 검색 + 시장 데이터 + 내러티브 |
+| Deep Research | 승인 계획에 따라 RSS/기사 외부 근거를 live resolve; Smart Collection/Market State/userContext 자체는 evidence가 아님 |
 | Thesis Delta | 로컬 뉴스 검색 + 공식자료 보강 |
 
 ## Evidence Intake / RSS 수집
