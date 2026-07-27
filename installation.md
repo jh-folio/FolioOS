@@ -1,12 +1,12 @@
 # Folio OS Installation and Launch Guide
 
-Folio OS is a local-first investment research workspace. The easiest 0.1 setup path assumes you already use an AI coding agent such as Codex, Claude Code, or another LLM assistant that can operate on your local machine.
+Folio OS 0.2 is a local-first investment research workspace. The easiest setup path assumes you already use an AI coding agent such as Codex, Claude Code, or another LLM assistant that can operate on your local machine.
 
 Korean users can also read [README.ko.md](README.ko.md).
 
 There are two supported setup paths:
 
-1. **AI Agent-assisted setup**: recommended for most 0.1 users.
+1. **AI Agent-assisted setup**: recommended for most 0.2 users.
 2. **Manual setup**: use when you prefer to run commands yourself or need to troubleshoot.
 
 ---
@@ -152,11 +152,11 @@ Keep the server process running while using the app.
 
 ---
 
-## 0.1 Launcher Notes
+## 0.2 Launcher Notes
 
-For 0.1, the current startup scripts are the supported launch path. They may show server logs in the terminal, which is normal and useful for troubleshooting.
+For 0.2, the current startup scripts are the supported launch path. They may show server logs in the terminal, which is normal and useful for troubleshooting.
 
-A quieter Windows launcher or tray-style app is planned as later polish, not required for the first 0.1 release.
+A quieter Windows launcher or tray-style app remains later polish and is not required for 0.2.
 
 ---
 
@@ -171,11 +171,14 @@ Do not delete these unless you intentionally want to remove local data:
 
 Development-only folders such as `web/`, `docs/`, and `roadmap/` are needed for source development, but are not required in a normal user runtime package if the built frontend under `public/` is current. Source/developer archives can still include them.
 
-Maintainers can create a clean 0.1 user package with:
+Maintainers can create a clean 0.2 user package from reviewed tracked inputs with:
 
 ```powershell
-py -3 scripts\package_release.py --version vX.Y.Z --force
+py -3 scripts\package_release.py --version v0.2.0
+py -3 scripts\verify_release.py --release-dir dist\FolioOS-v0.2.0
 ```
+
+The package includes the built React bundle, so normal users do not need Node.js. Deep Research remains local-first: its reports are stored under `data/topic-reports/`, Smart Collections under `data/smart-collections.json`, and Agent Work Log entries contain metadata only.
 
 ---
 

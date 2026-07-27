@@ -23,7 +23,7 @@ export const ROUTES: AppRoute[] = [
   { id: "rss", label: "RSS 피드", group: "research" },
   { id: "market-memory", label: "시장 내러티브", group: "research" },
   { id: "analysis", label: "기업 분석", group: "research" },
-  { id: "deep-research", label: "딥 리서치", group: "research", visibleInNav: false },
+  { id: "deep-research", label: "딥 리서치", group: "research" },
   { id: "watchlist", label: "워치리스트", group: "home", visibleInNav: false },
   { id: "settings", label: "설정", group: "system" },
 ];

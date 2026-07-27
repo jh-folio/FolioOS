@@ -7,6 +7,26 @@ from features.agent_mode import chat
 from features.market_memory.snapshot import save_market_state_snapshot
 
 
+def test_topic_pack_dispatch_preserves_custom_tickers_and_deep_research():
+    captured = {}
+
+    def fake_prepare(topic_key, **kwargs):
+        captured["topic_key"] = topic_key
+        captured.update(kwargs)
+        return {"taskType": "topic_report"}, Path("pack.json")
+
+    with patch.object(service, "prepare_topic_report_pack", side_effect=fake_prepare):
+        service.prepare_pack(
+            "topic_report",
+            topic_key="custom",
+            custom_tickers={"NVDA": "NVIDIA"},
+            deep_research=True,
+        )
+
+    assert captured["custom_tickers"] == {"NVDA": "NVIDIA"}
+    assert captured["deep_research"] is True
+
+
 def test_market_memory_agent_writeback_uses_existing_normalizer():
     pack = {
         "artifactId": "2099-12-31",
@@ -53,7 +73,9 @@ def test_market_state_snapshot_agent_writeback_saves_current_snapshot():
 def test_agent_chat_prompt_includes_market_memory_context():
     with TemporaryDirectory() as tmp:
         original_db = chat.MARKET_MEMORY_DB_PATH
+        original_index = chat.RESEARCH_INDEX_PATH
         chat.MARKET_MEMORY_DB_PATH = Path(tmp) / "market-memory.sqlite3"
+        chat.RESEARCH_INDEX_PATH = Path(tmp) / "research-index.sqlite3"
         try:
             save_market_state_snapshot(chat.MARKET_MEMORY_DB_PATH, {
                 "headline": "AI 공급망이 시장의 중심축",
@@ -65,13 +87,17 @@ def test_agent_chat_prompt_includes_market_memory_context():
                 "counterEvidence": ["금리 상승은 밸류에이션 상단을 제한한다."],
                 "sourceRefs": [{"id": "rss:1", "title": "AI demand", "source": "Reuters"}],
                 "confidence": 0.82,
+                "inputWatermarks": {"GLOBAL": None, "US": None, "KR": None},
             })
             prompt = chat.build_chat_prompt("현재 시장을 설명해줘", {"surface": "agent_home"}, {"effort": "medium"})
-            assert "## Market Memory Context" in prompt
-            assert "AI 공급망이 시장의 중심축" in prompt
-            assert "기업 고유 사실의 evidence가 아니라 시장 배경" in prompt
+            assert "## Market State Reference" in prompt
+            assert "status: current" in prompt
+            assert "- asOf:" in prompt
+            assert "reason: current_injected" in prompt
+            assert "evidenceRole: context_only" in prompt
         finally:
             chat.MARKET_MEMORY_DB_PATH = original_db
+            chat.RESEARCH_INDEX_PATH = original_index
 
 
 def test_company_analysis_agent_pack_preserves_analysis_style():

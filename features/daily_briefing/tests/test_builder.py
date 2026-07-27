@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from features.daily_briefing import builder
+from features.common.canonical_reports import canonical_content_hash
 
 
 def _doc(doc_id, title, source, date, market):
@@ -234,6 +235,31 @@ def test_persisted_us_generation_returns_us_view_while_storage_preserves_kr():
         assert "# US Market Briefing" in response["markdown"]
         assert "# Korea Market Briefing" not in response["markdown"]
         assert response["marketScope"] == "us"
+
+
+def test_direct_persistence_commits_canonical_revision_to_disk():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        with (
+            patch.object(builder, "BRIEFINGS_DIR", root),
+            patch.object(builder, "build_index", return_value={}),
+            patch.object(builder, "load_index", return_value={"documents": DOCS}),
+            patch.object(builder, "cached_market_snapshot", return_value={"ok": False, "error": "fixture"}),
+            patch.object(builder, "cached_korea_market_data", return_value={"ok": False, "provider": "fixture", "warnings": []}),
+            patch.object(builder, "list_briefing_memories", return_value=[]),
+            patch.object(builder, "load_prev_briefing", return_value=None),
+            patch.object(builder, "collect_briefing_visuals", side_effect=_visuals),
+            patch.object(builder, "apply_quality_loop", side_effect=lambda _kind, artifact, **_kwargs: artifact),
+        ):
+            response = builder.build_briefing(
+                "2026-06-10", strict_date=True, llm_override=False,
+                persist=True, market_scope="us",
+            )
+
+        persisted = builder.read_json(root / "2026-06-10.us.json", {})
+        assert persisted["canonicalRevision"]["number"] == 1
+        assert persisted["canonicalRevision"]["hash"] == canonical_content_hash(persisted)
+        assert response["canonicalRevision"] == persisted["canonicalRevision"]
 
 
 def test_persisted_visual_sidecar_uses_gzip_filename():

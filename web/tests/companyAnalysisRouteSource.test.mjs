@@ -30,7 +30,7 @@ test("Company Analysis route owns feed, form, and reader APIs", async () => {
   assert.match(source, /dedupeDataGaps/);
   assert.doesNotMatch(source, /proposalSurface/);
   assert.match(source, /openReactAgentDock/);
-  assert.match(source, /updateReactAgentContext/);
+  assert.match(source, /setReactAgentContextScope/);
   assert.match(source, /noteType: "company_thesis"/);
   assert.match(source, /reportKind: "company_analysis"/);
   assert.match(source, /AnalysisViewMode = "recent" \| "company" \| "month"/);

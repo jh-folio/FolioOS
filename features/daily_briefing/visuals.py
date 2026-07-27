@@ -16,6 +16,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from features.common.market_calendar import is_market_open, latest_trading_day_on_or_before, previous_trading_day
+from features.common.config_bootstrap import resolve_config
 from features.common.market_data.market_universe import build_kospi_heatmap_snapshot, build_us_heatmap_snapshot
 from features.common.market_data.price_history import INDEX_UNIVERSE, build_price_history
 from features.common.company_lookup import find_companies
@@ -30,7 +31,6 @@ from features.daily_briefing.schema import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPANY_MASTER_PATH = ROOT / "config" / "company_master.json"
 MARKET_CACHE_DIR = ROOT / "data" / "market-cache"
 MARKET_META = {
     "us": {"market": "US", "timezone": "America/New_York", "currency": "USD"},
@@ -85,7 +85,7 @@ def _default_history_fetcher(symbol, start, end):
 
 
 def _company_master():
-    payload = read_json(COMPANY_MASTER_PATH, {})
+    payload = read_json(resolve_config("company_master.json"), {})
     return [row for row in payload.get("companies", []) if isinstance(row, dict)]
 
 

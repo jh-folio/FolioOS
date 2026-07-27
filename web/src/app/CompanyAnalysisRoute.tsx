@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../api";
-import { openReactAgentDock, updateReactAgentContext } from "./agentContext";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
+import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
+import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
 import { CompanyAnalysisBody } from "./reportReader/CompanyAnalysisBody";
 import { stableNoteKey } from "./reportReader/FolioNotePanel";
 import { ReaderActionButton, ReaderActionGroup } from "./reportReader/ReaderActions";
@@ -47,7 +48,7 @@ type DataGap = {
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: { reportId?: string; artifactId?: string };
@@ -76,12 +77,12 @@ function sleep(ms: number) {
 
 function isAgentJob(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && isActiveJobStatus(job.status));
 }
 
 async function pollJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }
@@ -224,6 +225,7 @@ export function CompanyAnalysisRoute() {
   const [actionBusy, setActionBusy] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [proposalReloadKey, setProposalReloadKey] = useState(0);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -231,7 +233,7 @@ export function CompanyAnalysisRoute() {
     try {
       const payload = await getJson<AnalysisReport[]>("/api/analysis-reports");
       setReports(Array.isArray(payload) ? payload : []);
-      updateReactAgentContext({ surface: "analysis", viewId: "analysis", reportKind: "", reportId: "" });
+      setReactAgentContextScope("analysis", { surface: "analysis", viewId: "analysis", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "기업 분석 목록을 불러오지 못했습니다.");
     } finally {
@@ -254,6 +256,15 @@ export function CompanyAnalysisRoute() {
   }, []);
 
   useEffect(() => {
+    const handleProposalLifecycle = (event: Event) => {
+      const result = (event as CustomEvent<ProposalLifecycleResult>).detail;
+      if (proposalTargetsContext(result, window.FolioAgent?.currentContext)) setProposalReloadKey((value) => value + 1);
+    };
+    window.addEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+    return () => window.removeEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+  }, []);
+
+  useEffect(() => {
     let alive = true;
     async function loadDetail(reportId: string) {
       setLoading(true);
@@ -262,7 +273,7 @@ export function CompanyAnalysisRoute() {
         const report = await getJson<AnalysisReport>(`/api/analysis-reports/${encodeURIComponent(reportId)}?includePersonal=true`);
         if (!alive) return;
         setSelected(report);
-        updateReactAgentContext({
+        setReactAgentContextScope("analysis", {
           surface: "analysis_reader",
           viewId: "analysis",
           reportKind: "company_analysis",
@@ -282,12 +293,12 @@ export function CompanyAnalysisRoute() {
       loadDetail(detailId);
     } else {
       setSelected(null);
-      updateReactAgentContext({ surface: "analysis", viewId: "analysis", reportKind: "", reportId: "" });
+      setReactAgentContextScope("analysis", { surface: "analysis", viewId: "analysis", reportKind: "", reportId: "" });
     }
     return () => {
       alive = false;
     };
-  }, [detailId]);
+  }, [detailId, proposalReloadKey]);
 
   async function generateAnalysis(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

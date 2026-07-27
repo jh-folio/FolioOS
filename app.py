@@ -14,23 +14,29 @@ from pathlib import Path
 from fastapi import Body, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from features.common.health import health_payload
 
 from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.common.jobs import (
-    get_job,
     load_jobs,
-    recent_jobs,
     submit_job,
 )
+from features.common.jobs_routes import router as jobs_router
+from features.agent_mode.work_log_routes import router as work_log_router
 from features.agent_mode.bridge import (
     agent_preflight,
     bridge_status,
-    cancel_agent_task,
     submit_agent_task,
-    submit_market_memory_update,
 )
-from features.agent_mode.chat import apply_proposal, reject_proposal, submit_agent_chat
-from features.agent_mode.companion import agent_companion_reply
+from features.agent_mode.chat import (
+    ProposalActionError,
+    apply_proposal,
+    get_proposal,
+    recover_proposals,
+    reject_proposal,
+)
+from features.agent_mode.routes import AgentCompanionBoundary
+from features.agent_mode.proposal_schema import ProposalAction, ProposalActionRequest
 from features.agent_mode.generation_mode import (
     llm_override_for_mode,
 )
@@ -70,10 +76,9 @@ from features.common.research_library.search.service import (
 from features.llm_settings.settings_service import public_settings, save_settings
 from features.llm_settings.provider_status import check_provider as check_llm_api_provider
 from features.company_analysis.cache_cleanup import cache_stats, cleanup_cache
-from features.market_memory.service import run_llm_market_memory, run_llm_market_state_snapshot, schedule_startup_regime_refresh
+from features.market_memory.service import run_llm_market_memory, schedule_startup_regime_refresh
 from features.market_memory.digest import run_rss_market_memory_update
-from features.market_memory.state_dashboard import market_state_dashboard_payload
-from features.market_memory.snapshot import current_market_state_snapshot
+from features.market_memory.routes import create_market_state_router
 from features.market_widgets.service import (
     get_market_widget_settings,
     save_market_widget_settings,
@@ -160,7 +165,7 @@ from features.daily_briefing.builder import (
     cached_korea_market_data as feature_cached_korea_market_data,
     cached_market_snapshot as feature_cached_market_snapshot,
 )
-from features.daily_briefing.archive import query_briefing_archive
+from features.daily_briefing.archive import query_briefing_archive, refresh_briefing_archive
 from features.daily_briefing.schema import briefing_scope_view
 from features.daily_briefing.visuals import load_current_visuals, load_visual_sidecar
 from features.company_analysis.report_rules import build_rule_report
@@ -208,12 +213,12 @@ from features.topic_report.service import (
     attach_overlay_to_topic_report,
     delete_topic_report,
     evaluate_topic_report,
-    generate_topic_report,
     get_topic_report,
     list_topic_reports,
     preset_topics_list,
-    save_topic_report,
 )
+from features.topic_report.routes import ApprovedRequestBoundary
+from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
     get_quality as get_research_quality,
@@ -252,6 +257,7 @@ from features.portfolio.service import (
 )
 
 ROOT = Path(__file__).resolve().parent
+APP_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 DATA_DIR = ROOT / "data"
 CONFIG_DIR = ROOT / "config"
 INBOX_DIR = ROOT / "research-inbox"
@@ -277,6 +283,12 @@ def ensure_dirs():
         INBOX_DIR / "articles", INBOX_DIR / "links",
     ]:
         p.mkdir(parents=True, exist_ok=True)
+    from features.agent_mode.report_delete import recover_report_deletes
+
+    recover_report_deletes(BRIEFINGS_DIR, refresh=refresh_briefing_archive)
+    recover_report_deletes(ANALYSIS_REPORTS_DIR)
+    recover_report_deletes(TOPIC_REPORTS_DIR)
+    recover_proposals()
     ensure_company_files()
 
 
@@ -351,7 +363,23 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-fastapi_app = FastAPI(title="Folio OS", version="0.1.0", lifespan=lifespan)
+fastapi_app = FastAPI(title="Folio OS", version=APP_VERSION, lifespan=lifespan)
+SMART_COLLECTION_SERVICE = create_smart_collection_service(DATA_DIR)
+TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(
+    DATA_DIR,
+    collection_service=SMART_COLLECTION_SERVICE,
+)
+fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
+fastapi_app.include_router(SmartCollectionBoundary(SMART_COLLECTION_SERVICE).router())
+fastapi_app.include_router(AgentCompanionBoundary(SMART_COLLECTION_SERVICE).router())
+fastapi_app.include_router(create_market_state_router(DATA_DIR))
+fastapi_app.include_router(jobs_router)
+fastapi_app.include_router(work_log_router)
+
+
+@fastapi_app.get("/api/health")
+def api_health():
+    return health_payload(ROOT)
 
 
 @fastapi_app.exception_handler(Exception)
@@ -542,7 +570,7 @@ def api_delete_briefing(date: str, market: str = ""):
     try:
         result = delete_briefing(date, market=market or None)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid briefing identifier or market scope") from exc
     if not result["deleted"]:
         raise HTTPException(status_code=404, detail="Briefing not found")
     return result
@@ -703,7 +731,10 @@ def api_run_thesis_delta(ticker: str, body: dict | None = Body(default=None)):
 
 @fastapi_app.delete("/api/analysis-reports/{report_id}")
 def api_delete_analysis_report(report_id: str):
-    result = delete_analysis_report(report_id)
+    try:
+        result = delete_analysis_report(report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Analysis report not found")
     return result
@@ -1217,11 +1248,6 @@ def api_investment_review_by_date(date: str):
     return get_investment_review(date)
 
 
-@fastapi_app.get("/api/jobs")
-def api_recent_jobs():
-    return recent_jobs()
-
-
 @fastapi_app.get("/api/agent-bridge/status")
 def api_agent_bridge_status(refresh: bool = False):
     return bridge_status(refresh=refresh)
@@ -1235,29 +1261,31 @@ def api_agent_bridge_preflight(adapter: str = ""):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@fastapi_app.post("/api/agent/companion")
-def api_agent_companion(body: dict | None = Body(default=None)):
-    body = body or {}
-    return agent_companion_reply(body.get("message", ""), body.get("context") or {}, body.get("options") or {})
-
-
-@fastapi_app.post("/api/agent/chat")
-def api_agent_chat(body: dict | None = Body(default=None)):
-    body = body or {}
-    return submit_agent_chat(body.get("message", ""), body.get("context") or {}, body.get("options") or {})
+@fastapi_app.get("/api/agent/proposals/{proposal_id}")
+def api_agent_proposal(proposal_id: str):
+    try:
+        proposal = get_proposal(proposal_id)
+    except ProposalActionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"code": "proposal_read_failed"}) from exc
+    if proposal is None:
+        raise HTTPException(status_code=404, detail={"code": "proposal_not_found"})
+    return proposal
 
 
 @fastapi_app.post("/api/agent/proposals/{proposal_id}")
-def api_agent_proposal_action(proposal_id: str, body: dict | None = Body(default=None)):
-    action = str((body or {}).get("action") or "").strip()
+def api_agent_proposal_action(proposal_id: str, body: ProposalActionRequest):
     try:
-        if action == "approve":
+        if body.action == ProposalAction.APPROVE:
             return apply_proposal(proposal_id)
-        if action == "reject":
-            return reject_proposal(proposal_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
+        return reject_proposal(proposal_id)
+    except ProposalActionError as exc:
+        if exc.status_code >= 500:
+            raise HTTPException(status_code=exc.status_code, detail={"code": exc.code}) from exc
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail={"code": "proposal_apply_failed"}) from exc
 
 
 @fastapi_app.get("/api/agent-bridge/settings")
@@ -1289,22 +1317,6 @@ def api_login_agent_cli(adapter: str):
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-
-
-@fastapi_app.post("/api/agent-bridge/jobs/{job_id}/cancel")
-def api_cancel_agent_bridge_job(job_id: str):
-    result = cancel_agent_task(job_id)
-    if not result.get("cancelled") and result.get("error") == "Job not found":
-        raise HTTPException(status_code=404, detail="Job not found")
-    return result
-
-
-@fastapi_app.get("/api/jobs/{job_id}")
-def api_get_job(job_id: str):
-    job = get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job
 
 
 @fastapi_app.get("/api/index/documents")
@@ -1374,68 +1386,10 @@ def api_run_llm_market_memory(body: dict | None = Body(default=None)):
     return run_llm_market_memory(body.get("date") or kst_date())
 
 
-@fastapi_app.post("/api/memory/update")
-def api_update_market_memory(body: dict | None = Body(default=None)):
-    body = body or {}
-    date = body.get("date") or kst_date()
-    generation_mode = request_generation_mode(body)
-    if generation_mode == "llm_cli":
-        return submit_market_memory_update({
-            "date": date,
-        }, adapter=body.get("agentAdapter", ""))
-    if generation_mode == "rules":
-        return {
-            "ok": False,
-            "status": "rules_unavailable",
-            "message": "시장 메모리 업데이트는 화면용 시장 상태 스냅샷 생성을 위해 AI Agent 또는 LLM API가 필요합니다.",
-        }
-    memory = run_llm_market_memory(date)
-    snapshot = run_llm_market_state_snapshot(date)
-    return {
-        "ok": bool(memory.get("ok", True) and snapshot.get("ok", True)),
-        "status": "ok",
-        "message": "시장 메모리와 화면용 시장 상태 스냅샷을 모두 업데이트했습니다.",
-        "memory": memory,
-        "snapshot": snapshot,
-        "savedCount": len(memory.get("saved") or []),
-        "snapshotId": (snapshot.get("snapshot") or {}).get("id", ""),
-        "title": (snapshot.get("snapshot") or {}).get("headline", ""),
-        "date": date,
-    }
-
-
 @fastapi_app.post("/api/memory/rss-digest")
 def api_memory_rss_digest(body: dict | None = Body(default=None)):
     body = body or {}
     return run_rss_market_memory_update(date=body.get("date", ""))
-
-
-@fastapi_app.post("/api/memory/state-snapshot")
-def api_run_market_state_snapshot(body: dict | None = Body(default=None)):
-    body = body or {}
-    generation_mode = request_generation_mode(body)
-    if generation_mode == "llm_cli":
-        return submit_agent_task("market_state_snapshot", {
-            "date": body.get("date") or kst_date(),
-        }, adapter=body.get("agentAdapter", ""))
-    if generation_mode == "rules":
-        return {
-            "ok": False,
-            "status": "rules_unavailable",
-            "message": "시장 상태 스냅샷은 AI Agent 또는 LLM API가 활성화되어 있을 때 생성할 수 있습니다.",
-        }
-    return run_llm_market_state_snapshot(body.get("date") or kst_date())
-
-
-@fastapi_app.get("/api/memory/state-snapshot")
-def api_current_market_state_snapshot():
-    snapshot = current_market_state_snapshot(MARKET_MEMORY_DB_PATH)
-    return {"ok": bool(snapshot), "snapshot": snapshot}
-
-
-@fastapi_app.get("/api/memory/state-dashboard")
-def api_market_state_dashboard(limit: int = 5):
-    return market_state_dashboard_payload(MARKET_MEMORY_DB_PATH, limit=limit)
 
 
 @fastapi_app.get("/api/memory/states")
@@ -1564,63 +1518,9 @@ def api_list_topic_reports():
     return list_topic_reports()
 
 
-@fastapi_app.post("/api/topic-reports/plan")
-def api_topic_report_plan(body: dict | None = Body(default=None)):
-    body = body or {}
-    from features.topic_report.planner import build_topic_plan
-    generation_mode = request_generation_mode(body)
-    plan = build_topic_plan(
-        body.get("topicKey", "custom"),
-        custom_label=body.get("customLabel", ""),
-        user_context=body.get("userContext", ""),
-        llm_override=False if generation_mode == "llm_cli" else llm_override_for_mode(generation_mode),
-    )
-    return {"topicPlan": plan}
-
-
 @fastapi_app.post("/api/topic-reports")
 def api_generate_topic_report(body: dict | None = Body(default=None)):
-    body = body or {}
-    custom_tickers = body.get("customTickers")
-    quality_mode = normalize_quality_mode(body.get("qualityMode", "diagnose_only"))
-    generation_mode = request_generation_mode(body)
-    if generation_mode == "llm_cli":
-        return submit_agent_task("topic_report", {
-            "topic_key": body.get("topicKey", "weekly_market"),
-            "custom_label": body.get("customLabel", ""),
-            "user_context": body.get("userContext", ""),
-            "date": body.get("date", ""),
-            "use_planner": body.get("usePlanner", True) is not False,
-            "quality_mode": quality_mode,
-            "deep_research": bool(body.get("deepResearch")),
-        }, adapter=body.get("agentAdapter", ""))
-    report = generate_topic_report(
-        topic_key=body.get("topicKey", "weekly_market"),
-        custom_label=body.get("customLabel", ""),
-        user_context=body.get("userContext", ""),
-        web_search_override=bool_override(body.get("webSearch")),
-        llm_override=llm_override_for_mode(generation_mode),
-        date=body.get("date", ""),
-        use_planner=body.get("usePlanner", True) is not False,
-        custom_tickers=custom_tickers if isinstance(custom_tickers, dict) else None,
-        quality_mode=quality_mode,
-        deep_research=bool(body.get("deepResearch")),
-    )
-    try:
-        preflight = report.pop("qualityPreflight", None)
-        report = apply_quality_loop("topic_report", report, mode=quality_mode, preflight=preflight)
-    except Exception as exc:
-        report["qualityGeneration"] = {"mode": quality_mode, "repairApplied": False, "repairCount": 0, "warnings": [f"quality generation failed: {str(exc)[:120]}"]}
-    # 생성한 보고서를 자동 저장한다(같은 주제·같은 날은 최신본으로 덮어씀).
-    try:
-        return save_topic_report(report)
-    except Exception:
-        return report
-
-
-@fastapi_app.post("/api/topic-reports/save")
-def api_save_topic_report(body: dict | None = Body(default=None)):
-    return save_topic_report(body or {})
+    return TOPIC_APPROVAL_BOUNDARY.preflight(body or {})
 
 
 @fastapi_app.get("/api/topic-reports/{report_id}")
@@ -1666,7 +1566,10 @@ def api_topic_report_personal_overlay(report_id: str, body: dict | None = Body(d
 
 @fastapi_app.delete("/api/topic-reports/{report_id}")
 def api_delete_topic_report(report_id: str):
-    result = delete_topic_report(report_id)
+    try:
+        result = delete_topic_report(report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Topic report not found")
     return result

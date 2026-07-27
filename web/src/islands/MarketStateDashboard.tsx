@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { getJson } from "../api";
 import { legacyBridge as bridge } from "../app/legacyBridge";
+import { marketStateContextProjection, readMarketStateRef, type MarketStateRef, type MarketStateStatus } from "../app/marketStateContext";
+
+export { marketStateContextProjection } from "../app/marketStateContext";
 
 // Mirrors features/market_memory/state_dashboard.py::summarize_market_state.
 interface Driver {
@@ -44,7 +47,7 @@ interface ActionGuide {
   timing: string;
 }
 
-interface DashboardPayload {
+export interface DashboardPayload {
   title: string;
   summary: string;
   plainConclusion?: string;
@@ -63,6 +66,7 @@ interface DashboardPayload {
   snapshot?: { asOf?: string; status?: string; confidence?: number; marketRegime?: string };
   freshness?: { snapshotAsOf?: string; latestMemoryAt?: string; latestMemoryTitle?: string; stale?: boolean };
   marketViews?: Partial<Record<MarketScope, DashboardPayload>>;
+  marketStateRef?: MarketStateRef;
 }
 
 const CONFIDENCE_LABELS: Record<string, string> = { high: "높음", medium: "보통", low: "낮음" };
@@ -207,81 +211,122 @@ function DriverCard({ driver }: { driver: Driver }) {
 interface MarketStateDashboardProps {
   onUpdate?: () => void;
   updating?: boolean;
+  updateDisabled?: boolean;
+  onContext?: (context: ReturnType<typeof marketStateContextProjection>) => void;
 }
 
-export function MarketStateDashboard({ onUpdate, updating = false }: MarketStateDashboardProps = {}) {
-  const [payload, setPayload] = useState<DashboardPayload | null>(null);
-  const [selectedMarket, setSelectedMarket] = useState<MarketScope>("overall");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+const STATE_LABELS: Record<MarketStateStatus, string> = {
+  current: "현재",
+  stale: "업데이트 필요",
+  fallback: "참고용 대체 상태",
+  empty: "상태 없음",
+};
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await getJson<DashboardPayload>("/api/memory/state-dashboard?limit=5");
-      setPayload(data);
-      bridge().updateAgentContext?.({ surface: "market_state", viewId: "memory", reportKind: "", reportId: "" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+const SOURCE_LABELS: Record<MarketStateRef["sourceKind"], string> = {
+  snapshot: "Market State 스냅샷",
+  state_fallback: "기존 중기 내러티브 참고값",
+  none: "사용 가능한 상태 없음",
+};
 
-  useEffect(() => {
-    load();
-  }, [load]);
+const REASON_COPY: Record<string, string> = {
+  within_window: "최신 자료 기준과 생성 시각이 유효 범위 안에 있습니다.",
+  new_relevant_evidence: "스냅샷 이후 새 외부 자료가 들어왔습니다. 갱신 전 판단은 현재 투자 자세로 사용하지 않습니다.",
+  age_exceeded: "생성 후 72시간이 지나 최신성이 만료됐습니다.",
+  update_failed: "최근 업데이트가 실패해 현재 상태로 확정할 수 없습니다.",
+  invalid_as_of: "기준 시각이 없거나 올바르지 않아 현재 상태로 사용할 수 없습니다.",
+  future_as_of: "기준 시각이 현재보다 미래여서 검증이 필요합니다.",
+  missing_input_watermark: "입력 자료 기준점이 없어 최신성을 확인할 수 없습니다.",
+  state_fallback: "정식 스냅샷이 없어 기존 중기 내러티브를 참고용으로만 보여줍니다.",
+  no_state: "아직 생성된 시장 상태가 없습니다.",
+};
 
-  // Re-brand the Agent buttons this island rendered whenever content changes.
-  useEffect(() => {
-    bridge().applyAgentBranding?.();
-  }, [payload]);
+function stateAge(ref: MarketStateRef | null) {
+  if (!ref?.asOf || !ref.resolvedAt) return "계산 불가";
+  const asOf = new Date(ref.asOf).getTime();
+  const resolvedAt = new Date(ref.resolvedAt).getTime();
+  if (!Number.isFinite(asOf) || !Number.isFinite(resolvedAt) || resolvedAt < asOf) return "계산 불가";
+  const minutes = Math.floor((resolvedAt - asOf) / 60_000);
+  if (minutes < 60) return `${minutes}분`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}시간`;
+  return `${Math.floor(hours / 24)}일 ${hours % 24}시간`;
+}
 
+function StateMeta({ stateRef }: { stateRef: MarketStateRef | null }) {
+  return (
+    <dl className="market-state-meta" aria-label="시장 상태 기준 정보">
+      <div><dt>상태</dt><dd>{stateRef ? STATE_LABELS[stateRef.status] : "확인 불가"}</dd></div>
+      <div data-qa="market-state-asof"><dt>기준 시각</dt><dd>{displaySnapshotTime(stateRef?.asOf || undefined) || "없음"}</dd></div>
+      <div><dt>경과</dt><dd>{stateAge(stateRef)}</dd></div>
+      <div data-qa="market-state-source"><dt>출처</dt><dd>{stateRef ? SOURCE_LABELS[stateRef.sourceKind] : "응답 검증 실패"}</dd></div>
+      {stateRef ? <div><dt>범위</dt><dd>{stateRef.scope}</dd></div> : null}
+    </dl>
+  );
+}
+
+function StateGap({ state, stateRef, error, drivers }: { state: Exclude<MarketStateStatus, "current">; stateRef: MarketStateRef | null; error?: string; drivers: Driver[] }) {
+  const title = state === "stale" ? "최신 상태를 다시 만들어야 합니다" : state === "fallback" ? "참고용 내러티브만 있습니다" : "아직 생성된 시장 상태가 없습니다";
+  const copy = error
+    ? `시장 상태 응답을 사용할 수 없습니다: ${error}`
+    : REASON_COPY[stateRef?.freshnessReason || ""] || "현재 상태를 검증할 수 없습니다. 업데이트 후 다시 확인하세요.";
+  return (
+    <section className={`market-state-gap state-${state}`} role={state === "stale" ? "alert" : "status"}>
+      <span>{STATE_LABELS[state]}</span>
+      <h3>{title}</h3>
+      <p>{copy}</p>
+      {state === "stale" && stateRef?.freshnessReason === "new_relevant_evidence" ? <small>새 외부 자료 기준 {displaySnapshotTime(stateRef.relevantEvidenceWatermark || undefined) || "확인됨"}</small> : null}
+      {state === "fallback" && drivers.length ? <p>기존 내러티브 {drivers.length}건은 탐색 단서일 뿐, 현재 투자 판단으로 사용하지 마세요.</p> : null}
+    </section>
+  );
+}
+
+type MarketStateDashboardViewProps = {
+  payload: DashboardPayload | null;
+  selectedMarket?: MarketScope;
+  loading?: boolean;
+  updating?: boolean;
+  updateDisabled?: boolean;
+  error?: string;
+  onSelectMarket?: (scope: MarketScope) => void;
+  onUpdate?: () => void;
+  onReload?: () => void;
+};
+
+export function MarketStateDashboardView({ payload, selectedMarket = "overall", loading = false, updating = false, updateDisabled = false, error = "", onSelectMarket, onUpdate, onReload }: MarketStateDashboardViewProps) {
+  const ref = readMarketStateRef(payload);
+  const state: MarketStateStatus = ref?.status || "empty";
   const marketViews = payload?.marketViews || {};
-  const availableMarkets = ["overall", "us", "kr"] as MarketScope[];
+  const availableMarkets = (["overall", "us", "kr"] as MarketScope[]).filter((scope) => scope === "overall" || Boolean(marketViews[scope]));
   const activeMarket = availableMarkets.includes(selectedMarket) ? selectedMarket : "overall";
   const activePayload = activeMarket === "overall" ? (marketViews.overall || payload) : (marketViews[activeMarket] || payload);
   const drivers = activePayload?.drivers ?? [];
   const visibleSummary = activePayload?.plainConclusion || activePayload?.summary || "";
   const reasonSummary = activePayload?.reasonSummary || activePayload?.sourceSummary || activePayload?.stance || "";
   const interpretation = splitNarrative(reasonSummary);
-  const snapshotTime = displaySnapshotTime(activePayload?.snapshot?.asOf);
-  const latestMemoryTime = displaySnapshotTime(payload?.freshness?.latestMemoryAt);
-  const snapshotIsStale = Boolean(payload?.freshness?.stale);
-  const briefs = activePayload?.briefs?.length
-    ? activePayload.briefs
-    : [
-        { label: "현재 판단", value: visibleSummary },
-        { label: "시장 해석", value: reasonSummary },
-        { label: "행동 가이드", value: activePayload?.actionGuide?.action || activePayload?.stance || "" },
-        { label: "다음 확인", value: activePayload?.actionGuide?.timing || (activePayload?.watchItems || []).slice(0, 3).join("; ") },
-      ].filter((item) => item.value);
+  const briefs = activePayload?.briefs?.length ? activePayload.briefs : [
+    { label: "현재 판단", value: visibleSummary },
+    { label: "시장 해석", value: reasonSummary },
+    { label: "행동 가이드", value: activePayload?.actionGuide?.action || activePayload?.stance || "" },
+    { label: "다음 확인", value: activePayload?.actionGuide?.timing || (activePayload?.watchItems || []).slice(0, 3).join("; ") },
+  ].filter((item) => item.value);
   return (
-    <>
+    <section className={`market-state-surface market-state-surface-${state}`} data-qa={`market-state-${state}`}>
       <div className="market-state-head">
         <div>
           <p className="section-kicker">Market State</p>
           <h2>{activePayload?.title || payload?.title || "현재 중기 시장 상황"}</h2>
         </div>
         <div className="market-state-head-actions">
-          {snapshotTime ? (
-            <span className={`market-state-asof${snapshotIsStale ? " stale" : ""}`}>
-              생성 {snapshotTime}
-              {snapshotIsStale ? " · 최신 메모리 반영 전" : ""}
-            </span>
-          ) : null}
-          {onUpdate ? (
-            <button className="filter-btn apply" type="button" onClick={onUpdate} disabled={updating || loading}>
-              {updating ? "업데이트 중" : "시장 메모리 업데이트"}
-            </button>
-          ) : null}
-          <button className="filter-btn clear" type="button" onClick={load} disabled={loading || updating}>
+          <button className="filter-btn apply" type="button" data-qa="market-state-update" onClick={onUpdate} disabled={!onUpdate || updateDisabled || updating || loading}>
+            {updating ? "업데이트 중" : state === "current" ? "시장 메모리 업데이트" : "시장 상태 업데이트"}
+          </button>
+          <button className="filter-btn clear" type="button" onClick={onReload} disabled={!onReload || loading || updating}>
             {loading ? "불러오는 중…" : "새로고침"}
           </button>
         </div>
       </div>
-      {availableMarkets.length > 1 ? (
+      <StateMeta stateRef={ref} />
+      {state === "current" && availableMarkets.length > 1 ? (
         <div className="market-scope-tabs" role="tablist" aria-label="시장 범위 선택" data-scope={activeMarket} data-count={availableMarkets.length}>
           {availableMarkets.map((key) => (
             <button
@@ -290,24 +335,17 @@ export function MarketStateDashboard({ onUpdate, updating = false }: MarketState
               role="tab"
               aria-selected={activeMarket === key}
               className={activeMarket === key ? "active" : ""}
-              onClick={() => setSelectedMarket(key)}
+              onClick={() => onSelectMarket?.(key)}
             >
               {MARKET_SCOPE_LABELS[key]}
             </button>
           ))}
         </div>
       ) : null}
-      {snapshotIsStale ? (
-        <p className="market-state-stale-note">
-          최신 시장 메모리
-          {latestMemoryTime ? `(${latestMemoryTime})` : ""}
-          가 저장됐지만, 화면용 시장 상태 스냅샷은 아직 다시 생성되지 않았습니다. 시장 메모리 업데이트를 다시 실행하면 화면 판단을 갱신합니다.
-        </p>
-      ) : null}
-      {error ? (
-        <p className="market-state-summary">시장 상황을 불러오지 못했습니다: {error}</p>
-      ) : (
-        <div className="market-state-overview">
+      {state === "current" ? (
+        <>
+        <p className="market-state-current-note">{REASON_COPY[ref?.freshnessReason || "within_window"]}</p>
+        <div className="market-state-overview" data-qa="market-state-posture">
           {reasonSummary ? (
             <section className="market-state-interpretation">
               <span>시장 해석</span>
@@ -348,8 +386,7 @@ export function MarketStateDashboard({ onUpdate, updating = false }: MarketState
             </section>
           ) : null}
         </div>
-      )}
-      <div className="market-state-drivers">
+      <div className="market-state-drivers" data-qa="market-state-drivers">
         {drivers.map((driver, index) => (
           <DriverCard key={driver.id || index} driver={driver} />
         ))}
@@ -357,20 +394,23 @@ export function MarketStateDashboard({ onUpdate, updating = false }: MarketState
       {activePayload && ((activePayload.counterEvidence?.length || 0) > 0 || (activePayload.uncertainties?.length || 0) > 0) ? (
         <div className="market-state-checks" aria-label="반대 근거와 불확실성">
           {activePayload.counterEvidence?.length ? (
-            <section>
+            <section data-qa="market-state-counter-evidence">
               <h3>반대 근거</h3>
               <CheckList items={activePayload.counterEvidence} />
             </section>
           ) : null}
           {activePayload.uncertainties?.length ? (
-            <section>
+            <section data-qa="market-state-uncertainties">
               <h3>불확실성</h3>
               <CheckList items={activePayload.uncertainties} />
             </section>
           ) : null}
         </div>
       ) : null}
-      {payload?.sourceRefs?.length ? (
+      {(activePayload?.watchItems?.length || briefs[3]?.value) ? <section className="market-state-next-checks" data-qa="market-state-next-checks"><h3>다음 확인</h3><ul>{(activePayload?.watchItems || [briefs[3]?.value]).filter(Boolean).slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
+      </>
+      ) : <StateGap state={state} stateRef={ref} error={error} drivers={drivers} />}
+      {state === "current" && payload?.sourceRefs?.length ? (
         <details className="market-state-sources">
           <summary>사용한 출처 {payload.sourceRefs.length}개</summary>
           <ul>
@@ -387,6 +427,36 @@ export function MarketStateDashboard({ onUpdate, updating = false }: MarketState
           </ul>
         </details>
       ) : null}
-    </>
+    </section>
   );
+}
+
+export function MarketStateDashboard({ onUpdate, updating = false, updateDisabled = false, onContext }: MarketStateDashboardProps = {}) {
+  const [payload, setPayload] = useState<DashboardPayload | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<MarketScope>("overall");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await getJson<DashboardPayload>("/api/memory/state-dashboard?limit=5");
+      setPayload(data);
+      const marketState = marketStateContextProjection(data);
+      bridge().updateAgentContext?.({ surface: "market_state", viewId: "memory", reportKind: "", reportId: "", marketState });
+      onContext?.(marketState);
+    } catch (err) {
+      setPayload(null);
+      setError(err instanceof Error ? err.message : String(err));
+      onContext?.(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [onContext]);
+
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { bridge().applyAgentBranding?.(); }, [payload]);
+
+  return <MarketStateDashboardView payload={payload} selectedMarket={selectedMarket} loading={loading} updating={updating} updateDisabled={updateDisabled} error={error} onSelectMarket={setSelectedMarket} onUpdate={onUpdate} onReload={load} />;
 }

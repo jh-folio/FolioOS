@@ -1,7 +1,7 @@
 {
   "name": "folio-os-web",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Folio OS React island shell (gradual adoption). Builds fixed-name bundles into ../public/react for the FastAPI static server to serve.",
   "scripts": {
@@ -18,6 +18,9 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^6.0.3",
+    "react-doctor": "0.8.1",
+    "react-grab": "0.1.48",
+    "react-scan": "0.5.7",
     "typescript": "^7.0.2",
     "vite": "^8.1.5"
   }

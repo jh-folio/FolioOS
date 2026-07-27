@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import json
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from features.agent_mode import job_runtime
+from features.common import jobs
+from features.common.shared_jobs_projection import new_shared_job
+from features.common.shared_jobs_schema import JobStatus, TaskType
+from features.market_memory.attempt_store import AttemptStatus, AttemptStore
+from features.market_memory.tests.sql_receipt_test_support import entry, snapshot_payload
+
+
+def _running(monkeypatch: pytest.MonkeyPatch, root: Path, task_type: TaskType):
+    monkeypatch.setattr(jobs, "JOBS_PATH", root / "jobs.json")
+    jobs._LIFECYCLES.clear()
+    job = new_shared_job(
+        kind="agent_bridge",
+        task_type=task_type,
+        generation_mode="llm_cli",
+        adapter="codex",
+        requested_mode="cli",
+        mode="generate",
+        attempted_engine="cli",
+        clock=jobs._clock,
+    )
+    jobs.shared_store().add(job)
+    jobs.shared_store().transition(job.id, JobStatus.RUNNING)
+    jobs.private_lifecycle().set_private(job.id, {"canary": f"PRIVATE_{task_type.value}"})
+    jobs.write_job_pack(job.id, "pack", {"private": "PACK_CANARY"})
+    return job
+
+
+def _receipt_count(root: Path) -> int:
+    with sqlite3.connect(root / "market-memory.sqlite3") as connection:
+        return int(connection.execute("SELECT COUNT(*) FROM job_operation_receipts").fetchone()[0])
+
+
+def test_live_sql_runtime_commits_each_registered_sql_task(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    memory_root = tmp_path / "memory"
+    memory = _running(monkeypatch, memory_root, TaskType.MARKET_MEMORY_LLM)
+    memory_result = job_runtime.commit_market_memory_output(
+        memory.id,
+        {"artifactId": "2026-07-19", "internal": {"date": "2026-07-19", "usedDocs": []}},
+        {"entries": [entry()]},
+    )
+    assert memory_result["savedCount"] == 1
+    assert jobs.shared_store().get(memory.id).status is JobStatus.DONE
+    assert _receipt_count(memory_root) == 1
+    assert not (memory_root / "job-context" / memory.id).exists()
+
+    snapshot_root = tmp_path / "snapshot"
+    snapshot = _running(monkeypatch, snapshot_root, TaskType.MARKET_STATE_SNAPSHOT)
+    snapshot_result = job_runtime.commit_market_state_output(
+        snapshot.id,
+        {
+            "artifactId": "2026-07-19",
+            "title": "Market State",
+            "context": json.dumps({"inputWatermarks": {"GLOBAL": "2026-07-19T00:00:00Z"}}),
+            "internal": {"sourceRefs": []},
+        },
+        snapshot_payload(),
+    )
+    assert snapshot_result["snapshotId"] == "snapshot-1"
+    assert jobs.shared_store().get(snapshot.id).status is JobStatus.DONE
+    assert _receipt_count(snapshot_root) == 1
+    assert AttemptStore(snapshot_root / "market-state-update-attempts.json").load().attempts[0].status is AttemptStatus.SUCCESS
+
+    thesis_root = tmp_path / "thesis"
+    thesis = _running(monkeypatch, thesis_root, TaskType.THESIS_DELTA)
+    thesis_result = job_runtime.commit_thesis_output(
+        thesis.id,
+        {
+            "internal": {
+                "thesis": {"ticker": "NVDA", "company": "NVIDIA", "coreThesis": "AI demand"},
+                "meta": {"period": "90d", "periodDays": 90},
+                "evidence": [],
+            }
+        },
+        {
+            "verdict": "maintained",
+            "summary": "The bounded thesis remains unchanged.",
+            "supportingEvidence": [],
+            "counterEvidence": [],
+            "contradictions": [],
+            "uncertainties": [],
+            "nextCheckpoints": [],
+            "markdown": "# Thesis Delta",
+        },
+    )
+    assert thesis_result["artifactId"]
+    assert jobs.shared_store().get(thesis.id).status is JobStatus.DONE
+    assert _receipt_count(thesis_root) == 1
+
+    combined_root = tmp_path / "combined"
+    combined = _running(monkeypatch, combined_root, TaskType.MARKET_MEMORY_UPDATE)
+
+    def projected_snapshot(projected: sqlite3.Connection):
+        candidate = snapshot_payload()
+        count = int(projected.execute("SELECT COUNT(*) FROM market_memory").fetchone()[0])
+        candidate["id"] = "combined-snapshot"
+        candidate["headline"] = f"projected:{count}"
+        return candidate
+
+    combined_result = job_runtime.commit_combined_market_output(
+        combined.id,
+        (entry(),),
+        projected_snapshot,
+    )
+    assert combined_result["savedCount"] == 1
+    assert combined_result["snapshotId"] == "combined-snapshot"
+    assert jobs.shared_store().get(combined.id).status is JobStatus.DONE
+    assert _receipt_count(combined_root) == 2
+    with sqlite3.connect(combined_root / "market-memory.sqlite3") as connection:
+        payload = json.loads(connection.execute("SELECT payload_json FROM market_state_snapshots").fetchone()[0])
+    assert payload["headline"] == "projected:1"
+    assert AttemptStore(combined_root / "market-state-update-attempts.json").load().attempts[0].status is AttemptStatus.SUCCESS

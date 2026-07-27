@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { postJson } from "../api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getJson, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
 import { RouteHero } from "./RouteHero";
+import { setReactAgentContextScope } from "./agentContext";
+import type { MarketStateContextProjection } from "./marketStateContext";
+import { AgentJobTerminalError, AgentPollTimeout, pollAgentJobBounded } from "./agentPolling";
+import { clearMarketMemoryJobId, persistMarketMemoryJobId, readMarketMemoryJobId, recoverMarketMemoryJob } from "./marketMemoryJobResume";
 
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: Record<string, unknown>;
@@ -24,10 +28,6 @@ type MemoryResult = {
   rawEntryCount?: number;
   droppedCount?: number;
 };
-
-function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
 
 function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -49,33 +49,13 @@ function resultMessage(result: MemoryResult) {
 
 function isAgentJob(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && job.status);
 }
 
-async function pollJob(job: AgentJob): Promise<AgentJob> {
-  let current = job;
-  while (["queued", "running"].includes(current.status)) {
-    await sleep(1000);
-    current = await fetch(`/api/jobs/${encodeURIComponent(current.id)}`).then((res) => {
-      if (!res.ok) throw new Error(`/api/jobs/${encodeURIComponent(current.id)} failed: ${res.status}`);
-      return res.json() as Promise<AgentJob>;
-    });
-  }
-  if (current.status !== "done") {
-    throw new Error(current.message || current.error || "시장 내러티브 정리에 실패했습니다.");
-  }
-  return current;
-}
-
-async function runMemoryUpdate(): Promise<MemoryResult> {
-  const response = await postJson<MemoryResult | AgentJob>("/api/memory/update", {
+async function submitMemoryUpdate(): Promise<MemoryResult | AgentJob> {
+  return postJson<MemoryResult | AgentJob>("/api/memory/update", {
     date: todayIsoDate(),
   });
-  if (isAgentJob(response)) {
-    const done = await pollJob(response);
-    return (done.result || {}) as MemoryResult;
-  }
-  return response;
 }
 
 export function MarketMemoryRoute() {
@@ -83,6 +63,65 @@ export function MarketMemoryRoute() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [resumableJob, setResumableJob] = useState<AgentJob | null>(() => {
+    const id = readMarketMemoryJobId();
+    return id ? { id, status: "running" } : null;
+  });
+  const pollController = useRef<AbortController | null>(null);
+  const handleMarketStateContext = useCallback((marketState: MarketStateContextProjection | null) => {
+    setReactAgentContextScope("market-memory", {
+      surface: "market_state",
+      viewId: "memory",
+      reportKind: "",
+      reportId: "",
+      marketState,
+    });
+  }, []);
+
+  function applyResult(result: MemoryResult) {
+    if (result.ok === false) throw new Error(result.message || result.status || "시장 메모리 업데이트에 실패했습니다.");
+    clearMarketMemoryJobId();
+    setStatus(`시장 메모리를 업데이트했습니다. ${resultMessage(result)}`);
+    setResumableJob(null);
+    setRefreshKey((value) => value + 1);
+  }
+
+  useEffect(() => {
+    let current = true;
+    void recoverMarketMemoryJob((id) => getJson<AgentJob>(`/api/jobs/${encodeURIComponent(id)}`)).then((recovery) => {
+      if (!current) return;
+      if (recovery.kind === "active") {
+        setResumableJob(recovery.job);
+        setStatus("이전에 시작한 서버 작업이 계속되고 있습니다. 같은 작업의 상태를 다시 확인할 수 있습니다.");
+      } else if (recovery.kind === "terminal") {
+        setResumableJob(null);
+        if (recovery.job.status === "done") applyResult((recovery.job.result || {}) as MemoryResult);
+        else setError(recovery.job.message || recovery.job.error || "이전 시장 메모리 작업이 종료되었습니다.");
+      } else if (recovery.kind === "unavailable") {
+        setResumableJob({ id: recovery.id, status: "running" });
+        setStatus("저장된 시장 메모리 작업의 상태를 다시 확인해야 합니다.");
+      } else if (recovery.kind === "invalid") {
+        setResumableJob(null);
+        setError("저장된 시장 메모리 작업 정보를 확인할 수 없어 안전하게 제거했습니다.");
+      }
+    });
+    return () => {
+      current = false;
+      pollController.current?.abort();
+    };
+  }, []);
+
+  async function finishJob(job: AgentJob) {
+    pollController.current?.abort();
+    const controller = new AbortController();
+    pollController.current = controller;
+    try {
+      const done = await pollAgentJobBounded(job, { signal: controller.signal });
+      applyResult((done.result || {}) as MemoryResult);
+    } finally {
+      if (pollController.current === controller) pollController.current = null;
+    }
+  }
 
   async function runMarketMemoryUpdate() {
     setBusy(true);
@@ -90,15 +129,52 @@ export function MarketMemoryRoute() {
     setStatus("AI Agent가 단기 뉴스와 기존 중기 메모리를 업데이트하는 중입니다.");
     try {
       setStatus("시장 메모리와 화면용 시장 상태를 함께 갱신하는 중입니다.");
-      const result = await runMemoryUpdate();
-      if (result.ok === false) {
-        throw new Error(result.message || result.status || "시장 메모리 업데이트에 실패했습니다.");
-      }
-      setStatus(`시장 메모리를 업데이트했습니다. ${resultMessage(result)}`);
-      setRefreshKey((value) => value + 1);
+      const response = await submitMemoryUpdate();
+      if (isAgentJob(response)) {
+        persistMarketMemoryJobId(response.id);
+        setResumableJob(response);
+        await finishJob(response);
+      } else applyResult(response);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "시장 메모리 업데이트에 실패했습니다.");
-      setStatus("");
+      if (err instanceof AgentPollTimeout) {
+        persistMarketMemoryJobId(err.job.id);
+        setResumableJob(err.job as AgentJob);
+        setStatus("서버 작업은 계속되고 있습니다. 같은 작업의 상태를 다시 확인할 수 있습니다.");
+      } else if (err instanceof AgentJobTerminalError) {
+        clearMarketMemoryJobId();
+        setResumableJob(null);
+        setError(err.message);
+        setStatus("");
+      } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setError(err instanceof Error ? err.message : "시장 메모리 업데이트에 실패했습니다.");
+        setStatus("");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resumeMarketMemoryUpdate() {
+    if (!resumableJob) return;
+    setBusy(true);
+    setError("");
+    setStatus("같은 시장 메모리 작업의 상태를 다시 확인하는 중입니다.");
+    try {
+      await finishJob(resumableJob);
+    } catch (err) {
+      if (err instanceof AgentPollTimeout) {
+        persistMarketMemoryJobId(err.job.id);
+        setResumableJob(err.job as AgentJob);
+        setStatus("서버 작업은 계속되고 있습니다. 잠시 후 같은 작업을 다시 확인하세요.");
+      } else if (err instanceof AgentJobTerminalError) {
+        clearMarketMemoryJobId();
+        setResumableJob(null);
+        setError(err.message);
+        setStatus("");
+      } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+        setError(err instanceof Error ? err.message : "작업 상태 확인에 실패했습니다.");
+        setStatus("");
+      }
     } finally {
       setBusy(false);
     }
@@ -114,9 +190,15 @@ export function MarketMemoryRoute() {
 
       {error && <p className="react-dashboard-error">{error}</p>}
       {status && <p className="react-dashboard-warning">{status}</p>}
+      {resumableJob && !busy ? (
+        <div className="react-dashboard-warning market-state-job-resume" data-qa="market-state-job-still-running" role="status">
+          <span>작업 {resumableJob.id} · 서버에서 계속 실행 중</span>
+          <button className="filter-btn clear" type="button" data-qa="market-state-job-resume" onClick={() => void resumeMarketMemoryUpdate()}>같은 작업 다시 확인</button>
+        </div>
+      ) : null}
 
       <section className="market-state-dashboard react-market-memory-dashboard" aria-label="현재 중기 시장 상황">
-        <MarketStateDashboard key={refreshKey} onUpdate={runMarketMemoryUpdate} updating={busy} />
+        <MarketStateDashboard key={refreshKey} onUpdate={runMarketMemoryUpdate} updating={busy} updateDisabled={Boolean(resumableJob)} onContext={handleMarketStateContext} />
       </section>
     </div>
   );

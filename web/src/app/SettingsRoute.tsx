@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJson, postJson } from "../api";
-import { updateReactAgentContext } from "./agentContext";
+import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 
 type ProviderId = "openai" | "gemini" | "claude";
@@ -228,7 +228,7 @@ export function SettingsRoute() {
       setAutomation(buildAutomationPayload(automationPayload));
       setObsidian(obsidianPayload);
       setVaultPath(obsidianPayload.vaultPath || "");
-      updateReactAgentContext({ surface: "settings", viewId: "settings", reportKind: "", reportId: "" });
+      setReactAgentContextScope("settings", { surface: "settings", viewId: "settings", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "설정을 불러오지 못했습니다.");
     } finally {

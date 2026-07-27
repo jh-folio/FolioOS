@@ -11,8 +11,10 @@ from pathlib import Path
 
 from features.agent_mode import schema
 from features.agent_mode import service as agent_service
+from features.agent_mode import job_runtime
 from features.agent_mode.briefing_contract import briefing_contract_violations
 from features.common.jobs import cancel_job, get_job, submit_job
+from features.common.shared_jobs_schema import TaskType
 from features.llm_settings.client import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -527,11 +529,13 @@ def run_agent_task(
     params = params if isinstance(params, dict) else {}
     progress = progress or (lambda *args, **kwargs: None)
     with _RUN_SEMAPHORE:
+        durable = job_runtime.is_durable_job(job_id)
         if job_id and (get_job(job_id) or {}).get("status") == "cancelled":
             return {"cancelled": True, "artifactType": task_type}
         selected = _select_adapter(adapter)
         progress("Agent context pack을 구성하고 있습니다.", 10, adapter=selected["id"])
-        pack, pack_path = agent_service.prepare_pack(task_type, **params)
+        prepare_params = {**params, "owner_job_id": job_id} if durable else params
+        pack, pack_path = agent_service.prepare_pack(task_type, **prepare_params)
         progress("Agent CLI를 실행하고 있습니다.", 25, contextPackPath=str(pack_path), adapter=selected["id"])
         agent_prompt = _agent_prompt(pack_path, pack)
         timeout = max(30, int(os.environ.get("AGENT_CLI_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)))
@@ -557,8 +561,34 @@ def run_agent_task(
             raise
         progress("Agent 결과를 기존 저장소에 반영하고 있습니다.", 85, adapter=selected["id"])
         output_format = (pack.get("outputContract") or {}).get("format", "markdown")
+        payload = _json_payload(output) if output_format == "json" else None
+        if durable:
+            schema.update_pack_status(pack_path, status="committing")
+            parsed_task = TaskType(task_type)
+            if parsed_task == TaskType.THESIS_DELTA:
+                summary = job_runtime.commit_thesis_output(job_id, pack, payload or {})
+            elif parsed_task == TaskType.MARKET_MEMORY_LLM:
+                summary = job_runtime.commit_market_memory_output(job_id, pack, payload or {})
+            elif parsed_task == TaskType.MARKET_STATE_SNAPSHOT:
+                summary = job_runtime.commit_market_state_output(job_id, pack, payload or {})
+            else:
+                summary = job_runtime.commit_json_output(
+                    job_id,
+                    parsed_task,
+                    pack,
+                    markdown=output if output_format != "json" else None,
+                    payload=payload,
+                )
+            summary = {
+                "generationMode": "llm_cli",
+                "adapter": selected["id"],
+                "artifactType": task_type,
+                **summary,
+            }
+            progress("Agent 결과 저장을 완료했습니다.", 100, **summary)
+            return summary
         if output_format == "json":
-            result = agent_service.writeback_pack(pack, payload=_json_payload(output))
+            result = agent_service.writeback_pack(pack, payload=payload)
         else:
             result = agent_service.writeback_pack(pack, markdown=output)
         summary = _result_summary(task_type, pack, result, selected["id"])
@@ -593,6 +623,68 @@ def run_market_memory_update_task(
     date = str(params.get("date") or "").strip()
     task_params = {"date": date} if date else {}
     progress = progress or (lambda *args, **kwargs: None)
+    if job_runtime.is_durable_job(job_id):
+        with _RUN_SEMAPHORE:
+            selected = _select_adapter(adapter)
+            timeout = max(30, int(os.environ.get("AGENT_CLI_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)))
+            memory_pack, memory_path = agent_service.prepare_pack(
+                "market_memory_llm",
+                **task_params,
+                owner_job_id=job_id,
+            )
+            progress("1/2 중기 메모리: Agent CLI를 실행하고 있습니다.", 20, adapter=selected["id"])
+            try:
+                memory_output = _invoke_agent_cli(
+                    selected,
+                    _agent_prompt(memory_path, memory_pack),
+                    timeout,
+                    job_id,
+                )
+                memory_payload = _json_payload(memory_output)
+                memory_prepared = agent_service.prepare_market_memory_writeback(memory_pack, memory_payload)
+                schema.update_pack_status(memory_path, status="prepared")
+                if (get_job(job_id) or {}).get("status") == "cancel_requested":
+                    return {"cancelled": True, "artifactType": "market_memory_update"}
+                snapshot_pack, snapshot_path = agent_service.prepare_pack(
+                    "market_state_snapshot",
+                    **task_params,
+                    owner_job_id=job_id,
+                )
+                progress("2/2 시장 상태: Agent CLI를 실행하고 있습니다.", 65, adapter=selected["id"])
+                snapshot_output = _invoke_agent_cli(
+                    selected,
+                    _agent_prompt(snapshot_path, snapshot_pack),
+                    timeout,
+                    job_id,
+                )
+                snapshot_payload = agent_service.prepare_market_state_snapshot_writeback(
+                    snapshot_pack,
+                    _json_payload(snapshot_output),
+                )
+                schema.update_pack_status(memory_path, status="committing")
+                schema.update_pack_status(snapshot_path, status="committing")
+                committed = job_runtime.commit_combined_market_output(
+                    job_id,
+                    tuple(memory_prepared["entries"]),
+                    lambda _projected: snapshot_payload,
+                )
+            except Exception as exc:
+                for path in (locals().get("memory_path"), locals().get("snapshot_path")):
+                    if isinstance(path, Path) and path.exists():
+                        schema.update_pack_status(path, status="failed", result={"error": str(exc)[:2000]})
+                raise
+        result = {
+            "generationMode": "llm_cli",
+            "adapter": selected["id"],
+            "artifactType": "market_memory_update",
+            "artifactId": date or str(snapshot_pack.get("artifactId") or ""),
+            "title": str(snapshot_payload.get("headline") or "Market Memory Update"),
+            "date": date or str(snapshot_pack.get("artifactId") or ""),
+            **committed,
+            "message": "시장 메모리와 화면용 시장 상태 스냅샷을 모두 업데이트했습니다.",
+        }
+        progress("시장 메모리 업데이트를 완료했습니다.", 100, **result)
+        return result
     memory = run_agent_task(
         "market_memory_llm",
         task_params,
@@ -665,8 +757,16 @@ def submit_market_memory_update(params: dict | None = None, *, adapter: str = ""
 
 
 def cancel_agent_task(job_id: str) -> dict:
+    result = cancel_job(job_id)
+    if not result.get("cancelled"):
+        return result
     with _PROCESS_LOCK:
         proc = _RUNNING_PROCESSES.get(str(job_id))
     if proc and proc.poll() is None:
-        proc.terminate()
-    return cancel_job(job_id)
+        try:
+            proc.terminate()
+        except ProcessLookupError:
+            # The child can exit after poll() and before terminate(). The
+            # durable cancellation request has already been accepted.
+            pass
+    return result

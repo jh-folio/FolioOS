@@ -1,5 +1,6 @@
 import sys
 import os
+import threading
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
@@ -9,6 +10,9 @@ import pytest
 from features.agent_mode import bridge
 from features.agent_mode import schema
 from features.agent_mode.briefing_contract import briefing_contract_violations, briefing_output_contract
+from features.common import jobs
+from features.common.shared_jobs_projection import new_shared_job
+from features.common.shared_jobs_schema import Adapter, GenerationMode, JobKind, JobMode, JobStatus, TaskType
 
 
 def _valid_briefing_output():
@@ -193,6 +197,208 @@ def test_run_agent_task_captures_output_and_delegates_writeback():
         assert result["generationMode"] == "llm_cli"
         assert result["date"] == "2099-12-31"
         assert "Agent output" in writeback.call_args.kwargs["markdown"]
+
+
+def test_shared_job_uses_owned_pack_and_atomic_json_producer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # Given: a real running SharedJob, an unrelated manual pack, and a fake CLI result.
+    monkeypatch.setattr(jobs, "JOBS_PATH", tmp_path / "jobs.json")
+    jobs._LIFECYCLES.clear()
+    job = new_shared_job(
+        kind=JobKind.AGENT_BRIDGE,
+        task_type=TaskType.INVESTMENT_REVIEW,
+        generation_mode=GenerationMode.LLM_CLI,
+        adapter=Adapter.CODEX,
+        requested_mode="cli",
+        mode=JobMode.GENERATE,
+        attempted_engine="cli",
+        clock=jobs._clock,
+    )
+    jobs._store().add(job)
+    jobs._store().transition(job.id, JobStatus.RUNNING)
+    jobs._lifecycle().set_private(job.id, {"canary": "PRIVATE_CANARY"})
+    manual = tmp_path / "agent-context" / "manual-sentinel.json"
+    manual.parent.mkdir(parents=True)
+    manual.write_bytes(b"MANUAL_SENTINEL")
+    pack = schema.build_pack(
+        task_type="investment_review",
+        artifact_type="investment_review",
+        artifact_id="2099-12-31",
+        title="Investment Review",
+        prompt="prompt",
+        context="PRIVATE_CONTEXT_CANARY",
+        output_contract={"format": "markdown"},
+        write_back_contract={"method": "write_markdown"},
+        save_target=str(tmp_path / "investment-review" / "2099-12-31.json"),
+        draft_artifact={"date": "2099-12-31", "title": "Investment Review"},
+    )
+
+    def prepare_pack(_task_type: str, **kwargs):
+        assert kwargs["owner_job_id"] == job.id
+        owned = jobs.write_job_pack(job.id, f"review_{pack['packId']}", pack)
+        return pack, owned
+
+    adapter = {"id": "codex", "label": "Codex CLI", "executable": "codex", "available": True}
+    with (
+        patch.object(bridge, "_select_adapter", return_value=adapter),
+        patch.object(bridge.agent_service, "prepare_pack", side_effect=prepare_pack),
+        patch.object(bridge, "_invoke_agent_cli", return_value="# Review\n\nSafe result"),
+        patch.object(bridge.agent_service, "writeback_pack", side_effect=AssertionError("direct writeback forbidden")),
+    ):
+        # When: the live bridge finishes the SharedJob.
+        result = bridge.run_agent_task("investment_review", {}, job_id=job.id)
+
+    # Then: one atomic producer commit is durable and all job-private state is gone.
+    durable = jobs._store().get(job.id)
+    report_path = tmp_path / "investment-review" / "2099-12-31.json"
+    assert result["artifactId"] == "2099-12-31"
+    assert durable is not None and durable.status is JobStatus.DONE
+    assert durable.artifactRefs[0].type == "investment_review"
+    assert report_path.is_file()
+    assert '"jobCommit"' in report_path.read_text(encoding="utf-8")
+    assert not (tmp_path / "job-context" / job.id).exists()
+    assert not jobs._lifecycle().has_private(job.id)
+    assert manual.read_bytes() == b"MANUAL_SENTINEL"
+
+
+def test_cancel_agent_task_marks_shared_job_before_terminating_registered_process(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    # Given: a running SharedJob whose registered CLI process makes its worker
+    # observe a non-zero exit immediately when terminate() is called.
+    monkeypatch.setattr(jobs, "JOBS_PATH", tmp_path / "jobs.json")
+    jobs._LIFECYCLES.clear()
+    job = new_shared_job(
+        kind=JobKind.AGENT_BRIDGE,
+        task_type=TaskType.COMPANION,
+        generation_mode=GenerationMode.LLM_CLI,
+        adapter=Adapter.CODEX,
+        requested_mode="cli",
+        mode=JobMode.ANSWER,
+        attempted_engine="cli",
+        clock=jobs._clock,
+    )
+    jobs._store().add(job)
+    lifecycle = jobs._lifecycle()
+    lifecycle.set_private(job.id, {"canary": "PRIVATE_CANCEL_CANARY"})
+
+    terminalized = threading.Event()
+    communicating = threading.Event()
+    release_process = threading.Event()
+    worker_finished = threading.Event()
+    real_terminalize = lifecycle.terminalize
+
+    def terminalize(*args, **kwargs):
+        try:
+            return real_terminalize(*args, **kwargs)
+        finally:
+            terminalized.set()
+
+    monkeypatch.setattr(lifecycle, "terminalize", terminalize)
+
+    class ControlledProcess:
+        returncode = None
+        terminated = False
+        terminate_calls = 0
+
+        def communicate(self, _input=None, timeout=None):
+            communicating.set()
+            assert release_process.wait(timeout=2), "test process was not released"
+            self.returncode = -15
+            return "", "terminated by cancellation"
+
+        def poll(self):
+            return self.returncode
+
+        def terminate(self):
+            self.terminated = True
+            self.terminate_calls += 1
+            release_process.set()
+            # Make the ordering deterministic: termination does not return to
+            # cancel_agent_task until the worker has terminalized the job.
+            assert terminalized.wait(timeout=2), "worker did not terminalize"
+
+    process = ControlledProcess()
+    adapter = {"id": "codex", "executable": "codex", "available": True}
+
+    def worker(*, progress):
+        del progress
+        try:
+            return bridge._invoke_agent_cli(adapter, "PROMPT", timeout=30, job_id=job.id)
+        finally:
+            worker_finished.set()
+
+    monkeypatch.setattr(bridge, "_adapter_command", lambda *_args, **_kwargs: ["codex", "exec", "-"])
+    monkeypatch.setattr(bridge.subprocess, "Popen", lambda *_args, **_kwargs: process)
+    thread = threading.Thread(target=jobs.run_job, args=(job.id, worker), daemon=True)
+    thread.start()
+
+    try:
+        assert communicating.wait(timeout=2), "worker did not register its process"
+        assert jobs._store().get(job.id).status is JobStatus.RUNNING
+
+        # When: the public cancellation path is invoked.
+        result = bridge.cancel_agent_task(job.id)
+
+        # Then: cancellation wins the process-exit race and private state is cleaned.
+        assert worker_finished.wait(timeout=2)
+        thread.join(timeout=2)
+        durable = jobs._store().get(job.id)
+        assert result["cancelled"] is True
+        assert durable is not None and durable.status is JobStatus.CANCELLED
+        assert process.terminated is True
+        assert process.terminate_calls == 1
+        assert job.id not in bridge._RUNNING_PROCESSES
+        assert not lifecycle.has_private(job.id)
+        assert b"PRIVATE_CANCEL_CANARY" not in (tmp_path / "jobs-v2.json").read_bytes()
+
+        repeated = bridge.cancel_agent_task(job.id)
+        assert repeated["cancelled"] is False
+        assert process.terminate_calls == 1
+    finally:
+        release_process.set()
+        thread.join(timeout=2)
+        with bridge._PROCESS_LOCK:
+            bridge._RUNNING_PROCESSES.pop(job.id, None)
+        jobs._LIFECYCLES.clear()
+
+
+@pytest.mark.parametrize("status", ["committing", "cancelled"])
+def test_cancel_agent_task_does_not_terminate_when_shared_job_rejects_cancel(status: str):
+    process = Mock()
+    process.poll.return_value = None
+    with bridge._PROCESS_LOCK:
+        bridge._RUNNING_PROCESSES["job-rejected"] = process
+    try:
+        with patch.object(
+            bridge,
+            "cancel_job",
+            return_value={"cancelled": False, "job": {"status": status}},
+        ):
+            result = bridge.cancel_agent_task("job-rejected")
+        assert result["cancelled"] is False
+        process.poll.assert_not_called()
+        process.terminate.assert_not_called()
+    finally:
+        with bridge._PROCESS_LOCK:
+            bridge._RUNNING_PROCESSES.pop("job-rejected", None)
+
+
+def test_cancel_agent_task_accepts_process_exit_between_poll_and_terminate():
+    process = Mock()
+    process.poll.return_value = None
+    process.terminate.side_effect = ProcessLookupError
+    with bridge._PROCESS_LOCK:
+        bridge._RUNNING_PROCESSES["job-exited"] = process
+    try:
+        with patch.object(bridge, "cancel_job", return_value={"cancelled": True}) as cancel:
+            result = bridge.cancel_agent_task("job-exited")
+        assert result == {"cancelled": True}
+        cancel.assert_called_once_with("job-exited")
+        process.terminate.assert_called_once_with()
+    finally:
+        with bridge._PROCESS_LOCK:
+            bridge._RUNNING_PROCESSES.pop("job-exited", None)
 
 
 def test_market_state_snapshot_progress_does_not_conflict_with_message_key():

@@ -1,0 +1,3 @@
+defaults/config/*.json text eol=lf
+defaults/config/*.yaml text eol=lf
+public/react/folio-react.js text eol=lf

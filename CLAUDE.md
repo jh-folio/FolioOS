@@ -229,19 +229,20 @@ features/company_analysis/financial_quality_prompt.md
 | Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장 | source-grounded |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
-0.1 기본 사용자 화면에서의 노출 상태:
+0.2 기본 사용자 화면에서의 노출 상태:
 
-- **보이는 핵심 화면**: Home/AI Agent, Briefing, RSS Feed, Market Memory, Company Analysis, Settings.
-- **보이는 보조 기능**: 보고서 reader의 Folio Note, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
-- **숨김/축소 유지**: Deep Research/Topic Report, Dashboard, Watchlist route와 저장소는 기존 저장 보고서·딥링크 호환을 위해 유지하지만 0.1 기본 nav/Home/command palette에는 노출하지 않는다. Portfolio, Thesis Tracking, Personal Overlay, Investment Review, 고급 Investment Notes는 런타임/API 또는 내부 기반은 남아 있으나 0.1 제품 표면에서는 전면 기능으로 설명하지 않는다.
-- **문서 원칙**: 사용자용 README는 0.1에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 0.2+ 로드맵에서 다룬다.
+- **보이는 핵심 화면**: Home/AI Agent, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collections, Market State, Agent Work Log, 보고서 reader의 Folio Note, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
+- **숨김/축소 유지**: Dashboard와 Watchlist route/storage는 딥링크 호환을 위해 유지하지만 0.2 기본 nav/Home/command palette에는 노출하지 않는다. Portfolio, Thesis Tracking, Personal Overlay, Investment Review, 고급 Investment Notes는 런타임/API 또는 내부 기반은 남아 있으나 0.2 제품 표면에서는 전면 기능으로 설명하지 않는다.
+- **문서 원칙**: 사용자용 README는 0.2에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
 
 ### 설계 확정·구현 예정
 
 | 작업 | 계획 위치 | 범위 |
 |---|---|---|
 | 0.1 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Home/Agent, Briefing, RSS, Market Memory v3, Company Analysis v2, Agent-assisted Investment Notes v2, Settings/Automation 간소화, release QA |
-| 0.2+ 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Deep Research Agent workspace, Smart Collections, Agent work log, note/thesis intelligence, dark mode, portfolio/watchlist 재평가, Agent infrastructure hardening |
+| 0.2 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Deep Research Agent workspace, Smart Collections, metadata-only Agent Work Log, Market State, proposal writeback, release QA |
+| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | note/thesis intelligence, dark mode, portfolio/watchlist 재평가, installer/tray polish |
 | AI Agent Mode hardening | 로컬 `roadmap/` 문서가 있을 때만 참고 | CLI/API bridge preflight, Direct Bridge 안정화, proposal writeback, job lifecycle, restart recovery, context/log retention |
 
 > 개선안 01~04(Personal Overlay / Thesis Tracker / Regime 추적 v2 / Topic Report v2)와 post-v1 Step 6~11은 구현되어 위 표로 승격되었다.
@@ -354,7 +355,7 @@ features/company_analysis/financial_quality_prompt.md
 - `userContext`는 관심 방향이지 evidence가 아니다. 외부 자료와 충돌하면 충돌을 명시하고 반대 근거를 함께 제시한다.
 - Quality Gate(`evaluation.py`)는 규칙 기반이다. markdown 섹션 존재 + Evidence Pack 커버리지로 점수/등급/경고를 만든다. LLM 없이 동작한다.
 - Personal Overlay와 Quality 재평가는 **저장된 보고서에만** 동작한다(파일 기준). overlay 생성은 기본 `markdown`을 수정하지 않는다(Step 2 `with_overlay` 재사용).
-- 보고서는 생성 시 `data/topic-reports/`에 **자동 저장**된다(`api_generate_topic_report`가 `save_topic_report` 호출). id는 `날짜:topicKey:라벨` 기준이라 같은 주제를 같은 날 재생성하면 최신본으로 덮어쓴다. 덮어쓸 때 기존 `personalOverlay`는 보존한다. 저장 JSON에 `topicPlan`/`evidencePackSummary`/`sourceLedger`/`quality`/`personalOverlay`를 함께 둔다.
+- 보고서는 승인된 `POST /api/topic-reports` SharedJob의 committing 단계에서 `data/topic-reports/`에 **자동 저장**된다. 공개 save route는 없으며, 명시적 proposal 승인만 기존 Canonical revision을 바꾼다. 저장 JSON에는 `topicPlan`/`researchResolution`/`executionProvenance`/`evidencePackSummary`/`sourceLedger`/`quality`/`personalOverlay`를 함께 둔다.
 - LLM이 없어도 규칙 fallback이 리서치 계획 요약·데이터 부족 경고·체크포인트·Source & Data Notes를 포함한 보고서를 만든다.
 
 ### 포트폴리오
@@ -437,7 +438,7 @@ features/company_analysis/financial_quality_prompt.md
 - 로직은 `features/common/quality_generation/`에 둔다. 생성 품질 목표/자료 수집 루트, 생성 전 preflight, prompt/rule hints, 생성 후 `research_quality` 평가, 제한적 repair loop를 담당한다.
 - 브리핑/기업분석/테마보고서 생성 컨텍스트에는 보고서 유형별 품질 목표(`quality_targets.py`)를 먼저 주입한다. 최소 근거, 필요한 evidence mix, 자료 보강 루트, 필수 산출 요소가 생성 전부터 반영되어야 한다.
 - 내부 `qualityMode` 호환 값은 `diagnose_only`(기본), `llm_section_improve`, `strict`만 허용한다. 레거시 `improve_once` 요청은 `llm_section_improve`로 매핑한다. 기존 생성 API는 기본값이 `diagnose_only`라 기존 동작을 깨지 않는다.
-- 0.1 웹 UI에서는 품질 모드를 사용자 선택 항목으로 노출하지 않는다. 기본 생성은 자동 품질 진단(`diagnose_only`)으로 처리하고, 섹션 개선 모드는 내부/API 호환 경로로만 남긴다.
+- 0.2 웹 UI에서는 품질 모드를 사용자 선택 항목으로 노출하지 않는다. 기본 생성은 자동 품질 진단(`diagnose_only`)으로 처리하고, 섹션 개선 모드는 내부/API 호환 경로로만 남긴다.
 - `llm_section_improve`와 `strict`는 약한 섹션 LLM 개선을 최대 1회로 제한한다. 반복 재작성 루프를 만들지 않는다.
 - 섹션 개선은 현재 artifact의 `sourceLedger`, `evidenceItems`, `checkpoints`, `dataGaps`, `marketTape` 범위 안에서만 한계·반론·확인 경로·Source & Data Notes를 보강한다. 새 수치나 새 출처를 만들어내지 않는다.
 - 결과는 보고서 JSON의 별도 `qualityGeneration` 필드에 저장한다. `qualityBefore`/`qualityAfter`/`repairApplied`/`repairCount`/`repairType`/`weakSectionsBefore`/`weakSectionsAfter`/`telemetry`/`preflight`/`warnings`를 포함하며, Canonical markdown은 품질 진단만으로 바꾸지 않는다.
@@ -481,7 +482,7 @@ features/company_analysis/financial_quality_prompt.md
 - 시장 가격 스냅샷은 `yfinance`가 있으면 활성화된다. 한국장 KRX 기반 수치는 `pykrx`가 있으면 우선 활성화되고, 실패 시 yfinance fallback을 사용한다.
 - `polars`는 대량 문서 필터링, 점수 정렬, 재무/포트폴리오 집계 계산 엔진으로 사용한다.
 - Jinja2는 규칙 기반 기업분석 보고서에 필요하다.
-- Node.js는 React SPA 개발, typecheck/test/build, 그리고 bridge JS 문법 검사에 필요하다. 일반 0.1 사용자 패키지는 최신 `public/react/folio-react.js`가 포함되어 있으면 Node.js 없이 실행할 수 있다.
+- Node.js는 React SPA 개발, typecheck/test/build, 그리고 bridge JS 문법 검사에 필요하다. 일반 0.2 사용자 패키지는 최신 `public/react/folio-react.js`가 포함되어 있으면 Node.js 없이 실행할 수 있다.
 - LLM 기능은 선택 사항이다. API Key가 없으면 규칙 기반 fallback이 동작해야 한다.
 - SEC API 안정 사용을 위해 `.env`에 `SEC_USER_AGENT`를 둘 수 있다.
 
@@ -521,8 +522,8 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - SQLite/JSON은 저장소와 검색 인덱스 역할을 유지하고, 반복적인 필터링/정렬/집계는 `features/common/dataframe_ops.py`의 Polars 유틸을 우선 사용한다.
 - 여러 기능이 공유하는 코드는 `features/common/`에 둔다.
 - `data/index.json`은 상태 요약 파일로, 문서/파일 매니페스트는 `research-index.sqlite3`에 있다. 인덱싱 관련 로직을 변경하면 브리핑, 검색, 기업분석이 동시에 영향받는다.
-- 문서 수정 시 AGENTS/CLAUDE는 AI 작업자 관점, README/README.ko는 일반 사용자 관점으로 유지한다. README.dev는 예전 상세 사용자/개발 문서 백업이며 일반 0.1 릴리즈 패키지에는 포함하지 않는다.
-- README는 프로젝트를 처음 사용하는 사람이 읽는 문서다. 0.1에서 실제로 보이는 기능의 목적, 화면에서 하는 일, 필요한 입력 자료, 저장 위치, 주의점을 쉬운 말로 설명한다. 내부 구현 추적, Step 번호 중심 설명, 0.2+ 아이디어, 숨김/비활성 기능을 현재 기능처럼 서술하지 않는다.
+- 문서 수정 시 AGENTS/CLAUDE는 AI 작업자 관점, README/README.ko는 일반 사용자 관점으로 유지한다. README.dev는 예전 상세 사용자/개발 문서 백업이며 일반 0.2 릴리즈 패키지에는 포함하지 않는다.
+- README는 프로젝트를 처음 사용하는 사람이 읽는 문서다. 0.2에서 실제로 보이는 기능의 목적, 화면에서 하는 일, 필요한 입력 자료, 저장 위치, 주의점을 쉬운 말로 설명한다. 내부 구현 추적, Step 번호 중심 설명, 후속 아이디어, 숨김/비활성 기능을 현재 기능처럼 서술하지 않는다.
 - README는 기본적으로 화면 탭 단위로 정리한다. 여러 탭에서 함께 쓰는 자료·품질·연동 기능은 `features/common/` 또는 명확한 통합 폴더(예: `features/obsidian/`)의 상위 README에서 관리하고, 하위 README를 불필요하게 늘리지 않는다.
 - `roadmap/`은 개인 개발용 로컬 계획 폴더이며 GitHub/source archive/릴리즈 패키지에는 포함하지 않는다. 새 대형 작업은 `master`에서 독립 브랜치를 따고, 사용자가 로컬 roadmap 문서를 유지하는 경우에만 그 문서에 제품 순서와 진행 상태를 반영한다.
 - 앞으로 계획 관리는 GitHub Issues와 로컬 계획문서를 함께 사용한다. 공개적으로 추적할 작업은 GitHub Issue를 기준으로 삼고, 세부 실행 메모·개인 맥락·agent handoff는 `roadmap/` 또는 공개-safe한 `docs/superpowers/` 계획문서에 둔다. 자세한 규칙은 `docs/PLANNING_WORKFLOW.md`를 따른다.
@@ -537,6 +538,6 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - **기존 기능 수정 시**: 해당 기능의 README를 수정 내용에 맞게 업데이트한다. API 추가/변경, 동작 변경, 환경 변수 추가가 있으면 반드시 반영한다.
 - **`features/README.md` 테이블**: 새 기능 폴더를 만들면 폴더 역할 테이블에 한 줄 추가한다.
 - **`AGENTS.md`와 `CLAUDE.md`**: 본문을 항상 동일하게 유지한다. 기능 카탈로그(§8)·링크 목록(§9)·기능 경계(§10)에 새 기능을 두 파일 모두 반영한다.
-- **`README.md` / `README.ko.md`(최상위 사용자 문서)**: 사용자가 직접 쓰는 0.1 기능만 현재 기능으로 설명한다. 두 문서는 같은 제품 범위를 유지한다.
+- **`README.md` / `README.ko.md`(최상위 사용자 문서)**: 사용자가 직접 쓰는 0.2 기능만 현재 기능으로 설명한다. 두 문서는 같은 제품 범위를 유지한다.
 - **`README.dev.md`**: 이전 장문 README 백업이다. 일반 사용자 릴리즈 문서로 링크하거나 포함하지 않는다.
 - **신규 기능 표기 규칙**: §8에서 "구현됨 / 구현 예정"을 분리해 유지한다. 예정 기능은 구현 완료(해당 Step의 Acceptance Criteria 충족) 전까지 "있는 기능"으로 서술하지 않는다.

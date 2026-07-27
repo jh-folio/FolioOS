@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getJson, postJson } from "../api";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
-import { updateReactAgentContext } from "./agentContext";
+import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 
 type DashboardPayload = {
@@ -36,7 +36,7 @@ type LoadState = {
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: { date?: string; artifactId?: string };
@@ -87,12 +87,12 @@ function sleep(ms: number) {
 
 function isAgentJob(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && job?.kind === "agent_bridge" && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && job?.kind === "agent_bridge" && isActiveJobStatus(job.status));
 }
 
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }
@@ -516,7 +516,7 @@ export function Dashboard() {
         getJson<InvestmentReview>("/api/investment-review"),
       ]);
       setData({ dashboard, review });
-      updateReactAgentContext({ surface: "dashboard", viewId: "dashboard", reportKind: "", reportId: "" });
+      setReactAgentContextScope("dashboard", { surface: "dashboard", viewId: "dashboard", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "대시보드를 불러오지 못했습니다.");
     } finally {
@@ -547,7 +547,7 @@ export function Dashboard() {
       }
       const dashboard = await getJson<DashboardPayload>("/api/dashboard");
       setData({ dashboard, review });
-      updateReactAgentContext({ surface: "dashboard", viewId: "dashboard", reportKind: "investment_review", reportId: review.date || "" });
+      setReactAgentContextScope("dashboard", { surface: "dashboard", viewId: "dashboard", reportKind: "investment_review", reportId: review.date || "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "투자 리뷰를 갱신하지 못했습니다.");
     } finally {

@@ -2,6 +2,8 @@
 
 화면 표시명은 **딥 리서치**입니다. 내부 폴더/API/저장 경로는 기존 호환을 위해 `topic_report` 이름을 유지합니다.
 
+Folio OS 0.2에서는 좌측 navigation, Home 빠른 실행, command palette에 노출되는 기본 사용자 화면입니다. 실행 전에 승인 가능한 계획과 live evidence preview를 먼저 보여주며, 생성은 승인된 요청을 그대로 사용하는 SharedJob으로만 시작합니다.
+
 이 기능은 프리셋 테마(환율·금리·기업실적·주간시황·산업동향) 또는 **자유 투자 질문**에 대해 시장 데이터, 경제 지표, 시장 내러티브 기록, 로컬 뉴스를 종합하여 분석 보고서를 생성합니다. v2에서는 단순 "주제 보고서 생성기"를 넘어 **투자 질문 해결기**(주제 해석 → 리서치 계획 → 증거 묶음 → 유형별 분석 → 품질 평가 → 개인 해석 연결)로 동작합니다.
 
 ## 담당 범위
@@ -20,18 +22,20 @@
 - LLM 보고서 생성과 규칙 기반 fallback (LLM 없이도 전 과정 동작)
 - 사용자 추가 컨텍스트(userContext) 주입 — **관심 방향이지 사실/근거가 아님**
 - 보고서 자동 저장(같은 주제·같은 날 덮어쓰기), 목록 조회, 다시 열기, 삭제
-- 웹 UI 딥 리서치 탭은 저장 보고서를 **카드 피드**로 보여주고, 카드를 누르면 **팝업 리더(모달)** 로 본문이 열린다(생성 결과도 동일 팝업). 카드별 휴지통으로 삭제하며 기존 드롭다운 선택 방식은 폐기. (기업분석과 같은 `report-reader`/`report-feed-card` 컴포넌트 공유)
+- 웹 UI 딥 리서치 탭은 저장 보고서를 **카드 피드**로 보여주고, 카드를 누르면 `#/deep-research/{reportId}`의 공통 `ReportReaderShell`이 열린다. 카드별 휴지통으로 삭제하며 기존 드롭다운 선택 방식은 폐기한다.
 - Notion / Obsidian 내보내기
 
 ## v2 파이프라인
 
 ```text
-사용자 질문 → Topic Planner(주제 해석·리서치 계획) → Evidence Pack(축별 근거)
+사용자 질문 → 승인 계획/자료 preview → 사용자 승인 → live Evidence Pack(축별 근거)
 → report_type 템플릿 결합 → LLM/규칙 보고서 → Quality Gate(자동 평가) → Quality Generation(선택 보강)
 → [선택] Personal Overlay(내 노트와 대조)
 ```
 
 심층 모드를 켜면 Topic Planner 다음에 하위 질문 분해가 추가됩니다.
+
+Smart Collection은 저장 필터 metadata이며 evidence가 아닙니다. Market State는 별도 source-grounded context이고 evidence count/sourceLedger/hypothesis에 포함되지 않습니다. `userContext`, Folio Note, Obsidian note, Personal Overlay는 hypothesis입니다.
 
 ```text
 TopicPlan → deepResearch.subQuestions → 질문별 근거 수집 → questionCoverage/sourceLedger 라운드 기록
@@ -151,9 +155,9 @@ data/topic-reports/YYYY-MM-DD_<topic_key>_<id>.json
 ```text
 GET    /api/topic-reports/presets
 GET    /api/topic-reports
-POST   /api/topic-reports/plan                       # TopicPlan만 생성 (보고서 X)
-POST   /api/topic-reports                             # 보고서 생성 (usePlanner/customTickers/qualityMode 지원)
-POST   /api/topic-reports/save
+POST   /api/topic-reports/plan                       # 승인 가능한 TopicPlan + 자료 preview
+POST   /api/topic-reports/confirm-degraded           # zero-evidence 규칙 fallback 명시 확인
+POST   /api/topic-reports                             # 승인 envelope를 202 SharedJob으로 실행
 GET    /api/topic-reports/{report_id}?includePersonal # personalOverlay 포함 조회
 POST   /api/topic-reports/{report_id}/evaluate         # Quality Gate 재평가
 POST   /api/topic-reports/{report_id}/personal-overlay # 개인 해석 생성
@@ -162,25 +166,23 @@ POST   /api/export-notion/topic-report
 POST   /api/export-obsidian/topic-report
 ```
 
-`POST /api/topic-reports` 요청 본문:
+`POST /api/topic-reports`는 `/plan`에서 받은 `approvedRequest`와 approval을 수정 없이 사용한다. direct와 CLI 모두 같은 구조이며, 결과 보고서는 SharedJob의 committing 단계에서 내부 저장된다. 별도 공개 save API는 없다.
 
 ```json
 {
-  "topicKey": "custom",
-  "customLabel": "일본 금리 인상이 원화와 한국 금융주에 미치는 영향",
-  "userContext": "관심 방향 (사실 아님)",
-  "webSearch": true,
-  "usePlanner": true,
-  "customTickers": {"USDJPY=X": "USD/JPY"},
-  "date": "2026-06-12",
-  "qualityMode": "diagnose_only",
-  "deepResearch": true
+  "approvedRequest": {"schemaVersion": 1, "planRevision": 1, "...": "plan 응답 값"},
+  "approval": {"id": "apr_<uuid>", "token": "<43-char base64url>"},
+  "execution": {
+    "mode": "direct",
+    "adapter": "auto",
+    "fallbackPolicy": "rules_on_engine_failure"
+  }
 }
 ```
 
 ## 저장 JSON 주요 필드 (v2)
 
-`markdown`, `topicPlan`, `evidencePackSummary`, `evidenceItems`, `sourceLedger`, `checkpoints`, `dataGaps`, `marketTape`, `quality`, `qualityGeneration`, `personalOverlay`(기본 null), `generation`, `marketData`, `sources`, `deepResearch`.
+`markdown`, `topicPlan`, `evidencePackSummary`, `evidenceItems`, `sourceLedger`, `checkpoints`, `dataGaps`, `marketTape`, `quality`, `qualityGeneration`, `personalOverlay`(기본 null), `generation`, `marketData`, `sources`, `deepResearch`, `researchResolution`, `marketStateResolution`, `executionProvenance`.
 
 Step 6 Data Foundation Lite 이후 `checkpoints`/`evidenceItems`/`sourceLedger`/`dataGaps`/`marketTape`는 `features/common/research_schema/`와 `features/common/market_data/tape.py`의 공통 스키마를 사용한다. 기본 `markdown`은 구조화 필드 생성으로 바뀌지 않는다.
 Step 7 Research Quality 이후 기존 저장 보고서의 `quality`가 없거나 구버전이면 조회 시 공통 evaluator로 재평가해 최신 `sourceGrounding` 필드를 포함한다.

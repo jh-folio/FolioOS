@@ -23,9 +23,8 @@ import re
 from typing import Any, Callable
 import urllib.request
 
+from features.common.config_bootstrap import resolve_config
 
-ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_CONSTITUENTS_PATH = ROOT / "config" / "kospi200_constituents.json"
 WIKIPEDIA_URL = "https://en.wikipedia.org/wiki/KOSPI_200"
 
 # GICS sector (English) -> familiar Korean label used elsewhere in the app.
@@ -119,7 +118,7 @@ def _yfinance_market_caps(tickers: list[str]) -> dict:
 
 
 def build_kospi200_constituents_file(
-    path: Path | str = DEFAULT_CONSTITUENTS_PATH,
+    path: Path | str | None = None,
     *,
     html_fetcher: Callable[[], str] | None = None,
     cap_fetcher: Callable[[list[str]], dict] | None = None,
@@ -143,15 +142,16 @@ def build_kospi200_constituents_file(
         "missingCap": missing,
         "companies": sorted(companies, key=lambda row: row.get("marketCap") or 0, reverse=True),
     }
-    target = Path(path)
+    target = Path(path) if path is not None else resolve_config("kospi200_constituents.json")
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return payload
 
 
-def load_kospi200_constituents(path: Path | str = DEFAULT_CONSTITUENTS_PATH) -> list[dict]:
+def load_kospi200_constituents(path: Path | str | None = None) -> list[dict]:
+    target = Path(path) if path is not None else resolve_config("kospi200_constituents.json")
     try:
-        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+        payload = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError):
         return []
     companies = payload.get("companies") if isinstance(payload, dict) else None

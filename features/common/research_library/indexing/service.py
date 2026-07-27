@@ -362,6 +362,7 @@ def build_document(path):
         "reliabilityTier": meta.get("reliabilityTier", ""),
         "relatedTickers": meta.get("relatedTickers", []) or [],
         "relatedThemes": meta.get("relatedThemes", []) or [],
+        "markets": meta.get("markets", []) or [],
         "narrativeIds": meta.get("narrativeIds", []) or [],
         "eventId": meta.get("eventId", ""),
         "collectionStatus": meta.get("collectionStatus", ""),

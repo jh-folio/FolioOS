@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../api";
-import { openReactAgentDock, updateReactAgentContext } from "./agentContext";
+import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
+import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
+import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
 import { legacyBridge } from "./legacyBridge";
 import { ReaderActionButton, ReaderActionGroup } from "./reportReader/ReaderActions";
 import { ReportBody } from "./reportReader/ReportBody";
@@ -43,7 +44,7 @@ type Briefing = {
 type AgentJob = {
   id: string;
   kind?: string;
-  status: "queued" | "running" | "done" | "failed" | "cancelled";
+  status: JobStatus;
   message?: string;
   error?: string;
   result?: { date?: string; artifactId?: string };
@@ -187,12 +188,12 @@ function briefingNoteIdentity(date: string, scope: MarketScope) {
 
 function isAgentJob(value: unknown): value is AgentJob {
   const job = value as AgentJob;
-  return Boolean(job?.id && ["queued", "running"].includes(job.status));
+  return Boolean(job?.id && isActiveJobStatus(job.status));
 }
 
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
-  while (["queued", "running"].includes(current.status)) {
+  while (isActiveJobStatus(current.status)) {
     await sleep(1000);
     current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(current.id)}`);
   }
@@ -218,6 +219,7 @@ export function BriefingRoute() {
   const [archiveStart, setArchiveStart] = useState("");
   const [archiveEnd, setArchiveEnd] = useState("");
   const [archiveView, setArchiveView] = useState<ArchiveViewMode>("recent");
+  const [proposalReloadKey, setProposalReloadKey] = useState(0);
 
   const loadArchive = useCallback(async () => {
     setLoading(true);
@@ -234,7 +236,7 @@ export function BriefingRoute() {
       });
       const payload = await getJson<BriefingArchivePayload>(`/api/briefings/index?${params}`);
       setArchive(payload);
-      updateReactAgentContext({ surface: "briefing", viewId: "briefing", reportKind: "", reportId: "" });
+      setReactAgentContextScope("briefing", { surface: "briefing", viewId: "briefing", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "브리핑 목록을 불러오지 못했습니다.");
     } finally {
@@ -257,6 +259,15 @@ export function BriefingRoute() {
   }, []);
 
   useEffect(() => {
+    const handleProposalLifecycle = (event: Event) => {
+      const result = (event as CustomEvent<ProposalLifecycleResult>).detail;
+      if (proposalTargetsContext(result, window.FolioAgent?.currentContext)) setProposalReloadKey((value) => value + 1);
+    };
+    window.addEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+    return () => window.removeEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
+  }, []);
+
+  useEffect(() => {
     let alive = true;
     async function loadDetail(date: string, scope: MarketScope) {
       setLoading(true);
@@ -265,7 +276,7 @@ export function BriefingRoute() {
         const payload = await getJson<Briefing>(`/api/briefings/${encodeURIComponent(date)}?includePersonal=true&marketScope=${encodeURIComponent(scope)}`);
         if (!alive) return;
         setBriefing(payload);
-        updateReactAgentContext({
+        setReactAgentContextScope("briefing", {
           surface: "briefing_reader",
           viewId: "briefing",
           reportKind: "briefing",
@@ -285,12 +296,12 @@ export function BriefingRoute() {
       loadDetail(detailRoute.date, detailRoute.scope);
     } else {
       setBriefing(null);
-      updateReactAgentContext({ surface: "briefing", viewId: "briefing", reportKind: "", reportId: "" });
+      setReactAgentContextScope("briefing", { surface: "briefing", viewId: "briefing", reportKind: "", reportId: "" });
     }
     return () => {
       alive = false;
     };
-  }, [detailRoute]);
+  }, [detailRoute, proposalReloadKey]);
 
   async function exportBriefing(target: "notion" | "obsidian") {
     const date = briefing?.date || detailRoute?.date || "";

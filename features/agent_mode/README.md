@@ -2,6 +2,8 @@
 
 AI Agent Mode는 OpenAI/Gemini/Claude API Key 없이도 Codex, Claude Code 같은 구독형 AI 에이전트를 Folio OS의 최종 작성자로 쓰기 위한 보조 기능입니다.
 
+0.2에서는 Home과 Deep Research에서 Agent를 사용하고, 두 화면이 같은 metadata-only Work Log를 공유합니다. Work Log에는 prompt, reply transcript, Markdown, diff, attachment, 로컬 path, credential, raw stdout/stderr가 저장되지 않습니다. Canonical 보고서는 generate/regenerate 또는 명시적으로 승인된 proposal만 수정할 수 있습니다.
+
 Folio OS는 자료 선별, context pack 생성, 저장 포맷, 품질 metadata를 맡고, 현재 채팅 중인 AI 에이전트가 context pack을 읽어 보고서/overlay/delta를 작성합니다. 앱 내부 LLM API를 호출하지 않는 경로입니다.
 
 ## Phase 1 흐름
@@ -162,6 +164,8 @@ When the user explicitly asks to revise, create, update, schedule, or write back
 
 `POST /api/agent/companion`은 `message`, `context` 외에 채팅 도구 옵션 `options{model, effort, attachments}`를 받는다. `companion.normalize_agent_options()`가 effort enum(`low/medium/high/max`), 모델 문자열 길이, 첨부(최대 5개, 이름 120자, 본문 4,000자)를 코드에서 정규화해 응답 `options` 필드로 되돌려준다. 첨부파일 본문은 사용자 참고 입력(hypothesis)일 뿐 evidence로 승격하지 않는다.
 
+Deep Research에서 선택한 Smart Collection은 frontend가 `collectionId`와 strict 정수 `collectionRevision`만 전달한다. 서버는 저장된 Collection을 다시 조회하고 revision을 검사한 뒤 live resolve 결과의 metadata-only projection(정의 hash, 결과/실행 universe ID, 개수, provider generation, watermark)만 Agent context에 넣는다. Collection 이름·query·filter·preview item·snippet·RSS description·evidence body는 Agent prompt에 넣지 않으며, 이 projection은 `saved_filter_metadata_not_evidence`로 표시한다.
+
 ## Agent Chat (실연결) + Task Mode Writeback
 
 도크 채팅의 실제 실행 경로는 `features/agent_mode/chat.py`다.
@@ -169,9 +173,25 @@ When the user explicitly asks to revise, create, update, schedule, or write back
 - `POST /api/agent/chat` — `{message, context, options}`를 받아 `agent_bridge` job으로 제출한다(`submit_agent_chat`). CLI 실행이 오래 걸릴 수 있어 프론트는 `/api/jobs/{id}`를 폴링한다.
 - **Companion 질문**: 현재 화면 컨텍스트 + 열린 보고서 markdown 발췌(최대 24,000자) + 첨부 + 노력 단계 힌트로 프롬프트를 구성해 `bridge.run_agent_prompt()`(pack/writeback 없는 read-only 원샷 실행, 모델 오버라이드 지원)로 답을 받는다.
 - **Task 의도 + 저장 보고서 컨텍스트**(briefing/company_analysis/topic_report): CLI에 `{"summary", "revisedMarkdown"}` JSON으로 전체 수정본을 받아 unified diff와 함께 **제안(proposal)** 으로 `data/agent-proposals/{id}.json`에 저장한다. 이 시점에는 저장 보고서가 바뀌지 않는다.
-- `POST /api/agent/proposals/{id}` `{action: approve|reject}` — **승인 시에만** 해당 보고서 JSON의 `markdown`을 교체하고 `agentRevisions` 이력을 남긴다(personalOverlay 등 다른 필드 보존). 제안 생성 이후 저장본이 바뀌었으면(`baseMarkdownHash` 불일치) 적용을 거부하고 `stale`로 표시한다.
+- `GET /api/agent/proposals/{id}` — pending 제안의 bounded summary/diff/수정 본문을 승인 화면에서 다시 읽고, terminal 제안은 본문 필드가 제거된 상태/status projection으로 읽는다. 이 본문은 Work Log에 복사하지 않는다.
+- `POST /api/agent/proposals/{id}` `{action: approve|reject}` — **승인 시에만** Canonical coordinator가 `markdown`, `checkpoints`, `quality`, `qualityGeneration`, `canonicalRevision`, `agentRevisions`를 함께 갱신한다. `personalOverlay` 본문은 보존하고 Canonical 변경 시 stale marker만 추가한다. 제안 생성 이후 저장본의 `canonicalRevision` number/hash가 달라졌으면 보고서를 쓰지 않고 `stale`로 terminalize한다. approve/reject 응답은 `proposalId/status/reportKind/reportId/marketScope/targetRevision` 여섯 필드만 반환한다.
+- 제안 파일은 canonical revision과 정규화된 request/Markdown/diff hash를 묶고, apply journal로 prepared → applying → report_written → applied 순서를 복구한다. `applying` 상태의 외부 action은 409이며 startup recovery만 재개한다. 예상하지 못한 적용 오류는 private 예외 문자열을 노출하지 않고 safe error code로 응답한다.
 - **CLI가 없으면** 규칙 기반 companion 응답으로 fallback한다(`engine: "rules"`) — LLM 없이도 동작 원칙 유지.
 - 종합(`both`) 브리핑은 시장별 파일로 나뉘어 있어 단일 레거시 `{date}.json`이 있을 때만 수정 대상이 된다.
+
+## Agent Work Log
+
+Work Log는 SharedJob과 현재 proposal 파일에서 요청 시점에 파생되는 metadata-only 보기다. 별도 작업 본문을 복사해 저장하지 않으며, 각 entry는 엄격한 26개 필드만 반환한다. prompt/context, reply, Markdown, diff, 경로, traceback, operation/commit metadata와 report·artifact ID는 반환하지 않는다. Pending proposal의 본문이 필요하면 Work Log가 아니라 `GET /api/agent/proposals/{id}`로 다시 조회한다.
+
+- `GET /api/agent/work-log` — `kind=all|companion|task`, `limit`, `offset`으로 파생 목록을 조회한다.
+- `POST /api/agent/work-log/clear-preview` → `DELETE /api/agent/work-log` — preview token으로 현재 보이기만 숨긴다. SharedJob, 보고서, proposal 파일은 변경하거나 삭제하지 않는다.
+- `POST /api/agent/work-log/migration-preview` → `POST /api/agent/work-log/migration-confirm` — legacy `jobs.json`을 명시적으로 preview한 뒤 v2 job store로 이동한다.
+
+보존 표시는 최대 30일/200건이며, companion만 `category=companion`, artifact-producing task는 `category=task`다. 동기 direct Briefing/Company, index/RSS/setup/install은 Work Log에 들어가지 않는다. Direct Topic과 CLI/Agent Briefing·Company는 SharedJob이므로 포함된다.
+
+SharedJob/Work Log의 경로별 lock registry는 프로세스 수명 동안 항목을 퇴거하지 않는다. 실제 제품의 durable store 경로는 설정된 data root 아래의 유한한 집합이며, 오래 살아 있는 service와 새 service가 같은 경로에 서로 다른 lock을 받지 않도록 lock identity를 보존하는 것이 메모리 회수보다 우선한다.
+
+실행 중인 CLI 작업을 취소할 때는 SharedJob을 먼저 `cancel_requested`로 기록한 뒤 등록된 child process를 종료한다. 이미 terminal이거나 `committing`인 작업은 취소와 process 종료를 모두 거부하며, 종료 경계에서 child가 먼저 끝나도 승인된 취소는 유지한다.
 
 ## 구현 위치
 

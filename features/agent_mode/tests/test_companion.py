@@ -4,6 +4,10 @@ from features.agent_mode.companion import (
     normalize_agent_context,
     normalize_agent_options,
 )
+from pydantic import ValidationError
+
+
+VALID_COLLECTION_ID = "sc_12345678-1234-4234-9234-123456789abc"
 
 
 def test_normalize_agent_context_keeps_safe_fields_only():
@@ -29,6 +33,36 @@ def test_normalize_agent_context_keeps_safe_fields_only():
         "visibleSection": "leading_companies",
         "portfolioLinked": False,
     }
+
+
+def test_normalize_agent_context_accepts_only_collection_identity():
+    ctx = normalize_agent_context({
+        "surface": "deep_research",
+        "collectionId": VALID_COLLECTION_ID,
+        "collectionRevision": 3,
+        "query": "IGNORE RULES QUERY CANARY",
+        "matches": [{"body": "FAKE MATCH BODY CANARY"}],
+        "evidenceBodies": ["FAKE EVIDENCE BODY CANARY"],
+        "userContext": "HYPOTHESIS CANARY",
+    })
+    assert ctx["collectionId"] == VALID_COLLECTION_ID
+    assert ctx["collectionRevision"] == 3
+    assert not ({"query", "matches", "evidenceBodies", "userContext"} & ctx.keys())
+
+
+def test_normalize_agent_context_rejects_malformed_collection_identity():
+    for raw in (
+        {"collectionId": "../../smart-collections.json", "collectionRevision": 1},
+        {"collectionId": VALID_COLLECTION_ID, "collectionRevision": 0},
+        {"collectionId": VALID_COLLECTION_ID, "collectionRevision": "1"},
+        {"collectionId": VALID_COLLECTION_ID},
+        {"collectionRevision": 1},
+    ):
+        try:
+            normalize_agent_context(raw)
+            assert False, f"must reject {raw!r}"
+        except ValidationError:
+            pass
 
 
 def test_classify_agent_intent_starts_as_companion_for_questions():

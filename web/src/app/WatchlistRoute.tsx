@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getJson, postJson } from "../api";
-import { openReactAgentDock, updateReactAgentContext } from "./agentContext";
+import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 
 type WatchlistOverviewItem = {
@@ -127,7 +127,7 @@ export function WatchlistRoute() {
       const normalized = normalizeItems(Array.isArray(payload) ? payload : []);
       setItems(normalized);
       await loadOverview(normalized);
-      updateReactAgentContext({ surface: "watchlist", viewId: "watchlist", reportKind: "", reportId: "" });
+      setReactAgentContextScope("watchlist", { surface: "watchlist", viewId: "watchlist", reportKind: "", reportId: "" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "워치리스트를 불러오지 못했습니다.");
     } finally {
@@ -155,7 +155,7 @@ export function WatchlistRoute() {
       setDetailLoading(true);
       setError("");
       setDetail({ item });
-      updateReactAgentContext({ surface: "watchlist_detail", viewId: "watchlist", reportKind: "watchlist", reportId: item, marketScope: "" });
+      setReactAgentContextScope("watchlist", { surface: "watchlist_detail", viewId: "watchlist", reportKind: "watchlist", reportId: item, marketScope: "" });
       try {
         const payload = await getJson<WatchlistDetail>(`/api/watchlist/detail?item=${encodeURIComponent(item)}&limit=12`);
         if (!alive) return;
@@ -172,7 +172,7 @@ export function WatchlistRoute() {
       loadDetail(detailItem);
     } else {
       setDetail(null);
-      updateReactAgentContext({ surface: "watchlist", viewId: "watchlist", reportKind: "", reportId: "" });
+      setReactAgentContextScope("watchlist", { surface: "watchlist", viewId: "watchlist", reportKind: "", reportId: "" });
     }
     return () => {
       alive = false;

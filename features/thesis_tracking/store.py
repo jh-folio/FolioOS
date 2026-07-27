@@ -16,6 +16,7 @@ from features.thesis_tracking import model as M
 from features.common.research_schema.checkpoints import checkpoints_from_thesis_delta
 from features.common.research_schema.evidence import evidence_items_from_list
 from features.common.research_schema.source_ledger import source_ledger_from_items
+from features.common.sqlite_receipts import ensure_receipt_table
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = ROOT / "data" / "market-memory.sqlite3"
@@ -81,6 +82,7 @@ def init_db(conn: sqlite3.Connection) -> None:
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_thesis_delta_ticker_time ON thesis_delta(ticker, generated_at DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_thesis_delta_verdict ON thesis_delta(verdict)")
+    ensure_receipt_table(conn)
     conn.commit()
 
 
@@ -168,7 +170,14 @@ def _delta_id(ticker: str, generated_at: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
 
 
-def save_delta(conn, ticker: str, delta: dict) -> dict:
+def save_delta(
+    conn,
+    ticker: str,
+    delta: dict,
+    *,
+    commit: bool = True,
+    created_at: str | None = None,
+) -> dict:
     """Persist one Thesis Delta row and return the stored row."""
     ticker = str(ticker or "").strip().upper()
     if not ticker:
@@ -212,10 +221,11 @@ def save_delta(conn, ticker: str, delta: dict) -> dict:
             str(delta.get("summary") or ""),
             json.dumps(analysis, ensure_ascii=False),
             json.dumps(evidence, ensure_ascii=False),
-            _now(),
+            created_at or _now(),
         ),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
     return get_delta(conn, delta_id) or {**analysis, "evidence": evidence}
 
 

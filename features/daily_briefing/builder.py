@@ -10,6 +10,10 @@ from copy import deepcopy
 import datetime as dt
 from pathlib import Path
 
+from features.common.canonical_identity import ReportKind
+from features.common.canonical_report_state import load_report
+from features.common.canonical_report_types import WriteKind
+from features.common.canonical_reports import commit_sync, prepare
 from features.common.dataframe_ops import top_records
 from features.common.market_data.providers import fetch_korea_market_data
 from features.common.market_data.snapshot import fetch_market_snapshot
@@ -508,13 +512,12 @@ def build_briefing(
         saved_reports = {}
         for scope in requested_scopes:
             scoped_briefing = _single_market_briefing(briefing, scope)
-            existing = read_json(BRIEFINGS_DIR / briefing_file_name(date, scope), None)
+            report_path = BRIEFINGS_DIR / briefing_file_name(date, scope)
+            existing = read_json(report_path, None)
             if existing is None:
                 existing = read_json(BRIEFINGS_DIR / briefing_file_name(date), None)
                 existing = briefing_scope_view(existing, scope) if isinstance(existing, dict) else None
             scoped_briefing = _merge_with_existing(scoped_briefing, existing, scope)
-            write_json(BRIEFINGS_DIR / briefing_file_name(date, scope), scoped_briefing)
-            saved_reports[scope] = scoped_briefing
             try:
                 sidecar = _sidecar_for_market(visual_result.get("sidecar") or {}, scope)
                 if sidecar.get("snapshots"):
@@ -525,7 +528,17 @@ def build_briefing(
                     )
             except Exception as exc:
                 scoped_briefing.setdefault("warnings", []).append(f"visual sidecar write failed: {str(exc)[:160]}")
-                write_json(BRIEFINGS_DIR / briefing_file_name(date, scope), scoped_briefing)
+            prepared = prepare(
+                report_kind=ReportKind.BRIEFING,
+                exact_path=report_path,
+                write_kind=WriteKind.CANONICAL,
+                candidate=scoped_briefing,
+            )
+            commit_sync(prepared)
+            committed = load_report(report_path)
+            if committed is None:
+                raise RuntimeError("canonical briefing commit did not persist the report")
+            saved_reports[scope] = committed
         if market_scope == "both" and link_analysis:
             write_json(
                 BRIEFINGS_DIR / briefing_link_file_name(date),

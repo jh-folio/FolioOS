@@ -3,6 +3,7 @@ import datetime as dt
 import re
 from pathlib import Path
 
+from features.common.config_bootstrap import resolve_config
 from features.common.utils import normalize, read_json, write_json, now_iso
 from features.common.taxonomy import normalize_tag
 from features.common.company_lookup import (
@@ -17,7 +18,6 @@ from features.common.dataframe_ops import top_records
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
 NOTES_DIR = DATA_DIR / "notes"
-SP500_CONSTITUENTS_PATH = ROOT / "config" / "sp500_constituents.json"
 
 TRADINGVIEW_QUERY_SYMBOLS = {
     "GEV": "NYSE:GEV",
@@ -164,7 +164,7 @@ def watchlist_company_from_constituents(token: str):
     query = normalize(token).strip()
     if not query:
         return None
-    payload = read_json(SP500_CONSTITUENTS_PATH, {})
+    payload = read_json(resolve_config("sp500_constituents.json"), {})
     rows = payload.get("companies", []) if isinstance(payload, dict) else []
     for row in rows:
         ticker = str(row.get("ticker") or row.get("providerSymbol") or "").strip().upper()

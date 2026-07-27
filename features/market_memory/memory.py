@@ -5,8 +5,11 @@ import datetime as dt
 import json
 import re
 import sqlite3
+from contextlib import nullcontext
 from pathlib import Path
+from typing import assert_never
 
+from features.common.sqlite_receipts import ensure_receipt_table
 from features.common.taxonomy import TAG_ALIASES, INDUSTRY_ALIASES, canonical_tag, canonical_industry
 
 CATEGORY_CHOICES = {"stock_bond", "geopolitics", "emerging"}
@@ -377,6 +380,20 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_taxonomy_type ON market_memory_taxonomy(term_type, count DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_story_links_from ON market_story_links(from_story, relation)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_market_story_family_suggestions ON market_story_family_suggestions(status, updated_at DESC)")
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS market_state_snapshots (
+            snapshot_id TEXT PRIMARY KEY,
+            as_of TEXT NOT NULL,
+            horizon TEXT NOT NULL,
+            status TEXT NOT NULL,
+            headline TEXT NOT NULL,
+            payload_json TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_market_state_snapshots_as_of ON market_state_snapshots(as_of DESC)")
+    ensure_receipt_table(conn)
     conn.commit()
 
 
@@ -388,17 +405,51 @@ def _ensure_columns(conn: sqlite3.Connection, table: str, columns: dict[str, str
 
 
 def normalize(text: str) -> str:
-    return re.sub(r"\s+", " ", str(text or "")).strip()
+    return " ".join(str(text or "").split())
+
+
+def _strip_markup(value: str) -> str:
+    output: list[str] = []
+    inside_tag = False
+    for character in value:
+        if character == "<":
+            inside_tag = True
+            output.append(" ")
+        elif character == ">" and inside_tag:
+            inside_tag = False
+            output.append(" ")
+        elif not inside_tag:
+            output.append(character)
+    return "".join(output)
+
+
+def _strip_urls(value: str) -> str:
+    output: list[str] = []
+    index = 0
+    lowered = value.lower()
+    while index < len(value):
+        if lowered.startswith("http://", index) or lowered.startswith("https://", index):
+            while index < len(value) and not value[index].isspace():
+                index += 1
+            output.append(" ")
+            continue
+        output.append(value[index])
+        index += 1
+    return "".join(output)
 
 
 def clean_text(text: str) -> str:
-    value = re.sub(r"<[^>]*(?:>|$)", " ", str(text or ""))
+    value = _strip_markup(str(text or ""))
     value = value.replace("&nbsp;", " ").replace("&amp;", "&").replace("&quot;", '"').replace("&#x27;", "'")
-    value = re.sub(r"Original link:\s*https?://\S+", " ", value, flags=re.I)
-    value = re.sub(r"https?://\S+", " ", value)
-    value = re.sub(r"(^|\s)#\s*", " ", value)
-    value = re.sub(r"\s+-\s+Reuters\s*$", "", value, flags=re.I)
-    return normalize(value)
+    value = _strip_urls(value.replace("Original link:", " "))
+    value = "".join(
+        " " if character == "#" and (index == 0 or value[index - 1].isspace()) else character
+        for index, character in enumerate(value)
+    )
+    normalized = normalize(value)
+    if normalized.casefold().endswith(" - reuters"):
+        normalized = normalized[:-len(" - Reuters")]
+    return normalize(normalized)
 
 
 def slug(text: str) -> str:
@@ -448,6 +499,10 @@ def _state_blob(*parts) -> str:
     return clean_text(" ".join(flat)).lower()
 
 
+def _contains_any(value: str, terms: tuple[str, ...]) -> bool:
+    return any(term in value for term in terms)
+
+
 def canonical_state_for(
     state_key: str = "",
     state_label: str = "",
@@ -461,19 +516,19 @@ def canonical_state_for(
         if direct:
             return direct
     blob = _state_blob(state_key, state_label, story_family, story, text)
-    if re.search(r"전력|power|utility|utilities|grid|data ?center|데이터센터|전선|구리|원전", blob) and re.search(r"ai|인공지능|데이터센터|data ?center", blob):
+    if _contains_any(blob, ("전력", "power", "utility", "utilities", "grid", "data center", "datacenter", "데이터센터", "전선", "구리", "원전")) and _contains_any(blob, ("ai", "인공지능", "데이터센터", "data center", "datacenter")):
         return _canonical_def("ai_data_center_power_bottleneck")
-    if re.search(r"한국|korea|원화|krw|외국인|수급|etp|adr|해외 자본|레버리지", blob) and re.search(r"반도체|semiconductor|semis|hbm|memory|메모리|sk하이닉스|삼성전자", blob):
+    if _contains_any(blob, ("한국", "korea", "원화", "krw", "외국인", "수급", "etp", "adr", "해외 자본", "레버리지")) and _contains_any(blob, ("반도체", "semiconductor", "semis", "hbm", "memory", "메모리", "sk하이닉스", "삼성전자")):
         return _canonical_def("korea_semiconductor_exports_fx_sensitivity")
-    if re.search(r"ai|인공지능|반도체|semiconductor|semis|hbm|gpu|server|서버|메모리|memory|공급망|리더십|broadcom|nvidia|sk하이닉스|삼성전자|삼성전기", blob):
+    if _contains_any(blob, ("ai", "인공지능", "반도체", "semiconductor", "semis", "hbm", "gpu", "server", "서버", "메모리", "memory", "공급망", "리더십", "broadcom", "nvidia", "sk하이닉스", "삼성전자", "삼성전기")):
         return _canonical_def("ai_semiconductor_supply_chain")
-    if re.search(r"중동|iran|hormuz|middle east|유가|oil|brent|wti|지정학|geopolitical", blob):
+    if _contains_any(blob, ("중동", "iran", "hormuz", "middle east", "유가", "oil", "brent", "wti", "지정학", "geopolitical")):
         return _canonical_def("middle_east_energy_risk")
-    if re.search(r"금리|rates?|yield|yields|국채|채권|dollar|달러|liquidity|유동성", blob):
+    if _contains_any(blob, ("금리", "rate", "rates", "yield", "yields", "국채", "채권", "dollar", "달러", "liquidity", "유동성")):
         return _canonical_def("rates_dollar_liquidity")
-    if re.search(r"코스피|코스닥|한국 증시|kospi|kosdaq|외국인|기관", blob):
+    if _contains_any(blob, ("코스피", "코스닥", "한국 증시", "kospi", "kosdaq", "외국인", "기관")):
         return _canonical_def("korea_equity_rally")
-    if re.search(r"수출|export|무역|관세|tariff", blob):
+    if _contains_any(blob, ("수출", "export", "무역", "관세", "tariff")):
         return _canonical_def("korea_export_cycle")
     return None
 
@@ -516,19 +571,19 @@ def apply_canonical_state(memory: dict) -> dict:
 def inferred_axis_from_context(subject: str = "", tags: list[str] | None = None, text: str = "") -> dict:
     tags = [canonical_tag(tag) for tag in (tags or []) if canonical_tag(tag)]
     blob = text_blob(subject, " ".join(tags), text).lower()
-    if re.search(r"(ai|인공지능|데이터센터|data center).*(전력|power|utility|grid|electricity|원전|전선|구리)|(전력|power|utility|grid|전선|구리).*(ai|데이터센터|data center)", blob, re.I):
+    if _contains_any(blob, ("ai", "인공지능", "데이터센터", "data center")) and _contains_any(blob, ("전력", "power", "utility", "grid", "electricity", "원전", "전선", "구리")):
         return {"key": "ai_data_center_power_bottleneck", "label": "AI 데이터센터 전력 병목", "thesis": "AI 인프라 수요가 전력, 유틸리티, 전선·구리 등 물리 인프라 병목으로 확산되는 흐름"}
-    if re.search(r"nvidia|nvda|dell|sk하이닉스|하이닉스|samsung|삼성전자|삼성전기|micron|tsmc|broadcom|반도체|semiconductor|hbm|gpu|ai server|ai 서버|mlcc", blob, re.I):
+    if _contains_any(blob, ("nvidia", "nvda", "dell", "sk하이닉스", "하이닉스", "samsung", "삼성전자", "삼성전기", "micron", "tsmc", "broadcom", "반도체", "semiconductor", "hbm", "gpu", "ai server", "ai 서버", "mlcc")):
         return {"key": "ai_semiconductor_supply_chain", "label": "AI 반도체 공급망", "thesis": "AI 투자 사이클이 반도체, 서버, 메모리, 부품 공급망의 실적 기대와 수급으로 전이되는 흐름"}
-    if re.search(r"fed|fomc|treasury|yield|bond|rate|dollar|fx|금리|국채|채권|달러|환율|유동성|스와프", blob, re.I):
+    if _contains_any(blob, ("fed", "fomc", "treasury", "yield", "bond", "rate", "dollar", "fx", "금리", "국채", "채권", "달러", "환율", "유동성", "스와프")):
         return {"key": "rates_dollar_liquidity", "label": "금리·달러 유동성", "thesis": "금리, 국채 수급, 달러 유동성이 위험자산 밸류에이션과 자금 흐름을 좌우하는 흐름"}
-    if re.search(r"iran|hormuz|middle east|oil|brent|wti|war|이스라엘|이란|호르무즈|중동|유가|원유|전쟁|종전", blob, re.I):
+    if _contains_any(blob, ("iran", "hormuz", "middle east", "oil", "brent", "wti", "war", "이스라엘", "이란", "호르무즈", "중동", "유가", "원유", "전쟁", "종전")):
         return {"key": "middle_east_energy_risk", "label": "중동 에너지 리스크", "thesis": "중동 지정학과 에너지 가격 프리미엄이 물가, 금리, 산업 비용으로 전이되는 흐름"}
-    if re.search(r"earnings|guidance|revenue|sales outlook|beat|miss|margin|eps|실적|가이던스|매출|영업이익|마진|어닝", blob, re.I):
+    if _contains_any(blob, ("earnings", "guidance", "revenue", "sales outlook", "beat", "miss", "margin", "eps", "실적", "가이던스", "매출", "영업이익", "마진", "어닝")):
         return {"key": "earnings_revision_cycle", "label": "실적 기대 재가격화", "thesis": "개별 기업의 실적·가이던스 뉴스가 업종 이익 추정과 위험선호로 전이되는 흐름"}
-    if re.search(r"policy|regulation|tariff|government|congress|정책|규제|관세|정부|국회", blob, re.I):
+    if _contains_any(blob, ("policy", "regulation", "tariff", "government", "congress", "정책", "규제", "관세", "정부", "국회")):
         return {"key": "policy_regulation_risk", "label": "정책·규제 리스크", "thesis": "정책·규제 변화가 업종 수요, 비용, 밸류에이션에 반영되는 흐름"}
-    if re.search(r"stock|shares|index|rally|selloff|market|증시|주가|지수|상승|하락|위험선호", blob, re.I):
+    if _contains_any(blob, ("stock", "shares", "index", "rally", "selloff", "market", "증시", "주가", "지수", "상승", "하락", "위험선호")):
         return {"key": "broad_market_risk_appetite", "label": "시장 위험선호 변화", "thesis": "지수와 업종 수급이 위험선호와 가격 반응을 통해 재분류되는 흐름"}
     return {"key": "market_observation", "label": "시장 관찰 메모", "thesis": "반복되는 시장 재료를 가격 반응과 후속 수급으로 확인하는 흐름"}
 
@@ -764,8 +819,8 @@ def _taxonomy_values(memory: dict) -> list[tuple[str, str, str]]:
     return [(a, b, c) for a, b, c in rows if a in TAXONOMY_TYPES and b]
 
 
-def update_taxonomy(conn: sqlite3.Connection, memory: dict) -> None:
-    now = dt.datetime.now(dt.timezone.utc).isoformat()
+def update_taxonomy(conn: sqlite3.Connection, memory: dict, observed_at: str | None = None) -> None:
+    now = observed_at or dt.datetime.now(dt.timezone.utc).isoformat()
     for term_type, term_key, label in _taxonomy_values(memory):
         conn.execute(
             """
@@ -780,7 +835,7 @@ def update_taxonomy(conn: sqlite3.Connection, memory: dict) -> None:
         )
 
 
-def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, relation: str, strength: float, evidence: str) -> None:
+def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, relation: str, strength: float, evidence: str, updated_at: str | None = None) -> None:
     import hashlib
 
     from_key = slug(from_story)
@@ -788,7 +843,7 @@ def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, 
     if not from_key or not to_key or from_key == to_key:
         return
     relation = normalize_choice(relation, STORY_RELATIONS, "same_family")
-    updated_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    updated_at = updated_at or dt.datetime.now(dt.timezone.utc).isoformat()
     link_id = hashlib.sha256(f"{from_key}:{to_key}:{relation}".encode("utf-8")).hexdigest()[:16]
     conn.execute(
         """
@@ -803,14 +858,14 @@ def upsert_story_link(conn: sqlite3.Connection, from_story: str, to_story: str, 
     )
 
 
-def upsert_family_suggestion(conn: sqlite3.Connection, story: str, suggested_family: str, reason: str) -> None:
+def upsert_family_suggestion(conn: sqlite3.Connection, story: str, suggested_family: str, reason: str, observed_at: str | None = None) -> None:
     import hashlib
 
     story_key = slug(story)
     family_key = slug(suggested_family)
     if not story_key or not family_key or story_key == family_key:
         return
-    now = dt.datetime.now(dt.timezone.utc).isoformat()
+    now = observed_at or dt.datetime.now(dt.timezone.utc).isoformat()
     suggestion_id = hashlib.sha256(f"{story_key}:{family_key}".encode("utf-8")).hexdigest()[:16]
     conn.execute(
         """
@@ -1361,13 +1416,27 @@ def state_conclusion(label: str, bias: str, net_effect: str, summary: str = "", 
     return f"판단: {name} 내러티브는 현재 {bias_label} 신호입니다. 결론은 가격 반응, 실적 기대, 수급 변화 중 어느 축으로 전이되는지에 달려 있습니다."
 
 
-def upsert_memory(db_path: str | Path, entry: dict) -> dict:
+def upsert_memory(
+    db_path: str | Path | sqlite3.Connection,
+    entry: dict,
+    *,
+    prepared_at: str | None = None,
+) -> dict:
     import hashlib
 
-    conn = connect(db_path)
-    init_db(conn)
+    match db_path:
+        case sqlite3.Connection() as connection:
+            conn = connection
+            owns_connection = False
+        case str() | Path():
+            conn = connect(db_path)
+            init_db(conn)
+            owns_connection = True
+        case unreachable:
+            assert_never(unreachable)
     entry = apply_canonical_state(entry or {})
-    date = str(entry.get("date") or dt.datetime.now(dt.timezone.utc).date().isoformat())[:10]
+    observed_at = prepared_at or dt.datetime.now(dt.timezone.utc).isoformat()
+    date = str(entry.get("date") or observed_at[:10])[:10]
     title = clean_text(entry.get("title", "")) or "시장 내러티브"
     story = normalize(entry.get("story", "")) or slug(title)
     summary = clean_text(entry.get("summary", ""))
@@ -1399,9 +1468,9 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
     source_kind = normalize(entry.get("sourceKind") or entry.get("source_kind") or "auto")
     dedupe_key = normalize(entry.get("dedupeKey") or entry.get("dedupe_key") or f"{entry_mode}:{date}:{story}:{event_kind}")
     memory_id = str(entry.get("id") or hashlib.sha256(dedupe_key.encode("utf-8")).hexdigest()[:16])
-    as_of = str(entry.get("asOf") or entry.get("as_of") or dt.datetime.now(dt.timezone.utc).isoformat())
-    created_at = dt.datetime.now(dt.timezone.utc).isoformat()
-    with conn:
+    as_of = str(entry.get("asOf") or entry.get("as_of") or observed_at)
+    created_at = observed_at
+    with nullcontext():
         conn.execute(
             """
             INSERT INTO market_memory (
@@ -1498,8 +1567,8 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
             "sources": sources,
             "dedupeKey": dedupe_key,
         }
-        update_taxonomy(conn, result)
-        upsert_story_link(conn, story, parent_story, story_relation, 0.72, story_thesis or summary)
+        update_taxonomy(conn, result, observed_at)
+        upsert_story_link(conn, story, parent_story, story_relation, 0.72, story_thesis or summary, observed_at)
         if story_relation == "branches_from":
             story_axis = display_memory_axis(story, tags + industries, f"{title} {summary} {story_thesis} {story_checkpoint}")
             parent_axis = display_memory_axis(parent_story, tags + industries, f"{title} {summary} {story_thesis} {story_checkpoint}")
@@ -1517,6 +1586,7 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
                     f"{story_axis} 이슈가 {parent_axis} 흐름과 같은 원인→영향 고리로 움직이는 것으로 보입니다 "
                     f"(겹치는 주제: {shared_scope})."
                 ),
+                observed_at,
             )
     result = {
         "id": memory_id,
@@ -1548,13 +1618,20 @@ def upsert_memory(db_path: str | Path, entry: dict) -> dict:
     }
     try:
         if should_derive_state(conn, result):
-            result["state"] = upsert_state_from_memory(conn, result)
+            result["state"] = upsert_state_from_memory(conn, result, observed_at)
+        if owns_connection:
+            conn.commit()
         return result
+    except sqlite3.Error:
+        if owns_connection:
+            conn.rollback()
+        raise
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
 
 
-def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict) -> dict:
+def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict, observed_at: str | None = None) -> dict:
     import hashlib
 
     memory = apply_canonical_state(memory)
@@ -1563,7 +1640,7 @@ def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict) -> dict:
     bias = normalize_choice(memory.get("stateBias", ""), STATE_BIAS_CHOICES, infer_bias(f"{memory.get('title', '')} {memory.get('summary', '')}"))
     state_key = normalize(memory.get("stateKey", "") or story)
     state_id = hashlib.sha256(f"{state_key}:{memory.get('date', '')}".encode("utf-8")).hexdigest()[:16]
-    updated_at = dt.datetime.now(dt.timezone.utc).isoformat()
+    updated_at = observed_at or dt.datetime.now(dt.timezone.utc).isoformat()
     label = display_label(memory.get("stateLabel", "") or memory.get("storyFamily") or memory.get("title") or state_key)
     rationale = dedupe_sentences(memory.get("storyThesis", ""), 700) or dedupe_sentences(memory.get("summary", ""), 280)
     state = {
@@ -1586,7 +1663,7 @@ def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict) -> dict:
         "sourceMemoryId": memory.get("id", ""),
         "updatedAt": updated_at,
     }
-    with conn:
+    with nullcontext():
         if status in {"active", "watch"}:
             conn.execute(
                 """

@@ -9,7 +9,7 @@
 - 종합(both) 생성 시 한미 시장 연결 분석(`{date}.link.json`)을 별도 레이어로 생성
 - LLM 브리핑과 규칙 기반 fallback
 - 브리핑용 웹 검색 보완 ON/OFF
-- 0.1 기본 시장 가격 스냅샷 보조(yfinance/pykrx fallback). Toss Open API 어댑터는 숨김 내부 경로로만 유지
+- 0.2 기본 시장 가격 스냅샷 보조(yfinance/pykrx fallback). Toss Open API 어댑터는 숨김 내부 경로로만 유지
 - provider 기반 한국장 시장 수치 보조(`pykrx` 우선, 실패 시 yfinance fallback)
 - 최근 반복된 시장 흐름 참고
 
@@ -37,7 +37,7 @@ LLM 입력과 표시 참고자료에는 같은 evidence lane·cluster dedupe·�
 | 주도 기업 ①·② | 주도주의 최근 가격 경로는 어땠는가 | Focus price / line·candle | `time`, OHLCV, `subject` |
 | 시장 히트맵 | 전체 시장의 상승·하락과 시가총액 집중은 어디였는가 | Sector→industry→ticker treemap. 단, `sector`와 `industry`가 같은 KR 행은 중복 산업 단계를 생략해 Sector→ticker로 표시 | `sector`, `industry`, `changePct`, `marketCap` |
 
-미국 지수 차트는 **S&P 500 → Nasdaq → Dow Jones** 순서로 표시합니다. `Nasdaq`은 뉴스에서 일반적으로 말하는 Nasdaq Composite(`^IXIC`) 기준이며, Nasdaq 100(`^NDX`)이 아닙니다. 한국 지수는 KOSPI·KOSPI 200을 사용합니다. 히트맵은 **미국은 S&P 500 구성종목, 한국은 KOSPI 200 구성종목**으로 한정하며 KOSDAQ은 제외합니다. 미국 히트맵의 종목·섹터·산업 분류는 `config/sp500_constituents.json`에 내장한 **GICS Sector / Sub-Industry**(finviz와 동일한 익숙한 분류)를 사용하고, 시가총액(박스 크기)도 이 파일의 스냅샷을 씁니다. 한국 히트맵도 `config/kospi200_constituents.json`의 KOSPI 200 구성종목과 시가총액 스냅샷을 기본 universe로 사용합니다. KR 행에서 산업명이 섹터명과 같거나 비어 있으면 화면에서는 산업 단계를 만들지 않고 종목을 섹터 바로 아래에 배치해 중복 라벨 공간을 줄입니다. 0.1 기본 실행에서는 yfinance 일봉과 pykrx를 사용하고, 전일가·미지원/누락 종목은 저장된 마지막 정상 snapshot으로 보완합니다. 두 universe 파일은 각각 `py -3 -m features.common.market_data.sp500_universe`, `py -3 -m features.common.market_data.kospi200_universe`로 주기적으로 갱신합니다. Toss Open API 가격 보강은 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증 경로로만 남겨둡니다.
+미국 지수 차트는 **S&P 500 → Nasdaq → Dow Jones** 순서로 표시합니다. `Nasdaq`은 뉴스에서 일반적으로 말하는 Nasdaq Composite(`^IXIC`) 기준이며, Nasdaq 100(`^NDX`)이 아닙니다. 한국 지수는 KOSPI·KOSPI 200을 사용합니다. 히트맵은 **미국은 S&P 500 구성종목, 한국은 KOSPI 200 구성종목**으로 한정하며 KOSDAQ은 제외합니다. 미국 히트맵의 종목·섹터·산업 분류는 `config/sp500_constituents.json`에 내장한 **GICS Sector / Sub-Industry**(finviz와 동일한 익숙한 분류)를 사용하고, 시가총액(박스 크기)도 이 파일의 스냅샷을 씁니다. 한국 히트맵도 `config/kospi200_constituents.json`의 KOSPI 200 구성종목과 시가총액 스냅샷을 기본 universe로 사용합니다. KR 행에서 산업명이 섹터명과 같거나 비어 있으면 화면에서는 산업 단계를 만들지 않고 종목을 섹터 바로 아래에 배치해 중복 라벨 공간을 줄입니다. 0.2 기본 실행에서는 yfinance 일봉과 pykrx를 사용하고, 전일가·미지원/누락 종목은 저장된 마지막 정상 snapshot으로 보완합니다. 두 universe 파일은 각각 `py -3 -m features.common.market_data.sp500_universe`, `py -3 -m features.common.market_data.kospi200_universe`로 주기적으로 갱신합니다. Toss Open API 가격 보강은 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증 경로로만 남겨둡니다.
 미국 히트맵은 `GOOGL/GOOG`, `FOXA/FOX`, `NWS/NWSA`, `BRK.A/BRK.B`처럼 같은 기업의 복수 종류주식이 universe에 함께 있으면 한 기업 타일로 합쳐 표시합니다. 타일 크기는 중복 합산하지 않고 대표 회사 시가총액(max)을 쓰며, 등락률은 종류주식별 시가총액 가중 평균으로 계산합니다.
 
 히트맵 글자 크기는 박스 면적(시가총액)에 비례해 조정되어, 대형주는 티커가 크게 보이고 소형주도 작게나마 티커가 노출됩니다(finviz 스타일).
@@ -114,7 +114,7 @@ KR 당일 개장/장중
 
 `weekend` / `both_holiday` 모드에서는 `off_session_news` 자료를 핵심 변수와 주도 기업·섹터 후보에서 우선합니다. 직전 미국/한국 정규장 자료는 `시장 흐름` 섹션의 짧은 배경 복기에 쓰고, `시장을 움직인 핵심 변수`와 `시장을 주도한 기업` 섹션은 주말/휴장 사이 새로 나온 정책·지정학·기업 이벤트·실적/가이던스·M&A·규제·원자재/환율 뉴스를 다음 거래일 반영 후보로 다룹니다. 가격 반응은 단정하지 않고 다음 거래일 거래대금, 수급, 선물, 환율, 동종 기업 상대강도로 확인합니다.
 
-한국장 시장 수치는 `features/common/market_data/providers.py`의 provider 체인에서 가져옵니다. 0.1 기본 체인은 `PyKrxKoreaMarketProvider` → `YFinanceKoreaMarketProvider` 순서입니다. `PyKrxKoreaMarketProvider`는 `pykrx`를 통해 KOSPI/KOSDAQ/KOSPI200, 거래대금, 투자자별 수급, 주요 업종 등락률을 조회하고, 실패하거나 미설치 상태면 `YFinanceKoreaMarketProvider`가 KOSPI/KOSDAQ 등 지수 종가·등락률을 가능한 범위에서 보완합니다. 원·달러 환율은 `USDKRW=X` fallback으로 붙입니다. Toss Open API provider와 `/exchange-rate` 보조 경로는 0.1 사용자 표면에서 제외되며 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증에서만 실행됩니다. provider가 실패하면 “입력 자료에서 한국장 종가 등락률은 확인되지 않는다”고 명시하고 수치를 추정하지 않습니다.
+한국장 시장 수치는 `features/common/market_data/providers.py`의 provider 체인에서 가져옵니다. 0.2 기본 체인은 `PyKrxKoreaMarketProvider` → `YFinanceKoreaMarketProvider` 순서입니다. `PyKrxKoreaMarketProvider`는 `pykrx`를 통해 KOSPI/KOSDAQ/KOSPI200, 거래대금, 투자자별 수급, 주요 업종 등락률을 조회하고, 실패하거나 미설치 상태면 `YFinanceKoreaMarketProvider`가 KOSPI/KOSDAQ 등 지수 종가·등락률을 가능한 범위에서 보완합니다. 원·달러 환율은 `USDKRW=X` fallback으로 붙입니다. Toss Open API provider와 `/exchange-rate` 보조 경로는 0.2 사용자 표면에서 제외되며 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증에서만 실행됩니다. provider가 실패하면 “입력 자료에서 한국장 종가 등락률은 확인되지 않는다”고 명시하고 수치를 추정하지 않습니다.
 
 저장된 브리핑 `stats`에는 자료 부족/코드 문제를 구분하기 위한 세션 카운트가 포함됩니다: `krCurrentIntradayDocCount`, `usPrevRegularDocCount`, `krPrevRegularDocCount`(+ `analysisMode`). 한국 D 장중이 약한데 `krCurrentIntradayDocCount`가 0이면 자료 부족, 충분한데도 약하면 프롬프트/선별 문제로 진단합니다.
 

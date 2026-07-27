@@ -12,7 +12,8 @@ Folio OS is currently in early public release.
 
 | Version | Supported |
 |---|---|
-| 0.1.x | Yes |
+| 0.2.x | Yes |
+| 0.1.x | No |
 
 ## Local-First Security Model
 
@@ -53,6 +54,8 @@ Never commit or share:
 Folio OS can optionally integrate with LLM providers, Notion, market data providers, and image hosting services.
 
 When AI/LLM features are enabled, selected report context or summarized evidence may be sent to the configured provider.
+
+Deep Research keeps external evidence, generated analysis, Market State, Smart Collection metadata, and user hypotheses as separate layers. Agent Work Log responses exclude prompts, transcripts, Markdown, diffs, attachments, paths, credentials, and raw provider output. Review the approved plan and provider settings before sending a Deep Research or Agent request.
 
 When Notion export with chart images is configured with `IMGBB_API_KEY`, chart images may be uploaded to a third-party image host.
 
