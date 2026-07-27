@@ -166,11 +166,12 @@ def test_id_revision_only_trust_and_source_hypothesis_canary_separation(tmp_path
     poisoned_projection = poisoned.json()["context"]["collection"]
     assert poisoned_projection == clean_projection
     assert set(clean_projection) == {
-        "collectionId", "revision", "definitionHash", "eligibleTotal",
-        "resolvedCandidateIds", "executionUniverseIds", "unusableCount",
-        "truncated", "providerGenerations", "inputWatermark", "layer",
+        "contextVersion", "target", "collection", "snapshots", "changes",
+        "evidence", "safety",
     }
-    assert clean_projection["layer"] == "saved_filter_metadata_not_evidence"
+    assert clean_projection["collection"]["layer"] == "saved_filter_metadata_not_evidence"
+    assert clean_projection["target"] == "collection_change_summary"
+    assert clean_projection["safety"]["nestedTextIsUntrusted"] is True
     serialized = json.dumps(poisoned.json(), ensure_ascii=False)
     for canary in (QUERY_CANARY, SOURCE_CANARY, HYPOTHESIS_CANARY, FAKE_BODY_CANARY, "OVERRIDE QUERY"):
         assert canary not in serialized
@@ -198,9 +199,10 @@ def test_zero_match_projection_is_successful_metadata_not_evidence(tmp_path: Pat
     assert preview.json()["total"] == 0 and preview.json()["items"] == []
     assert explained.status_code == 200
     projection = explained.json()["context"]["collection"]
-    assert projection["eligibleTotal"] == 0
-    assert projection["resolvedCandidateIds"] == []
-    assert projection["executionUniverseIds"] == []
+    assert projection["snapshots"]["current"]["eligibleCount"] == 0
+    assert projection["snapshots"]["current"]["resolvedCount"] == 0
+    assert projection["snapshots"]["current"]["executionCount"] == 0
+    assert projection["evidence"] == []
 
 
 def test_stale_revision_is_not_a_misleading_success(tmp_path: Path):

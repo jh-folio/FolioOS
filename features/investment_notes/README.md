@@ -50,3 +50,23 @@ POST /api/investment-notes
 - 과거 일반 메모/호환 경로: `investment_note`
 
 Obsidian workflow는 계속 유지하되, 기본 저장 경로는 Folio native note입니다.
+
+## Note Intelligence (0.2.1)
+
+- 저장된 보고서 노트는 `GET /api/investment-notes/{note_id}/intelligence`에서
+  본문을 제외한 Thesis/Delta/review-state 요약을 조회한다.
+- 체크포인트 변경은 revision-safe 요청으로만 저장한다.
+- 보고서를 여는 것만으로 Agent 작업을 만들지 않으며, `최신 근거로 검토`는
+  사용자가 명시적으로 실행할 때만 기존 Thesis Delta 흐름을 사용한다.
+
+## Checkpoint projection (0.2.3)
+
+- native note의 `noteType=checkpoint`는 `checkpointState`, `dueDate`, `checkedAt`,
+  `invalidatedAt`을 controlled field로 정규화한다.
+- 상태는 `open | checked | invalidated`, 계산된 due 상태는
+  `overdue | due | upcoming | unscheduled | checked | invalidated`만 허용한다.
+- 워치리스트용 projection은 ticker로 범위를 제한하고 label/state/date만 반환하며
+  note body와 사용자 원문을 포함하지 않는다.
+- checkpoint 생성·확인은 native note 저장소만 갱신한다. 워치리스트, 포트폴리오,
+  Canonical 보고서와 외부 evidence는 수정하지 않는다.
+- 모든 checkpoint는 계속 `layer=hypothesis`, `reuseAsEvidence=false`다.

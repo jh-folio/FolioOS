@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 QA_020 = ROOT / "scripts" / "qa_020.py"
 SUPERVISOR = ROOT / "scripts" / "qa_server_supervisor.py"
 FAULT_PROXY = ROOT / "scripts" / "qa_fault_proxy.py"
+NOTE_THESIS_QA = ROOT / "scripts" / "qa_note_thesis_intelligence.py"
+SMART_WORKSPACE_QA = ROOT / "scripts" / "qa_smart_collection_workspace.py"
+INVESTMENT_CONTEXT_QA = ROOT / "scripts" / "qa_investment_context.py"
 
 PRE_EXPOSURE = [
     "DR-H1",
@@ -32,6 +35,9 @@ PRE_EXPOSURE = [
     "COL-F1",
     "MS-H1",
     "CTX-F1",
+    "NT-H1",
+    "SC-H2",
+    "IC-H1",
     "REL-H1",
 ]
 POST_EXPOSURE = ["DOC-H1"]
@@ -208,7 +214,7 @@ def _manifest(tmp_path: Path) -> tuple[Path, dict]:
                         "dom.json", "api-before.json", "api-after.json", "result.json",
                     )
                 ]
-                if scenario in {"DR-H1", "RP-H1", "REL-H1"}
+                if scenario in {"DR-H1", "RP-H1", "NT-H1", "SC-H2", "IC-H1", "REL-H1"}
                 else [f"{scenario}/result.json"]
             ) + ([f"{scenario}/post-restart-result.json"] if scenario in {"DR-H1", "WB-H1", "WL-H1"} else [])
         ],
@@ -525,6 +531,30 @@ def test_exact_named_scenario_sets_are_public_contract() -> None:
         "postExposure": POST_EXPOSURE,
         "full": FULL,
     }
+
+
+def test_stage_024_scenario_helpers_and_smoke_matrix_are_pinned() -> None:
+    module = _load_qa_020()
+
+    assert {"NT-H1", "SC-H2", "IC-H1"}.issubset(module.VIEWPORT_SCENARIOS)
+    for script in (NOTE_THESIS_QA, SMART_WORKSPACE_QA, INVESTMENT_CONTEXT_QA):
+        assert script.is_file(), f"TASK41_MISSING_HELPER:{script.name}"
+        source = script.read_text(encoding="utf-8")
+        assert "def run(source_root: Path, attempt_dir: Path) -> int:" in source
+        assert "cleanup-receipt.json" in source
+        assert "data/" not in source.split("Never read", maxsplit=1)[0]
+
+    smoke = (ROOT / "docs" / "SMOKE_TESTS.md").read_text(encoding="utf-8")
+    for phrase in (
+        "Note and Thesis Intelligence",
+        "Smart Collection workspace",
+        "Investment Context",
+        "1440 / 768 / 390",
+        "synthetic fixture root",
+        "Canonical hash",
+        "recommendation",
+    ):
+        assert phrase in smoke, f"TASK41_SMOKE_MATRIX_MISSING:{phrase}"
 
 
 def test_common_selectors_match_real_app_shell_classes() -> None:

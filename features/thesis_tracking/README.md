@@ -112,3 +112,13 @@ py -3 features\thesis_tracking\tests\test_thesis_model.py
 
 - 마지막 실적일 자동 식별을 구현해 `last_earnings` 기간을 실제 실적 window로 전환.
 - UI 직접 thesis 입력/수정 화면을 추가할지 결정.
+
+## Review State와 명시적 검토 (0.2.1)
+
+- `thesis_review_state`는 최근/다음 검토 시각, 최신 Delta ID, freshness,
+  최대 20개 체크포인트와 revision만 저장한다.
+- Direct, Agent, durable CLI 경로는 모두 기존 Delta 정규화 후 같은 review
+  state 갱신을 수행한다. raw prompt/provider 출력은 review state에 저장하지 않는다.
+- Agent context는 hypothesis/evidence/Market State 레이어와 writeback target을
+  서버가 고정하며 evidence는 최대 12개로 제한한다.
+- LLM 비활성 또는 자료 부족 시 기존 rules fallback이 계속 동작한다.

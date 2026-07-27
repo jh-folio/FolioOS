@@ -1,6 +1,7 @@
 """Watchlist keyword management, company resolution, overview, and notes."""
 import datetime as dt
 import re
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from features.common.config_bootstrap import resolve_config
@@ -14,6 +15,7 @@ from features.common.company_lookup import (
     sec_company_lookup,
 )
 from features.common.dataframe_ops import top_records
+from features.investment_notes.checkpoints import project_checkpoint_notes
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
@@ -79,6 +81,59 @@ def add_note(note):
 
 def get_watchlist():
     return read_json(DATA_DIR / "watchlist.json", [])
+
+
+def _watchlist_ticker(value) -> str:
+    if isinstance(value, dict):
+        value = value.get("ticker") or value.get("symbol") or value.get("keyword")
+    raw = normalize(value).strip().upper().lstrip("$")
+    korean = re.fullmatch(r"(\d{6})(?:\.(?:KS|KQ))?", raw)
+    if korean:
+        return korean.group(1)
+    raw = raw.replace(".", "-")
+    return raw if re.fullmatch(r"[A-Z0-9-]{1,12}", raw) else ""
+
+
+def watchlist_checkpoint_context(
+    *,
+    watchlist: Sequence[object] | None = None,
+    notes: Sequence[object] | None = None,
+    clock: Callable[[], dt.datetime | dt.date] | None = None,
+    limit: int = 20,
+) -> dict:
+    """Return a bounded hypothesis-only checkpoint view for watched tickers."""
+    from features.investment_notes import service as investment_note_service
+
+    observed_clock = clock or (lambda: dt.datetime.now(dt.timezone.utc))
+    watched = {
+        ticker
+        for item in (get_watchlist() if watchlist is None else watchlist)
+        if (ticker := _watchlist_ticker(item))
+    }
+    source_notes = (
+        investment_note_service.list_notes(
+            note_type="checkpoint",
+            limit=200,
+            include_body=False,
+            clock=observed_clock,
+        )
+        if notes is None
+        else list(notes)
+    )
+    projected = project_checkpoint_notes(
+        source_notes,
+        clock=observed_clock,
+        limit=100,
+    )
+    rows = [row for row in projected if row["ticker"] in watched][
+        : max(1, min(int(limit or 20), 100))
+    ]
+    return {
+        "count": len(rows),
+        "dueCount": sum(row["dueState"] == "due" for row in rows),
+        "overdueCount": sum(row["dueState"] == "overdue" for row in rows),
+        "checkpoints": rows,
+    }
 
 
 def watchlist_company_from_index(token: str):

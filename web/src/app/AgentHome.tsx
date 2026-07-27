@@ -3,6 +3,7 @@ import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { resetReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
 import { AgentWorkLog } from "./AgentWorkLog";
+import { InvestmentContextCard } from "./InvestmentContextCard";
 import { AgentPollTimeout, pollAgentJobBounded, releasePollController, replacePollController } from "./agentPolling";
 import { actOnProposal, boundedProposalDiff, boundedProposalSummary, hydrateAgentProposalFromResult, notifyProposalLifecycle } from "./agentProposalLifecycle";
 
@@ -663,6 +664,8 @@ export function AgentHome() {
             <button className="launch-tile" type="button" onClick={() => runQuickAction("analysis")}>기업 분석</button>
             <button className="launch-tile" data-qa="home-deep-research" type="button" onClick={() => runQuickAction("deep-research")}>딥 리서치</button>
           </div>
+
+          <InvestmentContextCard mode="home" dismissible />
 
           {recentReports.length > 0 && (
             <div className="review-recent-wrap agent-home-recent">

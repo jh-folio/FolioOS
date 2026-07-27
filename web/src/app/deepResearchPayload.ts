@@ -103,6 +103,49 @@ export type ExecutionProvenancePayload = {
 
 export type RevisionPayload = { readonly number: number | null; readonly hash: string };
 
+export type DeepResearchLocation =
+  | { readonly kind: "list"; readonly id: ""; readonly malformed: false }
+  | { readonly kind: "report"; readonly id: string; readonly malformed: boolean }
+  | { readonly kind: "collection"; readonly id: string; readonly malformed: boolean };
+
+const COLLECTION_ROUTE_ID = /^sc_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+export function deepResearchCollectionHash(collectionId: string): string {
+  return `#/deep-research/collections/${encodeURIComponent(collectionId)}`;
+}
+
+export function deepResearchReportHash(reportId: string): string {
+  return `#/deep-research/${encodeURIComponent(reportId)}`;
+}
+
+export function parseDeepResearchLocation(hash: string): DeepResearchLocation {
+  const route = hash.replace(/^#\/?/, "");
+  if (route === "deep-research" || route === "deep-research/") {
+    return { kind: "list", id: "", malformed: false };
+  }
+  const collection = route.match(/^deep-research\/collections\/(.+)$/);
+  if (collection) {
+    try {
+      const id = decodeURIComponent(collection[1]);
+      return COLLECTION_ROUTE_ID.test(id)
+        ? { kind: "collection", id, malformed: false }
+        : { kind: "collection", id: "", malformed: true };
+    } catch {
+      return { kind: "collection", id: "", malformed: true };
+    }
+  }
+  const report = route.match(/^deep-research\/(.+)$/);
+  if (!report) return { kind: "list", id: "", malformed: false };
+  try {
+    const id = decodeURIComponent(report[1]);
+    return id
+      ? { kind: "report", id, malformed: false }
+      : { kind: "report", id: "", malformed: true };
+  } catch {
+    return { kind: "report", id: "", malformed: true };
+  }
+}
+
 export type PersonalOverlayPayload = {
   readonly markdown: string;
   readonly stale: boolean;
@@ -113,6 +156,7 @@ export type PersonalOverlayPayload = {
   readonly contradictions: readonly string[];
   readonly uncertainties: readonly string[];
   readonly personalQuestions: readonly string[];
+  readonly revisionState: "current" | "stale" | "legacy_unknown";
 };
 
 export type TopicReport = {
@@ -311,8 +355,9 @@ function parseExecution(value: unknown): ExecutionProvenancePayload | null {
   return { schemaVersion: numberValue(value.schemaVersion), approvalId: value.approvalId, planHash: stringValue(value.planHash), requestedMode: stringValue(value.requestedMode), attemptedEngine: stringValue(value.attemptedEngine), finalEngine: stringValue(value.finalEngine), fallbackReason: value.fallbackReason === null ? null : stringValue(value.fallbackReason), adapter: stringValue(value.adapter), executedAt: value.executedAt };
 }
 
-function parseOverlay(value: unknown, canonical: RevisionPayload | null): PersonalOverlayPayload | null {
+export function parsePersonalOverlayPayload(value: unknown, canonicalValue: unknown): PersonalOverlayPayload | null {
   if (!isRecord(value)) return null;
+  const canonical = revision(canonicalValue);
   if (!["markdown", "stale", "staleReason", "canonicalRevision", "linkedNotes", "counterEvidence", "contradictions", "uncertainties", "personalQuestions"].some((key) => key in value)) return null;
   const overlayRevision = revision(value.canonicalRevision);
   const mismatch = Boolean(canonical && overlayRevision && (
@@ -322,12 +367,14 @@ function parseOverlay(value: unknown, canonical: RevisionPayload | null): Person
   const notes = Array.isArray(value.linkedNotes) ? value.linkedNotes.filter(isRecord).map((row) => ({
     title: stringValue(row.title), type: stringValue(row.type), ticker: stringValue(row.ticker),
   })).filter((row) => row.title) : [];
+  const stale = value.stale === true || value.staleReason === "canonical_revision_changed" || mismatch;
   return {
     markdown: stringValue(value.markdown),
-    stale: value.stale === true || value.staleReason === "canonical_revision_changed" || mismatch,
+    stale,
     staleReason: stringValue(value.staleReason), canonicalRevision: overlayRevision, linkedNotes: notes,
     counterEvidence: strings(value.counterEvidence), contradictions: strings(value.contradictions),
     uncertainties: strings(value.uncertainties), personalQuestions: strings(value.personalQuestions),
+    revisionState: stale ? "stale" : overlayRevision && canonical ? "current" : "legacy_unknown",
   };
 }
 
@@ -362,7 +409,7 @@ export function parseTopicReportPayload(value: unknown): TopicReport {
   if (value.marketStateResolution !== undefined && !marketStateResolution && !warnings.includes("marketStateResolution_invalid")) warnings.push("marketStateResolution_invalid");
   if (value.executionProvenance !== undefined && !executionProvenance && !warnings.includes("executionProvenance_invalid")) warnings.push("executionProvenance_invalid");
   const canonicalRevision = revision(value.canonicalRevision);
-  const personalOverlay = parseOverlay(value.personalOverlay, canonicalRevision);
+  const personalOverlay = parsePersonalOverlayPayload(value.personalOverlay, canonicalRevision);
   for (const [key, parsed] of [
     ["topicPlan", topicPlan], ["evidencePackSummary", evidencePackSummary], ["quality", quality],
     ["researchResolution", researchResolution], ["personalOverlay", personalOverlay],

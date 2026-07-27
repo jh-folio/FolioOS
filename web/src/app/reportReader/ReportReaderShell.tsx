@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { setReactAgentContextScope, type AgentContextPatch } from "../agentContext";
 import { FolioNotePanel, type FolioNoteIdentity } from "./FolioNotePanel";
+import type { PersonalOverlayPayload } from "../deepResearchPayload";
 
 type ReportReaderShellProps = {
   eyebrow?: string;
@@ -11,7 +12,7 @@ type ReportReaderShellProps = {
   noteSlot?: ReactNode;
   noteIdentity?: FolioNoteIdentity;
   noteLinkedTitle?: string;
-  noteOverlayMarkdown?: string;
+  noteOverlay?: PersonalOverlayPayload | null;
   agentContext?: AgentContextPatch;
   onClose?: () => void;
   children: ReactNode;
@@ -25,7 +26,7 @@ export function ReportReaderShell({
   noteSlot,
   noteIdentity,
   noteLinkedTitle,
-  noteOverlayMarkdown,
+  noteOverlay,
   agentContext,
   onClose,
   children,
@@ -40,7 +41,7 @@ export function ReportReaderShell({
     <FolioNotePanel
       identity={noteIdentity}
       linkedTitle={noteLinkedTitle || title}
-      overlayMarkdown={noteOverlayMarkdown || ""}
+      overlay={noteOverlay || null}
     />
   ) : null);
   const agentContextKey = agentContext ? JSON.stringify(agentContext) : "";

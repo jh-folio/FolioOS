@@ -150,3 +150,41 @@ public/react/folio-react.js
 - 표 렌더링은 `<div class="table-wrap"><table>...</table></div>` 구조입니다.
 - Plotly 차트는 layout마다 글꼴을 지정하지 않아도 되도록, `Plotly.react`/`newPlot`를 한 번 감싸 `layout.font.family`(`PLOTLY_FONT_FAMILY`, UI 본문 글꼴)를 일괄 주입합니다. 새 차트도 자동 적용되며, 차트 글꼴이 본문과 달라지면 이 래퍼를 먼저 확인합니다.
 - 기업분석 본문 폭은 기본적으로 `markdown-brief`의 제한 폭을 따릅니다.
+
+## 보고서 가설 검토 표면 (0.2.1)
+
+- Briefing, Company Analysis, Deep Research는 공용 `HypothesisReviewCard`와
+  `PersonalOverlayView`를 사용한다.
+- 자동 로드는 metadata-only intelligence 조회만 수행한다. Agent/Thesis Delta는
+  `최신 근거로 검토` 클릭으로만 시작한다.
+- Personal Overlay는 없음, stale, legacy revision, 빈 본문 상태를 세 reader에서
+  같은 문구로 표시하며 모바일 note panel에서도 세로로 쌓인다.
+
+## Smart Collection 워크스페이스 (0.2.2)
+
+- Smart Collection 목록/편집기는 `SmartCollectionWorkspace.tsx`와
+  `SmartCollectionEditor.tsx`로 분리되어 Deep Research 안에서만 렌더링한다.
+- 상세 주소는 `#/deep-research/collections/{collectionId}`이며 direct hash,
+  새로고침, browser back/forward를 지원한다. 별도 top-level route/navigation은 없다.
+- 상세 화면은 서버의 `/workspace`, `/changes`, `/refresh` projection만 사용해
+  definition, health/reason, last refresh, change count, 외부 evidence 카드를 표시한다.
+- empty, stale, noisy, source unavailable, deleted-while-open 상태는 서로 다른
+  machine-visible selector와 복구 문구를 사용한다.
+- `현재 자료 새로고침`은 Collection snapshot만 갱신한다. Agent는
+  `Agent에게 변화 묻기` 클릭에서만 dock의 기존 대화 경로로 auto-submit되며,
+  frontend는 Collection ID/revision 외의 evidence/context를 보내지 않는다.
+- `이 범위로 리서치 시작`은 같은 ID/revision으로 기존 question-first draft를
+  prefill한다. Collection 정의는 saved-filter metadata이며 evidence로 표현하지 않는다.
+
+## Investment Context 카드 (0.2.3)
+
+- `InvestmentContextCard.tsx`는 `GET /api/investment-context/summary`의 동일한
+  metadata-only projection을 Home, Market Memory, Smart Collection, Deep Research에 표시한다.
+- 네 표면의 ticker, stance, 예정 checkpoint, 연결 route는 같은 컴포넌트 계약을 사용한다.
+  Portfolio와 Watchlist의 독립 route는 계속 기본 navigation에서 숨긴다.
+- 카드는 `data-layer="hypothesis"`를 유지하고 포트폴리오 수량·비중·가격이나 note body를
+  렌더링하지 않는다. 외부 evidence와 Canonical 보고서 본문도 이 카드와 구분한다.
+- context 자동 조회는 read-only다. Agent는 사용자가 `Agent로 위험 설명`을 눌렀을 때만
+  실행되며 추천 없는 controlled 결과 또는 규칙 fallback을 카드 안에 표시한다.
+- checkpoint 생성·확인은 native investment note 저장소만 변경하며, 네 route의 context
+  재조회 결과가 동일하게 갱신되어야 한다.

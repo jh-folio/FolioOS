@@ -4,20 +4,22 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.2 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.2.4 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.2
+## What You Can Do In 0.2.4
 
 - Chat with the Folio OS AI Agent from the Home screen.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
 - Generate company analysis reports from local evidence and official data where available.
-- Run question-first Deep Research: review an evidence plan before execution, reuse Smart Collections, and reopen reports with provenance, gaps, quality, and Market State shown as separate layers.
+- Run question-first Deep Research: review an evidence plan before execution, reuse Smart Collections, inspect deterministic collection health and bounded changes, and reopen reports with provenance, gaps, quality, and Market State shown as separate layers.
+- Save report-side thoughts as hypotheses, review note/thesis freshness and challenging evidence, and track revision-safe checkpoints without requiring an Agent.
+- See bounded, read-only Investment Context from portfolio/watchlist ticker links on existing research screens without exposing quantities, prices, weights, or note bodies.
 - Review a metadata-only Agent Work Log and explicitly approve or reject report revision proposals.
 - Write report-side Folio Notes.
 - Export generated reports to Obsidian or Notion.
@@ -25,9 +27,8 @@ Your files and generated reports stay local by default. LLM/API integrations are
 
 Deferred from the 0.2 user surface:
 
-- Dashboard widgets and watchlist workflows.
-- Advanced portfolio workflows.
-- Advanced personal note analysis workflows.
+- Standalone Dashboard and Watchlist workflows.
+- Advanced portfolio management and standalone note-management workflows.
 - Dark mode and installer/tray-app polish.
 
 ---
@@ -117,13 +118,19 @@ Generate company analysis reports from official data and local research material
 
 ### Deep Research
 
-Start with an investment question, inspect the proposed research plan and live evidence preview, then approve execution. Smart Collections are reusable local filters stored in `data/smart-collections.json`; they are metadata, not evidence. Saved reports live under `data/topic-reports/` and record the approved plan, resolved external evidence, execution provenance, data gaps, quality, and a separate Market State reference. User context and report-side notes remain hypotheses and never become citations or evidence counts.
+Start with an investment question, inspect the proposed research plan and live evidence preview, then approve execution. Smart Collections are reusable local filters stored in `data/smart-collections.json`; they are metadata, not evidence. Their nested workspace shows deterministic health/reason badges, bounded snapshot changes, and current resolved evidence. Opening or refreshing it never starts an Agent automatically. Saved reports live under `data/topic-reports/` and record the approved plan, resolved external evidence, execution provenance, data gaps, quality, and a separate Market State reference. User context and report-side notes remain hypotheses and never become citations or evidence counts.
 
 Direct API and selected CLI execution use the same approved request. If an engine is unavailable, Folio OS may fall back to a rules-based report and records that fallback. A report with no usable external evidence requires explicit confirmation and is clearly labelled as evidence-limited. Existing Canonical Markdown changes only through an explicit revision proposal approval.
 
 ### Agent Work Log
 
 Home and Deep Research share a bounded, metadata-only Work Log. It stores task type, status, timing, engine/fallback metadata, artifact counts, and proposal state—not prompts, chat transcripts, report Markdown, diffs, attachments, local paths, credentials, or raw provider output.
+
+### Research Intelligence Boundaries
+
+Briefing, Company Analysis, and Deep Research can show rule-calculated note/thesis freshness, contradictions, uncertainties, counter-evidence, and checkpoints without an API key or CLI. Home, Market Memory, Smart Collections, and Deep Research can also show a bounded Investment Context assembled from ticker links in local portfolio/watchlist data. These automatic views are read-only metadata and never alter Canonical reports.
+
+Agent synthesis runs only after an explicit action such as `Review with latest evidence`, `Ask Agent what changed`, or `Explain risk with Agent`. Portfolio and Watchlist remain hidden as standalone top-level routes in the default 0.2.4 navigation; their bounded context does not imply a relaunched portfolio/watchlist product or provide trading advice.
 
 ### Settings
 

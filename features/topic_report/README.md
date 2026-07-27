@@ -23,6 +23,7 @@ Folio OS 0.2에서는 좌측 navigation, Home 빠른 실행, command palette에 
 - 사용자 추가 컨텍스트(userContext) 주입 — **관심 방향이지 사실/근거가 아님**
 - 보고서 자동 저장(같은 주제·같은 날 덮어쓰기), 목록 조회, 다시 열기, 삭제
 - 웹 UI 딥 리서치 탭은 저장 보고서를 **카드 피드**로 보여주고, 카드를 누르면 `#/deep-research/{reportId}`의 공통 `ReportReaderShell`이 열린다. 카드별 휴지통으로 삭제하며 기존 드롭다운 선택 방식은 폐기한다.
+- 같은 화면의 Smart Collection 목록에서 `#/deep-research/collections/{collectionId}` 상세 워크스페이스를 열어 저장 정의, deterministic health/reason, 스냅샷 변화, 현재 외부 evidence를 확인한다. 이 nested route는 별도 top-level navigation을 만들지 않는다.
 - Notion / Obsidian 내보내기
 
 ## v2 파이프라인
@@ -36,6 +37,8 @@ Folio OS 0.2에서는 좌측 navigation, Home 빠른 실행, command palette에 
 심층 모드를 켜면 Topic Planner 다음에 하위 질문 분해가 추가됩니다.
 
 Smart Collection은 저장 필터 metadata이며 evidence가 아닙니다. Market State는 별도 source-grounded context이고 evidence count/sourceLedger/hypothesis에 포함되지 않습니다. `userContext`, Folio Note, Obsidian note, Personal Overlay는 hypothesis입니다.
+
+Collection 상세의 refresh는 외부 자료를 다시 resolve하고 스냅샷을 명시적으로 기록합니다. `이 범위로 리서치 시작`은 Collection ID/revision만 기존 question-first 흐름에 전달하며, 승인 시 서버가 저장 정의와 현재 자료를 다시 읽습니다. `Agent에게 변화 묻기`도 ID/revision만 전달하고, 상세 진입·자료 refresh만으로 Agent를 자동 실행하지 않습니다.
 
 ```text
 TopicPlan → deepResearch.subQuestions → 질문별 근거 수집 → questionCoverage/sourceLedger 라운드 기록

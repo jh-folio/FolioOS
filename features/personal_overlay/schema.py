@@ -6,6 +6,8 @@ normalize_overlay()는 LLM이 어떤 JSON을 주든(또는 누락하든) 아래�
 """
 from __future__ import annotations
 
+from copy import deepcopy
+
 # 항상 존재해야 하는 리스트 필드
 LIST_FIELDS = [
     "linkedNotes",
@@ -66,3 +68,45 @@ def normalize_overlay(raw, *, linked_notes=None, markdown=None) -> dict:
     o["stance"] = stance if stance in STANCE_CHOICES else STANCE_DEFAULT
     o["markdown"] = markdown if markdown is not None else str(raw.get("markdown", "") or "")
     return o
+
+
+def _revision(value) -> dict | None:
+    if not isinstance(value, dict):
+        return None
+    number = value.get("number")
+    revision_hash = value.get("hash")
+    if not isinstance(number, int) or isinstance(number, bool) or number < 1:
+        return None
+    if not isinstance(revision_hash, str) or not revision_hash:
+        return None
+    return {"number": number, "hash": revision_hash}
+
+
+def public_projection(raw, *, canonical_revision=None) -> dict:
+    """Return the shared reader-safe Personal Overlay projection."""
+    normalized = normalize_overlay(raw)
+    raw = raw if isinstance(raw, dict) else {}
+    overlay_revision = _revision(raw.get("canonicalRevision"))
+    current_revision = _revision(canonical_revision)
+    mismatch = bool(
+        overlay_revision
+        and current_revision
+        and (
+            overlay_revision["number"] != current_revision["number"]
+            or overlay_revision["hash"] != current_revision["hash"]
+        )
+    )
+    stale = bool(raw.get("stale")) or raw.get("staleReason") == "canonical_revision_changed" or mismatch
+    revision_state = "stale" if stale else "current" if overlay_revision and current_revision else "legacy_unknown"
+    return {
+        "markdown": normalized["markdown"],
+        "linkedNotes": deepcopy(normalized["linkedNotes"]),
+        "counterEvidence": deepcopy(normalized["counterEvidence"]),
+        "contradictions": deepcopy(normalized["contradictions"]),
+        "uncertainties": deepcopy(normalized["uncertainties"]),
+        "personalQuestions": deepcopy(normalized["personalQuestions"]),
+        "canonicalRevision": overlay_revision,
+        "stale": stale,
+        "staleReason": "canonical_revision_changed" if stale else "",
+        "revisionState": revision_state,
+    }

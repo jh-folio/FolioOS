@@ -47,6 +47,9 @@ PRE_EXPOSURE = [
     "COL-F1",
     "MS-H1",
     "CTX-F1",
+    "NT-H1",
+    "SC-H2",
+    "IC-H1",
     "REL-H1",
 ]
 POST_EXPOSURE = ["DOC-H1"]
@@ -71,7 +74,15 @@ CAPTURE_FILES = (
     "api-after.json",
     "result.json",
 )
-VIEWPORT_SCENARIOS = {"DR-H1", "RP-H1", "REL-H1", "DOC-H1"}
+VIEWPORT_SCENARIOS = {
+    "DR-H1",
+    "RP-H1",
+    "NT-H1",
+    "SC-H2",
+    "IC-H1",
+    "REL-H1",
+    "DOC-H1",
+}
 
 EXIT_OK = 0
 EXIT_OWNERSHIP = 2
@@ -770,6 +781,18 @@ def command_prepare(args: argparse.Namespace) -> int:
             "MS-H1": {"clock": seeded["clockPath"], "states": seeded["marketStates"]},
             "DR-H1": {"index": seeded["indexPath"], "article": seeded["articlePath"]},
             "COL-H1": {"collection": seeded["collectionPath"], "rss": seeded["rssPath"]},
+            "NT-H1": {
+                "helper": "scripts/qa_note_thesis_intelligence.py",
+                "syntheticOnly": True,
+            },
+            "SC-H2": {
+                "helper": "scripts/qa_smart_collection_workspace.py",
+                "syntheticOnly": True,
+            },
+            "IC-H1": {
+                "helper": "scripts/qa_investment_context.py",
+                "syntheticOnly": True,
+            },
         },
         "urls": {
             "health": f"{base_url}/api/health",

@@ -59,8 +59,27 @@ def test_watchlist_string_and_dict_and_dedup():
     )
     tickers = [i["ticker"] for i in impacts]
     assert tickers == ["GEV", "ETN"]  # GEV는 portfolio에서 이미 추가 → 워치리스트 중복 제외
+    gev = [i for i in impacts if i["ticker"] == "GEV"][0]
+    assert gev["source"] == "both"
     eaton = [i for i in impacts if i["ticker"] == "ETN"][0]
     assert eaton["source"] == "watchlist" and eaton["impact"] == "positive"
+
+
+def test_legacy_impact_join_uses_public_ticker_identity_without_private_values():
+    impacts = S.build_portfolio_impacts(
+        positions=[{"ticker": "005930.KS", "quantity": 10, "avgPrice": 70000}],
+        watchlist=[{"ticker": "005930", "noteBody": "private"}],
+        regime_states=[],
+        thesis_changes=[],
+    )
+    assert impacts == [{
+        "ticker": "005930",
+        "name": "005930",
+        "source": "both",
+        "impact": "neutral",
+        "verdict": "",
+        "linkedNarratives": [],
+    }]
 
 
 def _run_all():

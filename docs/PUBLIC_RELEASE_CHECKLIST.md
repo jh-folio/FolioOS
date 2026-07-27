@@ -36,8 +36,8 @@ Use this checklist before changing the repository visibility to Public.
 - [ ] `python -m py_compile app.py` passes.
 - [ ] Python tests pass.
 - [ ] `py -3 scripts/public_release_audit.py` passes.
-- [ ] `py -3 scripts/package_release.py --version v0.2.0` creates a verified ZIP under `dist/`.
-- [ ] `py -3 scripts/verify_release.py --release-dir dist/FolioOS-v0.2.0` passes.
+- [ ] `py -3 scripts/package_release.py --version v0.2.4` creates a verified ZIP under `dist/`.
+- [ ] `py -3 scripts/verify_release.py --release-dir dist/FolioOS-v0.2.4` passes.
 - [ ] Web typecheck passes.
 - [ ] Web tests pass.
 - [ ] Web build passes.
@@ -49,5 +49,5 @@ Use this checklist before changing the repository visibility to Public.
 - [ ] The initial public release commit contains only clean files.
 - [ ] Deep Research is visible in nav, Home, and command palette while Dashboard/Watchlist remain hidden.
 - [ ] The full 0.2 packaged Browser scenario set and privacy evidence are confirmed at the release SHA.
-- [ ] The `v0.2.0` tag points to the clean release commit.
+- [ ] The `v0.2.4` tag points to the clean release commit.
 - [ ] Repository visibility is changed to Public only after all checks pass.

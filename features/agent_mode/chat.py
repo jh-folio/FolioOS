@@ -270,9 +270,14 @@ def _revision_payload(output: str) -> dict:
 
 def run_agent_chat(message: str, context: dict | None = None, options: dict | None = None,
                    *, progress=None, job_id: str = "",
-                   collection_service: SmartCollectionService | None = None) -> dict:
+                   collection_service: SmartCollectionService | None = None,
+                   prepared_context: bool = False) -> dict:
     progress = progress or (lambda *args, **kwargs: None)
-    normalized = prepare_agent_context(context, collection_service)
+    normalized = (
+        dict(context or {})
+        if prepared_context
+        else prepare_agent_context(context, collection_service)
+    )
     collection_projection = normalized.get("collection")
     normalized_options = normalize_agent_options(options)
     intent = classify_agent_intent(message)
@@ -377,8 +382,13 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
 
 
 def submit_agent_chat(message: str, context: dict | None = None, options: dict | None = None,
-                      *, collection_service: SmartCollectionService | None = None) -> dict:
-    runner = functools.partial(run_agent_chat, collection_service=collection_service)
+                      *, collection_service: SmartCollectionService | None = None,
+                      prepared_context: bool = False) -> dict:
+    runner = functools.partial(
+        run_agent_chat,
+        collection_service=collection_service,
+        prepared_context=prepared_context,
+    )
     job = submit_job(
         "agent_bridge",
         "Agent 채팅",

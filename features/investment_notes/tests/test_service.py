@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -97,3 +99,130 @@ def test_linked_notes_payload_filters_by_ticker(tmp_path):
         assert payload["ok"] is True
         assert payload["count"] == 1
         assert payload["notes"][0]["title"] == "AAPL"
+
+
+def test_legacy_note_without_new_fields_migrates_with_safe_defaults(tmp_path):
+    notes_dir = tmp_path / "notes"
+    notes_dir.mkdir()
+    db_path = tmp_path / "market-memory.sqlite3"
+    legacy = {
+        "id": "legacy-note",
+        "noteType": "company_thesis",
+        "title": "Legacy NVDA thesis",
+        "body": "Older note body",
+        "ticker": "nvda",
+        "createdAt": "2026-01-02T03:04:05",
+        "updatedAt": "2026-01-02T03:04:05",
+    }
+    (notes_dir / "legacy-note.json").write_text(
+        json.dumps(legacy, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    with patch.object(service, "NOTES_DIR", notes_dir), patch.object(
+        service,
+        "MARKET_MEMORY_DB_PATH",
+        db_path,
+    ):
+        indexed = service.list_notes(ticker="NVDA", include_body=True)
+        migrated = service.save_note({"id": "legacy-note"})
+        stored = service.get_note("legacy-note")
+
+    assert len(indexed) == 1
+    assert indexed[0]["body"] == "Older note body"
+    assert migrated["createdAt"] == legacy["createdAt"]
+    assert stored["rawThoughts"] == []
+    assert stored["interactionLog"] == []
+    assert stored["layer"] == "hypothesis"
+    assert stored["sourceLayer"] == "user_synthesis"
+    assert stored["reuseAsHypothesis"] is True
+    assert stored["reuseAsEvidence"] is False
+
+
+def test_checkpoint_save_and_update_touch_only_native_note_state(tmp_path):
+    notes_dir = tmp_path / "investment-notes"
+    db_path = tmp_path / "market-memory.sqlite3"
+    protected = {
+        name: tmp_path / name
+        for name in (
+            "portfolio.json",
+            "watchlist.json",
+            "smart-collections.json",
+            "company-report.json",
+        )
+    }
+    for name, path in protected.items():
+        path.write_bytes(f"{name}:canary".encode())
+    before = {name: (path.read_bytes(), path.stat().st_mtime_ns) for name, path in protected.items()}
+
+    with patch.object(service, "NOTES_DIR", notes_dir), patch.object(
+        service,
+        "MARKET_MEMORY_DB_PATH",
+        db_path,
+    ):
+        created = service.save_note(
+            {
+                "noteType": "checkpoint",
+                "title": "NVDA 실적 확인",
+                "body": "사용자 가설",
+                "ticker": "nvda",
+                "checkpointState": "open",
+                "dueDate": "2026-07-27",
+                "linkedReports": ["NVDA:2026-07-27"],
+                "linkedCollectionIds": ["ai-watch"],
+            }
+        )
+        updated = service.save_note(
+            {
+                "id": created["id"],
+                "checkpointState": "checked",
+                "lastCheckedDate": "2026-07-27",
+            }
+        )
+        loaded = service.get_note(
+            created["id"],
+            clock=lambda: datetime(2026, 7, 27, 9, 30, tzinfo=UTC),
+        )
+
+    assert updated["checkpointState"] == "checked"
+    assert loaded["dueState"] == "checked"
+    assert loaded["linkedReports"] == ["NVDA:2026-07-27"]
+    assert loaded["linkedCollectionIds"] == ["ai-watch"]
+    assert loaded["layer"] == "hypothesis"
+    assert loaded["reuseAsEvidence"] is False
+    for name, path in protected.items():
+        assert (path.read_bytes(), path.stat().st_mtime_ns) == before[name]
+
+
+def test_legacy_checkpoint_file_loads_without_a_persisted_migration(tmp_path):
+    notes_dir = tmp_path / "investment-notes"
+    notes_dir.mkdir()
+    legacy_path = notes_dir / "legacy-checkpoint.json"
+    legacy_path.write_text(
+        json.dumps(
+            {
+                "id": "legacy-checkpoint",
+                "noteType": "checkpoint",
+                "title": "다음 실적 확인",
+                "body": "사용자 가설",
+                "ticker": "NVDA",
+                "createdAt": "2025-01-01T00:00:00Z",
+                "updatedAt": "2025-01-01T00:00:00Z",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    before = (legacy_path.read_bytes(), legacy_path.stat().st_mtime_ns)
+
+    loaded = service.get_note(
+        "legacy-checkpoint",
+        notes_dir=notes_dir,
+        clock=lambda: datetime(2026, 7, 27, 9, 30, tzinfo=UTC),
+    )
+
+    assert loaded["checkpointState"] == "open"
+    assert loaded["dueState"] == "unknown"
+    assert loaded["dueDate"] == ""
+    assert loaded["lastCheckedDate"] == ""
+    assert (legacy_path.read_bytes(), legacy_path.stat().st_mtime_ns) == before

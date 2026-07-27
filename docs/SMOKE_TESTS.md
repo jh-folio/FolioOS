@@ -1,11 +1,11 @@
-# Folio OS 0.2 Smoke Tests
+# Folio OS 0.2.4 Smoke Tests
 
 Run these checks against a clean local workspace or a synthetic packaged fixture. Do not use real credentials, private notes, portfolio data, or provider transcripts as evidence.
 
 ## Startup and identity
 
 1. Start Folio OS with `start.ps1`, `start.sh`, or `start-archive.cmd`.
-2. Open `http://127.0.0.1:8787/api/health` and confirm `status=ok`, `version=0.2.0`, the expected commit, PID, and workspace identity.
+2. Open `http://127.0.0.1:8787/api/health` and confirm `status=ok`, `version=0.2.4`, the expected commit, PID, and workspace identity.
 3. Confirm Home, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, and Settings are visible; Dashboard and Watchlist are absent from the default navigation.
 
 ## Deep Research exposure
@@ -33,6 +33,44 @@ At desktop, tablet, and mobile widths:
 3. Reject another proposal and confirm the report hash is unchanged.
 4. Inspect `/api/agent/work-log`: entries may contain only bounded task/status/timing/engine/artifact/proposal metadata. Prompts, replies, Markdown, diffs, attachments, paths, credentials, and raw provider output must be absent.
 5. Restart the server and confirm the same saved report, proposal state, Smart Collection revision, and Work Log metadata reopen safely.
+
+## Stage 0.2.4 integrated workflow matrix
+
+Run every scenario with a **synthetic fixture root**. Never point these checks at
+the real `data/`, `config/`, `research-inbox/`, `.env`, portfolio, watchlist, or
+user-note locations.
+
+### Note and Thesis Intelligence
+
+1. Save a thought without Agent and confirm the original thought remains intact.
+2. Disable Agent and confirm the deterministic fallback still exposes
+   counter-evidence, contradictions, uncertainties, and controlled checkpoints.
+3. Complete a revision-safe checkpoint update and verify the Canonical hash is unchanged.
+4. Restart the synthetic runtime and confirm review state and checked checkpoints recover.
+
+### Smart Collection workspace
+
+1. Create the first snapshot, then resolve changed evidence and inspect the bounded change ledger.
+2. Exercise empty, noisy, stale, source-unavailable, and revision-conflict states.
+3. Invoke Agent only from the explicit action and hand the exact Collection ID/revision
+   to Deep Research.
+4. Restart and confirm the saved definition and snapshot history recover without mutation.
+
+### Investment Context
+
+1. Verify empty and populated portfolio/watchlist fixtures produce bounded personal links.
+2. Create and check one watchlist checkpoint; note bodies, quantities, prices, and weights
+   must not appear in unrelated responses.
+3. Request the explicit Agent risk explanation and confirm fallback contains challenging
+   evidence and limitations but no recommendation, target price, sizing, or execution copy.
+4. Confirm Portfolio and Watchlist remain absent from default navigation.
+
+### Browser viewport pass
+
+At **1440 / 768 / 390** widths, capture Home/Market Memory Investment Context,
+report-side Note and Thesis Intelligence, and the nested Smart Collection workspace.
+For every capture, require no horizontal overflow, no console error, no failed unrelated
+network response, correct hypothesis/evidence labels, and a complete cleanup receipt.
 
 ## Release checks
 

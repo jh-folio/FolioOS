@@ -130,3 +130,38 @@ test("malformed rows are discarded without throwing", async () => {
   }]);
   assert.deepEqual(parseTopicReportSummaries({}), []);
 });
+
+test("nested Collection hashes round-trip and remain distinct from report details", async () => {
+  const { deepResearchCollectionHash, parseDeepResearchLocation } = await loadParser();
+  const collectionId = "sc_12345678-1234-4234-9234-123456789abc";
+  assert.equal(deepResearchCollectionHash(collectionId), `#/deep-research/collections/${collectionId}`);
+  assert.deepEqual(parseDeepResearchLocation(`#/deep-research/collections/${collectionId}`), {
+    kind: "collection",
+    id: collectionId,
+    malformed: false,
+  });
+  assert.deepEqual(parseDeepResearchLocation("#/deep-research/report-1"), {
+    kind: "report",
+    id: "report-1",
+    malformed: false,
+  });
+  assert.deepEqual(parseDeepResearchLocation("#/deep-research"), {
+    kind: "list",
+    id: "",
+    malformed: false,
+  });
+});
+
+test("malformed nested Collection hashes fail closed", async () => {
+  const { parseDeepResearchLocation } = await loadParser();
+  assert.deepEqual(parseDeepResearchLocation("#/deep-research/collections/%E0%A4%A"), {
+    kind: "collection",
+    id: "",
+    malformed: true,
+  });
+  assert.deepEqual(parseDeepResearchLocation("#/deep-research/collections/not-a-collection"), {
+    kind: "collection",
+    id: "",
+    malformed: true,
+  });
+});

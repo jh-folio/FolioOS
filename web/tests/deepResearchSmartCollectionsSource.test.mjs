@@ -30,7 +30,9 @@ test("Smart Collection API exposes strict CRUD and preview transports", async ()
 });
 
 test("Deep Research embeds the complete collection browser contract", async () => {
-  const route = await source("app/DeepResearchRoute.tsx");
+  const workspace = await source("app/SmartCollectionWorkspace.tsx");
+  const editor = await source("app/SmartCollectionEditor.tsx");
+  const implementation = `${workspace}\n${editor}`;
   const selectors = [
     "collection-panel",
     "collection-reload",
@@ -53,13 +55,13 @@ test("Deep Research embeds the complete collection browser contract", async () =
     "collection-error",
     "collection-clear-selection",
   ];
-  for (const selector of selectors) assert.match(route, new RegExp(`data-qa="${selector}"`));
+  for (const selector of selectors) assert.match(implementation, new RegExp(`data-qa="${selector}"`));
 
-  assert.match(route, /\/api\/smart-collections\?limit=100&offset=0/);
-  assert.match(route, /\/api\/smart-collections\/\$\{encodeURIComponent\(collection\.id\)\}\/preview/);
-  assert.match(route, /expectedRevision: collection\.revision, limit: 10/);
-  assert.match(route, /requestError instanceof ApiRequestError && requestError\.status === 409/);
-  assert.match(route, /requestError\.code === "revision_conflict" \|\| requestError\.code === "duplicate_name"/);
+  assert.match(workspace, /\/api\/smart-collections\?limit=100&offset=0/);
+  assert.match(workspace, /\/api\/smart-collections\/\$\{encodeURIComponent\(collection\.id\)\}\/preview/);
+  assert.match(workspace, /expectedRevision: collection\.revision, limit: 10/);
+  assert.match(workspace, /requestError instanceof ApiRequestError && requestError\.status === 409/);
+  assert.match(workspace, /requestError\.code === "revision_conflict" \|\| requestError\.code === "duplicate_name"/);
 });
 
 test("Collection trust boundary sends identity only to plan and Agent context", async () => {
@@ -84,7 +86,7 @@ test("Collection trust boundary sends identity only to plan and Agent context", 
 });
 
 test("Collection requests reject stale responses and surface failures without false success", async () => {
-  const route = await source("app/DeepResearchRoute.tsx");
+  const route = await source("app/SmartCollectionWorkspace.tsx");
 
   assert.match(route, /listController\.current\?\.abort\(\)/);
   assert.match(route, /previewController\.current\?\.abort\(\)/);
@@ -99,10 +101,11 @@ test("Collection requests reject stale responses and surface failures without fa
 });
 
 test("Collection inputs capture DOM values before React functional state updates", async () => {
-  const route = await source("app/DeepResearchRoute.tsx");
+  const editor = await source("app/SmartCollectionEditor.tsx");
+  const workspace = await source("app/SmartCollectionWorkspace.tsx");
 
   assert.doesNotMatch(
-    route,
+    workspace,
     /setDraft\(\(current\) => \(\{[^}]*event\.currentTarget\.value/s,
     "React may clear currentTarget before a deferred functional updater runs",
   );
@@ -114,11 +117,11 @@ test("Collection inputs capture DOM values before React functional state updates
     ["collection-tickers", "tickers"],
     ["collection-tags", "tags"],
   ]) {
-    const control = route.split("\n").find((line) => line.includes(`data-qa="${selector}"`)) || "";
-    assert.match(control, new RegExp(`updateDraftField\\("${field}",`), `${selector} must pass a synchronously captured value`);
+    const control = editor.split("\n").find((line) => line.includes(`data-qa="${selector}"`)) || "";
+    assert.match(control, new RegExp(`onChange\\("${field}",`), `${selector} must pass a synchronously captured value`);
   }
-  assert.match(route, /function updateDraftField<K extends keyof CollectionDraft>\(field: K, value: CollectionDraft\[K\]\)/);
-  assert.match(route, /setDraft\(\(current\) => \(\{ \.\.\.current, \[field\]: value \}\)\)/);
+  assert.match(workspace, /function updateDraftField<K extends keyof CollectionDraft>\(field: K, value: CollectionDraft\[K\]\)/);
+  assert.match(workspace, /setDraft\(\(current\) => \(\{ \.\.\.current, \[field\]: value \}\)\)/);
 });
 
 test("Deep Research clears only the collection identity owned by its effect", async () => {

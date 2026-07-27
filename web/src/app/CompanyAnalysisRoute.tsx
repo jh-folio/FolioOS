@@ -7,6 +7,7 @@ import { stableNoteKey } from "./reportReader/FolioNotePanel";
 import { ReaderActionButton, ReaderActionGroup } from "./reportReader/ReaderActions";
 import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
+import { parsePersonalOverlayPayload } from "./deepResearchPayload";
 
 type AnalysisViewMode = "recent" | "company" | "month";
 type AnalysisStyle = "beginner" | "advanced";
@@ -30,7 +31,8 @@ type AnalysisReport = {
   sources?: Array<{ source?: string; date?: string; type?: string; title?: string; url?: string; path?: string }>;
   analysisCharts?: { available?: boolean; reason?: string; charts?: unknown[] };
   dataGaps?: DataGap[] | { gaps?: DataGap[]; summary?: Record<string, number> };
-  personalOverlay?: { markdown?: string } | null;
+  canonicalRevision?: unknown;
+  personalOverlay?: unknown;
 };
 
 type DataGap = {
@@ -62,7 +64,7 @@ type ExportResult = {
 };
 
 type OverlayResult = {
-  personalOverlay?: { markdown?: string } | null;
+  personalOverlay?: unknown;
 };
 
 const ANALYSIS_STYLES: Array<{ value: AnalysisStyle; label: string; description: string }> = [
@@ -531,7 +533,7 @@ export function CompanyAnalysisRoute() {
             linkedReports: [readerContent.title].filter(Boolean),
           }}
           noteLinkedTitle={readerContent.title}
-          noteOverlayMarkdown={selected.personalOverlay?.markdown || ""}
+          noteOverlay={parsePersonalOverlayPayload(selected.personalOverlay, selected.canonicalRevision)}
         >
           <CompanyAnalysisBody markdown={readerContent.body || readerMarkdown} charts={selected.analysisCharts} />
           {sources.length > 0 && (

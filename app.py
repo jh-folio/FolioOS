@@ -219,6 +219,7 @@ from features.topic_report.service import (
 )
 from features.topic_report.routes import ApprovedRequestBoundary
 from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
+from features.investment_notes.intelligence_routes import create_intelligence_router
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
     get_quality as get_research_quality,
@@ -236,6 +237,7 @@ from features.investment_review.service import (
     get_review as get_investment_review,
     generate_review as generate_investment_review,
 )
+from features.investment_review.context_routes import create_investment_context_router
 from features.portfolio.service import (
     delete_portfolio_backtest,
     delete_portfolio_preset,
@@ -371,8 +373,20 @@ TOPIC_APPROVAL_BOUNDARY = ApprovedRequestBoundary(
 )
 fastapi_app.include_router(TOPIC_APPROVAL_BOUNDARY.router(include_preflight=False))
 fastapi_app.include_router(SmartCollectionBoundary(SMART_COLLECTION_SERVICE).router())
-fastapi_app.include_router(AgentCompanionBoundary(SMART_COLLECTION_SERVICE).router())
+fastapi_app.include_router(
+    AgentCompanionBoundary(
+        SMART_COLLECTION_SERVICE,
+        data_dir=DATA_DIR,
+    ).router()
+)
 fastapi_app.include_router(create_market_state_router(DATA_DIR))
+fastapi_app.include_router(create_intelligence_router(DATA_DIR))
+fastapi_app.include_router(
+    create_investment_context_router(
+        DATA_DIR,
+        collection_service=SMART_COLLECTION_SERVICE,
+    )
+)
 fastapi_app.include_router(jobs_router)
 fastapi_app.include_router(work_log_router)
 

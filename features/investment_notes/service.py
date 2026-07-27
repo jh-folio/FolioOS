@@ -13,6 +13,10 @@ import uuid
 from pathlib import Path
 
 from features.common.utils import now_iso, read_json, write_json
+from features.investment_notes.checkpoints import (
+    checkpoint_projection,
+    normalize_checkpoint_fields,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
@@ -34,7 +38,11 @@ def _clean_text(value) -> str:
 
 
 def _clean_ticker(value) -> str:
-    raw = _clean_text(value).upper().replace(".", "-")
+    raw = _clean_text(value).upper().lstrip("$")
+    korean = re.fullmatch(r"(\d{6})(?:\.(?:KS|KQ))?", raw)
+    if korean:
+        return korean.group(1)
+    raw = raw.replace(".", "-")
     return raw if re.fullmatch(r"[A-Z0-9-]{1,12}", raw) else ""
 
 
@@ -98,8 +106,8 @@ def _clean_note_events(values) -> list[dict]:
     return events[-80:]
 
 
-def _note_path(note_id: str) -> Path:
-    return NOTES_DIR / f"{note_id}.json"
+def _note_path(note_id: str, notes_dir: Path | None = None) -> Path:
+    return (notes_dir or NOTES_DIR) / f"{note_id}.json"
 
 
 def _note_id() -> str:
@@ -166,7 +174,7 @@ def normalize_note(payload: dict | None, existing: dict | None = None) -> dict:
     report_id = _clean_text(payload.get("reportId") or existing.get("reportId"))
     if report_id and report_id not in linked_reports:
         linked_reports.append(report_id)
-    return {
+    note = {
         "id": note_id,
         "noteType": note_type,
         "title": title[:160],
@@ -189,10 +197,16 @@ def normalize_note(payload: dict | None, existing: dict | None = None) -> dict:
         "createdAt": existing.get("createdAt") or now,
         "updatedAt": now,
     }
+    if note_type == "checkpoint":
+        note.update(normalize_checkpoint_fields(payload, existing))
+    return note
 
 
-def public_note(note: dict, *, include_body: bool = True) -> dict:
+def public_note(note: dict, *, include_body: bool = True, clock=None) -> dict:
     row = dict(note)
+    if row.get("noteType") == "checkpoint":
+        clock = clock or (lambda: dt.datetime.now(dt.timezone.utc))
+        row = checkpoint_projection(row, clock=clock)
     if not include_body:
         body = row.pop("body", "") or ""
         row["summary"] = body.replace("\n", " ").strip()[:180]
@@ -262,14 +276,15 @@ def save_note(payload: dict | None, *, db_path: Path | None = None) -> dict:
     return public_note(note)
 
 
-def get_note(note_id: str) -> dict:
+def get_note(note_id: str, *, notes_dir: Path | None = None, clock=None) -> dict:
     note_id = _clean_text(note_id)
     if not note_id:
         return {}
-    return read_json(_note_path(note_id), {})
+    note = read_json(_note_path(note_id, notes_dir), {})
+    return public_note(note, clock=clock) if isinstance(note, dict) and note else {}
 
 
-def _row_to_note(row: sqlite3.Row, *, include_body: bool = False) -> dict:
+def _row_to_note(row: sqlite3.Row, *, include_body: bool = False, clock=None) -> dict:
     saved = read_json(Path(row["path"]), {})
     note = {
         "id": row["note_id"],
@@ -293,6 +308,12 @@ def _row_to_note(row: sqlite3.Row, *, include_body: bool = False) -> dict:
         note.update({k: saved.get(k, note.get(k, "")) for k in ("body", "label", "reportKind", "reportId")})
     else:
         note["summary"] = str(saved.get("body") or "").replace("\n", " ").strip()[:180]
+    if note["noteType"] == "checkpoint":
+        note.update(normalize_checkpoint_fields(saved))
+        note = checkpoint_projection(
+            note,
+            clock=clock or (lambda: dt.datetime.now(dt.timezone.utc)),
+        )
     return note
 
 
@@ -313,6 +334,7 @@ def list_notes(
     limit: int = 50,
     include_body: bool = False,
     db_path: Path | None = None,
+    clock=None,
 ) -> list[dict]:
     conn = connect(db_path)
     try:
@@ -334,7 +356,10 @@ def list_notes(
             args.extend([needle, needle, needle, needle])
         sql += " ORDER BY updated_at DESC LIMIT ?"
         args.append(max(1, min(int(limit or 50), 200)))
-        return [_row_to_note(row, include_body=include_body) for row in conn.execute(sql, args).fetchall()]
+        return [
+            _row_to_note(row, include_body=include_body, clock=clock)
+            for row in conn.execute(sql, args).fetchall()
+        ]
     finally:
         conn.close()
 

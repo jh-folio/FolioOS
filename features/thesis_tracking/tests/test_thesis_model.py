@@ -131,6 +131,41 @@ def test_store_upsert_idempotent():
         conn.close()
 
 
+def test_repeated_schema_initialization_preserves_existing_schema_and_rows():
+    conn = ST.connect(":memory:")
+    try:
+        thesis = M.parse_thesis_text(THESIS_NOTE, note_path="Theses/LRCX.md")
+        ST.upsert_thesis(conn, thesis)
+        delta = D.fallback_delta(
+            thesis.to_row(),
+            [],
+            {"period": "90d", "periodDays": 90, "cutoff": "2026-03-12"},
+        )
+        ST.save_delta(conn, thesis.ticker, delta)
+        tables = ("thesis", "thesis_delta", "job_operation_receipts")
+        columns_before = {
+            table: [tuple(row) for row in conn.execute(f"PRAGMA table_info({table})")]
+            for table in tables
+        }
+        thesis_before = dict(conn.execute("SELECT * FROM thesis WHERE ticker='LRCX'").fetchone())
+        delta_before = dict(conn.execute("SELECT * FROM thesis_delta WHERE ticker='LRCX'").fetchone())
+
+        ST.init_db(conn)
+        ST.init_db(conn)
+
+        columns_after = {
+            table: [tuple(row) for row in conn.execute(f"PRAGMA table_info({table})")]
+            for table in tables
+        }
+        thesis_after = dict(conn.execute("SELECT * FROM thesis WHERE ticker='LRCX'").fetchone())
+        delta_after = dict(conn.execute("SELECT * FROM thesis_delta WHERE ticker='LRCX'").fetchone())
+        assert columns_after == columns_before
+        assert thesis_after == thesis_before
+        assert delta_after == delta_before
+    finally:
+        conn.close()
+
+
 def test_store_requires_ticker():
     conn = ST.connect(":memory:")
     try:

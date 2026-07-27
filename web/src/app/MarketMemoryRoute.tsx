@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getJson, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
 import { RouteHero } from "./RouteHero";
+import { InvestmentContextCard } from "./InvestmentContextCard";
 import { setReactAgentContextScope } from "./agentContext";
 import type { MarketStateContextProjection } from "./marketStateContext";
 import { AgentJobTerminalError, AgentPollTimeout, pollAgentJobBounded } from "./agentPolling";
@@ -196,6 +197,8 @@ export function MarketMemoryRoute() {
           <button className="filter-btn clear" type="button" data-qa="market-state-job-resume" onClick={() => void resumeMarketMemoryUpdate()}>같은 작업 다시 확인</button>
         </div>
       ) : null}
+
+      <InvestmentContextCard mode="market-memory" />
 
       <section className="market-state-dashboard react-market-memory-dashboard" aria-label="현재 중기 시장 상황">
         <MarketStateDashboard key={refreshKey} onUpdate={runMarketMemoryUpdate} updating={busy} updateDisabled={Boolean(resumableJob)} onContext={handleMarketStateContext} />

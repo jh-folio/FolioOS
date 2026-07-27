@@ -75,3 +75,14 @@ py -3 features\personal_overlay\tests\test_overlay.py
 - 버튼 → `POST .../personal-overlay` 생성, 저장 보고서를 열 때 `GET ...?includePersonal=true`로 기존 overlay 표시.
 - 관련 프론트 코드: `public/app.js`(`renderOverlaySection`, 버튼 핸들러), `public/index.html`(`#briefOverlayArea`·`#briefOverlayContent`·`#analysisOverlayContent`), `public/styles.css`(`.personal-overlay`).
 - 기업분석 overlay는 **저장된 보고서(report_id)** 에서만 생성 가능(미저장 보고서는 버튼 비활성).
+
+## 공통 reader projection (0.2.1)
+
+- `schema.public_projection()`은 linked notes, counter-evidence, contradictions,
+  uncertainties, personal questions, Canonical revision, stale 상태를 세 보고서에
+  동일한 형태로 제공한다.
+- 새 Overlay는 생성 당시 `canonicalRevision`을 별도 snapshot으로 저장한다.
+- 저장본에 revision이 없으면 삭제/마이그레이션하지 않고
+  `legacy_unknown`으로 표시한다. Canonical revision 불일치는 `stale`로 표시한다.
+- Overlay 생성과 조회는 Canonical `markdown`, source ledger, evidence count를
+  변경하지 않는다.

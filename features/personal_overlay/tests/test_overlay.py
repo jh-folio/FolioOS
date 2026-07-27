@@ -52,6 +52,36 @@ def test_normalize_markdown_arg_wins():
     assert o["markdown"] == "override"
 
 
+def test_public_projection_normalizes_current_stale_and_legacy_revision_state():
+    canonical = {"number": 3, "hash": "canonical-3"}
+    current = S.public_projection(
+        {
+            "markdown": "overlay",
+            "linkedNotes": [{"noteId": "n1", "title": "Thesis", "type": "company_thesis"}],
+            "counterEvidence": ["counter"],
+            "canonicalRevision": canonical,
+        },
+        canonical_revision=canonical,
+    )
+    stale = S.public_projection(
+        {**current, "canonicalRevision": {"number": 2, "hash": "canonical-2"}},
+        canonical_revision=canonical,
+    )
+    legacy = S.public_projection({"markdown": "legacy"}, canonical_revision=canonical)
+
+    assert current["revisionState"] == "current"
+    assert current["stale"] is False
+    assert stale["revisionState"] == "stale"
+    assert stale["staleReason"] == "canonical_revision_changed"
+    assert legacy["revisionState"] == "legacy_unknown"
+    assert legacy["canonicalRevision"] is None
+    assert set(current) == {
+        "markdown", "linkedNotes", "counterEvidence", "contradictions",
+        "uncertainties", "personalQuestions", "canonicalRevision", "stale",
+        "staleReason", "revisionState",
+    }
+
+
 # ---------------------------------------------------------------------------
 # generate_overlay — fallback (LLM 꺼짐)
 # ---------------------------------------------------------------------------
@@ -86,7 +116,11 @@ def test_no_notes_short_circuits_even_with_llm_on():
 # ---------------------------------------------------------------------------
 
 def test_with_overlay_does_not_mutate_markdown():
-    report = {"markdown": "CANONICAL 본문", "sources": [1, 2]}
+    report = {
+        "markdown": "CANONICAL 본문",
+        "sources": [1, 2],
+        "canonicalRevision": {"number": 2, "hash": "canonical-2"},
+    }
     overlay = S.normalize_overlay({"supportingEvidence": ["x"]})
     updated = svc.with_overlay(report, overlay, status="ok")
     # 기본 markdown 불변
@@ -97,6 +131,8 @@ def test_with_overlay_does_not_mutate_markdown():
     assert updated["personalOverlay"]["enabled"] is True
     assert updated["personalOverlay"]["status"] == "ok"
     assert "supportingEvidence" in updated["personalOverlay"]
+    assert updated["personalOverlay"]["canonicalRevision"] == report["canonicalRevision"]
+    assert updated["sources"] == [1, 2]
 
 
 def test_strip_overlay_hides_by_default():
