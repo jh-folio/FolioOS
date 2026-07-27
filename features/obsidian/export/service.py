@@ -123,7 +123,9 @@ def _write_briefing_chart_images(
             ):
                 continue
             filename = stem + ".svg"
-            safe_child_path(assets, filename).write_text(svg_text, encoding="utf-8")  # lgtm[py/path-injection] validated vault child
+            # Filename is a validated child of the selected vault.
+            # codeql[py/path-injection]
+            safe_child_path(assets, filename).write_text(svg_text, encoding="utf-8")
             links.append(f"![[assets/{filename}]]")
             continue
         prefix = "data:image/png;base64,"
@@ -137,7 +139,9 @@ def _write_briefing_chart_images(
         if not raw.startswith(b"\x89PNG\r\n\x1a\n") or len(raw) > 8 * 1024 * 1024:
             continue
         filename = stem + ".png"
-        safe_child_path(assets, filename).write_bytes(raw)  # lgtm[py/path-injection] validated vault child
+        # Filename is a validated child of the selected vault.
+        # codeql[py/path-injection]
+        safe_child_path(assets, filename).write_bytes(raw)
         links.append(f"![[assets/{filename}]]")
     return links
 
@@ -213,8 +217,12 @@ def _write_briefing_note(folder, date, unit, chart_images):
     filename = _safe_filename(f"브리핑 {date} {market_label}") + ".md"
     note_path = safe_child_path(folder, filename)
 
-    existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""  # lgtm[py/path-injection] validated vault child
-    note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")  # lgtm[py/path-injection] validated vault child
+    # note_path is a validated child of the selected vault.
+    # codeql[py/path-injection]
+    existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
+    # note_path is a validated child of the selected vault.
+    # codeql[py/path-injection]
+    note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")
 
     return {"ok": True, "path": str(note_path), "filename": filename, "chartImageCount": len(image_links)}
 
@@ -317,8 +325,12 @@ def export_analysis_to_obsidian(report: dict) -> dict:
     filename = _safe_filename(company_name) + ".md"
     note_path = safe_child_path(folder, filename)
 
-    existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""  # lgtm[py/path-injection] validated vault child
-    note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")  # lgtm[py/path-injection] validated vault child
+    # note_path is a validated child of the selected vault.
+    # codeql[py/path-injection]
+    existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
+    # note_path is a validated child of the selected vault.
+    # codeql[py/path-injection]
+    note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")
 
     return {"ok": True, "path": str(note_path), "filename": filename, "company": company_name}
 
@@ -374,8 +386,12 @@ def export_topic_report_to_obsidian(report: dict) -> dict:
 
     filename = _safe_filename(f"{label} {date}".strip()) + ".md"
     note_path = safe_child_path(folder, filename)
-    existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""  # lgtm[py/path-injection] validated vault child
-    note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")  # lgtm[py/path-injection] validated vault child
+    # note_path is a validated child of the selected vault.
+    # codeql[py/path-injection]
+    existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
+    # note_path is a validated child of the selected vault.
+    # codeql[py/path-injection]
+    note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")
     return {"ok": True, "path": str(note_path), "filename": filename, "topic": label}
 
 
@@ -448,8 +464,12 @@ def export_narratives_to_obsidian() -> dict:
 
         filename = _safe_filename(family_label) + ".md"
         note_path = safe_child_path(folder, filename)
-        existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""  # lgtm[py/path-injection] validated vault child
-        note_path.write_text(preserve_user_notes(existing, body_with_links), encoding="utf-8")  # lgtm[py/path-injection] validated vault child
+        # note_path is a validated child of the selected vault.
+        # codeql[py/path-injection]
+        existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
+        # note_path is a validated child of the selected vault.
+        # codeql[py/path-injection]
+        note_path.write_text(preserve_user_notes(existing, body_with_links), encoding="utf-8")
         files.append(filename)
 
     return {"ok": True, "count": len(files), "files": files}

@@ -17,8 +17,12 @@ def safe_child_path(root: Path, filename: str) -> Path:
     safe_name = os.path.basename(raw_name)
     if "/" in raw_name or "\\" in raw_name or safe_name != raw_name or safe_name in {"", ".", ".."}:
         raise ValueError("artifact filename must be one safe path component")
-    resolved_root = root.resolve(strict=False)  # lgtm[py/path-injection] configured storage/vault root
-    candidate = (resolved_root / safe_name).resolve(strict=False)  # lgtm[py/path-injection] basename and separator checked
+    # Root is an explicitly configured storage/vault root.
+    # codeql[py/path-injection]
+    resolved_root = root.resolve(strict=False)
+    # safe_name is basename- and separator-checked above.
+    # codeql[py/path-injection]
+    candidate = (resolved_root / safe_name).resolve(strict=False)
     if candidate.parent != resolved_root:
         raise ValueError("artifact path escapes its configured root")
     return candidate
@@ -37,9 +41,13 @@ def _process_lock(path: Path) -> threading.RLock:
 def artifact_lock(path: Path) -> Iterator[None]:
     resolved = _normalized_artifact_path(path)
     lock_path = resolved.with_name(f".{resolved.name}.canonical.lock")
-    lock_path.parent.mkdir(parents=True, exist_ok=True)  # lgtm[py/path-injection] normalized artifact parent
+    # resolved is normalized by safe_child_path.
+    # codeql[py/path-injection]
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
     with _process_lock(resolved):
-        with lock_path.open("a+b") as stream:  # lgtm[py/path-injection] normalized artifact sibling
+        # lock_path is a fixed sibling of the normalized artifact.
+        # codeql[py/path-injection]
+        with lock_path.open("a+b") as stream:
             stream.seek(0, os.SEEK_END)
             if stream.tell() == 0:
                 stream.write(b"\0")
