@@ -266,10 +266,10 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         }
     try:
         visual_result = collect_briefing_visuals(date, market_scope, visual_scope_results)
-    except Exception as exc:
+    except Exception:
         visual_result = {
             "visualRecommendations": [], "visualSnapshots": [], "sidecar": {},
-            "warnings": [f"visual snapshot collection failed: {str(exc)[:160]}"],
+            "warnings": ["visual_snapshot_collection_failed"],
         }
     market_snapshot = cached_market_snapshot()
     korea_market_data = cached_korea_market_data(date)
@@ -415,9 +415,9 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
                 leader_subjects=leader_subjects,
                 include_market_visuals=False,
             )
-        except Exception as exc:
+        except Exception:
             aligned_visuals["warnings"].append(
-                f"leading company visual alignment failed: {str(exc)[:160]}"
+                "leading_company_visual_alignment_failed"
             )
     draft = replace_leading_company_visuals(draft, aligned_visuals)
     sources = source_refs(pack.get("sources") or draft.get("sources") or [], limit=14)
@@ -478,8 +478,8 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
             mode=(pack.get("internal") or {}).get("qualityMode", "diagnose_only"),
             preflight=(pack.get("internal") or {}).get("qualityPreflight"),
         )
-    except Exception as exc:
-        briefing["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+    except Exception:
+        briefing["quality"] = {"status": "warn", "warnings": ["quality_evaluation_failed"]}
     if persist and market_scope == "both":
         try:
             for entry in build_memory_from_briefing(briefing, (pack.get("internal") or {}).get("groups") or []):
@@ -513,8 +513,8 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
                         scoped_sidecar,
                         scope,
                     )
-        except Exception as exc:
-            scoped_briefing.setdefault("warnings", []).append(f"visual sidecar write failed: {str(exc)[:160]}")
+        except Exception:
+            scoped_briefing.setdefault("warnings", []).append("visual_sidecar_write_failed")
             if persist:
                 write_json(save_path, scoped_briefing)
         saved_reports[scope] = scoped_briefing
@@ -637,8 +637,8 @@ def write_company_analysis_from_markdown(pack: dict, markdown: str, *, persist: 
             mode=(pack.get("internal") or {}).get("qualityMode", "diagnose_only"),
             preflight=(pack.get("internal") or {}).get("qualityPreflight"),
         )
-    except Exception as exc:
-        report["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+    except Exception:
+        report["quality"] = {"status": "warn", "warnings": ["quality_evaluation_failed"]}
     return save_analysis_report(report) if persist else report
 
 

@@ -314,8 +314,8 @@ def _load_regime_states(warnings: list) -> list:
     try:
         from features.market_memory.memory import list_states
         return list_states(MEMORY_DB, status="current", limit=40)
-    except Exception as exc:
-        warnings.append(f"시장 내러티브를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("시장 내러티브를 불러오지 못했습니다.")
         return []
 
 
@@ -337,8 +337,8 @@ def _load_theses_with_deltas(warnings: list):
         finally:
             conn.close()
         return theses, deltas
-    except Exception as exc:
-        warnings.append(f"Thesis 데이터를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("Thesis 데이터를 불러오지 못했습니다.")
         return [], {}
 
 
@@ -346,8 +346,8 @@ def _load_positions(warnings: list) -> list:
     try:
         from features.portfolio.service import get_portfolio
         return get_portfolio().get("positions", [])
-    except Exception as exc:
-        warnings.append(f"포트폴리오를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("포트폴리오를 불러오지 못했습니다.")
         return []
 
 
@@ -355,8 +355,8 @@ def _load_watchlist(warnings: list) -> list:
     try:
         from features.watchlist_notes.service import get_watchlist
         return get_watchlist() or []
-    except Exception as exc:
-        warnings.append(f"워치리스트를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("워치리스트를 불러오지 못했습니다.")
         return []
 
 
@@ -365,8 +365,8 @@ def _load_notes(warnings: list) -> list:
     try:
         from features.investment_notes.service import list_notes as list_native_notes
         notes.extend(list_native_notes(limit=40))
-    except Exception as exc:
-        warnings.append(f"Folio 투자 노트를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("Folio 투자 노트를 불러오지 못했습니다.")
     try:
         from features.obsidian.importer.note_index import connect, list_notes
         conn = connect(str(MEMORY_DB))
@@ -374,8 +374,8 @@ def _load_notes(warnings: list) -> list:
             notes.extend(list_notes(conn, importable=True))
         finally:
             conn.close()
-    except Exception as exc:
-        warnings.append(f"Obsidian 노트를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("Obsidian 노트를 불러오지 못했습니다.")
     return notes
 
 
@@ -406,8 +406,8 @@ def _fetch_us_levels(symbols: dict, warnings: list) -> dict:
     out: dict = {}
     try:
         import yfinance as yf
-    except Exception as exc:
-        warnings.append(f"미국 지수 데이터를 불러오지 못했습니다(yfinance 없음): {exc}")
+    except Exception:
+        warnings.append("미국 지수 데이터를 불러오지 못했습니다.")
         return out
     for sym in symbols:
         try:
@@ -421,8 +421,8 @@ def _fetch_us_levels(symbols: dict, warnings: list) -> dict:
             prev = closes[-2] if len(closes) >= 2 else None
             chg = (last / prev - 1.0) * 100.0 if prev else None
             out[sym] = {"value": last, "changePct": chg}
-        except Exception as exc:
-            warnings.append(f"{symbols[sym]} 시세를 불러오지 못했습니다: {exc}")
+        except Exception:
+            warnings.append(f"{symbols[sym]} 시세를 불러오지 못했습니다.")
     return out
 
 
@@ -442,8 +442,8 @@ def build_dashboard_tape(date: str, warnings: list) -> dict:
         kospi = indices.get("KOSPI") or {}
         kosdaq = indices.get("KOSDAQ") or {}
         fx = (kr.get("fx") or {}).get("USDKRW") or {}
-    except Exception as exc:
-        warnings.append(f"한국 시장 데이터를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("한국 시장 데이터를 불러오지 못했습니다.")
 
     def us_item(label, sym, size="sm"):
         d = us.get(sym) or {}
@@ -496,8 +496,8 @@ def _load_recent_reports(warnings: list) -> list:
         if data:
             label = data.get("topicLabel") or data.get("topicKey") or path.stem
             out.append({"type": "topic", "id": path.stem, "title": str(label), "date": str(data.get("date") or "")[:10], "view": "topicrpt"})
-    except Exception as exc:
-        warnings.append(f"최근 보고서를 불러오지 못했습니다: {exc}")
+    except Exception:
+        warnings.append("최근 보고서를 불러오지 못했습니다.")
     return out
 
 

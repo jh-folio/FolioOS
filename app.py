@@ -398,7 +398,7 @@ def api_health():
 
 @fastapi_app.exception_handler(Exception)
 def unhandled_exception_handler(request: Request, exc: Exception):
-    return JSONResponse({"error": str(exc)}, status_code=500)
+    return JSONResponse({"error": "internal_server_error"}, status_code=500)
 
 
 @fastapi_app.middleware("http")
@@ -527,7 +527,7 @@ def api_briefing_archive_index(
             limit=limit,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid briefing query") from exc
 
 
 @fastapi_app.post("/api/briefings")
@@ -568,7 +568,7 @@ def api_get_briefing(date: str, includePersonal: bool = False, marketScope: str 
     try:
         briefing = resolve_briefing(date, marketScope)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid briefing identifier or market scope") from exc
     if not briefing:
         raise HTTPException(status_code=404, detail="Briefing not found")
     if not briefing.get("quality"):
@@ -738,9 +738,9 @@ def api_run_thesis_delta(ticker: str, body: dict | None = Body(default=None)):
     try:
         return run_thesis_delta(ticker, body)
     except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail="Thesis not found") from e
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid thesis request") from e
 
 
 @fastapi_app.delete("/api/analysis-reports/{report_id}")
@@ -748,7 +748,7 @@ def api_delete_analysis_report(report_id: str):
     try:
         result = delete_analysis_report(report_id)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid company analysis identifier") from exc
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Analysis report not found")
     return result
@@ -761,16 +761,16 @@ def api_export_briefing_notion(date: str, marketScope: str = "both", body: dict 
     try:
         briefing = resolve_briefing(date, requested_scope)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid briefing identifier or market scope") from exc
     if not briefing:
         raise HTTPException(status_code=404, detail="Briefing not found")
     chart_images = body.get("chartImages") or None
     try:
         return export_briefing(date, briefing_scope_view(briefing, requested_scope), chart_images=chart_images)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Notion export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Notion 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Notion 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.post("/api/export-notion/analysis")
@@ -782,9 +782,9 @@ def api_export_analysis_notion(body: dict | None = Body(default=None)):
     try:
         return export_analysis(report, chart_images=body.get("chartImages") or None)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Notion export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Notion 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Notion 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.post("/api/export-notion/topic-report")
@@ -796,9 +796,9 @@ def api_export_topic_report_notion(body: dict | None = Body(default=None)):
     try:
         return export_topic_report(report, chart_images=body.get("chartImages") or None)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Notion export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Notion 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Notion 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.get("/api/obsidian/settings")
@@ -822,9 +822,9 @@ def api_obsidian_workflow_create_note(body: dict | None = Body(default=None)):
             overwrite=bool(body.get("overwrite")),
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian workflow request") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 노트 생성 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 노트 생성에 실패했습니다.") from e
 
 
 @fastapi_app.get("/api/obsidian-workflow/note")
@@ -832,9 +832,9 @@ def api_obsidian_workflow_read_note(templateType: str = "", ticker: str = "", to
     try:
         return read_workflow_note(templateType, {"ticker": ticker, "topic": topic, "label": label})
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian workflow request") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 노트 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 노트 조회에 실패했습니다.") from e
 
 
 @fastapi_app.get("/api/obsidian-workflow/linked-notes")
@@ -842,9 +842,9 @@ def api_obsidian_workflow_linked_notes(ticker: str = "", topic: str = ""):
     try:
         return linked_notes_payload(ticker=ticker, topic=topic)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian workflow request") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 연결 노트 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 연결 노트 조회에 실패했습니다.") from e
 
 
 @fastapi_app.get("/api/obsidian-workflow/validate")
@@ -852,9 +852,9 @@ def api_obsidian_workflow_validate():
     try:
         return validate_workflow_notes()
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian workflow request") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian frontmatter 검사 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian frontmatter 검사에 실패했습니다.") from e
 
 
 @fastapi_app.post("/api/briefings/{date}/export-obsidian")
@@ -864,7 +864,7 @@ def api_export_briefing_obsidian(date: str, marketScope: str = "both", body: dic
     try:
         briefing = resolve_briefing(date, requested_scope)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid briefing identifier or market scope") from exc
     if not briefing:
         raise HTTPException(status_code=404, detail="Briefing not found")
     try:
@@ -874,9 +874,9 @@ def api_export_briefing_obsidian(date: str, marketScope: str = "both", body: dic
             chart_images=body.get("chartImages") or None,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.post("/api/export-obsidian/analysis")
@@ -887,9 +887,9 @@ def api_export_analysis_obsidian(body: dict | None = Body(default=None)):
     try:
         return export_analysis_to_obsidian(report)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.post("/api/export-obsidian/topic-report")
@@ -900,9 +900,9 @@ def api_export_topic_report_obsidian(body: dict | None = Body(default=None)):
     try:
         return export_topic_report_to_obsidian(report)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.post("/api/export-obsidian/narratives")
@@ -910,9 +910,9 @@ def api_export_narratives_obsidian():
     try:
         return export_narratives_to_obsidian()
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid Obsidian export settings") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Obsidian 내보내기 실패: {e}")
+        raise HTTPException(status_code=500, detail="Obsidian 내보내기에 실패했습니다.") from e
 
 
 @fastapi_app.get("/api/watchlist")
@@ -1121,7 +1121,7 @@ def api_test_llm_provider(provider: str):
     try:
         return check_llm_api_provider(provider)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail="Invalid LLM provider") from exc
 
 
 @fastapi_app.get("/api/cache/stats")
@@ -1272,7 +1272,7 @@ def api_agent_bridge_preflight(adapter: str = ""):
     try:
         return agent_preflight(adapter=adapter)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Unsupported agent adapter") from exc
 
 
 @fastapi_app.get("/api/agent/proposals/{proposal_id}")
@@ -1280,7 +1280,7 @@ def api_agent_proposal(proposal_id: str):
     try:
         proposal = get_proposal(proposal_id)
     except ProposalActionError as exc:
-        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code}) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail={"code": "proposal_read_failed"}) from exc
     if proposal is None:
@@ -1297,7 +1297,7 @@ def api_agent_proposal_action(proposal_id: str, body: ProposalActionRequest):
     except ProposalActionError as exc:
         if exc.status_code >= 500:
             raise HTTPException(status_code=exc.status_code, detail={"code": exc.code}) from exc
-        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code, "message": str(exc)}) from exc
+        raise HTTPException(status_code=exc.status_code, detail={"code": exc.code}) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail={"code": "proposal_apply_failed"}) from exc
 
@@ -1312,7 +1312,7 @@ def api_save_agent_bridge_settings(body: dict | None = Body(default=None)):
     try:
         return save_agent_cli_settings(body or {})
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail="Invalid Agent settings") from exc
 
 
 @fastapi_app.post("/api/agent-bridge/install/{adapter}")
@@ -1320,7 +1320,7 @@ def api_install_agent_cli(adapter: str):
     try:
         return submit_agent_cli_install(adapter)
     except (ValueError, RuntimeError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail="Agent CLI installation request failed") from exc
 
 
 @fastapi_app.post("/api/agent-bridge/login/{adapter}")
@@ -1328,9 +1328,9 @@ def api_login_agent_cli(adapter: str):
     try:
         return launch_agent_cli_login(adapter)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        raise HTTPException(status_code=400, detail="Invalid Agent CLI login request") from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail="Agent CLI login could not be started") from exc
 
 
 @fastapi_app.get("/api/index/documents")
@@ -1459,9 +1459,9 @@ def api_upsert_memory_regime_thesis_link(state_id: str, body: dict | None = Body
     try:
         return upsert_regime_thesis_link(MARKET_MEMORY_DB_PATH, state_id, body or {})
     except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail="Market state not found") from e
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Invalid market-state request") from e
 
 
 @fastapi_app.get("/api/memory/taxonomy")
@@ -1583,7 +1583,7 @@ def api_delete_topic_report(report_id: str):
     try:
         result = delete_topic_report(report_id)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail="Invalid topic report identifier") from exc
     if not result.get("deleted"):
         raise HTTPException(status_code=404, detail="Topic report not found")
     return result

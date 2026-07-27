@@ -147,8 +147,8 @@ def _collect_rss(feeds, args):
             feed = future_map[future]
             try:
                 feed_results.append(future.result())
-            except Exception as exc:  # noqa: BLE001 - feed failure must not abort the run
-                message = f"Feed failed ({feed['media']}): {feed['url']} - {exc}"
+            except Exception:  # noqa: BLE001 - feed failure must not abort the run
+                message = f"Feed failed ({feed['media']}): collection_failed"
                 fetch_errors.append(message)
                 print(message, file=sys.stderr)
     return feed_results, fetch_errors
@@ -216,8 +216,8 @@ def main():
         for future in concurrent.futures.as_completed(futures):
             try:
                 manifest.append(future.result())
-            except Exception as exc:  # noqa: BLE001 - one article failure must not abort the run
-                print(f"Article enrichment failed: {exc}", file=sys.stderr)
+            except Exception:  # noqa: BLE001 - one article failure must not abort the run
+                print("Article enrichment failed.", file=sys.stderr)
 
     report = validate_manifest(manifest)
 

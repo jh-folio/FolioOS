@@ -402,10 +402,10 @@ def build_briefing(
         visual_result = collect_briefing_visuals(
             date, market_scope, results, leader_subjects=leader_subjects,
         )
-    except Exception as exc:
+    except Exception:
         visual_result = {
             "visualRecommendations": [], "visualSnapshots": [], "sidecar": {},
-            "warnings": [f"visual snapshot collection failed: {str(exc)[:160]}"],
+            "warnings": ["visual_snapshot_collection_failed"],
         }
 
     session_counts = session_doc_counts(docs, market_windows)
@@ -505,8 +505,8 @@ def build_briefing(
     }
     try:
         briefing = apply_quality_loop("briefing", briefing, mode=quality_mode, preflight=quality_preflight)
-    except Exception as exc:
-        briefing["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+    except Exception:
+        briefing["quality"] = {"status": "warn", "warnings": ["quality_evaluation_failed"]}
 
     if persist:
         saved_reports = {}
@@ -526,8 +526,8 @@ def build_briefing(
                         sidecar,
                         scope,
                     )
-            except Exception as exc:
-                scoped_briefing.setdefault("warnings", []).append(f"visual sidecar write failed: {str(exc)[:160]}")
+            except Exception:
+                scoped_briefing.setdefault("warnings", []).append("visual_sidecar_write_failed")
             prepared = prepare(
                 report_kind=ReportKind.BRIEFING,
                 exact_path=report_path,

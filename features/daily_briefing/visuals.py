@@ -339,14 +339,14 @@ def collect_briefing_visuals(
                     "intraday": value.get("intraday") or {"interval": "5m", "points": []},
                     "daily": value.get("daily") or {"interval": "1d", "points": []},
                 }
-            except Exception as exc:
+            except Exception:
                 price_cache[key] = {
                     "provider": "unavailable",
                     "sourceByInterval": {},
                     "intraday": {"interval": "5m", "points": []},
                     "daily": {"interval": "1d", "points": []},
                 }
-                warnings.append(f"{symbol}: {str(exc)[:160]}")
+                warnings.append(f"{symbol}: price_history_unavailable")
         return deepcopy(price_cache[key])
 
     for market_key in scopes:
@@ -420,7 +420,7 @@ def collect_briefing_visuals(
 
         try:
             heatmap_payload = heatmap_fetchers[market_key](session_date) or {}
-        except Exception as exc:
+        except Exception:
             heatmap_payload = {
                 "market": MARKET_META[market_key]["market"],
                 "asOf": session_date,
@@ -428,9 +428,9 @@ def collect_briefing_visuals(
                 "freshness": "unavailable",
                 "coverage": {"requested": 0, "returned": 0, "ratio": 0.0, "status": "unavailable"},
                 "rows": [],
-                "warnings": [str(exc)[:160]],
+                "warnings": ["heatmap_unavailable"],
             }
-            warnings.append(f"{market_key} heatmap: {str(exc)[:160]}")
+            warnings.append(f"{market_key} heatmap: unavailable")
         heatmap_id = f"market-heatmap:{market_key}:{date}"
         sidecar_snapshots[heatmap_id] = {
             "schemaVersion": 2,
@@ -730,9 +730,9 @@ def _current_price_snapshot(saved, fetch_price, clock, warnings, retrieved_at):
         requested.append({"ticker": ticker, "providerSymbol": symbol})
         try:
             history = fetch_price(symbol, target) or {}
-        except Exception as exc:
+        except Exception:
             history = {}
-            warnings.append(f"{symbol}: {str(exc)[:160]}")
+            warnings.append(f"{symbol}: price_history_unavailable")
         intraday = history.get("intraday") or {"interval": "5m", "points": []}
         daily = history.get("daily") or {"interval": "1d", "points": []}
         if not (intraday.get("points") or daily.get("points")):
@@ -788,9 +788,9 @@ def _current_heatmap_snapshot(saved, saved_detail, fetch, clock, cache, warnings
         if symbol not in cache:
             try:
                 cache[symbol] = [row for row in (fetch(symbol, start, end) or []) if str(row.get("time") or "")[:10] <= target]
-            except Exception as exc:
+            except Exception:
                 cache[symbol] = []
-                warnings.append(f"{symbol}: {str(exc)[:160]}")
+                warnings.append(f"{symbol}: price_history_unavailable")
         points = cache[symbol]
         if not points:
             missing.append(symbol)
@@ -908,16 +908,16 @@ def load_current_visuals(
                 if market_key not in heatmap_cache:
                     try:
                         heatmap_cache[market_key] = batch_heatmaps[market_key](clock["latestSessionDate"]) or {}
-                    except Exception as exc:
+                    except Exception:
                         heatmap_cache[market_key] = {
                             "asOf": clock["latestSessionDate"],
                             "provider": "unavailable",
                             "freshness": "unavailable",
                             "coverage": {"requested": 0, "returned": 0, "ratio": 0.0, "status": "unavailable"},
                             "rows": [],
-                            "warnings": [str(exc)[:160]],
+                            "warnings": ["heatmap_unavailable"],
                         }
-                        warnings.append(f"{market} heatmap: {str(exc)[:160]}")
+                        warnings.append(f"{market} heatmap: unavailable")
                 current = _current_heatmap_snapshot_v2(saved, heatmap_cache[market_key], clock, retrieved_at)
             comparisons[current["id"]] = _heatmap_comparison(detail, current)
         else:

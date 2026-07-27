@@ -89,11 +89,11 @@ def fetch_json(url: str, cache_path: Path, ttl_hours: int = 24):
             data = json.loads(raw.decode("utf-8"))
         _write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "data": data, "error": ""})
         return data, ""
-    except Exception as exc:
+    except Exception:
         if cached and cached.get("data"):
-            return cached.get("data"), f"using cached SEC data after fetch error: {exc}"
-        _write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "data": None, "error": str(exc)})
-        return None, str(exc)
+            return cached.get("data"), "using cached SEC data after fetch error"
+        _write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "data": None, "error": "SEC request failed"})
+        return None, "SEC request failed"
 
 
 def load_ticker_cik_map(cache_dir: Path) -> dict[str, str]:

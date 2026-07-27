@@ -36,9 +36,19 @@ TASK_DIR_NAMES = {
     "investment_review": "investment-review",
 }
 
-SECRET_KEY_RE = re.compile(r"(api[_-]?key|token|secret|password|authorization|notion[_-]?token)", re.I)
+SECRET_KEY_RE = re.compile(
+    r"(api[_-]?key|token|secret|password|credential|authorization|cookie|session[_-]?id|notion[_-]?token)",
+    re.I,
+)
 SECRET_VALUE_RE = re.compile(
-    r"(sk-[A-Za-z0-9_\-]{12,}|sk-proj-[A-Za-z0-9_\-]{12,}|gh[opsu]_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9\-]{20,})"
+    r"(?:"
+    r"sk-[A-Za-z0-9_\-]{12,}|"
+    r"sk-proj-[A-Za-z0-9_\-]{12,}|"
+    r"gh[opsu]_[A-Za-z0-9_]{20,}|"
+    r"xox[baprs]-[A-Za-z0-9\-]{20,}|"
+    r"authorization\s*:\s*(?:bearer|basic)\s+[^\s\"']+"
+    r")",
+    re.I,
 )
 
 
@@ -191,13 +201,17 @@ def update_pack_status(path: str | Path, *, status: str, result: dict | None = N
     p = Path(path)
     if not p.is_absolute():
         p = ROOT / p
-    pack = read_pack(p)
+    resolved = p.resolve(strict=False)
+    pack = read_pack(resolved)
     pack["status"] = status
     pack["updatedAt"] = now_iso()
     if result is not None:
         pack["result"] = scrub_secrets(result)
-    p.write_text(json.dumps(pack, ensure_ascii=False, indent=2), encoding="utf-8")
-    return pack
+    scrubbed = scrub_secrets(pack)
+    # scrub_secrets removes credential-shaped keys and values before persistence.
+    # codeql[py/clear-text-storage-sensitive-data]
+    resolved.write_text(json.dumps(scrubbed, ensure_ascii=False, indent=2), encoding="utf-8")
+    return scrubbed
 
 
 def agent_generation(source_count: int = 0, *, status: str = "ok_agent_authored", message: str = "") -> dict:

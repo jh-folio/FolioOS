@@ -500,10 +500,10 @@ def generate_topic_report(
                     )
                 if generation["mayBeTruncated"]:
                     generation["message"] += " · 후반 섹션이 일부 누락됐을 수 있습니다."
-        except LlmRequestError as exc:
-            generation["message"] = f"{cfg.get('provider', '')} LLM 호출 실패로 규칙 기반 보고서로 대체했습니다. 상세: {str(exc)[:200]}"
-        except Exception as exc:
-            generation["message"] = f"LLM 호출 실패: {str(exc)[:200]}"
+        except LlmRequestError:
+            generation["message"] = f"{cfg.get('provider', '')} LLM 호출 실패로 규칙 기반 보고서로 대체했습니다."
+        except Exception:
+            generation["message"] = "LLM 호출에 실패했습니다."
     elif not cfg.get("apiKey"):
         generation["message"] = f"{cfg.get('provider', '')} API 키가 없어 규칙 기반 보고서를 생성했습니다."
     elif not llm_on:
@@ -683,7 +683,7 @@ def _find_report_path(report_id: str) -> Path | None:
     except CanonicalNotFoundError:
         return None
     except CanonicalIdentityError as exc:
-        raise ValueError(str(exc)) from exc
+        raise ValueError("topic report identifier is invalid") from exc
 
 
 def get_topic_report(report_id: str) -> dict | None:
@@ -710,7 +710,7 @@ def delete_topic_report(report_id: str) -> dict:
     except CanonicalNotFoundError:
         return {"deleted": False, "id": report_id}
     except CanonicalIdentityError as exc:
-        raise ValueError(str(exc)) from exc
+        raise ValueError("topic report identifier is invalid") from exc
     outcome = execute_report_delete(DeleteRequest(
         root=REPORTS_DIR,
         identity=f"topic:{report_id}",

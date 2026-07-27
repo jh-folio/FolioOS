@@ -129,7 +129,7 @@ def _validated_proposal_id(value: str) -> str:
     try:
         return parse_proposal_id(value)
     except ProposalIdError as exc:
-        raise ProposalActionError("proposal_id_invalid", str(exc), 422) from exc
+        raise ProposalActionError("proposal_id_invalid", "proposal identifier is invalid", 422) from exc
 
 
 def _approve_locked(paths: ProposalPaths, proposal: ProposalRecord, phase_hook: PhaseHook) -> dict[str, JsonValue]:
@@ -172,7 +172,7 @@ def _approve_locked(paths: ProposalPaths, proposal: ProposalRecord, phase_hook: 
         }
         error = error_map.get(exc.code, ProposalErrorCode.QUALITY_VALIDATION_FAILED)
         _persist_apply_failure(paths, proposal, ProposalStatus.FAILED_APPLY, error)
-        raise ProposalActionError("proposal_validation_failed", str(exc), 409) from exc
+        raise ProposalActionError("proposal_validation_failed", "proposal validation failed", 409) from exc
     except Exception as exc:
         _persist_apply_failure(paths, proposal, ProposalStatus.FAILED_APPLY, ProposalErrorCode.INTERNAL_ERROR)
         raise ProposalActionError(
@@ -206,7 +206,7 @@ def _approve_locked(paths: ProposalPaths, proposal: ProposalRecord, phase_hook: 
     except CanonicalConflictError as exc:
         _persist_apply_failure(paths, applying, ProposalStatus.CONFLICT, ProposalErrorCode.RECOVERY_CONFLICT)
         paths.journal(proposal.id).unlink(missing_ok=True)
-        raise ProposalActionError("proposal_action_conflict", str(exc), 409) from exc
+        raise ProposalActionError("proposal_action_conflict", "proposal action conflict", 409) from exc
     written = journal.model_copy(update={"status": JournalStatus.REPORT_WRITTEN})
     write_journal(paths, written)
     phase_hook("report_written")

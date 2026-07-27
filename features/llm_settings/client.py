@@ -15,6 +15,19 @@ GEMINI_GENERATE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{
 DEFAULT_OPENAI_MODEL = "gpt-5.5"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+SECRET_STORE_SERVICE = "Folio OS"
+SECRET_ENV_KEYS = {
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "DART_API_KEY",
+    "FRED_API_KEY",
+    "BOK_API_KEY",
+    "TOSS_OPEN_API_KEY",
+    "TOSS_OPEN_API_CLIENT_SECRET",
+    "NOTION_TOKEN",
+    "IMGBB_API_KEY",
+}
 
 
 class LlmRequestError(RuntimeError):
@@ -30,10 +43,12 @@ class LlmRequestError(RuntimeError):
 
 def load_dotenv():
     env_path = ROOT / ".env"
-    if not env_path.exists():
-        return
+    rows = []
+    migrated_secret_keys = set()
     try:
-        for line in env_path.read_text(encoding="utf-8").splitlines():
+        if env_path.exists():
+            rows = env_path.read_text(encoding="utf-8").splitlines()
+        for line in rows:
             line = line.strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
@@ -42,8 +57,39 @@ def load_dotenv():
             value = value.strip().strip('"').strip("'")
             if key and key not in os.environ:
                 os.environ[key] = value
+            if key in SECRET_ENV_KEYS and value:
+                try:
+                    _store_secret_value(key, value)
+                except Exception:
+                    continue
+                migrated_secret_keys.add(key)
     except Exception:
-        return
+        rows = []
+    if migrated_secret_keys:
+        next_rows = []
+        for line in rows:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                next_rows.append(line)
+                continue
+            key, _ = line.split("=", 1)
+            if key.strip() not in migrated_secret_keys:
+                next_rows.append(line)
+        try:
+            # Successfully migrated secrets are removed from the legacy .env file.
+            # codeql[py/clear-text-storage-sensitive-data]
+            env_path.write_text(
+                "\n".join(next_rows).rstrip() + ("\n" if next_rows else ""),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+    for key in SECRET_ENV_KEYS:
+        if key in os.environ:
+            continue
+        value = _load_secret_value(key)
+        if value:
+            os.environ[key] = value
 
 
 def openai_config():
@@ -117,9 +163,31 @@ def read_env_file():
     return rows
 
 
+def _keyring_module():
+    try:
+        import keyring
+    except ImportError as exc:
+        raise RuntimeError("OS credential store support is not installed") from exc
+    return keyring
+
+
+def _store_secret_value(key: str, value: str) -> None:
+    _keyring_module().set_password(SECRET_STORE_SERVICE, key, str(value))
+
+
+def _load_secret_value(key: str) -> str:
+    try:
+        return str(_keyring_module().get_password(SECRET_STORE_SERVICE, key) or "")
+    except Exception:
+        return ""
+
+
 def write_env_values(updates):
     env_path = ROOT / ".env"
     rows = read_env_file()
+    for key, value in updates.items():
+        if key in SECRET_ENV_KEYS and value is not None:
+            _store_secret_value(key, str(value))
     seen = set()
     next_rows = []
     for line in rows:
@@ -133,6 +201,8 @@ def write_env_values(updates):
             value = updates[key]
             if value is None:
                 next_rows.append(line)
+            elif key in SECRET_ENV_KEYS:
+                pass
             else:
                 next_rows.append(f"{key}={value}")
                 os.environ[key] = str(value)
@@ -140,9 +210,13 @@ def write_env_values(updates):
         else:
             next_rows.append(line)
     for key, value in updates.items():
-        if key not in seen and value is not None:
+        if key not in seen and value is not None and key not in SECRET_ENV_KEYS:
             next_rows.append(f"{key}={value}")
             os.environ[key] = str(value)
+        elif value is not None and key in SECRET_ENV_KEYS:
+            os.environ[key] = str(value)
+    # Secret values are stored through the OS credential service, never in .env.
+    # codeql[py/clear-text-storage-sensitive-data]
     env_path.write_text("\n".join(next_rows).rstrip() + "\n", encoding="utf-8")
 
 

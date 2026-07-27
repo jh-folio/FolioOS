@@ -238,7 +238,7 @@ def resolve_portfolio_ticker(ticker: str, market: str = "") -> dict:
                     "price": price,
                     "previousClose": previous,
                 }
-    except Exception as exc:
+    except Exception:
         return {
             "ok": False,
             "ticker": raw,
@@ -248,7 +248,7 @@ def resolve_portfolio_ticker(ticker: str, market: str = "") -> dict:
             "currency": "KRW" if re.fullmatch(r"\d{6}", raw) else "USD",
             "assetClass": "Unknown",
             "sector": "Unclassified",
-            "error": str(exc),
+            "error": "quote_provider_unavailable",
         }
     return {
         "ok": False,
@@ -326,8 +326,8 @@ def search_portfolio_tickers(query: str, limit: int = 8) -> dict:
             result = search_cls(raw, max_results=limit)
             for quote in (getattr(result, "quotes", None) or []):
                 add(_portfolio_suggestion_from_quote(quote, raw))
-    except Exception as exc:
-        errors.append(f"yfinance search: {exc}")
+    except Exception:
+        errors.append("yfinance_search_failed")
 
     if len(items) < limit:
         params = urllib.parse.urlencode({
@@ -351,8 +351,8 @@ def search_portfolio_tickers(query: str, limit: int = 8) -> dict:
                     add(_portfolio_suggestion_from_quote(quote, raw))
                 if len(items) >= limit:
                     break
-            except Exception as exc:
-                errors.append(f"{host}: {exc}")
+            except Exception:
+                errors.append(f"{host}: search_failed")
 
     return {"ok": True, "query": raw, "items": items[:limit], "errors": errors[:3]}
 
@@ -509,9 +509,9 @@ def fetch_portfolio_quote(position):
     errors = []
     try:
         import yfinance as yf
-    except Exception as exc:
+    except Exception:
         yf = None
-        errors.append(str(exc))
+        errors.append("yfinance_unavailable")
     for symbol in candidates:
         info = {}
         price = None
@@ -526,8 +526,8 @@ def fetch_portfolio_quote(position):
                     fast = {}
                 try:
                     info = stock.get_info() or {}
-                except Exception as exc:
-                    errors.append(f"{symbol} info: {exc}")
+                except Exception:
+                    errors.append(f"{symbol} info_unavailable")
                     info = {}
                 price = _pick_quote_value(
                     fast, info,
@@ -546,10 +546,10 @@ def fetch_portfolio_quote(position):
                                     price = float(closes.iloc[-1])
                                     if previous is None and len(closes) >= 2:
                                         previous = float(closes.iloc[-2])
-                    except Exception as exc:
-                        errors.append(f"{symbol} history: {exc}")
-            except Exception as exc:
-                errors.append(f"{symbol}: {exc}")
+                    except Exception:
+                        errors.append(f"{symbol} history_unavailable")
+            except Exception:
+                errors.append(f"{symbol}: quote_unavailable")
         if price is None:
             chart = _quote_from_yahoo_chart(symbol)
             if chart:
@@ -949,7 +949,7 @@ def _download_adjusted_close(symbol: str, start: str, end: str):
     except Exception as exc:
         if isinstance(cached, dict) and cached.get("series"):
             return cached["series"], "stale-cache"
-        raise ValueError(f"{symbol} 가격 데이터를 가져오지 못했습니다: {exc}") from exc
+        raise ValueError(f"{symbol} price data is unavailable") from exc
 
 
 def _fx_symbol_for_currency(currency: str):
@@ -1489,16 +1489,16 @@ def run_portfolio_backtest_comparison(body):
         try:
             payload = {**data, "presetId": preset_id}
             results.append(run_portfolio_backtest(payload, save_result=False))
-        except Exception as exc:
+        except Exception:
             preset = get_portfolio_preset(preset_id) or {}
-            errors.append({"presetId": preset_id, "presetName": preset.get("name") or preset_id, "error": str(exc)})
+            errors.append({"presetId": preset_id, "presetName": preset.get("name") or preset_id, "error": "backtest_failed"})
     for index, preset in enumerate(draft_presets, start=1):
         draft_name = str(preset.get("name") or f"비교 초안 {index}").strip()
         try:
             payload = {**data, "presetId": "", "preset": {**preset, "name": draft_name}}
             results.append(run_portfolio_backtest(payload, save_result=False))
-        except Exception as exc:
-            errors.append({"presetId": str(preset.get("id") or f"draft-{index}"), "presetName": draft_name, "error": str(exc)})
+        except Exception:
+            errors.append({"presetId": str(preset.get("id") or f"draft-{index}"), "presetName": draft_name, "error": "backtest_failed"})
     if not results:
         raise HTTPException(status_code=400, detail="No comparable backtest result could be generated")
     first = results[0]

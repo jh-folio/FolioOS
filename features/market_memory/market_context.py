@@ -116,16 +116,16 @@ def _latest_yfinance_item(yf, item_id: str, label: str, symbol: str) -> dict | N
 def fetch_market_tape() -> dict:
     try:
         import yfinance as yf
-    except Exception as exc:
-        return normalize_market_tape({"status": "unavailable", "dataGaps": [f"yfinance unavailable: {exc}"]})
+    except Exception:
+        return normalize_market_tape({"status": "unavailable", "dataGaps": ["yfinance_unavailable"]})
     data_gaps: list[str] = []
     markets = {"us": [], "kr": []}
     for market, symbols in (("us", US_MARKET_SYMBOLS), ("kr", KR_MARKET_SYMBOLS)):
         for item_id, (label, symbol) in symbols.items():
             try:
                 item = _latest_yfinance_item(yf, item_id, label, symbol)
-            except Exception as exc:
-                data_gaps.append(f"{symbol}: {exc}")
+            except Exception:
+                data_gaps.append(f"{symbol}: market_data_unavailable")
                 continue
             if item:
                 markets[market].append(item)
@@ -195,8 +195,8 @@ def fetch_macro_snapshot() -> dict:
     providers = {"fred": {"ok": False}, "bok": {"ok": False}}
     try:
         from features.topic_report.macro_data import fetch_bok_data, fetch_fred_data
-    except Exception as exc:
-        return normalize_macro_snapshot({"status": "unavailable", "dataGaps": [f"macro fetcher unavailable: {exc}"]})
+    except Exception:
+        return normalize_macro_snapshot({"status": "unavailable", "dataGaps": ["macro_fetcher_unavailable"]})
 
     fred_key = fred_api_key()
     if fred_key:

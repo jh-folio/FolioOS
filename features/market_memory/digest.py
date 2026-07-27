@@ -140,8 +140,8 @@ def run_rss_market_memory_update(date: str = "", items: list[dict] | None = None
             from features.market_memory.regime_v2 import refresh_all_regimes
             result = refresh_all_regimes(MARKET_MEMORY_DB_PATH)
             regime_refresh = {"ok": bool(result.get("ok")), "count": int(result.get("count") or 0)}
-        except Exception as exc:
-            regime_refresh = {"ok": False, "count": 0, "error": str(exc)}
+        except Exception:
+            regime_refresh = {"ok": False, "count": 0, "error": "regime_refresh_failed"}
     return {
         "ok": True,
         "digestCount": len(digest),

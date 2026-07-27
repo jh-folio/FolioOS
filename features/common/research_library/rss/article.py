@@ -97,8 +97,8 @@ def collect_article_body(url: str, rss_description: str) -> dict:
         return {"status": status, "summary": rss_description, "full_text": "", "error": "aggregator redirect url; source article html not fetched"}
     try:
         markup = fetch_url_text(url)
-    except Exception as exc:  # noqa: BLE001 - network errors are broad
-        return {"status": "fetch_failed", "summary": rss_description, "full_text": "", "error": str(exc)}
+    except Exception:  # noqa: BLE001 - network errors are broad
+        return {"status": "fetch_failed", "summary": rss_description, "full_text": "", "error": "article_fetch_failed"}
     summary = extract_meta_description(markup) or rss_description
     full_text = extract_article_text(markup)
     # A sufficiently long extracted body without a gate phrase inside it means

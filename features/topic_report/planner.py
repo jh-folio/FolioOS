@@ -489,8 +489,8 @@ def refine_plan_with_llm(rule_plan: dict, topic: str, user_context: str = "") ->
             if not refined.get(key):
                 refined[key] = rule_plan.get(key, refined.get(key))
         return refined, "llm"
-    except Exception as exc:
-        return rule_plan, f"llm_error:{str(exc)[:120]}"
+    except Exception:
+        return rule_plan, "llm_generation_failed"
 
 
 def build_topic_plan(

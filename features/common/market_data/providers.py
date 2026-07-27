@@ -96,8 +96,8 @@ class PyKrxKoreaMarketProvider(MarketDataProvider):
     def fetch_korea_market(self, date: str) -> dict:
         try:
             from pykrx import stock
-        except Exception as exc:
-            return _empty_payload(date, self.name, f"pykrx unavailable: {exc}")
+        except Exception:
+            return _empty_payload(date, self.name, "pykrx_unavailable")
 
         target = _ymd(date)
         payload = _empty_payload(date, self.name)
@@ -111,8 +111,8 @@ class PyKrxKoreaMarketProvider(MarketDataProvider):
                     continue
                 row = df.iloc[-1]
                 indices[label] = _index_payload(label, row, _iso_date(df.index[-1]))
-            except Exception as exc:
-                payload["warnings"].append(f"{label}: {exc}")
+            except Exception:
+                payload["warnings"].append(f"{label}: market_data_unavailable")
         payload["indices"] = indices
 
         investor_flows: dict[str, dict] = {}
@@ -128,8 +128,8 @@ class PyKrxKoreaMarketProvider(MarketDataProvider):
                     "institution": _pick(row, ["기관합계", "기관"]),
                     "individual": _pick(row, ["개인"]),
                 }
-            except Exception as exc:
-                payload["warnings"].append(f"{market} investor flow: {exc}")
+            except Exception:
+                payload["warnings"].append(f"{market}: investor_flow_unavailable")
         payload["investorFlows"] = investor_flows
 
         sectors = []
@@ -152,8 +152,8 @@ class PyKrxKoreaMarketProvider(MarketDataProvider):
                     sectors.append(item)
                 except Exception:
                     continue
-        except Exception as exc:
-            payload["warnings"].append(f"sector indices: {exc}")
+        except Exception:
+            payload["warnings"].append("sector_indices_unavailable")
         payload["sectors"] = sorted(
             sectors,
             key=lambda x: (x.get("changePct") is not None, x.get("changePct") or 0),
@@ -178,8 +178,8 @@ class YFinanceKoreaMarketProvider(MarketDataProvider):
     def fetch_korea_market(self, date: str) -> dict:
         try:
             import yfinance as yf
-        except Exception as exc:
-            return _empty_payload(date, self.name, f"yfinance unavailable: {exc}")
+        except Exception:
+            return _empty_payload(date, self.name, "yfinance_unavailable")
 
         payload = _empty_payload(date, self.name)
         indices = {}
@@ -190,8 +190,8 @@ class YFinanceKoreaMarketProvider(MarketDataProvider):
         for label, ticker in self.TICKERS.items():
             try:
                 hist = yf.Ticker(ticker).history(start=start, end=end, interval="1d", auto_adjust=False)
-            except Exception as exc:
-                payload["warnings"].append(f"{label}: {exc}")
+            except Exception:
+                payload["warnings"].append(f"{label}: market_data_unavailable")
                 continue
             if hist is None or hist.empty or "Close" not in hist:
                 continue
@@ -257,8 +257,8 @@ def _fetch_usdkrw(date: str) -> dict:
         pass
     try:
         import yfinance as yf
-    except Exception as exc:
-        return {"error": f"yfinance unavailable: {exc}"}
+    except Exception:
+        return {"error": "yfinance_unavailable"}
     try:
         target = dt.date.fromisoformat(str(date)[:10])
         hist = yf.Ticker("USDKRW=X").history(
@@ -267,8 +267,8 @@ def _fetch_usdkrw(date: str) -> dict:
             interval="1d",
             auto_adjust=False,
         )
-    except Exception as exc:
-        return {"error": str(exc)}
+    except Exception:
+        return {"error": "market_data_unavailable"}
     if hist is None or hist.empty or "Close" not in hist:
         return {"error": "no USD/KRW data returned"}
     rows = []

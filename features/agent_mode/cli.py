@@ -28,6 +28,8 @@ def _read_json_arg(value: str) -> dict:
 
 
 def _print_json(payload: dict) -> None:
+    # scrub_secrets is the CLI's mandatory final output boundary.
+    # codeql[py/clear-text-logging-sensitive-data]
     print(json.dumps(schema.scrub_secrets(payload), ensure_ascii=False, indent=2))
 
 
@@ -184,13 +186,13 @@ def main(argv: list[str] | None = None) -> int:
         else:
             writeback(args)
         return 0
-    except Exception as exc:
+    except Exception:
         if args.pack:
             try:
-                schema.update_pack_status(args.pack, status="failed", result={"error": str(exc)})
+                schema.update_pack_status(args.pack, status="failed", result={"error": "agent_writeback_failed"})
             except Exception:
                 pass
-        _print_json({"ok": False, "error": str(exc)})
+        _print_json({"ok": False, "error": "agent_command_failed"})
         return 1
 
 

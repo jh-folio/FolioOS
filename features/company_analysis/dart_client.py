@@ -80,11 +80,11 @@ def _request_json(url: str, params: dict, cache_path: Path, ttl_hours: int = 12)
             data = json.loads(resp.read().decode("utf-8"))
         _write_json(cache_path, data)
         return data, ""
-    except Exception as exc:
+    except Exception:
         cached = _read_json(cache_path, None)
         if cached is not None:
-            return cached, f"using cached DART data after fetch error: {exc}"
-        return None, str(exc)
+            return cached, "using cached DART data after fetch error"
+        return None, "DART request failed"
 
 
 def load_corp_codes(cache_dir: Path, api_key: str | None = None) -> list[dict]:

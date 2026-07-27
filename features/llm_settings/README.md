@@ -32,9 +32,12 @@ LLM API 연결 확인은 생성 요청을 보내지 않고 Provider의 모델 �
 파일:
 
 ```text
-.env
+OS 자격 증명 저장소  # API Key와 토큰
+.env                 # 모델·Provider 등 비밀이 아닌 설정
 .env.example
 ```
+
+설정 화면에서 저장한 API Key와 토큰은 운영체제 자격 증명 저장소에 보관합니다. 이전 버전의 `.env`에 남아 있는 비밀값은 자격 증명 저장소 기록이 성공한 뒤 자동으로 파일에서 제거되며, 이전이 실패하면 기존 값을 보존합니다.
 
 ## 주요 환경 변수
 
@@ -88,5 +91,5 @@ Gemini: Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash-Lite
 ## 보안 규칙
 
 - 실제 API Key를 문서, 로그, 최종 답변에 출력하지 마세요.
-- `.env`는 gitignore 대상입니다.
+- `.env`는 gitignore 대상이지만 API Key와 토큰의 영구 저장소로 사용하지 않습니다.
 - 설정 API는 키 전체가 아니라 masking된 값만 프론트에 내려야 합니다.

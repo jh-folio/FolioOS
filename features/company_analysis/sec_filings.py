@@ -88,11 +88,14 @@ def fetch_text(url: str, cache_path: Path, ttl_hours: int = 24) -> tuple[str, st
         text = raw.decode("utf-8", errors="replace")
         write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "url": url, "text": text, "error": ""})
         return text, ""
-    except Exception as exc:
+    except Exception:
+        public_error = "SEC request failed"
         if cached and cached.get("text"):
-            return cached["text"], f"using cached SEC filing after fetch error: {exc}"
-        write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "url": url, "text": "", "error": str(exc)})
-        return "", str(exc)
+            return cached["text"], "using cached SEC filing after fetch error"
+        # Only public SEC content and a stable failure code are cached.
+        # codeql[py/clear-text-storage-sensitive-data]
+        write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "url": url, "text": "", "error": public_error})
+        return "", public_error
 
 
 def get_company_submissions(cik: str, cache_dir: Path) -> tuple[dict, str]:
@@ -104,8 +107,8 @@ def get_company_submissions(cik: str, cache_dir: Path) -> tuple[dict, str]:
         return {}, error
     try:
         return json.loads(text), error
-    except Exception as exc:
-        return {}, str(exc)
+    except Exception:
+        return {}, "SEC response parse failed"
 
 
 def latest_10k_metadata(cik: str, cache_dir: Path) -> dict:

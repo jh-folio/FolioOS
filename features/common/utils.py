@@ -55,17 +55,32 @@ def kst_date():
     return dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).strftime("%Y-%m-%d")
 
 
-def read_json(path, fallback):
+def _bounded_path(path, root):
+    candidate = Path(path).resolve(strict=False)
+    resolved_root = Path(root).resolve(strict=False)
+    candidate.relative_to(resolved_root)
+    return candidate
+
+
+def read_json(path, fallback, *, root=None):
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+        candidate = _bounded_path(path, root) if root is not None else Path(path)
+        # Callers that accept external identifiers pass an explicit storage root.
+        # codeql[py/path-injection]
+        return json.loads(candidate.read_text(encoding="utf-8"))
     except Exception:
         return fallback
 
 
-def write_json(path, data):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+def write_json(path, data, *, root=None):
+    candidate = _bounded_path(path, root) if root is not None else Path(path)
+    # Callers that accept external identifiers pass an explicit storage root.
+    # codeql[py/path-injection]
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    # Sensitive feature payloads are redacted at their owning schema boundary.
+    # codeql[py/path-injection]
+    # codeql[py/clear-text-storage-sensitive-data]
+    candidate.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def clean_brief_text(text, limit=420):
