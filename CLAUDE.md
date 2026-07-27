@@ -212,6 +212,7 @@ features/company_analysis/financial_quality_prompt.md
 | 일일 브리핑 | `daily_briefing` | 미/한 시장 일일 브리핑 | Canonical |
 | 기업 분석 | `company_analysis` | SEC 숫자+10-K 기반 분석 | Canonical |
 | 테마분석 (Topic Report v2) | `topic_report` | 투자 질문 해결기: Planner→Evidence Pack→유형별 템플릿→Quality Gate→Personal Overlay | Canonical + Personal Overlay |
+| Smart Collections | `smart_collections` | Deep Research 안의 결정적 저장 필터·상태·snapshot 변화/recovery | metadata |
 | 포트폴리오 | `portfolio` | 보유·목표·백테스트 | — |
 | 시장 내러티브 메모리 / Regime 추적 v2 | `market_memory` | 중기 내러티브 상태·taxonomy·momentum/confidence·thesis 연결 | source-grounded |
 | 워치리스트 | `watchlist_notes` | 워치리스트·상세 모달(기업 정보/차트/수집 뉴스) | — |
@@ -232,17 +233,18 @@ features/company_analysis/financial_quality_prompt.md
 0.2 기본 사용자 화면에서의 노출 상태:
 
 - **보이는 핵심 화면**: Home/AI Agent, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
-- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collections, Market State, Agent Work Log, 보고서 reader의 Folio Note, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
-- **숨김/축소 유지**: Dashboard와 Watchlist route/storage는 딥링크 호환을 위해 유지하지만 0.2 기본 nav/Home/command palette에는 노출하지 않는다. Portfolio, Thesis Tracking, Personal Overlay, Investment Review, 고급 Investment Notes는 런타임/API 또는 내부 기반은 남아 있으나 0.2 제품 표면에서는 전면 기능으로 설명하지 않는다.
-- **문서 원칙**: 사용자용 README는 0.2에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
+- **Agent 실행 경계**: freshness/health/context 배지는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명은 사용자의 명시적 action에서만 Agent를 실행한다.
+- **숨김/축소 유지**: Dashboard와 Watchlist route/storage는 딥링크 호환을 위해 유지하지만 0.2.4 기본 nav/Home/command palette에는 노출하지 않는다. Portfolio와 Investment Review의 독립 화면도 전면 재출시로 설명하지 않으며, 개인 맥락은 기존 보이는 리서치 화면의 제한된 projection으로만 노출한다.
+- **문서 원칙**: 사용자용 README는 0.2.4에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
 
 ### 설계 확정·구현 예정
 
 | 작업 | 계획 위치 | 범위 |
 |---|---|---|
 | 0.1 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Home/Agent, Briefing, RSS, Market Memory v3, Company Analysis v2, Agent-assisted Investment Notes v2, Settings/Automation 간소화, release QA |
-| 0.2 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Deep Research Agent workspace, Smart Collections, metadata-only Agent Work Log, Market State, proposal writeback, release QA |
-| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | note/thesis intelligence, dark mode, portfolio/watchlist 재평가, installer/tray polish |
+| 0.2.4 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | note/thesis intelligence, Smart Collection workspace, 제한된 Portfolio/Watchlist Investment Context, integrated release QA |
+| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | dark mode, portfolio/watchlist 독립 화면 재평가, installer/tray polish |
 | AI Agent Mode hardening | 로컬 `roadmap/` 문서가 있을 때만 참고 | CLI/API bridge preflight, Direct Bridge 안정화, proposal writeback, job lifecycle, restart recovery, context/log retention |
 
 > 개선안 01~04(Personal Overlay / Thesis Tracker / Regime 추적 v2 / Topic Report v2)와 post-v1 Step 6~11은 구현되어 위 표로 승격되었다.
@@ -262,6 +264,7 @@ features/company_analysis/financial_quality_prompt.md
 - [Notion 내보내기](features/notion_export/README.md)
 - [Obsidian 연동](features/obsidian/README.md)
 - [테마분석 보고서](features/topic_report/README.md)
+- [Smart Collections](features/smart_collections/README.md)
 - [프론트엔드 UI](features/frontend_ui/README.md)
 - [워치리스트/메모](features/watchlist_notes/README.md)
 - [Native Investment Notes](features/investment_notes/README.md)

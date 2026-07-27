@@ -7,6 +7,7 @@ import { ReaderActionButton, ReaderActionGroup } from "./reportReader/ReaderActi
 import { ReportBody } from "./reportReader/ReportBody";
 import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
+import { parsePersonalOverlayPayload } from "./deepResearchPayload";
 
 type MarketScope = "us" | "kr" | "both";
 type ArchiveMarketFilter = "all" | MarketScope;
@@ -38,7 +39,8 @@ type Briefing = {
   marketScope?: string;
   markdown?: string;
   generation?: { message?: string; mode?: string; generatedAt?: string };
-  personalOverlay?: { markdown?: string; verdict?: string } | null;
+  canonicalRevision?: unknown;
+  personalOverlay?: unknown;
 };
 
 type AgentJob = {
@@ -498,7 +500,7 @@ export function BriefingRoute() {
             normalizedScope(briefing.marketScope || detailRoute.scope),
           )}
           noteLinkedTitle={readerContent.title}
-          noteOverlayMarkdown={briefing.personalOverlay?.markdown || ""}
+          noteOverlay={parsePersonalOverlayPayload(briefing.personalOverlay, briefing.canonicalRevision)}
         >
           <ReportBody
             markdown={readerContent.body || briefing.markdown || ""}

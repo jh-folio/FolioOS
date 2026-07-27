@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../../api";
+import { HypothesisReviewCard } from "./HypothesisReviewCard";
+import type { PersonalOverlayPayload } from "../deepResearchPayload";
+import { PersonalOverlayView } from "./PersonalOverlayView";
 import { ReportBody } from "./ReportBody";
 
 type NoteTab = "chat" | "links";
@@ -177,11 +180,11 @@ export function stableNoteKey(prefix: string, text: string) {
 export function FolioNotePanel({
   identity,
   linkedTitle,
-  overlayMarkdown = "",
+  overlay = null,
 }: {
   identity: FolioNoteIdentity;
   linkedTitle: string;
-  overlayMarkdown?: string;
+  overlay?: PersonalOverlayPayload | null;
 }) {
   const [noteBody, setNoteBody] = useState("");
   const [thoughtDraft, setThoughtDraft] = useState("");
@@ -193,6 +196,8 @@ export function FolioNotePanel({
   const [linkedNotes, setLinkedNotes] = useState<InvestmentNote[]>([]);
   const [agentBusy, setAgentBusy] = useState(false);
   const [noteTags, setNoteTags] = useState<string[]>([]);
+  const [noteExists, setNoteExists] = useState<boolean | null>(null);
+  const [intelligenceRefresh, setIntelligenceRefresh] = useState(0);
   const chatListRef = useRef<HTMLOListElement>(null);
   const agentAssisted = noteTags.includes("agent_assisted");
 
@@ -212,6 +217,7 @@ export function FolioNotePanel({
       setQuoteDraft("");
       setRawThoughts([]);
       setInteractionLog([]);
+      setNoteExists(null);
       try {
         const saved = await getJson<InvestmentNote>(`/api/investment-notes/${encodeURIComponent(identity.id)}`);
         if (!alive) return;
@@ -219,10 +225,12 @@ export function FolioNotePanel({
         setRawThoughts(saved.rawThoughts || []);
         setInteractionLog(saved.interactionLog || []);
         setNoteTags(saved.tags || []);
+        setNoteExists(true);
         setNoteStatus(saved.updatedAt ? `저장됨: ${saved.updatedAt}` : "Folio 로컬 노트를 불러왔습니다.");
       } catch {
         if (!alive) return;
         setNoteTags([]);
+        setNoteExists(false);
         setNoteStatus("생각 한 줄에서 시작하세요.");
       }
       try {
@@ -260,6 +268,8 @@ export function FolioNotePanel({
     };
     const saved = await postJson<InvestmentNote>("/api/investment-notes", payload);
     setNoteTags(saved.tags || []);
+    setNoteExists(true);
+    setIntelligenceRefresh((value) => value + 1);
     return saved;
   }
 
@@ -343,6 +353,12 @@ export function FolioNotePanel({
     }
   }
 
+  function prepareAgentExplanation() {
+    setNoteTab("chat");
+    setThoughtDraft("현재 freshness, 최신 verdict, 반대 근거, 체크포인트 상태가 무엇을 의미하는지 설명해줘.");
+    setNoteStatus("설명 요청을 준비했습니다. 내용을 확인한 뒤 Agent 버튼을 눌러 실행하세요.");
+  }
+
   return (
     <div className="react-note-panel" data-report-note-panel>
       <div className="report-note-head react-note-panel-head">
@@ -364,6 +380,12 @@ export function FolioNotePanel({
           ))}
         </div>
       </div>
+      <HypothesisReviewCard
+        identity={identity}
+        noteExists={noteExists}
+        refreshKey={intelligenceRefresh}
+        onRequestAgent={prepareAgentExplanation}
+      />
       {noteTab === "chat" && (
         <div className="report-note-chat">
           {chatEvents.length === 0 ? (
@@ -466,12 +488,10 @@ export function FolioNotePanel({
           ) : (
             <p className="report-note-empty">아직 연결된 노트가 없습니다.</p>
           )}
-          {overlayMarkdown && (
-            <div className="report-note-layer react-personal-overlay">
+          <div className="report-note-layer">
               <p className="section-kicker">참고 해석</p>
-              <ReportBody markdown={overlayMarkdown} />
-            </div>
-          )}
+              <PersonalOverlayView overlay={overlay} />
+          </div>
         </div>
       )}
       <div className="report-note-foot">

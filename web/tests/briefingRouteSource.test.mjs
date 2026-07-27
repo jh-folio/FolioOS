@@ -57,7 +57,7 @@ test("Briefing route owns reader actions and native note persistence", async () 
   assert.match(source, /noteType: "market_memo"/);
   assert.match(source, /noteIdentity=\{briefingNoteIdentity/);
   assert.match(source, /noteLinkedTitle=\{readerContent\.title\}/);
-  assert.match(source, /noteOverlayMarkdown=\{briefing\.personalOverlay\?\.markdown \|\| ""\}/);
+  assert.match(source, /noteOverlay=\{parsePersonalOverlayPayload\(briefing\.personalOverlay, briefing\.canonicalRevision\)\}/);
   assert.match(shellSource, /FolioNotePanel/);
   assert.match(noteSource, /\/api\/investment-notes/);
   assert.match(source, /ReaderActionGroup title="AI"/);

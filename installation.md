@@ -174,8 +174,8 @@ Development-only folders such as `web/`, `docs/`, and `roadmap/` are needed for 
 Maintainers can create a clean 0.2 user package from reviewed tracked inputs with:
 
 ```powershell
-py -3 scripts\package_release.py --version v0.2.0
-py -3 scripts\verify_release.py --release-dir dist\FolioOS-v0.2.0
+py -3 scripts\package_release.py --version v0.2.4
+py -3 scripts\verify_release.py --release-dir dist\FolioOS-v0.2.4
 ```
 
 The package includes the built React bundle, so normal users do not need Node.js. Deep Research remains local-first: its reports are stored under `data/topic-reports/`, Smart Collections under `data/smart-collections.json`, and Agent Work Log entries contain metadata only.

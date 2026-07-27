@@ -1,33 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ApiRequestError,
-  deleteJson,
   FALLBACK_POLICY,
   getJson,
   isActiveJobStatus,
   postJson,
-  putJson,
   type ApprovalReference,
   type CliAdapter,
   type CollectionRef,
   type ConfirmDegradedRequest,
-  type DeleteSmartCollectionRequest,
   type ExecutionMode,
   type ExecutionRequest,
   type GenerateApprovedRequest,
   type JobStatus,
+  type InvestmentTickerContext,
   type MarketStatePolicy,
   type MarketStateScope,
   type PlanPreviewEnvelope,
   type PlanRequest,
-  type PreviewSmartCollectionRequest,
-  type SmartCollection,
-  type SmartCollectionFields,
-  type SmartCollectionListEnvelope,
-  type SmartCollectionMarket,
-  type SmartCollectionMutationEnvelope,
-  type SmartCollectionPreview,
-  type UpdateSmartCollectionRequest,
 } from "../api";
 import { openReactAgentDock, patchReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -35,10 +25,23 @@ import { stableNoteKey } from "./reportReader/FolioNotePanel";
 import { ReaderActionButton, ReaderActionGroup } from "./reportReader/ReaderActions";
 import { ReportBody } from "./reportReader/ReportBody";
 import { ReportReaderShell } from "./reportReader/ReportReaderShell";
+import { PersonalOverlayView } from "./reportReader/PersonalOverlayView";
 import { RouteHero } from "./RouteHero";
 import { AgentWorkLog } from "./AgentWorkLog";
 import { marketStateContextProjection, readMarketStateRef } from "./marketStateContext";
-import { parseTopicReportPayload, parseTopicReportSummaries, type MarketStateResolutionPayload, type TopicReport, type TopicReportSummary } from "./deepResearchPayload";
+import {
+  deepResearchCollectionHash,
+  deepResearchReportHash,
+  parseDeepResearchLocation,
+  parsePersonalOverlayPayload,
+  parseTopicReportPayload,
+  parseTopicReportSummaries,
+  type MarketStateResolutionPayload,
+  type TopicReport,
+  type TopicReportSummary,
+} from "./deepResearchPayload";
+import { SmartCollectionsPanel, SmartCollectionWorkspace } from "./SmartCollectionWorkspace";
+import { InvestmentContextCard } from "./InvestmentContextCard";
 
 type DeepResearchPhase =
   | "readiness"
@@ -82,7 +85,7 @@ function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
   const plan = report.topicPlan;
   const coverage = report.evidencePackSummary;
   const resolution = report.researchResolution;
-  const overlay = report.personalOverlay;
+  const overlay = parsePersonalOverlayPayload(report.personalOverlay, report.canonicalRevision);
   const userContext = typeof report.userContext === "string" ? report.userContext.trim() : report.userContext ? "생성 요청에 사용자 컨텍스트가 포함되었습니다." : "";
   return (
     <section className="topicrpt-provenance" aria-labelledby="dr-provenance-heading">
@@ -203,15 +206,7 @@ function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
         <aside className="topicrpt-hypothesis-panel topicrpt-provenance-wide" data-qa="dr-overlay-hypothesis" aria-labelledby="dr-overlay-heading">
           <p className="section-kicker">PERSONAL OVERLAY · HYPOTHESIS</p>
           <h3 id="dr-overlay-heading">개인 해석</h3>
-          {overlay ? (
-            <>
-              {overlay.stale && <div className="topicrpt-overlay-stale" data-qa="dr-overlay-stale" role="status"><strong>이 Overlay는 오래된 Canonical 기준입니다.</strong><span>현재 보고서 revision과 생성 당시 revision이 다르므로 다시 연결해 확인하세요.</span></div>}
-              {!overlay.canonicalRevision && !overlay.stale && <p className="topicrpt-layer-note">생성 기준 revision을 확인할 수 없는 레거시 Overlay입니다.</p>}
-              {overlay.markdown ? <ReportBody markdown={overlay.markdown} /> : <EmptyProvenance>저장된 개인 해석 본문이 없습니다.</EmptyProvenance>}
-              <h4>반대 근거와 충돌</h4>{renderList([...overlay.counterEvidence, ...overlay.contradictions], "기록 없음")}
-              <h4>불확실성과 다음 질문</h4>{renderList([...overlay.uncertainties, ...overlay.personalQuestions], "기록 없음")}
-            </>
-          ) : <EmptyProvenance>생성된 Personal Overlay가 없습니다.</EmptyProvenance>}
+          <PersonalOverlayView overlay={overlay} staleQa="dr-overlay-stale" />
         </aside>
       </div>
     </section>
@@ -338,17 +333,7 @@ function displayDate(value?: string) {
 }
 
 function setTopicHash(reportId?: string) {
-  window.location.hash = reportId ? `#/deep-research/${encodeURIComponent(reportId)}` : "#/deep-research";
-}
-
-function readTopicDetailId(): { id: string; malformed: boolean } {
-  const match = window.location.hash.match(/^#\/?deep-research\/(.+)$/);
-  if (!match) return { id: "", malformed: false };
-  try {
-    return { id: decodeURIComponent(match[1]), malformed: false };
-  } catch {
-    return { id: "", malformed: true };
-  }
+  window.location.hash = reportId ? deepResearchReportHash(reportId) : "#/deep-research";
 }
 
 function isDeepResearchHash() {
@@ -383,377 +368,6 @@ function approvalReference(envelope: PlanPreviewEnvelope): ApprovalReference {
 function renderList(items: readonly string[], empty = "없음") {
   if (!items.length) return <span className="topicrpt-empty-value">{empty}</span>;
   return <ul className="topicrpt-inline-list">{items.map((item) => <li key={item}>{item}</li>)}</ul>;
-}
-
-type CollectionDraft = {
-  name: string;
-  query: string;
-  market: SmartCollectionMarket;
-  sources: string;
-  tickers: string;
-  tags: string;
-};
-
-const EMPTY_COLLECTION_DRAFT: CollectionDraft = {
-  name: "",
-  query: "",
-  market: "ALL",
-  sources: "",
-  tickers: "",
-  tags: "",
-};
-
-function tokens(value: string, upper = false): string[] {
-  const normalized = value
-    .split(",")
-    .map((item) => item.normalize("NFKC").trim())
-    .filter(Boolean)
-    .map((item) => upper ? item.toUpperCase() : item.toLowerCase());
-  return Array.from(new Set(normalized)).sort();
-}
-
-function collectionFields(draft: CollectionDraft): SmartCollectionFields {
-  return {
-    name: draft.name.normalize("NFKC").trim(),
-    query: draft.query.normalize("NFKC").trim(),
-    market: draft.market,
-    sources: tokens(draft.sources),
-    tickers: tokens(draft.tickers, true),
-    tags: tokens(draft.tags),
-  };
-}
-
-function collectionDraft(collection: SmartCollection): CollectionDraft {
-  return {
-    name: collection.name,
-    query: collection.query,
-    market: collection.market,
-    sources: collection.sources.join(", "),
-    tickers: collection.tickers.join(", "),
-    tags: collection.tags.join(", "),
-  };
-}
-
-function collectionFilterSummary(collection: SmartCollection): string {
-  const filters = [
-    collection.query && `query: ${collection.query}`,
-    collection.market !== "ALL" && `market: ${collection.market}`,
-    collection.sources.length && `sources: ${collection.sources.join(", ")}`,
-    collection.tickers.length && `tickers: ${collection.tickers.join(", ")}`,
-    collection.tags.length && `tags: ${collection.tags.join(", ")}`,
-  ].filter(Boolean);
-  return filters.join(" · ") || "필터 없음";
-}
-
-function collectionErrorCopy(error: unknown): string {
-  if (!(error instanceof ApiRequestError)) return "컬렉션 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요.";
-  if (error.code === "validation_error") return "필터 형식을 확인하세요. 이름과 하나 이상의 검색 조건이 필요하며 각 목록은 최대 20개입니다.";
-  if (error.code === "collection_store_unavailable") return "저장된 컬렉션을 읽을 수 없습니다. 저장소 상태를 확인한 뒤 다시 불러오세요.";
-  if (error.code === "collection_source_unavailable") return "현재 외부 자료 인덱스를 읽을 수 없습니다. 자료 상태를 확인한 뒤 다시 미리보세요.";
-  if (error.code === "collection_not_found") return "컬렉션이 더 이상 존재하지 않습니다. 목록을 다시 불러오세요.";
-  return `컬렉션 요청을 완료하지 못했습니다 (${error.code || "request_failed"}).`;
-}
-
-function currentRevision(error: ApiRequestError): number | null {
-  const value = error.payload?.currentRevision;
-  return typeof value === "number" && Number.isInteger(value) && value >= 1 ? value : null;
-}
-
-function SmartCollectionsPanel({
-  selectedRef,
-  onSelectedRef,
-  onBusyChange,
-  disabled,
-}: {
-  readonly selectedRef: CollectionRef | null;
-  readonly onSelectedRef: (ref: CollectionRef | null) => void;
-  readonly onBusyChange: (busy: boolean) => void;
-  readonly disabled: boolean;
-}) {
-  const [collections, setCollections] = useState<readonly SmartCollection[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loadingList, setLoadingList] = useState(true);
-  const [editorMode, setEditorMode] = useState<"create" | "edit" | null>(null);
-  const [editingId, setEditingId] = useState("");
-  const [editingRevision, setEditingRevision] = useState<number | null>(null);
-  const [draft, setDraft] = useState<CollectionDraft>(EMPTY_COLLECTION_DRAFT);
-  const [preview, setPreview] = useState<SmartCollectionPreview | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [conflict, setConflict] = useState<{ code: string; currentRevision: number | null } | null>(null);
-  const listSequence = useRef(0);
-  const previewSequence = useRef(0);
-  const listController = useRef<AbortController | null>(null);
-  const previewController = useRef<AbortController | null>(null);
-
-  function updateDraftField<K extends keyof CollectionDraft>(field: K, value: CollectionDraft[K]) {
-    setDraft((current) => ({ ...current, [field]: value }));
-  }
-
-  const selectedCollection = useMemo(
-    () => selectedRef ? collections.find((item) => item.id === selectedRef.id && item.revision === selectedRef.revision) || null : null,
-    [collections, selectedRef],
-  );
-
-  useEffect(() => {
-    onBusyChange(loadingList || previewLoading || busy);
-  }, [busy, loadingList, onBusyChange, previewLoading]);
-
-  const loadCollections = useCallback(async (rebaseDraft = false) => {
-    listController.current?.abort();
-    const controller = new AbortController();
-    listController.current = controller;
-    const sequence = listSequence.current + 1;
-    listSequence.current = sequence;
-    setLoadingList(true);
-    setError("");
-    try {
-      const payload = await getJson<SmartCollectionListEnvelope>("/api/smart-collections?limit=100&offset=0", { signal: controller.signal });
-      if (controller.signal.aborted || sequence !== listSequence.current) return;
-      setCollections(payload.items);
-      setTotal(payload.total);
-      if (selectedRef) {
-        const latest = payload.items.find((item) => item.id === selectedRef.id);
-        if (!latest || latest.revision !== selectedRef.revision) {
-          onSelectedRef(null);
-          setPreview(null);
-          if (latest) setConflict({ code: "revision_conflict", currentRevision: latest.revision });
-        }
-      }
-      if (rebaseDraft && editingId) {
-        const latest = payload.items.find((item) => item.id === editingId);
-        if (latest) {
-          setEditingRevision(latest.revision);
-          setConflict(null);
-        }
-      }
-    } catch (requestError) {
-      if (requestError instanceof DOMException && requestError.name === "AbortError") return;
-      if (sequence !== listSequence.current) return;
-      setError(collectionErrorCopy(requestError));
-    } finally {
-      if (!controller.signal.aborted && sequence === listSequence.current) setLoadingList(false);
-    }
-  }, [editingId, onSelectedRef, selectedRef]);
-
-  const previewCollection = useCallback(async (collection: SmartCollection) => {
-    previewController.current?.abort();
-    const controller = new AbortController();
-    previewController.current = controller;
-    const sequence = previewSequence.current + 1;
-    previewSequence.current = sequence;
-    setPreviewLoading(true);
-    setPreview(null);
-    onSelectedRef(null);
-    setError("");
-    setConflict(null);
-    const body: PreviewSmartCollectionRequest = { expectedRevision: collection.revision, limit: 10 };
-    try {
-      const payload = await postJson<SmartCollectionPreview>(`/api/smart-collections/${encodeURIComponent(collection.id)}/preview`, body, { signal: controller.signal });
-      if (controller.signal.aborted || sequence !== previewSequence.current) return;
-      setPreview(payload);
-      onSelectedRef({ id: collection.id, revision: collection.revision });
-    } catch (requestError) {
-      if (requestError instanceof DOMException && requestError.name === "AbortError") return;
-      if (sequence !== previewSequence.current) return;
-      if (requestError instanceof ApiRequestError && requestError.status === 409 && (requestError.code === "revision_conflict" || requestError.code === "duplicate_name")) {
-        setConflict({ code: requestError.code, currentRevision: currentRevision(requestError) });
-        onSelectedRef(null);
-      } else {
-        setError(collectionErrorCopy(requestError));
-      }
-    } finally {
-      if (!controller.signal.aborted && sequence === previewSequence.current) setPreviewLoading(false);
-    }
-  }, [onSelectedRef]);
-
-  useEffect(() => {
-    void loadCollections();
-    return () => {
-      listController.current?.abort();
-      previewController.current?.abort();
-    };
-  }, []);
-
-  const beginCreate = () => {
-    setEditorMode("create");
-    setEditingId("");
-    setEditingRevision(null);
-    setDraft(EMPTY_COLLECTION_DRAFT);
-    setConflict(null);
-    setError("");
-  };
-
-  const beginEdit = () => {
-    if (!selectedCollection) return;
-    setEditorMode("edit");
-    setEditingId(selectedCollection.id);
-    setEditingRevision(selectedCollection.revision);
-    setDraft(collectionDraft(selectedCollection));
-    setConflict(null);
-    setError("");
-  };
-
-  const saveCollection = async () => {
-    const fields = collectionFields(draft);
-    if (!fields.name || (!fields.query && fields.market === "ALL" && !fields.sources.length && !fields.tickers.length && !fields.tags.length) || fields.sources.length > 20 || fields.tickers.length > 20 || fields.tags.length > 20) {
-      setError("이름과 하나 이상의 검색 조건을 입력하세요. 쉼표 목록은 각각 최대 20개입니다.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    setConflict(null);
-    try {
-      let payload: SmartCollectionMutationEnvelope;
-      if (editorMode === "edit" && editingId && editingRevision) {
-        const body: UpdateSmartCollectionRequest = { ...fields, expectedRevision: editingRevision };
-        payload = await putJson<SmartCollectionMutationEnvelope>(`/api/smart-collections/${encodeURIComponent(editingId)}`, body);
-      } else {
-        payload = await postJson<SmartCollectionMutationEnvelope>("/api/smart-collections", fields);
-      }
-      setCollections((current) => [payload.collection, ...current.filter((item) => item.id !== payload.collection.id)]);
-      setTotal((current) => editorMode === "create" ? current + 1 : current);
-      setEditorMode(null);
-      setEditingId("");
-      setEditingRevision(null);
-      await previewCollection(payload.collection);
-    } catch (requestError) {
-      if (requestError instanceof ApiRequestError && requestError.status === 409 && (requestError.code === "revision_conflict" || requestError.code === "duplicate_name")) {
-        setConflict({ code: requestError.code, currentRevision: currentRevision(requestError) });
-        if (requestError.code === "revision_conflict") onSelectedRef(null);
-      } else {
-        setError(collectionErrorCopy(requestError));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const deleteCollection = async () => {
-    if (!selectedCollection || !window.confirm(`“${selectedCollection.name}” 컬렉션을 삭제할까요?`)) return;
-    setBusy(true);
-    setError("");
-    setConflict(null);
-    const body: DeleteSmartCollectionRequest = { expectedRevision: selectedCollection.revision };
-    try {
-      await deleteJson<{ readonly storeRevision: number; readonly deletedId: string }>(`/api/smart-collections/${encodeURIComponent(selectedCollection.id)}`, body);
-      setCollections((current) => current.filter((item) => item.id !== selectedCollection.id));
-      setTotal((current) => Math.max(0, current - 1));
-      setPreview(null);
-      onSelectedRef(null);
-    } catch (requestError) {
-      if (requestError instanceof ApiRequestError && requestError.status === 409 && (requestError.code === "revision_conflict" || requestError.code === "duplicate_name")) {
-        setConflict({ code: requestError.code, currentRevision: currentRevision(requestError) });
-        onSelectedRef(null);
-      } else {
-        setError(collectionErrorCopy(requestError));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="topicrpt-collections-panel" data-qa="collection-panel" aria-labelledby="collection-heading">
-      <div className="topicrpt-collections-head">
-        <div>
-          <span className="section-kicker">SMART COLLECTIONS</span>
-          <h3 id="collection-heading">외부 근거 필터</h3>
-          <p>저장된 검색 규칙이며 근거 자체나 사용자 가설이 아닙니다. 서버가 계획 시점에 일치 자료를 다시 확인합니다.</p>
-        </div>
-        <div className="topicrpt-collections-actions">
-          <button className="filter-btn clear" type="button" data-qa="collection-reload" disabled={loadingList || busy || disabled} onClick={() => void loadCollections()}>{loadingList ? "불러오는 중" : "다시 불러오기"}</button>
-          <button className="filter-btn apply" type="button" data-qa="collection-new" disabled={busy || disabled} onClick={beginCreate}>새 컬렉션</button>
-        </div>
-      </div>
-
-      {error && <div className="react-dashboard-error topicrpt-collection-alert" data-qa="collection-error" role="alert"><strong>컬렉션을 확인하세요</strong><span>{error}</span></div>}
-      {conflict && (
-        <div className="react-dashboard-warning topicrpt-collection-alert" data-qa="collection-conflict" role="alert">
-          <strong>{conflict.code === "duplicate_name" ? "같은 이름이 이미 있습니다" : "다른 탭에서 정의가 변경되었습니다"}</strong>
-          <span>{conflict.currentRevision ? `현재 revision ${conflict.currentRevision}. ` : ""}입력 내용은 유지했습니다. 최신 revision을 불러온 뒤 다시 저장하세요.</span>
-          {conflict.code === "duplicate_name" ? (
-            <button className="filter-btn clear" type="button" onClick={() => setConflict(null)}>이름 수정</button>
-          ) : (
-            <button className="filter-btn clear" type="button" onClick={() => void loadCollections(true)}>최신 revision 불러오기</button>
-          )}
-        </div>
-      )}
-
-      <div className="topicrpt-collections-grid">
-        <div className="topicrpt-collection-browser">
-          <div className="topicrpt-collection-subhead"><strong>저장된 규칙</strong><span>{total}개</span></div>
-          <div className="topicrpt-collection-list" data-qa="collection-list" aria-busy={loadingList}>
-            {!loadingList && !error && !collections.length && <div className="topicrpt-collection-empty" data-qa="collection-empty" data-empty-kind="list" role="status">저장된 외부 근거 필터가 없습니다. 새 컬렉션을 만들어 반복할 검색 범위를 저장하세요.</div>}
-            {collections.map((collection) => {
-              const isSelected = selectedRef?.id === collection.id && selectedRef.revision === collection.revision;
-              return (
-                <button
-                  className={`topicrpt-collection-item${isSelected ? " is-selected" : ""}`}
-                  type="button"
-                  data-qa="collection-item"
-                  data-collection-id={collection.id}
-                  data-revision={collection.revision}
-                  aria-pressed={isSelected}
-                  disabled={busy || disabled}
-                  onClick={() => void previewCollection(collection)}
-                  key={collection.id}
-                >
-                  <span><strong>{collection.name}</strong><small>revision {collection.revision}</small></span>
-                  <small>{collectionFilterSummary(collection)}</small>
-                </button>
-              );
-            })}
-          </div>
-          {total > collections.length && <p className="topicrpt-collection-disclosure">처음 {collections.length}개를 표시합니다. 전체 {total}개 중 나머지는 API 페이지에서 확인할 수 있습니다.</p>}
-          {selectedCollection && (
-            <div className="topicrpt-collections-actions topicrpt-selection-actions">
-              <button className="filter-btn clear" type="button" data-qa="collection-edit" disabled={busy || disabled} onClick={beginEdit}>선택 규칙 편집</button>
-              <button className="filter-btn clear" type="button" data-qa="collection-delete" disabled={busy || disabled} onClick={() => void deleteCollection()}>삭제</button>
-              <button className="filter-btn clear" type="button" data-qa="collection-clear-selection" onClick={() => { previewController.current?.abort(); setPreview(null); onSelectedRef(null); }}>선택 해제</button>
-            </div>
-          )}
-        </div>
-
-        <section className="topicrpt-collection-results" data-qa="collection-results" aria-busy={previewLoading} aria-live="polite">
-          <div className="topicrpt-collection-subhead"><strong>Live match</strong><span>{previewLoading ? "확인 중" : preview ? `${preview.total}건` : "규칙 선택 전"}</span></div>
-          {preview && preview.total === 0 && <div className="topicrpt-collection-empty" data-qa="collection-empty" data-empty-kind="matches" role="status">현재 일치 자료가 0건입니다. 계획은 근거 부족 확인을 거쳐야 하며, 이 컬렉션 자체가 근거로 사용되지는 않습니다.</div>}
-          {preview && preview.items.length > 0 && (
-            <ul className="topicrpt-collection-samples">
-              {preview.items.map((item) => (
-                <li key={item.id}>
-                  <span><strong>{item.title || "제목 없음"}</strong><em className={item.usability === "indexed" ? "is-indexed" : "is-unindexed"}>{item.usability === "indexed" ? "사용 가능" : "인덱싱 필요"}</em></span>
-                  <small>{[item.source, item.publishedAt].filter(Boolean).join(" · ") || "출처 정보 없음"}</small>
-                  {item.snippet && <p>{item.snippet}</p>}
-                </li>
-              ))}
-            </ul>
-          )}
-          {!preview && !previewLoading && <p className="topicrpt-empty-value">규칙을 선택하면 서버가 현재 자료의 개수와 표본을 확인합니다.</p>}
-          {preview && preview.total > preview.items.length && <p className="topicrpt-collection-disclosure">상위 {preview.items.length}건만 미리 표시합니다. 계획 실행 시 서버가 전체 범위를 다시 해석합니다.</p>}
-        </section>
-      </div>
-
-      {editorMode && (
-        <div className="topicrpt-collection-editor">
-          <div className="topicrpt-collection-subhead"><strong>{editorMode === "create" ? "새 검색 규칙" : "검색 규칙 편집"}</strong><span>{editingRevision ? `revision ${editingRevision}` : "새 정의"}</span></div>
-          <div className="topicrpt-collection-form-grid">
-            <label className="field"><span>이름</span><input data-qa="collection-name" value={draft.name} maxLength={80} onChange={(event) => updateDraftField("name", event.currentTarget.value)} /></label>
-            <label className="field topicrpt-collection-query"><span>검색어</span><textarea data-qa="collection-query" value={draft.query} maxLength={500} rows={2} onChange={(event) => updateDraftField("query", event.currentTarget.value)} /></label>
-            <label className="field"><span>시장</span><select data-qa="collection-market" value={draft.market} onChange={(event) => updateDraftField("market", event.currentTarget.value as SmartCollectionMarket)}><option value="ALL">전체</option><option value="US">미국</option><option value="KR">한국</option><option value="GLOBAL">글로벌</option><option value="UNKNOWN">미분류</option></select></label>
-            <label className="field"><span>출처 · 쉼표 구분</span><input data-qa="collection-sources" value={draft.sources} onChange={(event) => updateDraftField("sources", event.currentTarget.value)} /></label>
-            <label className="field"><span>티커 · 쉼표 구분</span><input data-qa="collection-tickers" value={draft.tickers} onChange={(event) => updateDraftField("tickers", event.currentTarget.value)} /></label>
-            <label className="field"><span>태그 · 쉼표 구분</span><input data-qa="collection-tags" value={draft.tags} onChange={(event) => updateDraftField("tags", event.currentTarget.value)} /></label>
-          </div>
-          <div className="topicrpt-collections-actions">
-            <button className="filter-btn clear" type="button" data-qa="collection-cancel" disabled={busy} onClick={() => { setEditorMode(null); setConflict(null); setError(""); }}>취소</button>
-            <button className="filter-btn apply" type="button" data-qa="collection-save" disabled={busy} onClick={() => void saveCollection()}>{busy ? "저장 중" : editorMode === "create" ? "컬렉션 저장" : "변경 저장"}</button>
-          </div>
-        </div>
-      )}
-    </section>
-  );
 }
 
 function PlanReview({
@@ -872,9 +486,10 @@ export function DeepResearchRoute() {
   const [workLogRefreshKey, setWorkLogRefreshKey] = useState(0);
   const [reports, setReports] = useState<TopicReportSummary[]>([]);
   const [selected, setSelected] = useState<TopicReport | null>(null);
-  const initialDetail = useMemo(() => readTopicDetailId(), []);
-  const [detailId, setDetailId] = useState(initialDetail.id);
-  const [malformedRoute, setMalformedRoute] = useState(initialDetail.malformed);
+  const initialLocation = useMemo(() => parseDeepResearchLocation(window.location.hash), []);
+  const [detailId, setDetailId] = useState(initialLocation.kind === "report" ? initialLocation.id : "");
+  const [collectionDetailId, setCollectionDetailId] = useState(initialLocation.kind === "collection" ? initialLocation.id : "");
+  const [malformedRoute, setMalformedRoute] = useState(initialLocation.malformed);
   const [question, setQuestion] = useState("");
   const [userContext, setUserContext] = useState("");
   const [marketStatePolicy, setMarketStatePolicy] = useState<MarketStatePolicy>("include_current");
@@ -961,14 +576,17 @@ export function DeepResearchRoute() {
   useEffect(() => {
     const handleHashChange = () => {
       if (!isDeepResearchHash()) return;
-      const route = readTopicDetailId();
+      const route = parseDeepResearchLocation(window.location.hash);
       setMalformedRoute(route.malformed);
-      setDetailId(route.id);
+      setDetailId(route.kind === "report" ? route.id : "");
+      setCollectionDetailId(route.kind === "collection" ? route.id : "");
       if (route.malformed) {
         setSelected(null);
-        setError("보고서 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요.");
+        setError(route.kind === "collection"
+          ? "컬렉션 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요."
+          : "보고서 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요.");
         setErrorKind("report");
-        setErrorReason("malformed_report_id");
+        setErrorReason(route.kind === "collection" ? "malformed_collection_id" : "malformed_report_id");
         setPhase("recoverable-error");
       }
     };
@@ -1040,14 +658,14 @@ export function DeepResearchRoute() {
     }
     if (detailId && !malformedRoute) {
       void loadDetail(detailId);
-    } else if (!malformedRoute) {
+    } else if (!malformedRoute && !collectionDetailId) {
       setSelected(null);
       setPhase((current) => current === "report" ? "draft" : current);
       setReactAgentContextScope("deep-research", { surface: "topic_report", viewId: "topicrpt", reportKind: "", reportId: "", collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
       setLoading(false);
     }
     return () => controller.abort();
-  }, [detailId, malformedRoute, proposalReloadKey]);
+  }, [collectionDetailId, detailId, malformedRoute, proposalReloadKey]);
 
   const handlePreview = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1259,6 +877,35 @@ export function DeepResearchRoute() {
   const readerContent = splitReportTitle(selected?.markdown || "", selected ? reportLabel(selected) : "딥 리서치");
   const selectedMarketStateContext = marketStateContextProjection(selected?.marketStateResolution);
 
+  const referenceInvestmentContext = useCallback((context: InvestmentTickerContext) => {
+    const source = context.source === "both"
+      ? "포트폴리오·워치리스트"
+      : context.source === "portfolio"
+        ? "포트폴리오"
+        : "워치리스트";
+    const reference = `개인 맥락(hypothesis): ${context.ticker} · ${source}`;
+    setUserContext((current) => {
+      const lines = current.split("\n").map((line) => line.trim()).filter(Boolean);
+      if (lines.includes(reference)) return current;
+      return [...lines, reference].join("\n").slice(0, 4000);
+    });
+  }, []);
+
+  if (collectionDetailId && !malformedRoute) {
+    return (
+      <div className="react-deep-research-route" data-deep-research-route>
+        <SmartCollectionWorkspace
+          collectionId={collectionDetailId}
+          onBack={() => setTopicHash()}
+          onStartResearch={(ref) => {
+            setSelectedCollectionRef(ref);
+            setTopicHash();
+          }}
+        />
+      </div>
+    );
+  }
+
   if (detailId && !selected && !(phase === "recoverable-error" && errorKind === "report")) {
     return (
       <div className="react-deep-research-route" data-deep-research-route>
@@ -1325,7 +972,7 @@ export function DeepResearchRoute() {
           )}
           noteIdentity={{ id: stableNoteKey("topic", reportLabel(selected)), noteType: "topic_review", title: reportLabel(selected) ? `${reportLabel(selected)} 리서치 노트` : "딥 리서치 노트", topic: reportLabel(selected), label: reportLabel(selected), reportKind: "topic_report", reportId: reportLabel(selected), linkedReports: [readerContent.title].filter(Boolean) }}
           noteLinkedTitle={readerContent.title}
-          noteOverlayMarkdown={selected.personalOverlay?.markdown || ""}
+          noteOverlay={parsePersonalOverlayPayload(selected.personalOverlay, selected.canonicalRevision)}
         >
           <MarketStateReportContext resolution={selected.marketStateResolution} />
           <ReportBody markdown={readerContent.body || selected.markdown || ""} />
@@ -1371,7 +1018,14 @@ export function DeepResearchRoute() {
             <span>추가 컨텍스트 <em>(선택)</em></span>
             <textarea data-qa="dr-context" value={userContext} onChange={(event) => setUserContext(event.currentTarget.value)} maxLength={4000} rows={4} placeholder="예: 보유 종목, 관심 지역, 확인할 기간 등. 이 내용은 hypothesis로 표시됩니다." />
           </label>
-          <SmartCollectionsPanel selectedRef={selectedCollectionRef} onSelectedRef={setSelectedCollectionRef} onBusyChange={setCollectionBusy} disabled={phase === "plan-loading" || loading} />
+          <InvestmentContextCard mode="deep-research" onReference={referenceInvestmentContext} />
+          <SmartCollectionsPanel
+            selectedRef={selectedCollectionRef}
+            onSelectedRef={setSelectedCollectionRef}
+            onBusyChange={setCollectionBusy}
+            onOpenDetail={(collectionId) => { window.location.hash = deepResearchCollectionHash(collectionId); }}
+            disabled={phase === "plan-loading" || loading}
+          />
           <div className="topicrpt-action-row">
             <label className="field topicrpt-policy-field">
               <span>Market State 정책</span>

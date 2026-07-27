@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import UTC, datetime
 import json
 from pathlib import Path
 
 from features.agent_mode import schema as A
+from features.agent_mode.hypothesis_context import build_hypothesis_review_context
 from features.agent_mode.briefing_contract import (
     briefing_contract_violations,
     briefing_output_contract,
@@ -70,6 +72,7 @@ from features.daily_briefing.visuals import (
     write_visual_sidecar,
 )
 from features.market_memory.memory import build_memory_from_briefing, list_briefing_memories, upsert_memory
+from features.market_memory.market_state_ref import MarketStateRefQuery, resolve_market_state_ref
 from features.market_memory.service import (
     build_memory_llm_context,
     normalize_llm_memory_entry,
@@ -119,6 +122,7 @@ from features.personal_overlay.service import (
     with_overlay,
 )
 from features.thesis_tracking import delta as thesis_delta
+from features.thesis_tracking import review_state as thesis_review_state
 from features.thesis_tracking import store as thesis_store
 from features.thesis_tracking.service import get_thesis
 from features.common.research_quality.evaluator import evaluate_artifact
@@ -920,8 +924,34 @@ def prepare_thesis_delta_pack(ticker: str, *, period="90d", evidence_limit=12, o
     if not thesis:
         raise FileNotFoundError(f"Thesis not found: {ticker}")
     period = thesis_delta.normalize_period(period)
-    evidence, meta = thesis_delta.gather_local_evidence(thesis, period=period, limit=int(evidence_limit or 12))
-    context = thesis_delta.build_context(thesis, evidence, meta)
+    evidence_limit = max(1, min(int(evidence_limit or 12), 12))
+    evidence, meta = thesis_delta.gather_local_evidence(thesis, period=period, limit=evidence_limit)
+    connection = thesis_store.connect(MARKET_MEMORY_DB_PATH)
+    try:
+        prior_delta = thesis_store.latest_delta(connection, thesis["ticker"])
+        review_state = thesis_review_state.load_review_state(connection, thesis["ticker"]).model_dump(mode="json")
+    finally:
+        connection.close()
+    market_state_ref = resolve_market_state_ref(
+        MarketStateRefQuery(
+            market_db_path=MARKET_MEMORY_DB_PATH,
+            research_db_path=DATA_DIR / "research-index.sqlite3",
+            scope="GLOBAL",
+            now=datetime.now(UTC),
+        )
+    )
+    context = json.dumps(
+        build_hypothesis_review_context(
+            thesis=thesis,
+            evidence=evidence,
+            meta=meta,
+            market_state_ref=market_state_ref,
+            prior_delta=prior_delta,
+            review_state=review_state,
+        ),
+        ensure_ascii=False,
+        indent=2,
+    )
     pack = A.build_pack(
         task_type="thesis_delta",
         artifact_type="thesis_delta",
@@ -962,6 +992,9 @@ def write_thesis_delta_from_json(pack: dict, delta_payload: dict) -> dict:
     conn = thesis_store.connect()
     try:
         saved = thesis_store.save_delta(conn, ticker, delta)
+        thesis = thesis_store.get_thesis(conn, ticker)
+        if thesis:
+            thesis_review_state.record_completed_review(conn, thesis, saved)
     finally:
         conn.close()
     return {"ok": True, "delta": saved}
@@ -1213,6 +1246,30 @@ def write_investment_review_from_markdown(pack: dict, markdown: str, *, persist:
         REVIEW_DIR.mkdir(parents=True, exist_ok=True)
         write_json(REVIEW_DIR / f"{date}.json", review)
     return review
+
+
+def prepare_investment_explanation_pack(tickers, context_service, evidence_loader) -> dict:
+    """Public service seam for the read-only investment explanation context pack."""
+    from features.agent_mode.investment_context import prepare_investment_context_pack
+
+    return prepare_investment_context_pack(
+        tickers,
+        context_service,
+        evidence_loader=evidence_loader,
+    )
+
+
+def submit_investment_explanation(tickers, context_service, evidence_loader) -> dict:
+    """Submit the explanation through the existing metadata-only Agent job lane."""
+    from features.agent_mode.investment_context import (
+        submit_investment_context_explanation,
+    )
+
+    return submit_investment_context_explanation(
+        tickers,
+        context_service=context_service,
+        evidence_loader=evidence_loader,
+    )
 
 
 def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:

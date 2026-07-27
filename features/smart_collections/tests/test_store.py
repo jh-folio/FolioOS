@@ -75,3 +75,25 @@ def test_store_shape_is_strict_json(
     service.create(CreateCollectionRequest.model_validate(definition))
     payload = json.loads((tmp_path / "smart-collections.json").read_text(encoding="utf-8"))
     assert set(payload) == {"schemaVersion", "storeRevision", "updatedAt", "collections"}
+
+
+def test_read_operations_do_not_change_definition_bytes_or_revisions(
+    service: SmartCollectionService,
+    definition: dict[str, str | list[str]],
+    tmp_path: Path,
+) -> None:
+    created = service.create(CreateCollectionRequest.model_validate(definition))
+    collection = created["collection"]
+    primary = tmp_path / "smart-collections.json"
+    bytes_before = primary.read_bytes()
+
+    listed = service.list(limit=100, offset=0)
+    fetched = service.get(str(collection["id"]))
+    approved = service.approved_ref(str(collection["id"]), expected_revision=1)
+
+    assert primary.read_bytes() == bytes_before
+    assert listed["storeRevision"] == created["storeRevision"] == 1
+    assert fetched["storeRevision"] == 1
+    assert listed["items"][0]["revision"] == collection["revision"] == 1
+    assert fetched["collection"]["revision"] == 1
+    assert approved.revision == 1

@@ -164,7 +164,15 @@ When the user explicitly asks to revise, create, update, schedule, or write back
 
 `POST /api/agent/companion`은 `message`, `context` 외에 채팅 도구 옵션 `options{model, effort, attachments}`를 받는다. `companion.normalize_agent_options()`가 effort enum(`low/medium/high/max`), 모델 문자열 길이, 첨부(최대 5개, 이름 120자, 본문 4,000자)를 코드에서 정규화해 응답 `options` 필드로 되돌려준다. 첨부파일 본문은 사용자 참고 입력(hypothesis)일 뿐 evidence로 승격하지 않는다.
 
-Deep Research에서 선택한 Smart Collection은 frontend가 `collectionId`와 strict 정수 `collectionRevision`만 전달한다. 서버는 저장된 Collection을 다시 조회하고 revision을 검사한 뒤 live resolve 결과의 metadata-only projection(정의 hash, 결과/실행 universe ID, 개수, provider generation, watermark)만 Agent context에 넣는다. Collection 이름·query·filter·preview item·snippet·RSS description·evidence body는 Agent prompt에 넣지 않으며, 이 projection은 `saved_filter_metadata_not_evidence`로 표시한다.
+Deep Research의 `Agent에게 변화 묻기`는 frontend가 `collectionId`와 strict 정수 `collectionRevision`만 전달하는 명시적 Companion action이다. 서버는 저장된 Collection을 다시 조회하고 revision을 검사한 뒤, 한 번의 read-only resolve로 현재/이전 스냅샷 metadata, change counts/reason, 현재 외부 evidence 카드 최대 12개를 구성한다. Collection 정의는 ID/revision/definition hash만 포함한 `saved_filter_metadata_not_evidence`, 외부 카드는 `external_evidence_untrusted`로 표시한다. 카드의 title/source/url/snippet은 인용 데이터일 뿐 prompt 지시가 아니며 별도 untrusted delimiter 안에 둔다. 사용자 note/context, frontend가 보낸 match/evidence body, 보고서, Agent 응답은 이 projection에 들어가지 않는다.
+
+Collection change-summary 응답은 conversational/non-mutating이다. workspace open과 Collection refresh는 Agent job을 만들지 않으며, Agent 조회도 스냅샷을 append하지 않는다. Work Log에는 기존 SharedJob의 task/status/timing/engine/artifact metadata만 남고 질문·context·evidence·reply는 복사되지 않는다.
+
+### 개인 투자 맥락 위험 설명
+
+Home·Market Memory·Smart Collection·Deep Research의 개인 맥락 카드에서 사용자가 `Agent로 위험 설명`을 직접 눌렀을 때만 `POST /api/agent/investment-context/explain`이 실행된다. 요청은 선택 ticker 최대 5개만 받으며, 서버가 저장된 context를 다시 조회해 포트폴리오/워치리스트 연결 metadata, Market Memory driver, thesis verdict, checkpoint, 연결 보고서와 외부 evidence 참조를 bounded pack으로 만든다. 수량·비중·note body는 pack에 포함하지 않는다.
+
+Agent 출력은 해석·도전 근거·불확실성·모니터링 질문·한계의 strict JSON 계약을 통과해야 한다. 매수/매도/보유, 목표주가, position size, 진입·청산·주문 지침이 감지되거나 출력 계약이 깨지면 결과를 렌더링하지 않고 추천 없는 규칙 설명으로 안전하게 전환한다. 이 작업은 기존 `agent_bridge` SharedJob을 사용하며, Work Log에는 selected ticker, prompt, evidence, reply가 아니라 실행 상태·engine·fallback reason 같은 metadata만 남는다.
 
 ## Agent Chat (실연결) + Task Mode Writeback
 
@@ -200,6 +208,18 @@ features/agent_mode/schema.py   # context pack schema, secret scrubber, generati
 features/agent_mode/service.py  # prepare/writeback handlers
 features/agent_mode/cli.py      # Phase 1 chat command entrypoint
 features/agent_mode/bridge.py   # Phase 2 Direct Agent Bridge adapters/subprocess
+features/agent_mode/collection_context.py # bounded Collection change-summary context
 features/agent_mode/setup.py    # CLI 설치/로그인/제공자·모델 설정
 features/agent_mode/generation_mode.py # rules/llm_api/llm_cli normalization
 ```
+
+## Stage 0.2.3 Investment Context 통합
+
+`GET /api/investment-context/summary`와 `GET /api/investment-context/{ticker}`가
+Home, Market Memory, Smart Collection, Deep Research에 동일한 read-only projection을
+제공한다. 카드 표시·새로고침·checkpoint 조회만으로 Agent job을 만들지 않으며,
+`Agent로 위험 설명` 버튼만 명시적 실행 경계다.
+
+Agent는 선택 ticker를 서버 저장소에서 다시 조회하고 추천 없는 controlled 설명만
+반환한다. 결과는 저장 보고서, 포트폴리오, 워치리스트, checkpoint를 자동 변경하지
+않으며 Work Log에도 ticker, context, prompt, reply를 남기지 않는다.

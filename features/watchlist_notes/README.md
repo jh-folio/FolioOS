@@ -7,6 +7,7 @@
 - 관심 기업/섹터 목록 저장
 - 워치리스트 기반 관련 뉴스 표시 및 태그 집계
 - 워치리스트 항목 상세 모달(TradingView 차트/심볼 정보 + 수집 뉴스)
+- 관심 ticker의 body-free checkpoint projection
 - 투자 메모 추가
 - 최근 메모 표시
 
@@ -22,6 +23,17 @@ data/notes/notes.json
 `watchlist_overview()`는 워치리스트 항목별 관련 기사를 검색해 태그를 집계합니다. 탭의 카드에는 요약만 표시하고, 사용자가 항목을 클릭하면 `watchlist_detail()` 결과를 팝업으로 열어 회사 정보, TradingView 위젯, 수집 뉴스를 함께 보여줍니다. 태그 노이즈를 줄이기 위해 여러 단계의 필터를 적용합니다.
 
 관심 종목 관리는 카드 한 곳에서 한다. 키워드를 추가하면 즉시 저장되고 카드가 나타나며, 삭제는 카드 우상단의 삭제 버튼으로 한다(별도 키워드 칩 목록은 두지 않는다). 카드 좌측 강조색과 밝은 표면은 브리핑 목록 카드와 같은 시각 규격을 공유한다.
+
+## Investment Context와 checkpoint (0.2.3)
+
+`watchlist_checkpoint_context()`는 워치리스트 ticker에 연결된 native
+`noteType=checkpoint`만 읽어 최대 개수와 상태를 제한한 projection을 반환한다.
+본문·원문 생각·수량·가격은 반환하지 않으며 `reuseAsEvidence=false`를 유지한다.
+projection 조회는 `watchlist.json`을 다시 쓰지 않는다.
+
+포트폴리오에도 같은 ticker가 있으면 공통 Investment Context의 source는 `both`가 된다.
+이 연결은 저장 항목의 존재만 나타내며 보유량, 비중, 매수/매도 판단을 뜻하지 않는다.
+화면의 checkpoint 생성·확인은 native investment note 저장소에만 반영한다.
 
 ### 검색 관련성 필터 (Fix 5)
 `search_documents()`로 `limit * 4`개의 후보를 뽑은 뒤, `companies` 필드에 해당 기업이 실제 등장하는 문서만 사용합니다. 예를 들어 "Visa Inc." 검색 시 일반 명사 "visa"가 등장하는 비자 정책 기사는 제외됩니다. 인덱스에 해당 기업이 전혀 없으면 원래 검색 결과를 그대로 사용합니다.
@@ -40,7 +52,8 @@ data/notes/notes.json
 
 ## 관련 코드
 
-- `features/watchlist_notes/service.py`: `watchlist_overview()`, `watchlist_detail()`, `_item_matches_company()`, `normalize_watchlist_keyword()`
+- `features/watchlist_notes/service.py`: `watchlist_overview()`, `watchlist_detail()`, `watchlist_checkpoint_context()`, `_item_matches_company()`, `normalize_watchlist_keyword()`
+- `features/investment_notes/checkpoints.py`: controlled checkpoint normalization/projection
 - `app.py`: 워치리스트/메모 API 엔드포인트
 - `public/app.js`: `loadWatchlistNews()`, `openWatchlistDetail()`, `renderWatchlistDetailNews()`, `renderNotes()`
 - `public/index.html`: `watchlist`, `notes` 탭

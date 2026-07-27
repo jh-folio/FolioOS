@@ -16,6 +16,7 @@ from features.smart_collections.schema import (
     DeleteCollectionRequest,
     ListQuery,
     PreviewRequest,
+    RefreshRequest,
     ResolveRequest,
     UpdateCollectionRequest,
 )
@@ -24,6 +25,7 @@ from features.smart_collections.service import (
     CollectionNotFoundError,
     CollectionServiceError,
     CollectionStoreUnavailableError,
+    SnapshotStoreUnavailableError,
     SmartCollectionRuntime,
     SmartCollectionService,
 )
@@ -33,12 +35,14 @@ CollectionFailure = (
     ValidationError
     | CollectionServiceError
     | CollectionStoreUnavailableError
+    | SnapshotStoreUnavailableError
     | CollectionSourceUnavailableError
 )
 COLLECTION_FAILURES = (
     ValidationError,
     CollectionServiceError,
     CollectionStoreUnavailableError,
+    SnapshotStoreUnavailableError,
     CollectionSourceUnavailableError,
 )
 CANONICAL_QUERY_INTEGER = re.compile(r"(?:0|[1-9][0-9]*)\Z")
@@ -75,6 +79,8 @@ def failure_response(error: CollectionFailure) -> JSONResponse:
             )
         case CollectionStoreUnavailableError():
             return response(503, {"error": "collection_store_unavailable"})
+        case SnapshotStoreUnavailableError():
+            return response(503, {"error": "collection_snapshot_unavailable"})
         case CollectionSourceUnavailableError():
             return response(503, {"error": "collection_source_unavailable"})
         case CollectionServiceError(code=code):
@@ -133,7 +139,12 @@ class SmartCollectionBoundary:
     def delete(self, collection_id: str, body: dict[str, JsonValue] = Body(...)) -> JSONResponse:
         try:
             payload = self.service.delete(collection_id, DeleteCollectionRequest.model_validate(body))
-        except (ValidationError, CollectionServiceError, CollectionStoreUnavailableError) as error:
+        except (
+            ValidationError,
+            CollectionServiceError,
+            CollectionStoreUnavailableError,
+            SnapshotStoreUnavailableError,
+        ) as error:
             return failure_response(error)
         return response(200, payload)
 
@@ -151,6 +162,30 @@ class SmartCollectionBoundary:
             return failure_response(error)
         return response(200, payload)
 
+    def workspace(self, collection_id: str) -> JSONResponse:
+        try:
+            payload = self.service.workspace(collection_id)
+        except COLLECTION_FAILURES as error:
+            return failure_response(error)
+        return response(200, payload)
+
+    def changes(self, collection_id: str) -> JSONResponse:
+        try:
+            payload = self.service.changes(collection_id)
+        except COLLECTION_FAILURES as error:
+            return failure_response(error)
+        return response(200, payload)
+
+    def refresh(self, collection_id: str, body: dict[str, JsonValue] = Body(...)) -> JSONResponse:
+        try:
+            payload = self.service.refresh(
+                collection_id,
+                RefreshRequest.model_validate(body),
+            )
+        except COLLECTION_FAILURES as error:
+            return failure_response(error)
+        return response(200, payload)
+
     def router(self) -> APIRouter:
         router = APIRouter(prefix="/api/smart-collections", tags=["smart-collections"])
         router.add_api_route("", self.list, methods=["GET"])
@@ -160,6 +195,9 @@ class SmartCollectionBoundary:
         router.add_api_route("/{collection_id}", self.delete, methods=["DELETE"])
         router.add_api_route("/{collection_id}/preview", self.preview, methods=["POST"])
         router.add_api_route("/{collection_id}/resolve", self.resolve, methods=["POST"])
+        router.add_api_route("/{collection_id}/workspace", self.workspace, methods=["GET"])
+        router.add_api_route("/{collection_id}/refresh", self.refresh, methods=["POST"])
+        router.add_api_route("/{collection_id}/changes", self.changes, methods=["GET"])
         return router
 
 

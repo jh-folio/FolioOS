@@ -4,7 +4,7 @@
 
 [English README](README.md)
 
-Folio OS 0.2는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 일일 브리핑, 시장 맥락, 기업 분석, 근거 추적이 가능한 Deep Research로 정리해 주는 로컬 투자 리서치 도구입니다.
+Folio OS 0.2.4는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 일일 브리핑, 시장 맥락, 기업 분석, 근거 추적이 가능한 Deep Research로 정리해 주는 로컬 투자 리서치 도구입니다.
 
 자료와 생성된 보고서는 기본적으로 내 컴퓨터에 저장됩니다. LLM/API 연동은 선택 사항이며, 사용자가 설정한 경우에만 사용됩니다.
 
@@ -22,14 +22,16 @@ Folio OS 0.2는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 
 
 ---
 
-## 0.2에서 할 수 있는 일
+## 0.2.4에서 할 수 있는 일
 
 - Home 화면에서 Folio OS AI Agent와 대화하기
 - 공개 RSS/뉴스 피드 수집 및 검색
 - 미국/한국 시장 일일 브리핑 생성
 - 중기 시장 상황을 요약한 Market Memory 확인
 - 로컬 자료와 공식 데이터를 활용한 기업 분석 보고서 생성
-- 투자 질문부터 시작해 계획을 승인하고, Smart Collection을 재사용하며, 근거·자료 공백·품질·Market State를 분리해 확인하는 Deep Research
+- 투자 질문부터 시작해 계획을 승인하고, Smart Collection의 결정적 상태와 제한된 변화 내역을 확인하며, 근거·자료 공백·품질·Market State를 분리해 보는 Deep Research
+- 보고서 옆 생각을 hypothesis로 저장하고, Agent 없이 노트/thesis freshness·반대 근거·체크포인트를 검토
+- 기존 리서치 화면에서 수량·가격·비중·노트 본문을 제외한 읽기 전용 Portfolio/Watchlist Investment Context 확인
 - 메타데이터 전용 Agent Work Log 확인과 보고서 수정 제안의 명시적 승인/거절
 - 보고서 옆 Folio Note 작성
 - 생성된 보고서를 Obsidian 또는 Notion으로 내보내기
@@ -37,9 +39,8 @@ Folio OS 0.2는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 
 
 0.2 사용자 화면에서 제외하거나 뒤로 미룬 기능:
 
-- 대시보드 위젯과 워치리스트 워크플로
-- 고급 포트폴리오 워크플로
-- 고급 개인 노트 분석 워크플로
+- 독립 Dashboard와 Watchlist 워크플로
+- 고급 포트폴리오 관리와 독립 노트 관리 워크플로
 - 다크 모드와 설치 프로그램/트레이 앱 수준의 마감 작업
 
 ---
@@ -129,13 +130,19 @@ Home은 AI Agent의 기본 진입점입니다. 현재 워크스페이스 요약,
 
 ### Deep Research
 
-투자 질문을 입력하면 실행 전에 리서치 계획과 현재 자료 미리보기를 확인하고 승인합니다. Smart Collection은 `data/smart-collections.json`에 저장되는 재사용 가능한 로컬 필터이며 그 자체는 근거가 아닙니다. 보고서는 `data/topic-reports/`에 저장되고 승인 계획, 실행 시 해석된 외부 근거, 실행 provenance, 자료 공백, 품질, 별도 Market State 참조를 기록합니다. 사용자 맥락과 보고서 옆 노트는 hypothesis이며 인용이나 evidence count로 승격되지 않습니다.
+투자 질문을 입력하면 실행 전에 리서치 계획과 현재 자료 미리보기를 확인하고 승인합니다. Smart Collection은 `data/smart-collections.json`에 저장되는 재사용 가능한 로컬 필터이며 그 자체는 근거가 아닙니다. Deep Research 안의 상세 워크스페이스에서 결정적인 health/reason 배지, 제한된 snapshot 변화, 현재 해석된 외부 근거를 확인할 수 있습니다. 상세 화면을 열거나 자료를 새로고쳐도 Agent가 자동 실행되지 않습니다. 보고서는 `data/topic-reports/`에 저장되고 승인 계획, 실행 시 해석된 외부 근거, 실행 provenance, 자료 공백, 품질, 별도 Market State 참조를 기록합니다. 사용자 맥락과 보고서 옆 노트는 hypothesis이며 인용이나 evidence count로 승격되지 않습니다.
 
 Direct API와 선택한 CLI는 같은 승인 요청을 사용합니다. 엔진을 사용할 수 없으면 규칙 기반 보고서로 fallback할 수 있고 그 사실을 기록합니다. 쓸 수 있는 외부 근거가 없으면 사용자의 명시적 확인 뒤에만 근거 부족 보고서를 만듭니다. 기존 Canonical Markdown은 수정 제안을 명시적으로 승인한 경우에만 바뀝니다.
 
 ### Agent Work Log
 
 Home과 Deep Research는 제한된 메타데이터 전용 Work Log를 공유합니다. 작업 종류·상태·시간·엔진/fallback·artifact 수·proposal 상태만 저장하고 prompt, 채팅 전문, 보고서 Markdown, diff, 첨부, 로컬 경로, 자격 증명, provider 원문 출력은 저장하지 않습니다.
+
+### 리서치 인텔리전스 경계
+
+Briefing, Company Analysis, Deep Research는 API Key나 CLI 없이도 규칙으로 계산한 노트/thesis freshness, 충돌, 불확실성, 반대 근거, 체크포인트를 보여줄 수 있습니다. Home, Market Memory, Smart Collection, Deep Research에는 로컬 Portfolio/Watchlist의 ticker 연결에서 만든 제한된 Investment Context도 표시됩니다. 이런 자동 표시는 읽기 전용 메타데이터이며 Canonical 보고서를 바꾸지 않습니다.
+
+Agent 종합은 `최신 근거로 검토`, `Agent에게 변화 묻기`, `Agent로 위험 설명`처럼 사용자가 명시적으로 실행한 경우에만 시작됩니다. Portfolio와 Watchlist의 독립 최상위 route는 0.2.4 기본 navigation에서 계속 숨겨져 있습니다. 제한된 맥락 표시는 Portfolio/Watchlist 제품 재출시나 투자 권고를 뜻하지 않습니다.
 
 ### Settings
 

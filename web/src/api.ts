@@ -11,6 +11,144 @@ export type JobStatus =
   | "failed_restart"
   | "failed_commit_recovery";
 
+export type HypothesisFreshness = "fresh" | "due" | "stale" | "unknown";
+export type HypothesisCheckpointState = "open" | "due" | "checked" | "invalidated";
+export type HypothesisCheckpoint = {
+  readonly id: string;
+  readonly label: string;
+  readonly state: HypothesisCheckpointState;
+  readonly dueAt: string | null;
+  readonly checkedAt: string | null;
+  readonly reasonCode: string;
+  readonly evidenceRefs: readonly {
+    readonly evidenceId: string;
+    readonly source: string;
+    readonly title: string;
+  }[];
+};
+export type HypothesisReviewState = {
+  readonly ticker: string;
+  readonly lastReviewedAt: string | null;
+  readonly nextReviewAt: string | null;
+  readonly latestDeltaId: string | null;
+  readonly freshness: HypothesisFreshness;
+  readonly checkpoints: readonly HypothesisCheckpoint[];
+  readonly revision: number;
+  readonly updatedAt: string | null;
+};
+export type HypothesisIntelligencePayload = {
+  readonly note: {
+    readonly id: string;
+    readonly ticker: string;
+    readonly title: string;
+    readonly linkedReports: readonly string[];
+  } | null;
+  readonly thesis: {
+    readonly ticker: string;
+    readonly company: string;
+    readonly status: string;
+    readonly reviewCycle: string;
+    readonly conviction: string;
+  } | null;
+  readonly latestDelta: {
+    readonly deltaId: string;
+    readonly verdict: string;
+    readonly generatedAt: string;
+    readonly counterEvidenceCount: number;
+    readonly contradictionCount: number;
+    readonly uncertaintyCount: number;
+  } | null;
+  readonly reviewState: HypothesisReviewState;
+  readonly checkpointCounts: Readonly<Record<HypothesisCheckpointState, number>>;
+  readonly marketStateRef: Readonly<Record<string, unknown>>;
+  readonly reasonCodes: readonly string[];
+  readonly observedAt: string;
+  readonly layer: "hypothesis";
+  readonly reuseAsEvidence: false;
+};
+export type UpdateHypothesisCheckpointRequest = {
+  readonly noteId: string;
+  readonly checkpointId: string;
+  readonly state: HypothesisCheckpointState;
+  readonly expectedRevision: number;
+};
+
+export type InvestmentMarketDriver = {
+  readonly stateId: string;
+  readonly label: string;
+  readonly momentum: "strengthening" | "stable" | "fading" | "turning" | "conflicted" | "unknown";
+};
+
+export type InvestmentDueCheckpoint = {
+  readonly id: string;
+  readonly label: string;
+  readonly dueAt: string | null;
+};
+
+export type InvestmentCollectionLink = {
+  readonly id: string;
+  readonly name: string;
+  readonly revision: number;
+  readonly health: "active" | "stale" | "empty" | "noisy" | "unknown" | "unavailable";
+  readonly matchSources: readonly ("saved_filter" | "external_result")[];
+};
+
+export type InvestmentTickerContext = {
+  readonly ticker: string;
+  readonly source: "portfolio" | "watchlist" | "both";
+  readonly stance: "positive" | "watch" | "negative" | "neutral" | "unknown";
+  readonly observedAt: string | null;
+  readonly reasonCodes: readonly string[];
+  readonly marketDrivers: readonly InvestmentMarketDriver[];
+  readonly latestThesisVerdict: string;
+  readonly dueCheckpoints: readonly InvestmentDueCheckpoint[];
+  readonly linkedReports: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly reportType: "briefing" | "analysis" | "topic" | "unknown";
+  }[];
+  readonly collections: readonly InvestmentCollectionLink[];
+};
+
+export type InvestmentContextSummary = {
+  readonly observedAt: string;
+  readonly counts: {
+    readonly total: number;
+    readonly portfolio: number;
+    readonly watchlist: number;
+    readonly both: number;
+    readonly positive: number;
+    readonly watch: number;
+    readonly negative: number;
+    readonly neutral: number;
+    readonly unknown: number;
+  };
+  readonly watchContexts: readonly InvestmentTickerContext[];
+};
+
+export type InvestmentContextExplanationJob = {
+  readonly id: string;
+  readonly status: JobStatus;
+  readonly message?: string;
+  readonly error?: string;
+  readonly result?: {
+    readonly reply?: string | null;
+    readonly noticeCode?: string | null;
+  } | null;
+};
+
+export type ThesisReviewJob = {
+  readonly id: string;
+  readonly status: JobStatus;
+  readonly message?: string;
+  readonly error?: string;
+};
+export type ThesisReviewResult = ThesisReviewJob | {
+  readonly ok: boolean;
+  readonly status: string;
+  readonly delta?: Readonly<Record<string, unknown>>;
+};
+
 export const MARKET_STATE_POLICIES = ["exclude", "include_current"] as const;
 export type MarketStatePolicy = (typeof MARKET_STATE_POLICIES)[number];
 
@@ -91,6 +229,88 @@ export type SmartCollectionPreview = {
 export type UpdateSmartCollectionRequest = SmartCollectionFields & { readonly expectedRevision: number };
 export type DeleteSmartCollectionRequest = { readonly expectedRevision: number };
 export type PreviewSmartCollectionRequest = { readonly expectedRevision: number; readonly limit: number };
+export type RefreshSmartCollectionRequest = { readonly expectedRevision: number };
+
+export type SmartCollectionHealth = "active" | "stale" | "empty" | "noisy";
+
+export type SmartCollectionProviderGenerations = {
+  readonly index: string | null;
+  readonly rss: string | null;
+};
+
+export type SmartCollectionLatestPreview = {
+  readonly resolvedAt: string;
+  readonly providerGenerations: SmartCollectionProviderGenerations;
+  readonly inputWatermark: string | null;
+  readonly eligibleCount: number;
+  readonly resolvedCount: number;
+  readonly executionCount: number;
+  readonly unusableCount: number;
+  readonly truncated: boolean;
+};
+
+export type SmartCollectionChangeCounts = {
+  readonly added: number;
+  readonly removed: number;
+  readonly unchanged: number;
+};
+
+export type SmartCollectionWorkspaceEnvelope = {
+  readonly collection: SmartCollection;
+  readonly latestPreview: SmartCollectionLatestPreview | null;
+  readonly health: SmartCollectionHealth;
+  readonly healthReasonCodes: readonly string[];
+  readonly lastRefresh: string | null;
+  readonly changeCounts: SmartCollectionChangeCounts;
+  readonly recentEvidence: readonly SmartCollectionPreviewItem[];
+  readonly current: {
+    readonly observedAt: string;
+    readonly eligibleCount: number;
+    readonly resolvedCount: number;
+    readonly unusableCount: number;
+    readonly truncated: boolean;
+  };
+};
+
+export type SmartCollectionChangesEnvelope = {
+  readonly collectionId: string;
+  readonly revision: number;
+  readonly observedAt: string;
+  readonly health: SmartCollectionHealth;
+  readonly reasonCodes: readonly string[];
+  readonly counts: SmartCollectionChangeCounts & { readonly unusable: number };
+  readonly addedItems: readonly SmartCollectionPreviewItem[];
+  readonly removedIds: readonly string[];
+  readonly unchangedIds: readonly string[];
+  readonly truncated: boolean;
+};
+
+export type SmartCollectionChangeProjection = {
+  readonly collectionId: string;
+  readonly revision: number;
+  readonly observedAt: string;
+  readonly health: SmartCollectionHealth;
+  readonly addedIds: readonly string[];
+  readonly removedIds: readonly string[];
+  readonly unchangedIds: readonly string[];
+  readonly addedCount: number;
+  readonly removedCount: number;
+  readonly unchangedCount: number;
+  readonly eligibleCount: number;
+  readonly resolvedCount: number;
+  readonly unusableCount: number;
+  readonly truncated: boolean;
+  readonly reasonCodes: readonly string[];
+};
+
+export type SmartCollectionRefreshEnvelope = {
+  readonly collectionId: string;
+  readonly revision: number;
+  readonly refreshedAt: string;
+  readonly latestPreview: SmartCollectionLatestPreview;
+  readonly change: SmartCollectionChangeProjection;
+  readonly recentEvidence: readonly SmartCollectionPreviewItem[];
+};
 
 export type PlanRequest = {
   readonly question: string;
@@ -428,6 +648,39 @@ export async function postJson<T>(path: string, body: unknown, options: JsonRequ
     body: JSON.stringify(body),
     signal: options.signal,
   });
+}
+
+export async function getHypothesisIntelligence(
+  noteId: string,
+  options: JsonRequestOptions = {},
+): Promise<HypothesisIntelligencePayload> {
+  return getJson<HypothesisIntelligencePayload>(
+    `/api/investment-notes/${encodeURIComponent(noteId)}/intelligence`,
+    options,
+  );
+}
+
+export async function updateHypothesisCheckpoint(
+  ticker: string,
+  body: UpdateHypothesisCheckpointRequest,
+  options: JsonRequestOptions = {},
+): Promise<HypothesisIntelligencePayload> {
+  return postJson<HypothesisIntelligencePayload>(
+    `/api/theses/${encodeURIComponent(ticker)}/review/checkpoints`,
+    body,
+    options,
+  );
+}
+
+export async function runThesisReview(
+  ticker: string,
+  options: JsonRequestOptions = {},
+): Promise<ThesisReviewResult> {
+  return postJson<ThesisReviewResult>(
+    `/api/theses/${encodeURIComponent(ticker)}/delta`,
+    { period: "90d" },
+    options,
+  );
 }
 
 export async function putJson<T>(path: string, body: unknown, options: JsonRequestOptions = {}): Promise<T> {

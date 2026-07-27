@@ -13,6 +13,7 @@ from features.smart_collections.schema import (
     CreateCollectionRequest,
     DeleteCollectionRequest,
     PreviewRequest,
+    RefreshRequest,
     ResolveRequest,
     UpdateCollectionRequest,
 )
@@ -22,6 +23,12 @@ from features.smart_collections.store import (
     CollectionStoreUnavailableError,
     StoreState,
 )
+from features.smart_collections.snapshot_store import (
+    SnapshotStore,
+    SnapshotStoreUnavailableError,
+    resolution_snapshot,
+)
+from features.smart_collections.change_detection import calculate_change
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,10 +76,77 @@ def definition_hash(collection: CollectionFields) -> str:
     return sha256_hex(definition_snapshot(collection))
 
 
+def project_ticker_collection_links(
+    collections,
+    *,
+    external_results=(),
+    health_by_collection=None,
+) -> dict[str, list[dict[str, JsonValue]]]:
+    """Project read-only Collection metadata by normalized ticker.
+
+    Saved ticker filters and externally supplied result ticker identities are
+    separate match signals. This helper never resolves or rewrites a Collection.
+    """
+    from features.investment_review.context_links import normalize_research_ticker
+
+    health_by_collection = health_by_collection or {}
+    definitions: dict[str, dict] = {}
+    matches: dict[tuple[str, str], set[str]] = {}
+    for raw in collections or ():
+        if not isinstance(raw, dict):
+            continue
+        collection_id = str(raw.get("id") or "").strip()
+        name = str(raw.get("name") or "").strip()
+        revision = raw.get("revision")
+        if not collection_id or not name or not isinstance(revision, int) or revision < 1:
+            continue
+        definitions[collection_id] = raw
+        for value in raw.get("tickers") or ():
+            ticker = normalize_research_ticker(value)
+            if ticker:
+                matches.setdefault((ticker, collection_id), set()).add("saved_filter")
+
+    for raw in external_results or ():
+        if not isinstance(raw, dict):
+            continue
+        collection_id = str(raw.get("collectionId") or "").strip()
+        if collection_id not in definitions or not str(raw.get("evidenceId") or "").strip():
+            continue
+        for value in raw.get("tickers") or ():
+            ticker = normalize_research_ticker(value)
+            if ticker:
+                matches.setdefault((ticker, collection_id), set()).add("external_result")
+
+    allowed_health = {"active", "stale", "empty", "noisy", "unknown", "unavailable"}
+    output: dict[str, list[dict[str, JsonValue]]] = {}
+    for (ticker, collection_id), sources in matches.items():
+        definition = definitions[collection_id]
+        health = str(health_by_collection.get(collection_id) or "unknown").lower()
+        if health not in allowed_health:
+            health = "unknown"
+        output.setdefault(ticker, []).append(
+            {
+                "id": collection_id,
+                "name": str(definition["name"])[:80],
+                "revision": int(definition["revision"]),
+                "health": health,
+                "matchSources": [
+                    source
+                    for source in ("saved_filter", "external_result")
+                    if source in sources
+                ],
+            }
+        )
+    for links in output.values():
+        links.sort(key=lambda link: (str(link["name"]).casefold(), str(link["id"])))
+    return dict(sorted(output.items()))
+
+
 class SmartCollectionService:
     def __init__(self, runtime: SmartCollectionRuntime) -> None:
         self.runtime = runtime
         self.store = CollectionStore(runtime.dataDir / "smart-collections.json")
+        self.snapshots = SnapshotStore(runtime.dataDir / "smart-collection-state")
 
     def _find(self, state: StoreState, collection_id: str) -> Collection:
         collection = next((item for item in state.collections if item.id == collection_id), None)
@@ -188,6 +262,7 @@ class SmartCollectionService:
                     tuple(item for item in state.collections if item.id != collection_id),
                 )
             )
+            self.snapshots.delete(collection_id)
             return {"storeRevision": written.storeRevision, "deletedId": collection_id}
 
     def preview(self, collection_id: str, request: PreviewRequest) -> dict[str, JsonValue]:
@@ -196,9 +271,14 @@ class SmartCollectionService:
         state = self.store.load()
         collection = self._find(state, collection_id)
         self._check_revision(state, collection, request.expectedRevision)
-        return resolve_collection(
-            ResolutionRequest(self.runtime.dataDir, collection, request.limit, False, self.runtime.clock)
+        resolved = resolve_collection(
+            ResolutionRequest(self.runtime.dataDir, collection, request.limit, True, self.runtime.clock)
         )
+        self.snapshots.append(resolved, definition_hash=definition_hash(collection))
+        return {
+            key: resolved[key]
+            for key in ("collectionId", "revision", "total", "limit", "items")
+        }
 
     def resolve(self, collection_id: str, request: ResolveRequest) -> dict[str, JsonValue]:
         from features.smart_collections.resolution import ResolutionRequest, resolve_collection
@@ -206,17 +286,176 @@ class SmartCollectionService:
         state = self.store.load()
         collection = self._find(state, collection_id)
         self._check_revision(state, collection, request.expectedRevision)
-        return resolve_collection(
+        resolved = resolve_collection(
             ResolutionRequest(self.runtime.dataDir, collection, request.limit, True, self.runtime.clock)
         )
+        self.snapshots.append(resolved, definition_hash=definition_hash(collection))
+        return resolved
+
+    def _current_resolution(
+        self,
+        collection: Collection,
+        *,
+        limit: int = 120,
+    ) -> dict[str, JsonValue]:
+        from features.smart_collections.resolution import ResolutionRequest, resolve_collection
+
+        return resolve_collection(
+            ResolutionRequest(self.runtime.dataDir, collection, limit, True, self.runtime.clock)
+        )
+
+    def _change_projection(
+        self,
+        collection: Collection,
+        resolved: dict[str, JsonValue],
+        previous,
+    ):
+        current = resolution_snapshot(resolved, definition_hash=definition_hash(collection))
+        return current, calculate_change(current, previous, now=self.runtime.clock())
+
+    @staticmethod
+    def _latest_preview(snapshot) -> dict[str, JsonValue] | None:
+        if snapshot is None:
+            return None
+        return {
+            "resolvedAt": snapshot.resolvedAt,
+            "providerGenerations": snapshot.providerGenerations.model_dump(mode="json"),
+            "inputWatermark": snapshot.inputWatermark,
+            "eligibleCount": snapshot.eligibleCount,
+            "resolvedCount": snapshot.resolvedCount,
+            "executionCount": snapshot.executionCount,
+            "unusableCount": snapshot.unusableCount,
+            "truncated": snapshot.truncated,
+        }
+
+    def _workspace_payload(
+        self,
+        collection: Collection,
+        resolved: dict[str, JsonValue],
+        previous,
+    ) -> dict[str, JsonValue]:
+        _, change = self._change_projection(collection, resolved, previous)
+        change_payload = change.model_dump(mode="json")
+        items = resolved.get("items")
+        recent = items[:20] if isinstance(items, list) else []
+        return {
+            "collection": collection.model_dump(mode="json"),
+            "latestPreview": self._latest_preview(previous),
+            "health": change.health.value,
+            "healthReasonCodes": list(change.reasonCodes),
+            "lastRefresh": previous.resolvedAt if previous is not None else None,
+            "changeCounts": {
+                "added": change.addedCount,
+                "removed": change.removedCount,
+                "unchanged": change.unchangedCount,
+            },
+            "recentEvidence": recent,
+            "current": {
+                "observedAt": change.observedAt,
+                "eligibleCount": change.eligibleCount,
+                "resolvedCount": change.resolvedCount,
+                "unusableCount": change.unusableCount,
+                "truncated": change.truncated,
+            },
+        }
+
+    def workspace(self, collection_id: str) -> dict[str, JsonValue]:
+        state = self.store.load()
+        collection = self._find(state, collection_id)
+        history = self.snapshots.load(collection_id)
+        previous = history.history[-1] if history is not None and history.history else None
+        resolved = self._current_resolution(collection)
+        return self._workspace_payload(collection, resolved, previous)
+
+    def changes(self, collection_id: str) -> dict[str, JsonValue]:
+        state = self.store.load()
+        collection = self._find(state, collection_id)
+        history = self.snapshots.load(collection_id)
+        previous = history.history[-1] if history is not None and history.history else None
+        resolved = self._current_resolution(collection)
+        _, change = self._change_projection(collection, resolved, previous)
+        items = resolved.get("items")
+        current_items = items if isinstance(items, list) else []
+        added = set(change.addedIds)
+        return {
+            "collectionId": collection.id,
+            "revision": collection.revision,
+            "observedAt": change.observedAt,
+            "health": change.health.value,
+            "reasonCodes": list(change.reasonCodes),
+            "counts": {
+                "added": change.addedCount,
+                "removed": change.removedCount,
+                "unchanged": change.unchangedCount,
+                "unusable": change.unusableCount,
+            },
+            "addedItems": [
+                item
+                for item in current_items
+                if isinstance(item, dict) and item.get("id") in added
+            ][:120],
+            "removedIds": list(change.removedIds),
+            "unchangedIds": list(change.unchangedIds),
+            "truncated": change.truncated,
+        }
+
+    def read_change_summary(
+        self,
+        collection_id: str,
+        expected_revision: int,
+    ) -> dict[str, JsonValue]:
+        """Read one consistent change comparison without persisting a snapshot."""
+        state = self.store.load()
+        collection = self._find(state, collection_id)
+        self._check_revision(state, collection, expected_revision)
+        history = self.snapshots.load(collection_id)
+        previous = history.history[-1] if history is not None and history.history else None
+        resolved = self._current_resolution(collection)
+        current, change = self._change_projection(collection, resolved, previous)
+        items = resolved.get("items")
+        return {
+            "collectionId": collection.id,
+            "revision": collection.revision,
+            "definitionHash": definition_hash(collection),
+            "currentSnapshot": current.model_dump(mode="json"),
+            "previousSnapshot": previous.model_dump(mode="json") if previous is not None else None,
+            "change": change.model_dump(mode="json"),
+            "items": items if isinstance(items, list) else [],
+        }
+
+    def refresh(
+        self,
+        collection_id: str,
+        request: RefreshRequest,
+    ) -> dict[str, JsonValue]:
+        state = self.store.load()
+        collection = self._find(state, collection_id)
+        self._check_revision(state, collection, request.expectedRevision)
+        history = self.snapshots.load(collection_id)
+        previous = history.history[-1] if history is not None and history.history else None
+        resolved = self._current_resolution(collection)
+        current, change = self._change_projection(collection, resolved, previous)
+        self.snapshots.append(resolved, definition_hash=definition_hash(collection))
+        items = resolved.get("items")
+        recent = items[:20] if isinstance(items, list) else []
+        return {
+            "collectionId": collection.id,
+            "revision": collection.revision,
+            "refreshedAt": current.resolvedAt,
+            "latestPreview": self._latest_preview(current),
+            "change": change.model_dump(mode="json"),
+            "recentEvidence": recent,
+        }
 
 
 __all__ = [
     "CollectionConflictError",
     "CollectionNotFoundError",
     "CollectionStoreUnavailableError",
+    "SnapshotStoreUnavailableError",
     "SmartCollectionRuntime",
     "SmartCollectionService",
     "definition_hash",
+    "project_ticker_collection_links",
     "definition_snapshot",
 ]

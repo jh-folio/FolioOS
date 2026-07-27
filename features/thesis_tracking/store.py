@@ -34,7 +34,7 @@ def connect(db_path=None) -> sqlite3.Connection:
     return conn
 
 
-def init_db(conn: sqlite3.Connection) -> None:
+def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS thesis (
@@ -83,7 +83,15 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_thesis_delta_ticker_time ON thesis_delta(ticker, generated_at DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_thesis_delta_verdict ON thesis_delta(verdict)")
     ensure_receipt_table(conn)
+    from features.thesis_tracking.review_state import ensure_schema as ensure_review_state_schema
+
+    ensure_review_state_schema(conn)
     conn.commit()
+
+
+def init_db(conn: sqlite3.Connection) -> None:
+    """Backward-compatible schema entrypoint."""
+    ensure_schema(conn)
 
 
 _LIST_COLS = {

@@ -3,11 +3,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 const routeUrl = new URL("../src/app/DeepResearchRoute.tsx", import.meta.url);
+const payloadUrl = new URL("../src/app/deepResearchPayload.ts", import.meta.url);
 const shellUrl = new URL("../src/app/reportReader/ReportReaderShell.tsx", import.meta.url);
 const cssUrl = new URL("../../public/styles.css", import.meta.url);
 
 test("saved Deep Research reader exposes every provenance and RP-H1 state selector", async () => {
   const source = await readFile(routeUrl, "utf8");
+  const payloadSource = await readFile(payloadUrl, "utf8");
   for (const selector of [
     "dr-approved-plan", "dr-evidence-coverage", "dr-source-ledger", "dr-data-gaps",
     "dr-quality", "dr-collection-resolution", "dr-market-state-context",
@@ -16,7 +18,7 @@ test("saved Deep Research reader exposes every provenance and RP-H1 state select
     "dr-report-list-empty",
   ]) assert.match(source, new RegExp("[\"']" + selector + "[\"']"), selector);
   assert.match(source, /parseTopicReportPayload/);
-  assert.match(source, /try\s*\{[\s\S]*decodeURIComponent/);
+  assert.match(payloadSource, /try\s*\{[\s\S]*decodeURIComponent/);
   assert.match(source, /data-qa="dr-overlay-generate"/);
   assert.doesNotMatch(source, /data-qa="dr-overlay-generate"[^>]+setMobileNoteOpen/);
   assert.match(source, /coverage\.roleCounts/);

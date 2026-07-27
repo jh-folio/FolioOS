@@ -52,12 +52,27 @@
 `positive` / `watch` / `negative` / `neutral` — thesis verdict(at_risk/broken→watch,
 strengthened→positive)와 regime momentum(strengthening→positive, fading/turning→watch)로 판정.
 
+## 종목별 Investment Context (0.2.3)
+
+`InvestmentContextService`는 포트폴리오와 워치리스트의 ticker를 기준으로 Market Memory
+driver, thesis verdict, 예정 checkpoint, 연결 보고서와 Smart Collection 상태를 묶은
+읽기 전용 projection을 만든다. 이 객체는 Personal Overlay/hypothesis 계층이며
+Canonical 보고서나 외부 evidence를 수정하지 않는다.
+
+- `GET /api/investment-context/summary`: 전체 ticker 수와 source/stance 집계, 점검할 context
+- `GET /api/investment-context/{ticker}`: 한 ticker의 bounded context
+- 포트폴리오 수량·비중·가격, native note 본문은 응답에 포함하지 않는다.
+- 입력 저장소 watermark가 바뀐 경우에만 메모리 캐시를 다시 계산하며 별도 context 파일을 쓰지 않는다.
+- Home, Market Memory, Smart Collection, Deep Research가 같은 projection과 route link를 재사용한다.
+
 ## API
 
 ```text
 GET  /api/investment-review            # 오늘(또는 최신) 리뷰
 POST /api/investment-review/generate   # 강제 재생성 (body: date, includePortfolio/Watchlist/Obsidian, useLlm, forceRefresh)
 GET  /api/investment-review/{date}     # 특정 날짜 리뷰(없으면 최신 + stale)
+GET  /api/investment-context/summary   # metadata-only 종목별 개인 맥락 집계
+GET  /api/investment-context/{ticker}  # metadata-only 종목별 개인 맥락
 ```
 
 ## 테스트

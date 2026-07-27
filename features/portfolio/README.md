@@ -103,6 +103,17 @@ ETF는 `yfinance`가 종목 유형을 정확히 반환하지 못하는 경우가
 - 백테스트는 리서치용이며 실제 세금, 수수료, 슬리피지, 체결오차를 반영하지 않는다.
 - 변동성 기여도는 일별 수익률 공분산을 활용한 대략적인 리스크 기여도이며, 베타 기여도는 벤치마크와의 일별 수익률 공분산을 기준으로 계산한다.
 
+## Investment Context 연결 (0.2.3)
+
+현재 포트폴리오의 ticker는 읽기 전용 Investment Context에서 Market Memory,
+thesis, checkpoint, 보고서, Smart Collection과 연결할 수 있다. 연결 projection에는
+`source=portfolio|watchlist|both`와 정규화된 stance만 들어가며 수량, 평균단가,
+평가금액, 손익, 비중은 포함하지 않는다.
+
+이 projection은 Home, Market Memory, Smart Collection, Deep Research의 개인 맥락
+카드에서만 사용한다. Portfolio route는 계속 기본 navigation에서 숨기며, 연결 결과는
+리서치 점검을 돕는 hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 아니다.
+
 ## 아직 범위 밖인 기능
 
 - 거래 내역 기반 평균단가 자동 계산

@@ -136,12 +136,12 @@ jobs:
       - name: Build and verify canonical source-only package
         run: |
           python scripts/package_release.py --output dist/release
-          python scripts/verify_release.py --release-dir dist/release/FolioOS-v0.2.0 --expected-commit "${{ github.sha }}"
-          gitleaks dir dist/release/FolioOS-v0.2.0 --redact=100 --report-format json --report-path "${{ runner.temp }}/gitleaks-artifact.json"
+          python scripts/verify_release.py --release-dir dist/release/FolioOS-v0.2.4 --expected-commit "${{ github.sha }}"
+          gitleaks dir dist/release/FolioOS-v0.2.4 --redact=100 --report-format json --report-path "${{ runner.temp }}/gitleaks-artifact.json"
 
       - name: Upload the sole canonical release artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: FolioOS-v0.2.0
-          path: dist/release/FolioOS-v0.2.0.zip
+          name: FolioOS-v0.2.4
+          path: dist/release/FolioOS-v0.2.4.zip
           if-no-files-found: error

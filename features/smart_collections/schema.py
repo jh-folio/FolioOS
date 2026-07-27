@@ -109,6 +109,10 @@ class ResolveRequest(StrictModel):
     limit: int = Field(ge=1, le=120)
 
 
+class RefreshRequest(StrictModel):
+    expectedRevision: int = Field(ge=1)
+
+
 class ListQuery(StrictModel):
     limit: int = Field(default=100, ge=1, le=100)
     offset: int = Field(default=0, ge=0, le=10000)
@@ -170,3 +174,29 @@ class CollectionResolve(CollectionPreview):
     executionUniverseIds: list[str]
     unusableCandidates: list[UnusableCandidate]
     truncated: bool
+
+
+class SnapshotProviderGenerations(StrictModel):
+    index: str | None
+    rss: str | None
+
+
+class CollectionResolutionSnapshot(StrictModel):
+    collectionId: str = Field(pattern=COLLECTION_ID_PATTERN.pattern)
+    revision: int = Field(ge=1)
+    definitionHash: str = Field(min_length=1, max_length=128)
+    resolvedAt: str = Field(min_length=1, max_length=64)
+    providerGenerations: SnapshotProviderGenerations
+    inputWatermark: str | None = Field(default=None, max_length=256)
+    evidenceIds: list[str] = Field(max_length=120)
+    eligibleCount: int = Field(ge=0)
+    resolvedCount: int = Field(ge=0)
+    executionCount: int = Field(ge=0)
+    unusableCount: int = Field(ge=0)
+    truncated: bool
+
+
+class CollectionSnapshotFile(StrictModel):
+    schemaVersion: Literal[1]
+    collectionId: str = Field(pattern=COLLECTION_ID_PATTERN.pattern)
+    history: list[CollectionResolutionSnapshot] = Field(max_length=8)

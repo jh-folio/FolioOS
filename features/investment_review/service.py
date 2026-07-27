@@ -11,7 +11,11 @@
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import json
+import threading
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from pathlib import Path
 
 from features.investment_review.schema import normalize_review
@@ -71,11 +75,16 @@ def build_thesis_changes(theses: list, deltas_by_ticker: dict) -> list:
 
 
 def _ticker_to_regimes(regime_states: list) -> dict:
+    from features.investment_review.context_links import normalize_research_ticker
+
     idx: dict[str, list] = {}
     for s in regime_states or []:
         label = s.get("stateLabel") or s.get("storyFamily") or s.get("story") or ""
         for tk in (s.get("linkedCompanies") or []):
-            idx.setdefault(str(tk).upper(), []).append(
+            ticker = normalize_research_ticker(tk)
+            if not ticker:
+                continue
+            idx.setdefault(ticker, []).append(
                 {"label": label, "momentum": s.get("momentum") or "stable", "bias": s.get("bias") or ""}
             )
     return idx
@@ -100,18 +109,29 @@ def _impact_for(regimes: list, verdict: str) -> str:
 
 
 def build_portfolio_impacts(positions: list, watchlist: list, regime_states: list, thesis_changes: list) -> list:
+    from features.investment_review.context_links import normalize_research_ticker
+
     reg_idx = _ticker_to_regimes(regime_states)
-    verdict_idx = {c.get("ticker"): c.get("verdict") for c in (thesis_changes or [])}
+    verdict_idx = {
+        ticker: c.get("verdict")
+        for c in (thesis_changes or [])
+        if (ticker := normalize_research_ticker(c.get("ticker")))
+    }
     out = []
-    seen: set[str] = set()
+    indexes: dict[str, int] = {}
 
     def add(ticker, name, source):
-        ticker = str(ticker or "").upper()
-        if not ticker or ticker in seen:
+        ticker = normalize_research_ticker(ticker)
+        if not ticker:
             return
-        seen.add(ticker)
+        existing_index = indexes.get(ticker)
+        if existing_index is not None:
+            if out[existing_index]["source"] != source:
+                out[existing_index]["source"] = "both"
+            return
         regimes = reg_idx.get(ticker, [])
         verdict = verdict_idx.get(ticker, "")
+        indexes[ticker] = len(out)
         out.append({
             "ticker": ticker,
             "name": name or ticker,
@@ -479,6 +499,292 @@ def _load_recent_reports(warnings: list) -> list:
     except Exception as exc:
         warnings.append(f"최근 보고서를 불러오지 못했습니다: {exc}")
     return out
+
+
+# ---------------------------------------------------------------------------
+# Read-only per-ticker investment context (0.2.3)
+# ---------------------------------------------------------------------------
+
+def _context_file_watermark(path: Path) -> str:
+    try:
+        stat = path.stat()
+    except OSError:
+        return "missing"
+    return f"{stat.st_mtime_ns}:{stat.st_size}"
+
+
+def _context_directory_watermark(path: Path) -> str:
+    if not path.is_dir():
+        return "missing"
+    entries = []
+    for child in sorted(path.glob("*.json"), key=lambda item: item.name)[:200]:
+        try:
+            stat = child.stat()
+        except OSError:
+            continue
+        entries.append(f"{child.name}:{stat.st_mtime_ns}:{stat.st_size}")
+    return hashlib.sha256("\n".join(entries).encode("utf-8")).hexdigest()
+
+
+def _context_source_watermarks(data_dir: Path) -> dict[str, str]:
+    return {
+        "portfolio": _context_file_watermark(data_dir / "portfolio.json"),
+        "watchlist": _context_file_watermark(data_dir / "watchlist.json"),
+        "marketMemory": _context_file_watermark(data_dir / "market-memory.sqlite3"),
+        "marketMemoryWal": _context_file_watermark(data_dir / "market-memory.sqlite3-wal"),
+        "researchIndex": _context_file_watermark(data_dir / "research-index.sqlite3"),
+        "researchIndexWal": _context_file_watermark(data_dir / "research-index.sqlite3-wal"),
+        "collections": _context_file_watermark(data_dir / "smart-collections.json"),
+        "collectionState": _context_directory_watermark(data_dir / "smart-collection-state"),
+        "companyReports": _context_directory_watermark(data_dir / "company-analysis"),
+        "topicReports": _context_directory_watermark(data_dir / "topic-reports"),
+    }
+
+
+def _context_json(path: Path, default):
+    if not path.is_file():
+        return default
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return default
+
+
+def _context_report_rows(data_dir: Path) -> list[dict]:
+    rows: list[dict] = []
+    for path in sorted((data_dir / "company-analysis").glob("*.json"), reverse=True)[:40]:
+        report = _context_json(path, None)
+        if not isinstance(report, dict):
+            continue
+        company = report.get("company") if isinstance(report.get("company"), dict) else {}
+        rows.append({
+            "id": report.get("id") or path.stem,
+            "title": report.get("headline") or report.get("title") or path.stem,
+            "type": "analysis",
+            "generatedAt": report.get("generatedAt") or report.get("date") or "",
+            "company": {"ticker": company.get("ticker") or ""},
+        })
+    for path in sorted((data_dir / "topic-reports").glob("*.json"), reverse=True)[:40]:
+        report = _context_json(path, None)
+        if not isinstance(report, dict):
+            continue
+        tickers: list[str] = []
+        for value in (
+            report.get("customTickers"),
+            (report.get("topicPlan") or {}).get("approvedTickers")
+            if isinstance(report.get("topicPlan"), dict)
+            else None,
+        ):
+            if isinstance(value, dict):
+                tickers.extend(str(ticker) for ticker in value)
+            elif isinstance(value, list):
+                tickers.extend(str(ticker) for ticker in value)
+        rows.append({
+            "id": report.get("id") or path.stem,
+            "title": report.get("title") or report.get("topicLabel") or path.stem,
+            "type": "topic",
+            "generatedAt": report.get("generatedAt") or report.get("date") or "",
+            "tickers": tickers,
+        })
+    return rows
+
+
+def _context_inputs(data_dir: Path, collection_service=None) -> dict:
+    portfolio = _context_json(data_dir / "portfolio.json", {"positions": []})
+    if isinstance(portfolio, list):
+        positions = portfolio
+    elif isinstance(portfolio, dict) and isinstance(portfolio.get("positions"), list):
+        positions = portfolio["positions"]
+    else:
+        positions = []
+    watchlist = _context_json(data_dir / "watchlist.json", [])
+    if not isinstance(watchlist, list):
+        watchlist = []
+
+    database = data_dir / "market-memory.sqlite3"
+    regime_states = None
+    thesis_deltas = None
+    due_checkpoints = None
+    if database.is_file():
+        try:
+            from features.market_memory.memory import list_states
+
+            regime_states = list_states(database, status="current", limit=40)
+        except Exception:
+            regime_states = None
+        try:
+            from features.thesis_tracking.service import list_theses
+            from features.thesis_tracking.store import connect, latest_delta
+
+            theses = list_theses(db_path=str(database), status=None)
+            thesis_deltas = []
+            connection = connect(str(database))
+            try:
+                for thesis in theses:
+                    ticker = str(thesis.get("ticker") or "").strip().upper()
+                    if not ticker:
+                        continue
+                    delta = latest_delta(connection, ticker)
+                    if delta:
+                        thesis_deltas.append(delta)
+            finally:
+                connection.close()
+        except Exception:
+            thesis_deltas = None
+        if regime_states is not None and thesis_deltas is not None:
+            due_checkpoints = aggregate_checkpoints(thesis_deltas, regime_states, limit=40)
+
+    collections = []
+    collection_results = []
+    collection_health = {}
+    try:
+        if collection_service is None and (data_dir / "smart-collections.json").is_file():
+            from features.smart_collections.service import (
+                SmartCollectionRuntime,
+                SmartCollectionService,
+            )
+
+            collection_service = SmartCollectionService(
+                SmartCollectionRuntime(dataDir=data_dir, clock=lambda: dt.datetime.now(dt.UTC))
+            )
+        if collection_service is not None:
+            collection_list = collection_service.list(limit=50, offset=0)
+            collections = collection_list.get("items") or []
+            for collection in collections:
+                collection_id = str(collection.get("id") or "")
+                if not collection_id:
+                    continue
+                try:
+                    workspace = collection_service.workspace(collection_id)
+                except Exception:
+                    collection_health[collection_id] = "unavailable"
+                    continue
+                collection_health[collection_id] = workspace.get("health") or "unknown"
+                for item in workspace.get("recentEvidence") or []:
+                    if not isinstance(item, dict):
+                        continue
+                    collection_results.append({
+                        "collectionId": collection_id,
+                        "evidenceId": item.get("id") or "",
+                        "tickers": item.get("tickers") or [],
+                    })
+    except Exception:
+        collections = None
+        collection_results = None
+        collection_health = None
+
+    return {
+        "positions": positions,
+        "watchlist": watchlist,
+        "regime_states": regime_states,
+        "thesis_deltas": thesis_deltas,
+        "due_checkpoints": due_checkpoints,
+        "reports": _context_report_rows(data_dir),
+        "collections": collections,
+        "collection_results": collection_results,
+        "collection_health": collection_health,
+    }
+
+
+@dataclass(frozen=True, slots=True)
+class InvestmentContextRuntime:
+    dataDir: Path
+    clock: Callable[[], dt.datetime]
+    inputLoader: Callable[[], dict] | None = None
+    watermarkLoader: Callable[[], Mapping[str, str]] | None = None
+    collectionService: object | None = None
+
+
+class InvestmentContextNotFoundError(LookupError):
+    code = "investment_context_not_found"
+
+
+class InvestmentContextService:
+    def __init__(self, runtime: InvestmentContextRuntime) -> None:
+        self.runtime = runtime
+        self._lock = threading.Lock()
+        self._cached_watermark: tuple[tuple[str, str], ...] | None = None
+        self._cached_contexts = ()
+
+    def _watermark(self) -> tuple[tuple[str, str], ...]:
+        values = (
+            self.runtime.watermarkLoader()
+            if self.runtime.watermarkLoader is not None
+            else _context_source_watermarks(self.runtime.dataDir)
+        )
+        return tuple(sorted((str(key), str(value)) for key, value in values.items()))
+
+    def _observed_at(self) -> str:
+        current = self.runtime.clock()
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=dt.UTC)
+        return current.astimezone(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+    def contexts(self):
+        from features.investment_review.context_links import build_ticker_research_contexts
+
+        watermark = self._watermark()
+        with self._lock:
+            if watermark == self._cached_watermark:
+                return self._cached_contexts
+            inputs = (
+                self.runtime.inputLoader()
+                if self.runtime.inputLoader is not None
+                else _context_inputs(self.runtime.dataDir, self.runtime.collectionService)
+            )
+            contexts = build_ticker_research_contexts(
+                positions=inputs.get("positions"),
+                watchlist=inputs.get("watchlist"),
+                regime_states=inputs.get("regime_states"),
+                thesis_deltas=inputs.get("thesis_deltas"),
+                due_checkpoints=inputs.get("due_checkpoints"),
+                reports=inputs.get("reports"),
+                collections=inputs.get("collections"),
+                collection_results=inputs.get("collection_results"),
+                collection_health=inputs.get("collection_health"),
+                observed_at=self._observed_at(),
+            )
+            self._cached_contexts = contexts
+            self._cached_watermark = watermark
+            return contexts
+
+    def summary(self) -> dict:
+        contexts = self.contexts()
+        source_counts = {
+            source: sum(1 for context in contexts if context.source.value == source)
+            for source in ("portfolio", "watchlist", "both")
+        }
+        stance_counts = {
+            stance: sum(1 for context in contexts if context.stance.value == stance)
+            for stance in ("positive", "watch", "negative", "neutral", "unknown")
+        }
+        watch = sorted(
+            (context for context in contexts if context.stance.value == "watch"),
+            key=lambda context: (
+                -len(context.dueCheckpoints),
+                -len(context.marketDrivers),
+                context.ticker,
+            ),
+        )[:10]
+        observed_at = contexts[0].observedAt if contexts else self._observed_at()
+        return {
+            "observedAt": observed_at,
+            "counts": {
+                "total": len(contexts),
+                **source_counts,
+                **stance_counts,
+            },
+            "watchContexts": [context.model_dump(mode="json") for context in watch],
+        }
+
+    def detail(self, ticker: str):
+        from features.investment_review.context_links import normalize_research_ticker
+
+        normalized = normalize_research_ticker(ticker)
+        context = next((item for item in self.contexts() if item.ticker == normalized), None)
+        if context is None:
+            raise InvestmentContextNotFoundError(normalized)
+        return context.model_dump(mode="json")
 
 
 # ---------------------------------------------------------------------------

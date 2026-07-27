@@ -183,14 +183,24 @@ def with_overlay(report: dict, overlay: dict, *, status="", generated_at=None) -
     block["enabled"] = True
     block["status"] = status
     block["generatedAt"] = generated_at or _now_iso()
+    block["canonicalRevision"] = S._revision(out.get("canonicalRevision"))
+    block["stale"] = False
+    block["staleReason"] = ""
     out["personalOverlay"] = block
     return out
 
 
 def strip_overlay(report, include_personal: bool):
     """include_personal=False면 응답에서 personalOverlay를 제거한다(기본 보고서 응답 보호)."""
-    if include_personal or not isinstance(report, dict) or "personalOverlay" not in report:
+    if not isinstance(report, dict) or "personalOverlay" not in report:
         return report
+    if include_personal:
+        out = dict(report)
+        out["personalOverlay"] = S.public_projection(
+            report.get("personalOverlay"),
+            canonical_revision=report.get("canonicalRevision"),
+        )
+        return out
     out = dict(report)
     out.pop("personalOverlay", None)
     return out

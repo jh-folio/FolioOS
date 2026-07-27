@@ -16,6 +16,7 @@ from features.llm_settings.client import bool_override
 from features.common.utils import now_iso
 from features.thesis_tracking import delta as D
 from features.thesis_tracking import model as M
+from features.thesis_tracking import review_state as RS
 from features.thesis_tracking import store as ST
 
 
@@ -67,6 +68,21 @@ def get_thesis(ticker: str, db_path=None):
     conn = ST.connect(db_path)
     try:
         return ST.get_thesis(conn, ticker)
+    finally:
+        conn.close()
+
+
+def get_thesis_review_state(ticker: str, db_path=None, *, now=None) -> dict:
+    """Return stored review state or a non-persisted legacy-safe projection."""
+    conn = ST.connect(db_path)
+    try:
+        thesis = ST.get_thesis(conn, ticker)
+        if not thesis:
+            return RS.empty_review_state(ticker).model_dump(mode="json")
+        stored = RS.load_review_state(conn, thesis["ticker"])
+        if stored.revision > 0:
+            return stored.model_dump(mode="json")
+        return RS.state_from_thesis(thesis, now=now).model_dump(mode="json")
     finally:
         conn.close()
 
@@ -163,6 +179,7 @@ def run_thesis_delta(ticker: str, body: dict | None = None, db_path=None) -> dic
         )
         delta["company"] = thesis.get("company", "")
         saved = ST.save_delta(conn, ticker, delta)
+        RS.record_completed_review(conn, thesis, saved)
         exported = None
         if export_obsidian:
             exported = export_thesis_delta_to_obsidian(thesis, saved)

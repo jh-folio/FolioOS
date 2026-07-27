@@ -35,6 +35,7 @@ from features.market_memory.sql_job_service import (
     run_market_state_job,
 )
 from features.thesis_tracking import store as thesis_store
+from features.thesis_tracking import review_state as thesis_review_state
 from features.thesis_tracking.sql_job_service import ThesisDeltaJobRequest, run_thesis_delta_job
 
 
@@ -231,6 +232,10 @@ def commit_thesis_output(job_id: str, pack: dict, payload: dict) -> dict[str, st
             lifecycle,
             ThesisDeltaJobRequest(job_id, operation_id, ticker, generated_at, delta, utc_z(_clock())),
         )
+        thesis = thesis_store.get_thesis(connection, ticker)
+        saved_delta = thesis_store.get_delta(connection, result.delta_id)
+        if thesis and saved_delta:
+            thesis_review_state.record_completed_review(connection, thesis, saved_delta)
     finally:
         connection.close()
     return {"artifactId": result.delta_id, "reportId": result.delta_id}
