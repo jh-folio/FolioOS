@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 let parserPromise;
@@ -16,7 +17,7 @@ async function loadParser() {
     const tempRoot = await mkdtemp(join(tmpdir(), "folio-dr-parser-"));
     const tscPath = new URL("../node_modules/typescript/bin/tsc", import.meta.url);
     try {
-      await execFileAsync(process.execPath, [tscPath.pathname.slice(1), sourcePath.pathname.slice(1), "--ignoreConfig", "--target", "ES2022", "--module", "ES2022", "--outDir", tempRoot, "--skipLibCheck"]);
+      await execFileAsync(process.execPath, [fileURLToPath(tscPath), fileURLToPath(sourcePath), "--ignoreConfig", "--target", "ES2022", "--module", "ES2022", "--outDir", tempRoot, "--skipLibCheck"]);
       const output = await readFile(join(tempRoot, "deepResearchPayload.js"), "utf8");
       return import("data:text/javascript;base64," + Buffer.from(output).toString("base64"));
     } finally {
