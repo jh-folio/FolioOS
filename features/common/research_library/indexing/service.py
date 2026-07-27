@@ -6,7 +6,15 @@ import re
 import threading
 from pathlib import Path
 
-from features.common.utils import normalize, now_iso, read_json, write_json, summarize, clean_embedded_sections
+from features.common.utils import (
+    clean_embedded_sections,
+    normalize,
+    now_iso,
+    read_json,
+    summarize,
+    url_host_matches,
+    write_json,
+)
 from features.common.taxonomy import normalize_tag
 from features.common.company_lookup import (
     TRUSTED_SOURCES,
@@ -79,7 +87,7 @@ def rss_item_is_market_relevant(title, description, url):
     strong = sum(1 for term in RSS_STRONG_MARKET_TERMS if term.lower() in text)
     company = any(term.lower() in text for term in RSS_COMPANY_HINTS)
     noise = sum(1 for term in RSS_NOISE_TERMS if term.lower() in text)
-    is_kr = any(domain in (url or "") for domain in ["hankyung.com", "mk.co.kr", "einfomax.co.kr"]) or any(src in text for src in ["한국경제", "매일경제", "연합인포맥스"]) or bool(re.search(r"[가-힣]", text))
+    is_kr = url_host_matches(url, "hankyung.com", "mk.co.kr", "einfomax.co.kr") or any(src in text for src in ["한국경제", "매일경제", "연합인포맥스"]) or bool(re.search(r"[가-힣]", text))
     if is_kr and noise >= 2 and strong < 2:
         return False
     return relevant >= 1 or company or not is_kr
@@ -107,18 +115,18 @@ def infer_source(text, path):
 
 
 def canonical_news_source(source, url="", title=""):
-    hay = normalize(f"{url} {title}").lower()
-    if "barrons.com" in hay or "barron's" in hay or "barrons" in hay:
+    title_hay = normalize(title).lower()
+    if url_host_matches(url, "barrons.com") or "barron's" in title_hay or "barrons" in title_hay:
         return "Barron's"
-    if "wsj.com" in hay or "wall street journal" in hay:
+    if url_host_matches(url, "wsj.com") or "wall street journal" in title_hay:
         return "WSJ"
-    if "marketwatch.com" in hay:
+    if url_host_matches(url, "marketwatch.com") or "marketwatch" in title_hay:
         return "MarketWatch"
-    if "cnbc.com" in hay:
+    if url_host_matches(url, "cnbc.com") or "cnbc" in title_hay:
         return "CNBC"
-    if "einfomax.co.kr" in hay:
+    if url_host_matches(url, "einfomax.co.kr") or "연합인포맥스" in title_hay:
         return "연합인포맥스"
-    if "yna.co.kr" in hay:
+    if url_host_matches(url, "yna.co.kr") or "연합뉴스" in title_hay:
         return "연합뉴스"
     if source == "Dow Jones":
         return "Dow Jones"

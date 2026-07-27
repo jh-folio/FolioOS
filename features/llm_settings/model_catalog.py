@@ -47,7 +47,18 @@ CLI_MODEL_FALLBACKS = {
     ],
 }
 
-GENERATION_MODEL_RE = re.compile(r"^(?:gpt|o\d|claude|gemini)[a-z0-9._:-]*(?:-[a-z0-9._:-]+)*$", re.I)
+MAX_MODEL_ID_LENGTH = 128
+_MODEL_ID_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789._:-")
+
+
+def _is_generation_model_id(value: str) -> bool:
+    model_id = str(value or "").strip().lower()
+    if not model_id or len(model_id) > MAX_MODEL_ID_LENGTH:
+        return False
+    valid_prefix = model_id.startswith(("gpt", "claude", "gemini")) or (
+        len(model_id) >= 2 and model_id[0] == "o" and model_id[1].isdigit()
+    )
+    return valid_prefix and all(char in _MODEL_ID_CHARS for char in model_id)
 
 
 def _now_iso() -> str:
@@ -177,7 +188,7 @@ def _generation_model_ids(provider: str, payload: dict) -> list[str]:
     if provider == "openai":
         rows = payload.get("data") if isinstance(payload, dict) else []
         ids = [str(row.get("id") or "").strip() for row in rows or [] if isinstance(row, dict)]
-        return [model_id for model_id in ids if GENERATION_MODEL_RE.match(model_id)]
+        return [model_id for model_id in ids if _is_generation_model_id(model_id)]
     if provider == "gemini":
         rows = payload.get("models") if isinstance(payload, dict) else []
         out = []
@@ -188,12 +199,12 @@ def _generation_model_ids(provider: str, payload: dict) -> list[str]:
             if methods and "generateContent" not in methods:
                 continue
             name = str(row.get("name") or "").strip().removeprefix("models/")
-            if name and GENERATION_MODEL_RE.match(name):
+            if name and _is_generation_model_id(name):
                 out.append(name)
         return out
     rows = payload.get("data") if isinstance(payload, dict) else []
     ids = [str(row.get("id") or "").strip() for row in rows or [] if isinstance(row, dict)]
-    return [model_id for model_id in ids if GENERATION_MODEL_RE.match(model_id)]
+    return [model_id for model_id in ids if _is_generation_model_id(model_id)]
 
 
 def discover_api_models(
@@ -237,11 +248,14 @@ def discover_api_models(
 def _parse_cli_models(stdout: str) -> list[str]:
     out = []
     for line in str(stdout or "").splitlines():
-        text = line.strip().strip("-*•").strip()
+        raw = line.strip()
+        if len(raw) > MAX_MODEL_ID_LENGTH + 8:
+            continue
+        text = raw.strip("-*•").strip()
         if not text:
             continue
         candidate = text.split()[0].strip("`'\",")
-        if GENERATION_MODEL_RE.match(candidate):
+        if _is_generation_model_id(candidate):
             out.append(candidate)
     return out
 
@@ -249,8 +263,8 @@ def _parse_cli_models(stdout: str) -> list[str]:
 def _parse_claude_help_models(stdout: str) -> list[str]:
     text = str(stdout or "")
     out = []
-    for model_id in re.findall(r"\bclaude-[a-z0-9._:-]+(?:-[a-z0-9._:-]+)*\b", text, re.I):
-        if GENERATION_MODEL_RE.match(model_id):
+    for model_id in re.findall(r"\bclaude-[a-z0-9._:-]+\b", text[:100_000], re.I):
+        if _is_generation_model_id(model_id):
             out.append(model_id)
     if re.search(r"\bfable\b", text, re.I):
         out.append("claude-fable-5")

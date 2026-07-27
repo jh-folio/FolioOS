@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 
 from features.common.research_library.rss.article import normalize_text
+from features.common.utils import url_host_matches
 
 NOISY_TITLE_PATTERNS = [
     r"\bStock Price\s*&\s*Latest News\b",
@@ -57,22 +58,22 @@ _REUTERS_COMPANY_RE = re.compile(r"/markets/companies/[^/]+/?$", re.IGNORECASE)
 
 def canonical_media(media: str, url: str = "", title: str = "") -> str:
     """Map known outlets to a stable display name from any URL/title hint."""
-    hay = f"{url} {title}".lower()
-    if "barrons.com" in hay or "barron's" in hay or "barrons" in hay:
+    title_hay = str(title or "").lower()
+    if url_host_matches(url, "barrons.com") or "barron's" in title_hay or "barrons" in title_hay:
         return "Barron's"
-    if "wsj.com" in hay or "wall street journal" in hay:
+    if url_host_matches(url, "wsj.com") or "wall street journal" in title_hay:
         return "WSJ"
-    if "marketwatch.com" in hay:
+    if url_host_matches(url, "marketwatch.com") or "marketwatch" in title_hay:
         return "MarketWatch"
-    if "cnbc.com" in hay:
+    if url_host_matches(url, "cnbc.com") or "cnbc" in title_hay:
         return "CNBC"
-    if "einfomax.co.kr" in hay:
+    if url_host_matches(url, "einfomax.co.kr") or "연합인포맥스" in title_hay:
         return "연합인포맥스"
     return media
 
 
 def is_korean_media_link(link: str) -> bool:
-    return any(domain in (link or "") for domain in _KOREAN_MEDIA_DOMAINS)
+    return url_host_matches(link, *_KOREAN_MEDIA_DOMAINS)
 
 
 def is_market_relevant_item(title: str, description: str, link: str) -> bool:
@@ -95,7 +96,7 @@ def should_archive_item(title: str, description: str, link: str) -> bool:
     for pattern in NOISY_TITLE_PATTERNS:
         if re.search(pattern, title or "", re.IGNORECASE):
             return False
-    if "reuters.com" in (link or "") and _REUTERS_COMPANY_RE.search(link or ""):
+    if url_host_matches(link, "reuters.com") and _REUTERS_COMPANY_RE.search(link or ""):
         return False
     if _VENDOR_TICKER_RE.search(title or ""):
         return False

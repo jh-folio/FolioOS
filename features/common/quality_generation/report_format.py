@@ -6,9 +6,6 @@ import re
 from dataclasses import dataclass
 
 
-HEADING_RE = re.compile(r"(?m)^(#{1,6})\s+(.+?)\s*$")
-
-
 @dataclass(frozen=True)
 class FormatGuardResult:
     markdown: str
@@ -67,20 +64,39 @@ def _norm_heading(line: str) -> str:
 
 
 def _main_sections(markdown: str) -> list[dict]:
-    matches = [m for m in HEADING_RE.finditer(markdown or "") if len(m.group(1)) <= 2]
+    matches: list[dict] = []
+    offset = 0
+    for line in str(markdown or "").splitlines(keepends=True):
+        content = line.rstrip("\r\n")
+        level = len(content) - len(content.lstrip("#"))
+        if (
+            1 <= level <= 2
+            and len(content) > level
+            and content[level].isspace()
+            and content[level:].strip()
+        ):
+            matches.append(
+                {
+                    "start": offset,
+                    "end": offset + len(content),
+                    "full": content.strip(),
+                    "level": level,
+                }
+            )
+        offset += len(line)
     sections: list[dict] = []
     for idx, match in enumerate(matches):
-        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(markdown)
-        full = match.group(0).strip()
-        body_start = match.end()
+        end = matches[idx + 1]["start"] if idx + 1 < len(matches) else len(markdown)
+        full = match["full"]
+        body_start = match["end"]
         sections.append({
             "heading": full,
             "norm": _norm_heading(full),
-            "level": len(match.group(1)),
-            "start": match.start(),
+            "level": match["level"],
+            "start": match["start"],
             "body_start": body_start,
             "end": end,
-            "text": markdown[match.start():end].strip(),
+            "text": markdown[match["start"]:end].strip(),
             "body": markdown[body_start:end].strip(),
         })
     return sections

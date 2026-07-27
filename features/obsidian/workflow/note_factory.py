@@ -1,6 +1,7 @@
 """Create user-synthesis notes in the configured Obsidian Vault."""
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -32,7 +33,16 @@ def _require_vault() -> Path:
 
 def safe_filename(value: str) -> str:
     cleaned = re.sub(r'[\\/:*?"<>|#^[\]]', "", str(value or "")).strip()
-    return cleaned or "Untitled"
+    cleaned = "".join(char for char in cleaned if ord(char) >= 32).strip(" .")
+    return cleaned[:120] or "Untitled"
+
+
+def _note_path(folder: Path, filename: str) -> Path:
+    root = os.path.realpath(folder)
+    path = os.path.realpath(os.path.join(root, filename))
+    if not path.startswith(root + os.sep):
+        raise ValueError("Note path escapes the configured folder")
+    return Path(path)
 
 
 def _filename(template_type: str, context: dict) -> str:
@@ -57,7 +67,7 @@ def create_note(template_type: str, context: dict | None = None, *, overwrite: b
     folder = vault / FOLDERS.get(template_type, "Personal Reviews")
     folder.mkdir(parents=True, exist_ok=True)
     filename = _filename(template_type, context)
-    path = folder / filename
+    path = _note_path(folder, filename)
     if path.exists() and not overwrite:
         return {
             "ok": True,
@@ -86,7 +96,7 @@ def read_note(template_type: str, context: dict | None = None) -> dict:
     template_type = str(template_type or "").strip()
     vault = _require_vault()
     folder = vault / FOLDERS.get(template_type, "Personal Reviews")
-    path = folder / _filename(template_type, context)
+    path = _note_path(folder, _filename(template_type, context))
     if not path.exists():
         return {"ok": True, "exists": False, "body": "", "path": str(path)}
     text = path.read_text(encoding="utf-8")

@@ -560,8 +560,8 @@ def api_get_briefing(date: str, includePersonal: bool = False, marketScope: str 
     if not briefing.get("quality"):
         try:
             briefing["quality"] = evaluate_research_quality_payload({"artifactType": "briefing", "artifact": briefing})["quality"]
-        except Exception as exc:
-            briefing["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+        except Exception:
+            briefing["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(briefing_scope_view(briefing, marketScope), includePersonal)
 
 
@@ -642,8 +642,8 @@ def api_analyze(request: Request):
     try:
         preflight = report.pop("qualityPreflight", None)
         report = apply_quality_loop("company_analysis", report, mode=quality_mode, preflight=preflight)
-    except Exception as exc:
-        report["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+    except Exception:
+        report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     # 생성한 보고서를 자동 저장한다(같은 기업·같은 날은 최신본으로 덮어씀).
     try:
         return save_analysis_report(report)
@@ -676,8 +676,8 @@ def api_get_analysis_report(report_id: str, includePersonal: bool = False):
         try:
             result = recheck_research_quality("company_analysis", report_id)
             report["quality"] = result.get("quality")
-        except Exception as exc:
-            report["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+        except Exception:
+            report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(report, includePersonal)
 
 
@@ -1532,8 +1532,8 @@ def api_get_topic_report(report_id: str, includePersonal: bool = False):
         try:
             result = recheck_research_quality("topic_report", report_id)
             report["quality"] = result.get("quality")
-        except Exception as exc:
-            report["quality"] = {"status": "warn", "warnings": [f"quality evaluation failed: {str(exc)[:120]}"]}
+        except Exception:
+            report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(report, includePersonal)
 
 
