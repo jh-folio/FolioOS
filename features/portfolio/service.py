@@ -18,6 +18,7 @@ PORTFOLIO_PATH = DATA_DIR / "portfolio.json"
 PORTFOLIO_PRESETS_PATH = DATA_DIR / "portfolio-presets.json"
 PORTFOLIO_PRICE_CACHE_DIR = DATA_DIR / "portfolio-price-cache"
 BACKTESTS_DIR = DATA_DIR / "portfolio-backtests"
+BACKTEST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 
 
@@ -1544,13 +1545,19 @@ def list_portfolio_backtests():
 
 
 def get_portfolio_backtest(backtest_id):
+    backtest_id = str(backtest_id or "")
+    if not BACKTEST_ID_RE.fullmatch(backtest_id):
+        return None
     path = BACKTESTS_DIR / f"{backtest_id}.json"
     if not path.exists():
         return None
-    return read_json(path)
+    return read_json(path, None)
 
 
 def delete_portfolio_backtest(backtest_id):
+    backtest_id = str(backtest_id or "")
+    if not BACKTEST_ID_RE.fullmatch(backtest_id):
+        return {"deleted": False, "id": backtest_id}
     path = BACKTESTS_DIR / f"{backtest_id}.json"
     if path.exists():
         path.unlink()

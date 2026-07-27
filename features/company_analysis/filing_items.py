@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import html
 import re
+
+from features.common.utils import strip_html_text
 
 DEFAULT_ITEM_LIMITS = {
     "1": 4200,
@@ -32,11 +33,7 @@ def normalize_text(text: str) -> str:
 
 def readable_filing_text(text: str) -> str:
     """Return a compact text view from local SEC/DART/IR HTML or text filings."""
-    value = str(text or "")
-    value = re.sub(r"(?is)<script\b.*?</script>", " ", value)
-    value = re.sub(r"(?is)<style\b.*?</style>", " ", value)
-    value = re.sub(r"(?is)<[^>]+>", " ", value)
-    value = html.unescape(value)
+    value = strip_html_text(text)
     value = re.sub(r"\s+", " ", value)
     return normalize_text(value)
 

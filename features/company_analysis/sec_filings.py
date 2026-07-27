@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import datetime as dt
-import html
 import json
 import os
 import re
 import urllib.request
 from pathlib import Path
 
+from features.common.utils import strip_html_text
 from features.company_analysis.sec_companyfacts import normalize_cik, sec_user_agent
 
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
@@ -140,10 +140,7 @@ def latest_10k_metadata(cik: str, cache_dir: Path) -> dict:
 
 
 def html_to_paragraphs(markup: str) -> list[str]:
-    text = re.sub(r"(?is)<script[^>]*>.*?</script>|<style[^>]*>.*?</style>", " ", markup)
-    text = re.sub(r"(?i)</(p|div|tr|li|h[1-6])>", "\n", text)
-    text = re.sub(r"(?is)<[^>]+>", " ", text)
-    text = html.unescape(text)
+    text = strip_html_text(markup, separator="\n")
     text = re.sub(r"[ \t\xa0]+", " ", text)
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
     paragraphs = []

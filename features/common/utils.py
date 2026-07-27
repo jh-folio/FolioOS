@@ -4,13 +4,45 @@ import html
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
+
+from bs4 import BeautifulSoup
+
+
+def strip_html_text(value, *, separator=" "):
+    """Return visible text without executable/style elements."""
+    text = str(value or "")
+    if "<" not in text:
+        return html.unescape(text)
+    soup = BeautifulSoup(text, "html.parser")
+    for element in soup(["script", "style"]):
+        element.decompose()
+    return html.unescape(soup.get_text(separator=separator))
+
+
+def url_hostname(value):
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    candidate = text if "://" in text or text.startswith("//") else f"//{text}"
+    try:
+        return str(urlsplit(candidate).hostname or "").lower().rstrip(".")
+    except ValueError:
+        return ""
+
+
+def url_host_matches(value, *domains):
+    hostname = url_hostname(value)
+    return bool(hostname) and any(
+        hostname == domain.lower().rstrip(".")
+        or hostname.endswith(f".{domain.lower().rstrip('.')}")
+        for domain in domains
+        if str(domain or "").strip()
+    )
 
 
 def normalize(text):
-    text = html.unescape(str(text or ""))
-    text = re.sub(r"<script[\s\S]*?</script>", " ", text, flags=re.I)
-    text = re.sub(r"<style[\s\S]*?</style>", " ", text, flags=re.I)
-    text = re.sub(r"<[^>]+>", " ", text)
+    text = strip_html_text(text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
