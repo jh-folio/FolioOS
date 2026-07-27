@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Final
 
 from features.common.canonical_json import JsonValue, canonical_json_bytes
+from features.common.canonical_report_io import safe_child_path
 from features.common.canonical_report_types import (
     CanonicalConflictError,
     CanonicalValidationError,
@@ -64,6 +65,7 @@ def marker(report: Mapping[str, JsonValue] | None) -> dict[str, JsonValue] | Non
 
 
 def load_report(path: Path) -> dict[str, JsonValue] | None:
+    path = safe_child_path(path.parent, path.name)
     if not path.exists():
         return None
     try:

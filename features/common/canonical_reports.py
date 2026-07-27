@@ -14,7 +14,7 @@ from features.common.canonical_identity import (
     validate_report_identity,
 )
 from features.common.canonical_json import JsonValue
-from features.common.canonical_report_io import artifact_lock, atomic_write
+from features.common.canonical_report_io import artifact_lock, atomic_write, safe_child_path
 from features.common.canonical_report_state import (
     canonical_candidate,
     canonical_content_hash,
@@ -80,7 +80,7 @@ def prepare(
         report_kind, exact_path, write_kind, candidate, operation_id, job_marker = _parse_prepare_request(request)
     if report_kind is None or exact_path is None or write_kind is None or candidate is None:
         raise CanonicalValidationError("prepare_input_invalid", "prepare input is incomplete")
-    path = exact_path.resolve(strict=False)
+    path = safe_child_path(exact_path.parent, exact_path.name)
     if path.suffix != ".json":
         raise CanonicalIdentityError("canonical_path_invalid", "canonical path must end in .json")
     with artifact_lock(path):

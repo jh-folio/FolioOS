@@ -8,6 +8,7 @@ from collections.abc import Mapping
 from typing import Final, assert_never
 
 from features.common.canonical_json import JsonValue
+from features.common.canonical_report_io import safe_child_path
 
 DATE_PATTERN: Final = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SAFE_ID_PATTERN: Final = re.compile(r"^[A-Za-z0-9_-]{1,160}$")
@@ -58,8 +59,9 @@ def _briefing_identity(report_id: str, market_scope: str | None) -> tuple[str, s
     return date_text, normalized_scope or suffix
 
 
-def _read_report_id(path: Path) -> str | None:
+def _read_report_id(folder: Path, filename: str) -> str | None:
     try:
+        path = safe_child_path(folder, filename)
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
@@ -79,20 +81,25 @@ def resolve_exact_report_path(
         case ReportKind.BRIEFING:
             date_text, scope = _briefing_identity(report_id, market_scope)
             filename = f"{date_text}.{scope}.json" if scope is not None else f"{date_text}.json"
-            candidate = data_root / "briefings" / filename
+            candidate = safe_child_path(data_root / "briefings", filename)
             if candidate.is_file():
                 return candidate
         case ReportKind.COMPANY_ANALYSIS:
             if SAFE_ID_PATTERN.fullmatch(report_id) is None:
                 raise CanonicalIdentityError("company_report_id_invalid", "company report id is invalid")
-            candidate = data_root / "company-analysis" / f"{report_id}.json"
-            if candidate.is_file() and _read_report_id(candidate) in {None, report_id}:
+            filename = f"{report_id}.json"
+            candidate = safe_child_path(data_root / "company-analysis", filename)
+            if candidate.is_file() and _read_report_id(candidate.parent, candidate.name) in {None, report_id}:
                 return candidate
         case ReportKind.TOPIC_REPORT:
             if SAFE_ID_PATTERN.fullmatch(report_id) is None:
                 raise CanonicalIdentityError("topic_report_id_invalid", "topic report id is invalid")
             folder = data_root / "topic-reports"
-            exact_matches = [path for path in sorted(folder.glob("*.json")) if _read_report_id(path) == report_id]
+            exact_matches = [
+                safe_child_path(folder, path.name)
+                for path in sorted(folder.glob("*.json"))
+                if _read_report_id(folder, path.name) == report_id
+            ]
             if len(exact_matches) == 1:
                 return exact_matches[0]
             if len(exact_matches) > 1:

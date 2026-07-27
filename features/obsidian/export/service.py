@@ -1,9 +1,11 @@
 """Obsidian vault export: settings management and note writing for briefings, analyses, narratives."""
 import base64
 import binascii
+import os
 import re
 from pathlib import Path
 
+from features.common.canonical_report_io import safe_child_path
 from features.common.config_bootstrap import resolve_config
 from features.common.utils import read_json, write_json
 from features.common.taxonomy import normalize_tag
@@ -37,9 +39,12 @@ def _require_vault() -> Path:
     vault_path = settings.get("vaultPath", "").strip()
     if not vault_path:
         raise ValueError("Obsidian vault 경로가 설정되지 않았습니다.")
-    p = Path(vault_path)
-    if not p.exists():
+    try:
+        p = Path(vault_path).resolve(strict=True)
+    except OSError:
         raise ValueError(f"Vault 경로가 존재하지 않습니다: {vault_path}")
+    if not p.is_dir():
+        raise ValueError(f"Vault 경로가 폴더가 아닙니다: {vault_path}")
     return p
 
 
@@ -86,7 +91,9 @@ def _obsidian_tag(tag: str) -> str:
 
 def _safe_filename(name: str) -> str:
     """Strip characters that Obsidian / Windows disallow in filenames."""
-    return re.sub(r'[\\/:*?"<>|#^[\]]', "", name).strip()
+    cleaned = "".join(char for char in str(name) if char not in '\\/:*?"<>|#^[]').strip()
+    cleaned = os.path.basename(cleaned)
+    return cleaned if cleaned not in {"", ".", ".."} else "Untitled"
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +106,7 @@ def _write_briefing_chart_images(
     """Write browser-rendered PNG/SVG fallbacks inside the vault, with strict bounds."""
     if not chart_images:
         return []
-    assets = folder / "assets"
+    assets = safe_child_path(folder, "assets")
     links = []
     for index, image in enumerate(chart_images[:12], start=1):
         assets.mkdir(parents=True, exist_ok=True)
@@ -116,7 +123,7 @@ def _write_briefing_chart_images(
             ):
                 continue
             filename = stem + ".svg"
-            (assets / filename).write_text(svg_text, encoding="utf-8")
+            safe_child_path(assets, filename).write_text(svg_text, encoding="utf-8")
             links.append(f"![[assets/{filename}]]")
             continue
         prefix = "data:image/png;base64,"
@@ -130,7 +137,7 @@ def _write_briefing_chart_images(
         if not raw.startswith(b"\x89PNG\r\n\x1a\n") or len(raw) > 8 * 1024 * 1024:
             continue
         filename = stem + ".png"
-        (assets / filename).write_bytes(raw)
+        safe_child_path(assets, filename).write_bytes(raw)
         links.append(f"![[assets/{filename}]]")
     return links
 
@@ -204,7 +211,7 @@ def _write_briefing_note(folder, date, unit, chart_images):
 
     market_label = {"us": "미국장", "kr": "한국장", "both": "종합"}.get(market_scope, "종합")
     filename = _safe_filename(f"브리핑 {date} {market_label}") + ".md"
-    note_path = folder / filename
+    note_path = safe_child_path(folder, filename)
 
     existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
     note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")
@@ -214,7 +221,7 @@ def _write_briefing_note(folder, date, unit, chart_images):
 
 def export_briefing_to_obsidian(date: str, briefing: dict, chart_images: list[str] | None = None) -> dict:
     vault = _require_vault()
-    folder = vault / "Briefings"
+    folder = safe_child_path(vault, "Briefings")
     folder.mkdir(parents=True, exist_ok=True)
     units = briefing_export_units(briefing)
     exports = []
@@ -233,7 +240,7 @@ def export_briefing_to_obsidian(date: str, briefing: dict, chart_images: list[st
 
 def export_analysis_to_obsidian(report: dict) -> dict:
     vault = _require_vault()
-    folder = vault / "Companies"
+    folder = safe_child_path(vault, "Companies")
     folder.mkdir(parents=True, exist_ok=True)
 
     company = report.get("company") or {}
@@ -308,7 +315,7 @@ def export_analysis_to_obsidian(report: dict) -> dict:
     )
 
     filename = _safe_filename(company_name) + ".md"
-    note_path = folder / filename
+    note_path = safe_child_path(folder, filename)
 
     existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
     note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")
@@ -328,7 +335,7 @@ def export_topic_report_to_obsidian(report: dict) -> dict:
     evidence로 재사용하지 않게 한다.
     """
     vault = _require_vault()
-    folder = vault / "Topic Reports"
+    folder = safe_child_path(vault, "Topic Reports")
     folder.mkdir(parents=True, exist_ok=True)
 
     label = report.get("topicLabel") or report.get("topicKey") or "테마 분석"
@@ -366,7 +373,7 @@ def export_topic_report_to_obsidian(report: dict) -> dict:
     )
 
     filename = _safe_filename(f"{label} {date}".strip()) + ".md"
-    note_path = folder / filename
+    note_path = safe_child_path(folder, filename)
     existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
     note_path.write_text(preserve_user_notes(existing, new_body), encoding="utf-8")
     return {"ok": True, "path": str(note_path), "filename": filename, "topic": label}
@@ -382,7 +389,7 @@ def export_narratives_to_obsidian() -> dict:
     from collections import defaultdict
 
     vault = _require_vault()
-    folder = vault / "Narratives"
+    folder = safe_child_path(vault, "Narratives")
     folder.mkdir(parents=True, exist_ok=True)
 
     states = list_states(MARKET_MEMORY_DB, limit=100, status="current")
@@ -440,7 +447,7 @@ def export_narratives_to_obsidian() -> dict:
         body_with_links = inject_wikilinks(body, company_names)
 
         filename = _safe_filename(family_label) + ".md"
-        note_path = folder / filename
+        note_path = safe_child_path(folder, filename)
         existing = note_path.read_text(encoding="utf-8") if note_path.exists() else ""
         note_path.write_text(preserve_user_notes(existing, body_with_links), encoding="utf-8")
         files.append(filename)

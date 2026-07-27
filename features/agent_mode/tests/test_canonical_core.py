@@ -17,11 +17,18 @@ from features.common.canonical_reports import (
     resolve_exact_report_path,
     storage_hash,
 )
+from features.common.canonical_report_io import safe_child_path
 
 
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+@pytest.mark.parametrize("filename", ("../report.json", r"..\report.json", ".", "..", ""))
+def test_safe_child_path_rejects_non_literal_child_names(tmp_path: Path, filename: str) -> None:
+    with pytest.raises(ValueError):
+        safe_child_path(tmp_path, filename)
 
 
 def test_pin_existing_exact_briefing_and_company_resolution(

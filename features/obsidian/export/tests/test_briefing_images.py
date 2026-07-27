@@ -8,7 +8,11 @@ ROOT = Path(__file__).resolve().parents[4]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from features.obsidian.export.service import _write_briefing_chart_images, export_briefing_to_obsidian
+from features.obsidian.export.service import (
+    _safe_filename,
+    _write_briefing_chart_images,
+    export_briefing_to_obsidian,
+)
 
 
 PNG_1X1 = base64.b64decode(
@@ -90,3 +94,8 @@ def test_single_scope_export_preserves_existing_user_notes_and_legacy_image_inpu
         assert len(result["exports"]) == 1
         assert "Updated" in content and "keep me" in content
         assert "briefing-2026-06-22-us-visual-1.png" in content
+
+
+def test_safe_filename_never_returns_dot_or_path_components() -> None:
+    assert _safe_filename("../") == "Untitled"
+    assert _safe_filename(r"..\outside/report") == "..outsidereport"

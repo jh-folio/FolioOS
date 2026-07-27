@@ -199,6 +199,16 @@ def test_canonical_state_aliases_keep_distinct_axes():
     assert power["stateKey"] == "ai_data_center_power_bottleneck"
 
 
+def test_market_state_classification_handles_long_untrusted_text_without_regex_backtracking():
+    long_text = ("neutral observation " * 20_000) + "AI data center grid"
+
+    canonical = M.canonical_state_for(text=long_text)
+    inferred = M.inferred_axis_from_context(text=long_text)
+
+    assert canonical["stateKey"] == "ai_data_center_power_bottleneck"
+    assert inferred["key"] == "ai_data_center_power_bottleneck"
+
+
 def test_reconcile_state_aliases_collapses_current_duplicates():
     with tempfile.TemporaryDirectory() as tmp:
         db_path = os.path.join(tmp, "market-memory.sqlite3")

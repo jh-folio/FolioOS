@@ -27,7 +27,10 @@ LOCK_COMPILE = (
     "--generate-hashes --exclude-newer 2026-07-16T00:00:00Z"
 )
 LOCK_COMPILE_FULL = f"{LOCK_COMPILE} --output-file requirements.lock.py312.txt requirements.txt"
-HASH_INSTALL = "python -m uv pip install --system --require-hashes -r requirements.lock.py312.txt"
+TEST_LOCK_COMPILE_FULL = (
+    f"{LOCK_COMPILE} --output-file requirements-test.lock.py312.txt requirements-test.txt"
+)
+HASH_INSTALL = "python -m uv pip install --system --require-hashes -r requirements-test.lock.py312.txt"
 BOOTSTRAP_INSTALL = (
     "python -m pip install --require-hashes --no-deps -r requirements-bootstrap.lock.txt"
 )
@@ -68,18 +71,26 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22.17.0"
-      - name: Regenerate the universal lock twice, normalize LF, and byte-compare
+      - name: Regenerate runtime and test locks twice, normalize LF, and byte-compare
         run: |
           python -m pip install --require-hashes --no-deps -r requirements-bootstrap.lock.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.committed.txt')"
+          python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.committed.txt')"
           python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
           python scripts/normalize_lock_lf.py requirements.lock.py312.txt
+          python scripts/normalize_lock_lf.py requirements-test.lock.py312.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.first.txt')"
+          python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.first.txt')"
           python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
           python scripts/normalize_lock_lf.py requirements.lock.py312.txt
+          python scripts/normalize_lock_lf.py requirements-test.lock.py312.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.second.txt')"
+          python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.second.txt')"
           python scripts/compare_lock_bytes.py requirements.lock.py312.committed.txt requirements.lock.py312.first.txt requirements.lock.py312.second.txt
-          python -m uv pip install --system --require-hashes -r requirements.lock.py312.txt
+          python scripts/compare_lock_bytes.py requirements-test.lock.py312.committed.txt requirements-test.lock.py312.first.txt requirements-test.lock.py312.second.txt
+          python -m uv pip install --system --require-hashes -r requirements-test.lock.py312.txt
       - name: Install checksum-verified Gitleaks 8.30.1
         run: python scripts/install_gitleaks.py --version 8.30.1 --verify-checksum
       - name: Scan full Git history
@@ -183,11 +194,18 @@ def workflow_contract_issues(source: str) -> list[str]:
         issues.append("matrix must hash-install the uv bootstrap lock")
     if matrix.count(LOCK_COMPILE_FULL) != 2:
         issues.append("matrix must run the exact universal compile twice")
+    if matrix.count(TEST_LOCK_COMPILE_FULL) != 2:
+        issues.append("matrix must run the exact universal test-lock compile twice")
     if matrix.count("normalize_lock_lf.py requirements.lock.py312.txt") != 2 or (
         "compare_lock_bytes.py requirements.lock.py312.committed.txt "
         "requirements.lock.py312.first.txt requirements.lock.py312.second.txt"
     ) not in matrix:
         issues.append("matrix must normalize LF and byte-compare both regenerated locks")
+    if matrix.count("normalize_lock_lf.py requirements-test.lock.py312.txt") != 2 or (
+        "compare_lock_bytes.py requirements-test.lock.py312.committed.txt "
+        "requirements-test.lock.py312.first.txt requirements-test.lock.py312.second.txt"
+    ) not in matrix:
+        issues.append("matrix must normalize LF and byte-compare both regenerated test locks")
     if HASH_INSTALL not in matrix:
         issues.append("matrix must install the universal lock with hashes")
 
@@ -246,6 +264,7 @@ def test_validator_accepts_exact_compliant_workflow_shape() -> None:
         ("matrix_need_missing", COMPLIANT_WORKFLOW.replace("    needs: [test-matrix]\n", "")),
         ("same_sha_missing", COMPLIANT_WORKFLOW.replace("          ref: ${{ github.sha }}\n", "", 1)),
         ("single_lock_regeneration", COMPLIANT_WORKFLOW.replace(f"          {LOCK_COMPILE_FULL}\n", "", 1)),
+        ("test_lock_missing", COMPLIANT_WORKFLOW.replace(f"          {TEST_LOCK_COMPILE_FULL}\n", "", 1)),
         ("unhashed_install", COMPLIANT_WORKFLOW.replace("pip install --system --require-hashes", "pip install --system")),
         ("no_byte_compare", COMPLIANT_WORKFLOW.replace("compare_lock_bytes.py", "accept_lock_without_compare.py")),
         ("dirty_worktree_force", COMPLIANT_WORKFLOW.replace("package_release.py --output dist/release", "package_release.py --force --output dist/release")),
@@ -260,3 +279,9 @@ def test_validator_rejects_malformed_workflow_variants(case: str, mutated: str) 
 def test_current_ci_workflow_satisfies_todo15_contract() -> None:
     issues = workflow_contract_issues(WORKFLOW.read_text(encoding="utf-8"))
     assert issues == [], "Todo 15 immutable CI contract gaps:\n- " + "\n- ".join(issues)
+
+
+def test_test_dependency_input_includes_runtime_and_pytest() -> None:
+    source = (ROOT / "requirements-test.txt").read_text(encoding="utf-8").splitlines()
+    assert "-r requirements.txt" in source
+    assert any(line.startswith("pytest==") for line in source)

@@ -691,7 +691,7 @@ def get_topic_report(report_id: str) -> dict | None:
     if not path:
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return load_report(path)
     except Exception:
         return None
 
@@ -736,7 +736,9 @@ def evaluate_topic_report(report_id: str) -> dict:
     path = _find_report_path(report_id)
     if not path:
         raise FileNotFoundError(f"Topic report not found: {report_id}")
-    report = json.loads(path.read_text(encoding="utf-8"))
+    report = load_report(path)
+    if report is None:
+        raise FileNotFoundError(f"Topic report not found: {report_id}")
     quality = evaluate_report(
         report.get("markdown", ""),
         evidence_summary=report.get("evidencePackSummary"),
@@ -750,7 +752,12 @@ def evaluate_topic_report(report_id: str) -> dict:
         artifact_type="topic_report",
     )
     report["quality"] = quality
-    path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    commit_sync(prepare(
+        report_kind=ReportKind.TOPIC_REPORT,
+        exact_path=path,
+        write_kind=WriteKind.CANONICAL,
+        candidate=report,
+    ))
     return {"ok": True, "id": report_id, "quality": quality}
 
 
@@ -774,7 +781,9 @@ def attach_overlay_to_topic_report(report_id: str, *, llm_override=None, web_sea
     path = _find_report_path(report_id)
     if not path:
         raise FileNotFoundError(f"Topic report not found: {report_id}")
-    canonical = json.loads(path.read_text(encoding="utf-8"))
+    canonical = load_report(path)
+    if canonical is None:
+        raise FileNotFoundError(f"Topic report not found: {report_id}")
 
     # 테마 보고서는 단일 티커가 아니므로, plan의 candidateTickers로 노트를 모으고
     # 없으면 전체 hypothesis를 연결한다.
@@ -803,5 +812,10 @@ def attach_overlay_to_topic_report(report_id: str, *, llm_override=None, web_sea
         llm_override=llm_override, web_search_override=web_search_override,
     )
     updated = with_overlay(canonical, overlay, status=status)
-    path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+    commit_sync(prepare(
+        report_kind=ReportKind.TOPIC_REPORT,
+        exact_path=path,
+        write_kind=WriteKind.OVERLAY,
+        candidate={"personalOverlay": updated["personalOverlay"]},
+    ))
     return {"ok": True, "status": status, "personalOverlay": updated["personalOverlay"]}

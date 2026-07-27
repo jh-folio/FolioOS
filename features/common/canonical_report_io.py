@@ -11,6 +11,23 @@ _PROCESS_LOCKS: dict[Path, threading.RLock] = {}
 _PROCESS_LOCKS_GUARD = threading.Lock()
 
 
+def safe_child_path(root: Path, filename: str) -> Path:
+    """Resolve one literal child while rejecting separators, dot names, and symlink escapes."""
+    raw_name = str(filename)
+    safe_name = os.path.basename(raw_name)
+    if safe_name != raw_name or safe_name in {"", ".", ".."}:
+        raise ValueError("artifact filename must be one safe path component")
+    resolved_root = root.resolve(strict=False)
+    candidate = (resolved_root / safe_name).resolve(strict=False)
+    if candidate.parent != resolved_root:
+        raise ValueError("artifact path escapes its configured root")
+    return candidate
+
+
+def _normalized_artifact_path(path: Path) -> Path:
+    return safe_child_path(path.parent, path.name)
+
+
 def _process_lock(path: Path) -> threading.RLock:
     with _PROCESS_LOCKS_GUARD:
         return _PROCESS_LOCKS.setdefault(path, threading.RLock())
@@ -18,7 +35,7 @@ def _process_lock(path: Path) -> threading.RLock:
 
 @contextmanager
 def artifact_lock(path: Path) -> Iterator[None]:
-    resolved = path.resolve(strict=False)
+    resolved = _normalized_artifact_path(path)
     lock_path = resolved.with_name(f".{resolved.name}.canonical.lock")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with _process_lock(resolved):
@@ -48,6 +65,7 @@ def artifact_lock(path: Path) -> Iterator[None]:
 
 
 def atomic_write(path: Path, content: bytes) -> None:
+    path = _normalized_artifact_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     try:
