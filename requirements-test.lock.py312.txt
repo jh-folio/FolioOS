@@ -979,9 +979,9 @@ pluggy==1.6.0 \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
     --hash=sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746
     # via pytest
-polars==1.42.1 \
-    --hash=sha256:2fe94f3059334650bd850ae19a9c165dcd5d9cb12cd95ea04de2201662e70e8a \
-    --hash=sha256:3c0c65cdfa21a621650c4bdcbbccf93964d052fd766c3e70e84a55d961c259fd
+polars==1.43.1 \
+    --hash=sha256:cb07ff3ad61c7b28043e6176e5fdb04a294346920b7f033deeb84116b4911883 \
+    --hash=sha256:f6ecd9184956f46442ddfcf6185423401475bbeffea59e238de8b9ecedacf16c
     # via -r requirements.txt
 polars-runtime-32==1.42.1 \
     --hash=sha256:4d4809e1c1b9a6611f6944f27b24abea902b5159e6b6fa262fd716e947af5afd \
