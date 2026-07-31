@@ -160,7 +160,7 @@
       height: "100%",
       locale: "kr",
       colorTheme: themeValue(widget.theme),
-      isTransparent: true,
+      isTransparent: false,
     };
   }
 
@@ -215,7 +215,7 @@
   function economicCalendarConfig(widget) {
     return {
       colorTheme: themeValue(widget.theme),
-      isTransparent: true,
+      isTransparent: false,
       width: "100%",
       height: "100%",
       locale: "kr",
@@ -243,7 +243,7 @@
         symbols: tickerSymbols(widget),
         showSymbolLogo: true,
         colorTheme: themeValue(widget.theme),
-        isTransparent: true,
+        isTransparent: false,
         displayMode: "adaptive",
         locale: "kr",
       };
