@@ -52,6 +52,19 @@ test("malformed dashboard payload fails closed to one empty state", async (t) =>
   assert.doesNotMatch(partialHtml, /data-qa=\"market-state-current\"/);
 });
 
+test("snapshot asOf accepts an explicit local timezone offset", async (t) => {
+  const vite = await createServer({ configFile: false, root: webRoot, server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  t.after(() => vite.close());
+  const { MarketStateDashboardView, marketStateContextProjection } = await vite.ssrLoadModule("/src/islands/MarketStateDashboard.tsx");
+  const payload = structuredClone(marketStateFixtures.stale);
+  payload.marketStateRef.asOf = "2026-07-29T14:48:08.624992+09:00";
+
+  const html = renderToStaticMarkup(React.createElement(MarketStateDashboardView, { payload }));
+  assert.match(html, /data-qa="market-state-stale"/);
+  assert.doesNotMatch(html, /data-qa="market-state-empty"/);
+  assert.equal(marketStateContextProjection(payload)?.asOf, "2026-07-29T14:48:08.624992+09:00");
+});
+
 test("fallback accepts a valid live evidence watermark without promoting it to evidence context", async (t) => {
   const vite = await createServer({ configFile: false, root: webRoot, server: { middlewareMode: true, hmr: false }, appType: "custom" });
   t.after(() => vite.close());

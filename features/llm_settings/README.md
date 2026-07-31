@@ -72,7 +72,8 @@ FOLIO_AGENT_CLAUDE_MODEL=claude-sonnet-5
 fallback 모델 목록:
 
 ```text
-Codex/OpenAI: GPT-5.5, GPT-5.4, GPT-5.4-mini
+Codex CLI: GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, GPT-5.5, GPT-5.4, GPT-5.4-mini
+OpenAI API: GPT-5.5, GPT-5.4, GPT-5.4-mini
 Claude: Claude Fable 5, Claude Sonnet 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude Haiku 4.5
 Gemini: Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash-Lite
 ```

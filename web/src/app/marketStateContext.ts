@@ -29,6 +29,10 @@ function utcInstant(value: unknown) {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(value) && Number.isFinite(new Date(value).getTime());
 }
 
+function zonedInstant(value: unknown) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(new Date(value).getTime());
+}
+
 const STALE_REASONS = new Set(["invalid_as_of", "future_as_of", "missing_input_watermark", "age_exceeded", "new_relevant_evidence", "update_failed"]);
 
 export function readMarketStateRef(value: unknown): MarketStateRef | null {
@@ -49,12 +53,12 @@ export function readMarketStateRef(value: unknown): MarketStateRef | null {
   const status = candidate.status as MarketStateStatus;
   const reason = candidate.freshnessReason;
   if (typeof reason !== "string") return null;
-  if (status === "current" && (sourceKind !== "snapshot" || typeof candidate.snapshotId !== "string" || !candidate.snapshotId || !utcInstant(candidate.asOf) || reason !== "within_window")) return null;
+  if (status === "current" && (sourceKind !== "snapshot" || typeof candidate.snapshotId !== "string" || !candidate.snapshotId || !zonedInstant(candidate.asOf) || reason !== "within_window")) return null;
   if (status === "current" && (candidate.inputWatermark !== null && !utcInstant(candidate.inputWatermark))) return null;
   if (status === "current" && ((candidate.inputWatermark === null) !== (candidate.relevantEvidenceWatermark === null))) return null;
   if (status === "stale" && (sourceKind !== "snapshot" || typeof candidate.snapshotId !== "string" || !candidate.snapshotId || !STALE_REASONS.has(reason))) return null;
-  if (status === "stale" && reason !== "invalid_as_of" && !utcInstant(candidate.asOf)) return null;
-  if (status === "fallback" && (sourceKind !== "state_fallback" || candidate.snapshotId !== null || (candidate.asOf !== null && !utcInstant(candidate.asOf)) || reason !== "state_fallback" || candidate.inputWatermark !== null)) return null;
+  if (status === "stale" && reason !== "invalid_as_of" && !zonedInstant(candidate.asOf)) return null;
+  if (status === "fallback" && (sourceKind !== "state_fallback" || candidate.snapshotId !== null || (candidate.asOf !== null && !zonedInstant(candidate.asOf)) || reason !== "state_fallback" || candidate.inputWatermark !== null)) return null;
   if (status === "empty" && (sourceKind !== "none" || candidate.snapshotId !== null || candidate.asOf !== null || reason !== "no_state" || candidate.inputWatermark !== null || candidate.relevantEvidenceWatermark !== null)) return null;
   return {
     snapshotId: typeof candidate.snapshotId === "string" ? candidate.snapshotId : null,

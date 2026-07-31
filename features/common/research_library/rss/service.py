@@ -5,6 +5,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from features.common.utils import normalize, clean_brief_text, clean_embedded_sections, read_json
@@ -37,6 +38,12 @@ RSS_CACHE_TABLE = "rss_feed_items"
 RSS_CACHE_REFRESH_TTL_SECONDS = int(os.environ.get("RSS_CACHE_REFRESH_TTL_SECONDS", "30") or 30)
 _RSS_CACHE_LAST_REFRESH = 0.0
 _RSS_CACHE_LAST_STATS = {"files": 0, "updated": 0, "deleted": 0, "skipped": False}
+_RSS_IMPORT_LOCK = threading.Lock()
+
+
+def _collection_created_count(output):
+    match = re.search(r"(?m)^Done\. Created\s+(\d+)\s+file\(s\)\.", str(output or ""))
+    return int(match.group(1)) if match else None
 
 
 def response_tail(text, lines=30):
@@ -551,9 +558,10 @@ def rss_save_full_text_enabled():
     return bool(rss_cfg.get("saveFullText", True))
 
 
-def import_rssarchive(run_collection=True, progress=None):
+def _import_rssarchive_locked(run_collection=True, progress=None):
     output = []
     before = len(list(RSS_INBOX_DIR.glob("*.md")))
+    collector_created = None
     if progress:
         progress(f"RSS 수집 준비 중입니다. 기존 RSS 파일 {before}개", progress=5)
     if run_collection:
@@ -572,23 +580,32 @@ def import_rssarchive(run_collection=True, progress=None):
             )
             if proc.stdout.strip():
                 output.append(proc.stdout.strip())
+                collector_created = _collection_created_count(proc.stdout)
             if proc.stderr.strip():
                 output.append(proc.stderr.strip())
         except Exception:
             output.append("RSS collection failed.")
     after = len(list(RSS_INBOX_DIR.glob("*.md")))
-    output.append(f"RSS collection finished. Added {max(after - before, 0)}, total {after}.")
+    added = collector_created if collector_created is not None else max(after - before, 0)
+    output.append(f"RSS collection finished. Added {added}, total {after}.")
     output.append(f"RSS folder: {RSS_INBOX_DIR}")
     if progress:
-        progress(f"RSS 수집 완료: 신규 {max(after - before, 0)}개, 총 {after}개. 피드 캐시를 갱신합니다.", progress=62)
+        progress(f"RSS 수집 완료: 신규 {added}개, 총 {after}개. 피드 캐시를 갱신합니다.", progress=62)
     cache = refresh_rss_feed_cache(progress=progress, force=True)
     if progress:
         progress(f"RSS 피드 캐시 갱신 완료: 변경 {cache.get('updated', 0)}개, 삭제 {cache.get('deleted', 0)}개. 인덱스를 갱신합니다.", progress=68)
     index = build_index(incremental=True, progress=progress)
     return {
         "output": "\n".join(output),
-        "added": max(after - before, 0),
+        "added": added,
         "total": after,
         "cache": cache,
         "index": {"count": index.get("count", 0), "generatedAt": index.get("generatedAt", ""), "incremental": index.get("incremental", {})},
     }
+
+
+def import_rssarchive(run_collection=True, progress=None):
+    # 자동화, 브리핑 prerequisite, 수동 버튼이 같은 저장소를 공유한다.
+    # 한 번에 하나만 실행해 dedupe state와 실행별 신규 개수를 안정적으로 유지한다.
+    with _RSS_IMPORT_LOCK:
+        return _import_rssarchive_locked(run_collection=run_collection, progress=progress)

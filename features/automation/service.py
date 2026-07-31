@@ -47,9 +47,28 @@ def list_runs(limit: int = 20) -> list[dict]:
 
 def _parse_iso(value: str) -> dt.datetime | None:
     try:
-        return dt.datetime.fromisoformat(str(value or "").replace("Z", "+00:00")).replace(tzinfo=None)
+        return dt.datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _elapsed(now: dt.datetime, finished: dt.datetime) -> dt.timedelta:
+    """Compare timestamps without mixing local wall time and UTC wall time."""
+    if now.tzinfo is None and finished.tzinfo is None:
+        return now - finished
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=finished.tzinfo)
+    if finished.tzinfo is None:
+        finished = finished.replace(tzinfo=now.tzinfo)
+    return now.astimezone(dt.timezone.utc) - finished.astimezone(dt.timezone.utc)
+
+
+def _date_in_reference_timezone(value: dt.datetime, reference: dt.datetime) -> dt.date:
+    if value.tzinfo is not None and reference.tzinfo is not None:
+        return value.astimezone(reference.tzinfo).date()
+    if value.tzinfo is not None:
+        return value.astimezone().date()
+    return value.date()
 
 
 def _last_run_for(kind: str, runs: list[dict] | None = None) -> dict | None:
@@ -66,7 +85,7 @@ def _minutes_from_time(value: str) -> int:
 
 def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | None = None, runs: list[dict] | None = None) -> bool:
     settings = normalize_settings(settings or read_settings())
-    now = now or dt.datetime.now()
+    now = now or dt.datetime.now().astimezone()
     runs = list_runs(100) if runs is None else runs
     if kind == "rss":
         cfg = settings["rss"]
@@ -74,14 +93,14 @@ def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | N
             return False
         last = _last_run_for("rss", runs)
         finished = _parse_iso((last or {}).get("finishedAt", ""))
-        return finished is None or now - finished >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
+        return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
     if kind == "marketMemory":
         cfg = settings["marketMemory"]
         if not cfg.get("enabled"):
             return False
         last = _last_run_for("marketMemory", runs)
         finished = _parse_iso((last or {}).get("finishedAt", ""))
-        return finished is None or now - finished >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
+        return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
     if kind == "briefing":
         cfg = settings["briefing"]
         if not cfg.get("enabled"):
@@ -94,19 +113,19 @@ def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | N
             return False
         last = _last_run_for("briefing", runs)
         finished = _parse_iso((last or {}).get("finishedAt", ""))
-        return finished is None or finished.date() != now.date()
+        return finished is None or _date_in_reference_timezone(finished, now) != now.date()
     return False
 
 
 def market_memory_recently_run(*, now: dt.datetime | None = None, max_age_hours: int = 12, runs: list[dict] | None = None) -> bool:
-    now = now or dt.datetime.now()
+    now = now or dt.datetime.now().astimezone()
     last = _last_run_for("marketMemory", list_runs(100) if runs is None else runs)
     if (last or {}).get("status") not in {"done", "ok", ""}:
         return False
     finished = _parse_iso((last or {}).get("finishedAt", ""))
     if finished is None:
         return False
-    return now - finished < dt.timedelta(hours=max(1, int(max_age_hours or 12)))
+    return _elapsed(now, finished) < dt.timedelta(hours=max(1, int(max_age_hours or 12)))
 
 
 def run_briefing_prerequisites(*, now: dt.datetime | None = None, memory_max_age_hours: int = 12) -> dict:

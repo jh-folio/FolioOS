@@ -51,6 +51,17 @@ def test_api_model_catalog_falls_back_without_api_key():
     assert catalog["modelChoices"] == [{"value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6"}]
 
 
+def test_codex_fallback_includes_gpt_5_6_family_in_role_order():
+    choices = model_catalog.CLI_MODEL_FALLBACKS["codex"]
+
+    assert choices[:3] == [
+        {"value": "gpt-5.6-sol", "label": "GPT-5.6 Sol"},
+        {"value": "gpt-5.6-terra", "label": "GPT-5.6 Terra"},
+        {"value": "gpt-5.6-luna", "label": "GPT-5.6 Luna"},
+    ]
+    assert "gpt-5.5" in {item["value"] for item in choices}
+
+
 def test_cli_model_catalog_parses_stdout_and_keeps_fallback(tmp_path, monkeypatch):
     monkeypatch.setattr(model_catalog, "CACHE_PATH", tmp_path / "llm-model-cache.json")
 
