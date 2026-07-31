@@ -45,6 +45,25 @@ def test_manual_snapshot_route_records_attempt_and_exposes_normative_ref(tmp_pat
     assert (backend.prepare_calls, backend.save_calls) == (1, 1)
 
 
+def test_dashboard_recovers_snapshot_with_equivalent_utc_offset_storage(tmp_path) -> None:
+    app, _backend, storage = _app(tmp_path)
+    with LiveHttpClient(app) as client:
+        created = client.post("/api/memory/state-snapshot", json={"scope": "GLOBAL"})
+    assert created.status_code == 200
+    with connect(storage.marketDbPath) as connection:
+        connection.execute(
+            "UPDATE market_state_snapshots SET as_of = ? WHERE snapshot_id = ?",
+            ("2026-07-17T12:00:00+00:00", created.json()["snapshot"]["id"]),
+        )
+        connection.commit()
+
+    with LiveHttpClient(app) as client:
+        dashboard = client.get("/api/memory/state-dashboard", params={"scope": "GLOBAL", "limit": 5})
+
+    assert dashboard.status_code == 200
+    assert dashboard.json()["marketStateRef"]["status"] == "current"
+
+
 def test_context_route_enforces_policy_and_never_returns_evidence_fields(tmp_path) -> None:
     # Given a current snapshot / When include and exclude policies are projected / Then only current context is injected.
     app, _backend, _storage = _app(tmp_path)

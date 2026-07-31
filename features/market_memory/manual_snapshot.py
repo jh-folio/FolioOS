@@ -190,8 +190,6 @@ def recover_manual_attempts(
     additions: list[MarketStateAttempt] = []
     for snapshot in sorted(committed, key=lambda row: (row.savedAt, row.snapshotId)):
         reference = snapshot.updateAttemptRef
-        if snapshot.savedAt < reference.startedAt:
-            raise ManualSnapshotRepairRequiredError()
         match reference.mode:
             case AttemptMode.MANUAL:
                 pass
@@ -199,6 +197,8 @@ def recover_manual_attempts(
                 continue
             case unreachable:
                 assert_never(unreachable)
+        if snapshot.savedAt < reference.startedAt:
+            raise ManualSnapshotRepairRequiredError()
         if reference.id in referenced:
             raise ManualSnapshotRepairRequiredError()
         referenced[reference.id] = snapshot
