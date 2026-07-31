@@ -17,7 +17,7 @@ export const MOTION_PREFERENCE_KEY = "folio.motionPreference.v1";
 export const UI_PREFERENCE_EVENT = "folio:ui-preferences-updated";
 
 const DEFAULT_PREFERENCES: UiPreferences = {
-  home: { mode: "office", choiceSeen: false },
+  home: { mode: "home", choiceSeen: true },
   character: { preset: "classic", name: "" },
   motion: "system",
 };
@@ -95,8 +95,10 @@ export function resetUiPreferences() {
   return defaults;
 }
 
-export function preferredHomeRoute(preferences = readUiPreferences()): RouteId {
-  return preferences.home.mode;
+// Pixel Office 보류 동안에는 저장된 선택과 무관하게 Agent Home으로 들어간다.
+// 선택값 자체는 지우지 않으므로 재개할 때 사용자의 이전 선택이 살아 있다.
+export function preferredHomeRoute(_preferences = readUiPreferences()): RouteId {
+  return "home";
 }
 
 export function useUiPreferences() {

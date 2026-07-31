@@ -24,9 +24,7 @@ These screenshots were captured from a clean sample workspace with no private re
 
 ## What You Can Do In 0.3.0
 
-- Use Pixel Office as the default Home to see research freshness, saved outputs, Agent activity, and items needing attention.
-- Switch to the text-focused Agent Home while keeping the same Agent conversation and Work Log.
-- Chat with the Folio OS AI Agent from either Home.
+- Chat with the Folio OS AI Agent from the Home screen.
 - Review market, report, checkpoint, and portfolio context from the Dashboard.
 - Maintain a local company, sector, and theme Watchlist with related news.
 - Collect and search public RSS/news feeds.
@@ -110,13 +108,11 @@ Do not delete `data/`, `research-inbox/`, `config/`, or `.env` unless you intent
 
 ## Main Screens
 
-### Pixel Office and Agent Home
+### Home
 
-Pixel Office is the default Home. Its seven office objects summarize news, market context, research, saved reports, notes, portfolio/watchlist presence, and Agent status without exposing note bodies, portfolio positions, or raw job errors.
+Home is where you ask the AI Agent for research. Type a question or ask it to revise a saved report, and start a briefing, an RSS collection, a company analysis, or deep research from the quick actions.
 
-On smaller screens, the same objects appear as readable cards with bottom-sheet details. You can choose Classic Analyst or Economics Student, give the character a local display name, and reduce motion under Settings.
-
-Agent Home remains available as a text-focused workspace. Both Homes share the same Agent conversation, model selection, proposals, and recent jobs. You can choose a default on first launch or change it later under Settings.
+The Agent work log below shows only the latest status as a single line; expand it for the full history. It never shows the body of a task or your private research material.
 
 ### Dashboard
 
@@ -162,7 +158,7 @@ Agent synthesis runs only after an explicit action such as `Review with latest e
 
 ### Settings
 
-Configure appearance, the default Home, Agent character and motion, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+Configure appearance and motion, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
 
 ---
 

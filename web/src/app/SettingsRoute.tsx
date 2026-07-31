@@ -459,7 +459,7 @@ export function SettingsRoute() {
             <div className="input-panel-header">
               <div>
                 <h3>화면</h3>
-                <p>이 브라우저의 색상 모드, 기본 Home, Agent 캐릭터와 움직임 방식을 저장합니다.</p>
+                <p>이 브라우저의 색상 모드와 움직임 방식을 저장합니다.</p>
               </div>
               <span className="settings-theme-status" aria-live="polite">
                 현재 {theme.resolved === "dark" ? "다크" : "라이트"}
@@ -487,16 +487,6 @@ export function SettingsRoute() {
             </div>
             <div className="settings-grid">
               <label className="field">
-                <span>기본 Home</span>
-                <select
-                  value={uiPreferences.preferences.home.mode}
-                  onChange={(event) => uiPreferences.setHome(event.currentTarget.value === "home" ? "home" : "office", true)}
-                >
-                  <option value="office">Pixel Office</option>
-                  <option value="home">Agent Home</option>
-                </select>
-              </label>
-              <label className="field">
                 <span>움직임</span>
                 <select
                   value={uiPreferences.preferences.motion}
@@ -506,45 +496,6 @@ export function SettingsRoute() {
                   <option value="reduced">움직임 줄이기</option>
                 </select>
               </label>
-            </div>
-            <div className="settings-grid">
-              <div className="field">
-                <span>캐릭터</span>
-                <div className="settings-segmented" aria-label="Agent 캐릭터">
-                  <button
-                    className={uiPreferences.preferences.character.preset === "classic" ? "active" : ""}
-                    type="button"
-                    onClick={() => uiPreferences.setCharacter("classic")}
-                  >
-                    클래식 애널리스트
-                  </button>
-                  <button
-                    className={uiPreferences.preferences.character.preset === "student" ? "active" : ""}
-                    type="button"
-                    onClick={() => uiPreferences.setCharacter("student")}
-                  >
-                    경제 탐구생
-                  </button>
-                </div>
-              </div>
-              <label className="field">
-                <span>캐릭터 이름</span>
-                <input
-                  type="text"
-                  maxLength={30}
-                  value={uiPreferences.preferences.character.name}
-                  placeholder="선택 사항"
-                  onChange={(event) => uiPreferences.setCharacter(
-                    uiPreferences.preferences.character.preset,
-                    event.currentTarget.value,
-                  )}
-                />
-              </label>
-            </div>
-            <div className="filter-actions settings-actions">
-              <button className="filter-btn clear" type="button" onClick={uiPreferences.reset}>
-                Home 선택과 화면 설정 초기화
-              </button>
             </div>
           </section>
 

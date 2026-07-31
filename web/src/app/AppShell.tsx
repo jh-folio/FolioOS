@@ -162,8 +162,8 @@ export function AppShell() {
   const routeFocusReadyRef = useRef(false);
   const scrollByRouteRef = useRef<Record<string, number>>({});
   const agentVisible = active.id !== "home" && active.id !== "office";
-  const showHomeChooser = (active.id === "home" || active.id === "office")
-    && !uiPreferences.preferences.home.choiceSeen;
+  // Pixel Office 보류: Home을 고르게 하지 않는다.
+  const showHomeChooser = false;
   const shellAgentClass = agentVisible && agentOpen ? " is-agent-open" : " is-agent-closed";
 
   useEffect(() => {

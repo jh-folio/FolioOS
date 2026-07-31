@@ -3,7 +3,6 @@ import { AgentThread } from "./agentWorkspace/AgentThread";
 import { recentKey, reportRoute } from "./agentWorkspace/presenters";
 import { useAgentWorkspace } from "./agentWorkspace/useAgentWorkspace";
 import { AgentWorkLog } from "./AgentWorkLog";
-import { HomeModeSwitch } from "./HomeModeSwitch";
 import { InvestmentContextCard } from "./InvestmentContextCard";
 
 export function AgentHome() {
@@ -17,7 +16,6 @@ export function AgentHome() {
             <p className="eyebrow">Local Investment Research Workspace</p>
             <h1>Folio OS</h1>
             <p className="agent-home-tagline">AI Agent에게 투자 리서치를 요청하고 여기서 대화를 이어가세요.</p>
-            <HomeModeSwitch current="home" />
           </header>
 
           <AgentComposer workspace={workspace} />

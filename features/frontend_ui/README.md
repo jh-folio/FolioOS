@@ -242,8 +242,9 @@ public/react/folio-react.js
   `--folio-surface-float`, `--folio-surface-veil`, `--folio-toggle-track`.
 - accent 위에 올라가는 글자는 `--folio-on-accent`를 쓴다. accent는 다크에서 밝아지므로
   글자색이 뒤집혀야 한다.
-- 다크 표면은 색이 아니라 어둠으로 위계를 만든다. 색상 222°를 유지하되 채도는 10% 안쪽으로
-  묶어 남색이 아닌 중성 회색으로 읽히게 한다(배경 `#0e0f11`, 카드 `#202227`, 테두리 `#373b43`).
+- 다크 표면은 색이 아니라 어둠으로 위계를 만든다. 색상 222°에 채도 16~24%를 둔다
+  (배경 `#0d0f12`, 카드 `#1c202b`, 테두리 `#2e374c`). 완전 무채색은 화면이 죽고 원래의
+  38~54%는 남색으로 튀므로, 회색 기조를 유지하면서 네이비가 은은하게 읽히는 지점이다.
   강조색은 의미를 지니므로 색상을 유지하고 채도만 10%p 낮춰 회색 위에서 튀지 않게 한다.
 - 세그먼트 토글의 선택 알약은 `--folio-segment-active` / `--folio-segment-active-ink`를 쓴다.
   라이트는 밝은 트랙 위 어두운 알약, 다크는 어두운 트랙 위 밝은 알약이며 트랙 대비 3:1
@@ -251,3 +252,17 @@ public/react/folio-react.js
 - `var(--token)`을 쓰려면 그 토큰이 반드시 어딘가에 정의돼 있어야 한다. 정의가 없으면
   라이트 리터럴 fallback이 다크에도 고정되거나(대비 파괴), fallback이 없는 선언은 통째로
   무효가 된다(포커스 링 소실). `web/tests/workLogCopySource.test.mjs`가 이를 검사한다.
+
+## Pixel Office 보류 (0.3.0)
+
+런타임·에셋·테스트는 저장소에 남기고 사용자 화면 진입점만 제거한 상태다. 재개할 때 다시
+만들지 않기 위해서다.
+
+- 라우트 `office`는 `visibleInNav: false`이고 기본 진입은 `home`이다. `#/office` 직접 진입만
+  살아 있어 `PixelOfficeRoute`와 씬 매니페스트가 계속 타입체크·테스트를 받는다.
+- 첫 실행 Home 선택 화면(`HomeModeChooser`)과 Agent Home의 전환 버튼(`HomeModeSwitch`)은
+  렌더링하지 않는다. `preferredHomeRoute()`는 저장된 선택과 무관하게 `home`을 돌려주되
+  선택값 자체는 지우지 않아 재개 시 복원된다.
+- 설정 화면의 기본 Home·캐릭터 선택은 감췄다. `움직임 줄이기`는 Pixel Office와 무관한
+  접근성 설정이라 남긴다.
+- 재개 조건은 `.planning/pixel-office-game-scene-upgrade/DEFERRED_CHECKPOINT.md`를 따른다.

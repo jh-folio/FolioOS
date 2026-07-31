@@ -306,23 +306,24 @@
 }
 
 /* 다크 표면은 색이 아니라 어둠으로 위계를 만든다.
-   색상 222°는 유지하되 채도는 10% 안쪽으로 묶어 남색이 아닌 중성 회색으로 읽히게 한다.
+   색상 222°에 채도 16~24%를 둬서, 회색 기조를 유지하면서도 네이비가 은은하게 읽히게 한다.
+   (완전 무채색은 화면이 죽고, 원래의 38~54%는 남색으로 튄다. 그 사이가 목표다.)
    강조색만 의미를 지니므로 색상은 그대로 두고 채도만 낮춰 회색 위에서 튀지 않게 한다. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --folio-bg: #0e0f11;
-  --folio-bg-soft: #121416;
-  --folio-surface: #17181c;
-  --folio-surface-2: #202227;
-  --folio-surface-clean: #151619;
-  --folio-surface-muted: #202227;
-  --folio-surface-dark: #0b0c0e;
-  --folio-surface-black: #090a0b;
-  --folio-surface-dark-2: #25272d;
+  --folio-bg: #0d0f12;
+  --folio-bg-soft: #101318;
+  --folio-surface: #14171f;
+  --folio-surface-2: #1c202b;
+  --folio-surface-clean: #13151b;
+  --folio-surface-muted: #1c202b;
+  --folio-surface-dark: #0b0c0f;
+  --folio-surface-black: #09090b;
+  --folio-surface-dark-2: #202532;
   --folio-ink: #f1f2f4;
   --folio-ink-soft: #dcdfe4;
-  --folio-ink-muted: #b7bcc8;
-  --folio-ink-subtle: #9299ab;
+  --folio-ink-muted: #b4bbcb;
+  --folio-ink-subtle: #8f97ac;
   --folio-ink-inverse: #f4f5f7;
   --folio-gold: #d6b168;
   --folio-gold-soft: #443927;
@@ -342,8 +343,8 @@
   --folio-chart-3: #9ec37c;
   --folio-chart-4: #d6b168;
   --folio-chart-5: #c5add3;
-  --folio-border: #373b43;
-  --folio-border-strong: #555b68;
+  --folio-border: #2e374c;
+  --folio-border-strong: #4a5673;
   --folio-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
   --link: #a2ccf0;
   --color-risk: #faa097;
@@ -357,14 +358,14 @@
   --focus-ring: 0 0 0 3px rgba(122, 182, 234, 0.32);
   --folio-tint-weak: rgba(240, 241, 244, 0.08);
   --folio-tint-strong: rgba(240, 241, 244, 0.15);
-  --folio-surface-translucent: rgba(21, 22, 25, 0.96);
-  --folio-surface-float: rgba(32, 34, 39, 0.98);
+  --folio-surface-translucent: rgba(19, 21, 27, 0.96);
+  --folio-surface-float: rgba(28, 32, 43, 0.98);
   --folio-surface-veil: rgba(240, 241, 244, 0.04);
-  --folio-toggle-track: #3a3d45;
+  --folio-toggle-track: #333c50;
   --folio-on-accent: var(--folio-surface-black);
   /* 라이트에서는 어두운 알약이 밝은 트랙 위에 오지만, 다크에서는 반대로 밝은 알약이 올라와야
      "선택됨"이 자연스럽게 읽힌다. 트랙 대비 3:1(WCAG 1.4.11)을 넘기는 밝기로 고정한다. */
-  --folio-segment-active: #6b6e75;
+  --folio-segment-active: #666e82;
   --folio-segment-active-ink: #ffffff;
 }
 
@@ -1156,7 +1157,8 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .react-agent-message-head time {
-  color: var(--folio-ink-subtle, #8b95a1);
+  /* subtle은 이 표면에서 4.31:1이라 본문 크기 글자로는 부족하다. */
+  color: var(--folio-ink-muted);
   font-weight: 700;
 }
 
@@ -12919,7 +12921,8 @@ main.page {
 .work-log-item[data-tone="running"] { border-left-color: var(--folio-blue); }
 .work-log-item[data-tone="failed"] { border-left-color: var(--color-error-text); }
 .work-log-item-side { display: grid; justify-items: end; gap: 10px; min-width: 150px; }
-.work-log-item-side time { font-size: 13px; color: var(--folio-ink-muted, #736b61); }
+/* 카드 표면 위 13px이라 muted로는 4.5:1을 못 넘긴다. */
+.work-log-item-side time { font-size: var(--fs-xs); color: var(--folio-ink-soft); }
 .work-log-footer { margin-top: 16px; align-items: flex-end; }
 .work-log-footer-note { display: grid; gap: 2px; min-width: 0; flex: 1 1 320px; }
 .work-log-footer-note p { margin: 0; color: var(--folio-ink-muted); font-size: var(--fs-xs); }
