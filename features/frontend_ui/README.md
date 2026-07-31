@@ -266,11 +266,17 @@ public/react/folio-react.js
 런타임·에셋·테스트는 저장소에 남기고 사용자 화면 진입점만 제거한 상태다. 재개할 때 다시
 만들지 않기 위해서다.
 
-- 라우트 `office`는 `visibleInNav: false`이고 기본 진입은 `home`이다. `#/office` 직접 진입만
-  살아 있어 `PixelOfficeRoute`와 씬 매니페스트가 계속 타입체크·테스트를 받는다.
-- 첫 실행 Home 선택 화면(`HomeModeChooser`)과 Agent Home의 전환 버튼(`HomeModeSwitch`)은
-  렌더링하지 않는다. `preferredHomeRoute()`는 저장된 선택과 무관하게 `home`을 돌려주되
-  선택값 자체는 지우지 않아 재개 시 복원된다.
+- 실행되는 앱에는 배선이 전혀 없다. 라우트 id `office`, 아이콘, `PixelOfficeRoute` 렌더
+  분기, 첫 실행 선택 화면(`HomeModeChooser`), Agent Home의 전환 버튼(`HomeModeSwitch`)을
+  모두 끊었다. `#/office`는 조용히 홈으로 되돌린다.
+- 컴포넌트와 씬 코드는 `web/src/app/pixelOffice/` 아래에 그대로 있고 vitest 단위 테스트와
+  타입체크를 계속 받는다. 다만 진입점이 없어 번들에 포함되지 않으므로 Pixi 청크도 빌드되지
+  않는다(번들 gzip 156.6KB → 153.2KB).
+- 릴리즈 패키지도 제외한다. `scripts/package_release.py`의 `EXCLUDED_PARTS`에
+  `pixel_office`/`pixel-office`가 있어 백엔드 service와 0.87MB 스프라이트가 배포본에
+  들어가지 않는다(403 → 354 경로).
+- `preferredHomeRoute()`는 저장된 선택과 무관하게 `home`을 돌려주되 선택값 자체는 지우지
+  않아 재개 시 복원된다.
 - 설정 화면의 기본 Home·캐릭터 선택은 감췄다. `움직임 줄이기`는 Pixel Office와 무관한
   접근성 설정이라 남긴다.
 - 재개 조건은 `.planning/pixel-office-game-scene-upgrade/DEFERRED_CHECKPOINT.md`를 따른다.

@@ -18,19 +18,27 @@ test("Home preference uses versioned guarded storage defaults", () => {
   assert.match(preferences, /motion === "reduced" \? "reduced" : "system"/);
 });
 
-test("Pixel Office is held: the runtime survives but nothing reaches it", () => {
-  // 코드와 에셋은 보존한다. 재개할 때 처음부터 다시 만들지 않기 위해서다.
-  assert.match(routes, /\| "office"/);
-  assert.match(shell, /<PixelOfficeRoute \/>/);
-
-  // 진입점은 전부 막는다: 내비게이션, 기본 진입, 첫 실행 선택, 홈 전환 버튼,
-  // 그리고 오래된 북마크로 들어오는 #/office까지.
-  assert.match(routes, /id: "office"[^\n]*visibleInNav: false/);
-  assert.match(routes, /const DEFAULT_ROUTE: RouteId = "home"/);
-  assert.match(shell, /const showHomeChooser = false/);
-  assert.match(shell, /replaceState[\s\S]{0,300}#\/home/);
+test("Pixel Office is held: the shipped app carries no trace of it", () => {
+  // 소스는 저장소에 남아 있지만(재개용) 실행되는 앱에는 배선이 없다.
+  // 라우트 id, 아이콘, 렌더 분기, 첫 실행 선택 화면까지 전부 끊는다.
+  assert.doesNotMatch(routes, /"office"/);
+  assert.doesNotMatch(shell, /PixelOfficeRoute/);
+  assert.doesNotMatch(shell, /HomeModeChooser/);
   assert.doesNotMatch(home, /HomeModeSwitch/);
+
+  assert.match(routes, /const DEFAULT_ROUTE: RouteId = "home"/);
   assert.match(preferences, /return "home";/);
+  // 오래된 북마크는 조용히 홈으로 보낸다.
+  assert.match(shell, /office\(\?:/);
+  assert.match(shell, /replaceState[\s\S]{0,300}#\/home/);
+});
+
+test("the release package excludes the held feature", async () => {
+  const packager = await import("node:fs/promises")
+    .then((fs) => fs.readFile(new URL("../../scripts/package_release.py", import.meta.url), "utf8"));
+  // 도달할 수 없는 기능의 백엔드와 스프라이트를 배포본에 넣을 이유가 없다.
+  assert.match(packager, /"pixel_office"/);
+  assert.match(packager, /"pixel-office"/);
 });
 
 test("Settings exposes only display choices that are actually live", () => {

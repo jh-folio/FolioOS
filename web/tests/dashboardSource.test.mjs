@@ -42,7 +42,7 @@ test("AppShell renders Dashboard on the dashboard route", async () => {
 test("AppShell suppresses the global agent dock on the home route", async () => {
   const source = await readFile(new URL("../src/app/AppShell.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /const agentVisible = active\.id !== "home" && active\.id !== "office"/);
+  assert.match(source, /const agentVisible = active\.id !== "home"/);
   assert.match(source, /is-agent-suppressed/);
   assert.match(source, /\{agentVisible && \(/);
 });

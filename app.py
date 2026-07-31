@@ -23,7 +23,6 @@ from features.common.jobs import (
 )
 from features.common.jobs_routes import router as jobs_router
 from features.agent_mode.work_log_routes import router as work_log_router
-from features.pixel_office.service import pixel_office_payload
 from features.agent_mode.bridge import (
     agent_preflight,
     bridge_status,
@@ -477,11 +476,6 @@ def api_dashboard():
         "notes": list_investment_notes(limit=10, include_body=True),
         "recent": news_docs[:12],
     }
-
-
-@fastapi_app.get("/api/pixel-office")
-def api_pixel_office():
-    return pixel_office_payload()
 
 
 @fastapi_app.get("/api/market-widgets/settings")

@@ -1,5 +1,4 @@
 export type RouteId =
-  | "office"
   | "home"
   | "dashboard"
   | "briefing"
@@ -18,9 +17,6 @@ export type AppRoute = {
 };
 
 export const ROUTES: AppRoute[] = [
-  // Pixel Office는 보류 상태다. 런타임과 에셋은 보존하되 사용자 화면에는 노출하지 않는다.
-  // #/office 직접 진입만 살려두어 코드가 죽지 않게 한다.
-  { id: "office", label: "Pixel Office", group: "home", visibleInNav: false },
   { id: "home", label: "홈", group: "home" },
   { id: "dashboard", label: "대시보드", group: "home" },
   { id: "briefing", label: "브리핑", group: "research" },
