@@ -186,6 +186,9 @@ public/react/folio-react.js
   metadata-only projection을 Home, Market Memory, Smart Collection, Deep Research에 표시한다.
 - 네 표면의 ticker, stance, 예정 checkpoint, 연결 route는 같은 컴포넌트 계약을 사용한다.
   Portfolio와 Watchlist의 독립 route는 계속 기본 navigation에서 숨긴다.
+- 연결된 맥락이 없으면 어떤 화면에서도 렌더링하지 않는다(로딩·실패도 마찬가지). 홈에서
+  빈 카드가 상시 떠 있으면 아직 쓰지 않은 기능을 계속 광고하게 된다. 닫기는
+  `folio.investmentContext.dismissed.v1`에 저장해 화면을 옮겨도 유지한다.
 - 카드는 `data-layer="hypothesis"`를 유지하고 포트폴리오 수량·비중·가격이나 note body를
   렌더링하지 않는다. 외부 evidence와 Canonical 보고서 본문도 이 카드와 구분한다.
 - context 자동 조회는 read-only다. Agent는 사용자가 `Agent로 위험 설명`을 눌렀을 때만
@@ -225,6 +228,9 @@ public/react/folio-react.js
   단순화 과정에서 승인 절차를 숨기지 않는다.
 - 지금 아무 일도 할 수 없는 컨트롤은 그리지 않는다. 범주 필터는 기록이 2건 이상이거나 이미
   범주를 좁혀둔 상태일 때만, 페이지 이동은 전체 건수가 한 페이지를 넘을 때만 렌더링한다.
+- 홈 열은 하나의 폭(`min(100%, 920px)`)을 공유한다. 작업 기록만 내용 폭으로 줄어들면
+  화면이 어긋나 보인다.
+- 접혀 있을 때는 한 줄짜리 정보라 카드 테두리·배경을 없애고, 펼칠 때만 판을 세운다.
 - 헤더에는 새로고침 아이콘 버튼 하나만 둔다. `기록 숨기기`는 푸터의 조용한 텍스트 버튼
   (`.work-log-quiet-btn`)이고, 보존 안내와 metadata-only 고지도 푸터 작은 글씨로 둔다.
 - 예전 `jobs.json` 마이그레이션은 일회성 유지보수라 Work Log가 아니라 설정의

@@ -13057,6 +13057,31 @@ main.page {
   gap: 12px;
 }
 
+/* 홈 열은 하나의 폭을 공유한다. 작업 기록만 내용 폭으로 줄어들면 화면이 어긋나 보인다. */
+.agent-home > .work-log {
+  width: min(100%, 920px);
+  justify-self: center;
+}
+
+/* 접혀 있을 때는 한 줄짜리 정보라 카드 테두리가 과하다. 펼칠 때만 판을 세운다. */
+.work-log-collapsible:has(> .work-log-collapse:not([open])) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  margin-top: 18px;
+}
+
+.work-log-collapsible:has(> .work-log-collapse:not([open])) .work-log-collapse > summary {
+  padding: 10px 4px;
+  border-radius: var(--folio-radius);
+}
+
+.work-log-collapsible:has(> .work-log-collapse:not([open])) .work-log-collapse > summary:hover {
+  background: var(--folio-tint-weak);
+}
+
 /* Agent Work Log: 홈에서는 최근 상태 요약 후 펼쳐보기 */
 .work-log-collapse > summary {
   display: flex;

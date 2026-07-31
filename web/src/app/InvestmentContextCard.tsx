@@ -22,11 +22,11 @@ type InvestmentContextCardViewProps = {
   readonly explainingTicker?: string;
   readonly explanation?: { readonly ticker: string; readonly reply: string } | null;
   readonly explanationError?: string;
-  readonly loading?: boolean;
-  readonly error?: string;
 };
 
 type InvestmentContextCardProps = Omit<InvestmentContextCardViewProps, "summary" | "onDismiss">;
+
+const CONTEXT_DISMISS_KEY = "folio.investmentContext.dismissed.v1";
 
 const contextBoundary = {
   layer: "hypothesis",
@@ -106,8 +106,6 @@ export function InvestmentContextCardView({
   explainingTicker = "",
   explanation = null,
   explanationError = "",
-  loading = false,
-  error = "",
 }: InvestmentContextCardViewProps) {
   const contexts = useMemo(
     () => summary ? contextsFor(summary, mode, collectionId).slice(0, mode === "home" ? 4 : 3) : [],
@@ -115,35 +113,13 @@ export function InvestmentContextCardView({
   );
   const copy = MODE_COPY[mode];
 
-  if (!summary) {
-    if (mode !== "home") return null;
-    return (
-      <aside className="investment-context-card is-minimal" data-qa="investment-context-loading" data-layer={contextBoundary.layer}>
-        <span>{loading ? "개인 리서치 연결을 확인하는 중입니다." : error || "개인 맥락을 불러오지 못했습니다."}</span>
-      </aside>
-    );
-  }
+  // 아직 불러오지 못했거나 실패했을 때 자리만 차지하는 안내는 두지 않는다.
+  // 이 카드는 보조 정보라, 없으면 조용히 비어 있는 편이 화면에 낫다.
+  if (!summary) return null;
 
-  if (!contexts.length) {
-    if (mode !== "home") return null;
-    return (
-      <aside
-        className="investment-context-card is-empty"
-        data-qa="investment-context-empty"
-        data-layer={contextBoundary.layer}
-        data-reuse-as-evidence={String(contextBoundary.reuseAsEvidence)}
-      >
-        <div className="investment-context-head">
-          <div>
-            <p>내 투자 맥락 · 가설 (근거 아님)</p>
-            <h2>개인 리서치 연결이 아직 없습니다</h2>
-          </div>
-          {dismissible && onDismiss ? <button type="button" className="investment-context-dismiss" aria-label="개인 맥락 카드 닫기" onClick={onDismiss}>×</button> : null}
-        </div>
-        <p>관심 종목이나 체크포인트를 기록하면 관련 리서치 화면에서 조용히 연결됩니다.</p>
-      </aside>
-    );
-  }
+  // 연결된 맥락이 하나도 없으면 어떤 화면에서도 렌더링하지 않는다. 홈에서 빈 카드가
+  // 상시 떠 있으면 아직 쓰지 않은 기능을 계속 광고하는 꼴이 된다.
+  if (!contexts.length) return null;
 
   const dueCount = contexts.reduce((total, context) => total + context.dueCheckpoints.length, 0);
   return (
@@ -219,9 +195,15 @@ export function InvestmentContextCardView({
 
 export function InvestmentContextCard(props: InvestmentContextCardProps) {
   const [summary, setSummary] = useState<InvestmentContextSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [dismissed, setDismissed] = useState(false);
+  // 닫기는 브라우저에 기억한다. 컴포넌트 state로만 두면 화면을 옮길 때마다 되살아나서
+  // "닫았는데 또 뜬다"가 된다.
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return window.localStorage.getItem(CONTEXT_DISMISS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [explainingTicker, setExplainingTicker] = useState("");
   const [explanation, setExplanation] = useState<{ ticker: string; reply: string } | null>(null);
   const [explanationError, setExplanationError] = useState("");
@@ -229,16 +211,10 @@ export function InvestmentContextCard(props: InvestmentContextCardProps) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setLoading(true);
-    setError("");
     getJson<InvestmentContextSummary>("/api/investment-context/summary", { signal: controller.signal })
       .then(setSummary)
-      .catch((requestError) => {
-        if (requestError instanceof DOMException && requestError.name === "AbortError") return;
-        setError(requestError instanceof Error ? requestError.message : "개인 맥락을 불러오지 못했습니다.");
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+      .catch(() => {
+        // 보조 카드라 실패하면 조용히 사라진다. 리서치 화면에 오류 배너를 띄울 만한 정보가 아니다.
       });
     return () => controller.abort();
   }, []);
@@ -282,9 +258,14 @@ export function InvestmentContextCard(props: InvestmentContextCardProps) {
     <InvestmentContextCardView
       {...props}
       summary={summary}
-      loading={loading}
-      error={error}
-      onDismiss={props.dismissible ? () => setDismissed(true) : undefined}
+      onDismiss={props.dismissible ? () => {
+        setDismissed(true);
+        try {
+          window.localStorage.setItem(CONTEXT_DISMISS_KEY, "1");
+        } catch {
+          // 저장이 막혀 있어도 이번 화면에서는 닫힌 상태를 유지한다.
+        }
+      } : undefined}
       onExplain={requestExplanation}
       explainingTicker={explainingTicker}
       explanation={explanation}

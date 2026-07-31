@@ -4,6 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
 import { fileURLToPath } from "node:url";
+import { readFile } from "node:fs/promises";
 
 const webRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -70,22 +71,34 @@ test("card renders bounded personal context and collection filtering without pri
   assert.doesNotMatch(collection, /MSFT/);
 });
 
-test("empty state is neutral and dismissible", async (t) => {
+test("the card takes no space until there is context to show", async (t) => {
   const vite = await createServer({ configFile: false, root: webRoot, server: { middlewareMode: true, hmr: false }, appType: "custom" });
   t.after(() => vite.close());
   const { InvestmentContextCardView } = await vite.ssrLoadModule("/src/app/InvestmentContextCard.tsx");
   const empty = { ...summary, counts: { ...summary.counts, total: 0 }, watchContexts: [] };
 
-  const html = renderToStaticMarkup(React.createElement(InvestmentContextCardView, {
-    mode: "home",
-    summary: empty,
-    dismissible: true,
-    onDismiss: () => {},
-  }));
-  assert.match(html, /data-qa="investment-context-empty"/);
-  assert.match(html, /개인 리서치 연결이 아직 없습니다/);
-  assert.match(html, /aria-label="개인 맥락 카드 닫기"/);
-  assert.doesNotMatch(html, /위험|경고|추천/);
+  // 홈은 이 카드가 상시 떠 있기 가장 쉬운 자리다. 연결이 없으면 아무것도 그리지 않아야
+  // 아직 쓰지 않은 기능을 계속 광고하지 않는다.
+  for (const mode of ["home", "market-memory", "deep-research"]) {
+    assert.equal(
+      renderToStaticMarkup(React.createElement(InvestmentContextCardView, { mode, summary: empty, dismissible: true, onDismiss: () => {} })),
+      "",
+      `${mode} should render nothing without context`,
+    );
+  }
+  // 아직 불러오지 못한 상태도 마찬가지다.
+  assert.equal(
+    renderToStaticMarkup(React.createElement(InvestmentContextCardView, { mode: "home", summary: null })),
+    "",
+  );
+});
+
+test("dismissing the card is remembered across mounts", async (t) => {
+  const source = await readFile(new URL("../src/app/InvestmentContextCard.tsx", import.meta.url), "utf8");
+  // state로만 두면 화면을 옮길 때마다 닫은 카드가 되살아난다.
+  assert.match(source, /folio\.investmentContext\.dismissed\.v1/);
+  assert.match(source, /localStorage\.getItem\(CONTEXT_DISMISS_KEY\)/);
+  assert.match(source, /localStorage\.setItem\(CONTEXT_DISMISS_KEY/);
 });
 
 test("controlled Agent reply renders headings and bullets without HTML injection", async (t) => {

@@ -15,7 +15,6 @@ export function AgentHome() {
           <header className="home-hero agent-home-hero">
             <p className="eyebrow">Local Investment Research Workspace</p>
             <h1>Folio OS</h1>
-            <p className="agent-home-tagline">AI Agent에게 투자 리서치를 요청하고 여기서 대화를 이어가세요.</p>
           </header>
 
           <AgentComposer workspace={workspace} />
