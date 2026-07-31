@@ -18,6 +18,8 @@ test("Market Memory route owns the memory workflow shell", async () => {
   assert.match(source, /data-qa="market-state-job-still-running"/);
   assert.match(source, /data-qa="market-state-job-resume"/);
   assert.match(source, /recoverMarketMemoryJob/);
+  assert.match(source, /discoverActiveMarketMemoryJob/);
+  assert.match(source, /자동으로 다시 연결했습니다/);
   assert.match(source, /persistMarketMemoryJobId/);
   assert.match(source, /clearMarketMemoryJobId/);
   assert.match(source, /MARKET_MEMORY_ACTIVE_JOB_KEY|marketMemoryJobResume/);

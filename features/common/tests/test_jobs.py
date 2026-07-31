@@ -52,6 +52,24 @@ def test_progress_only_update_preserves_non_nullable_job_identity(monkeypatch, t
     assert current.adapter is jobs.Adapter.NONE
 
 
+def test_public_job_projection_exposes_task_type_for_reload_recovery(monkeypatch, tmp_path):
+    monkeypatch.setattr(jobs, "JOBS_PATH", tmp_path / "jobs.json")
+    jobs._LIFECYCLES.clear()
+    job = jobs.new_shared_job(
+        kind="rss",
+        task_type="rss",
+        generation_mode="none",
+        adapter="none",
+        requested_mode=None,
+        mode="collect",
+        attempted_engine=None,
+        clock=jobs._clock,
+    )
+    jobs.shared_store().add(job)
+
+    assert jobs.get_job(job.id)["taskType"] == "rss"
+
+
 def test_index_job_normalizes_utc_offset_before_terminal_projection(monkeypatch, tmp_path):
     monkeypatch.setattr(jobs, "JOBS_PATH", tmp_path / "jobs.json")
     jobs._LIFECYCLES.clear()

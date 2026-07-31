@@ -6,7 +6,7 @@ import { InvestmentContextCard } from "./InvestmentContextCard";
 import { setReactAgentContextScope } from "./agentContext";
 import type { MarketStateContextProjection } from "./marketStateContext";
 import { AgentJobTerminalError, AgentPollTimeout, pollAgentJobBounded } from "./agentPolling";
-import { clearMarketMemoryJobId, persistMarketMemoryJobId, readMarketMemoryJobId, recoverMarketMemoryJob } from "./marketMemoryJobResume";
+import { clearMarketMemoryJobId, discoverActiveMarketMemoryJob, persistMarketMemoryJobId, readMarketMemoryJobId, recoverMarketMemoryJob } from "./marketMemoryJobResume";
 
 type AgentJob = {
   id: string;
@@ -89,11 +89,36 @@ export function MarketMemoryRoute() {
 
   useEffect(() => {
     let current = true;
-    void recoverMarketMemoryJob((id) => getJson<AgentJob>(`/api/jobs/${encodeURIComponent(id)}`)).then((recovery) => {
+    void (async () => {
+      let recovery = await recoverMarketMemoryJob((id) => getJson<AgentJob>(`/api/jobs/${encodeURIComponent(id)}`));
+      if (recovery.kind === "none") {
+        recovery = await discoverActiveMarketMemoryJob(() => getJson<AgentJob[]>("/api/jobs"));
+      }
       if (!current) return;
       if (recovery.kind === "active") {
         setResumableJob(recovery.job);
-        setStatus("이전에 시작한 서버 작업이 계속되고 있습니다. 같은 작업의 상태를 다시 확인할 수 있습니다.");
+        setBusy(true);
+        setStatus("이전에 시작한 서버 작업에 자동으로 다시 연결했습니다.");
+        try {
+          await finishJob(recovery.job);
+        } catch (err) {
+          if (!current) return;
+          if (err instanceof AgentPollTimeout) {
+            persistMarketMemoryJobId(err.job.id);
+            setResumableJob(err.job as AgentJob);
+            setStatus("서버 작업은 계속되고 있습니다. 같은 작업의 상태를 다시 확인할 수 있습니다.");
+          } else if (err instanceof AgentJobTerminalError) {
+            clearMarketMemoryJobId();
+            setResumableJob(null);
+            setError(err.message);
+            setStatus("");
+          } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+            setError(err instanceof Error ? err.message : "작업 상태 확인에 실패했습니다.");
+            setStatus("");
+          }
+        } finally {
+          if (current) setBusy(false);
+        }
       } else if (recovery.kind === "terminal") {
         setResumableJob(null);
         if (recovery.job.status === "done") applyResult((recovery.job.result || {}) as MemoryResult);
@@ -105,7 +130,7 @@ export function MarketMemoryRoute() {
         setResumableJob(null);
         setError("저장된 시장 메모리 작업 정보를 확인할 수 없어 안전하게 제거했습니다.");
       }
-    });
+    })();
     return () => {
       current = false;
       pollController.current?.abort();
