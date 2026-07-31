@@ -10,18 +10,6 @@ Folio OS 0.3.0은 내 PC에 저장한 시장 뉴스와 리서치 자료를 모�
 
 ---
 
-## 화면 미리보기
-
-아래 이미지는 개인 리서치 자료, 보고서, 포트폴리오 데이터, API Key가 없는 깨끗한 샘플 워크스페이스에서 캡처했습니다.
-
-<img src="docs/assets/screenshots/folio-os-home.png" alt="AI Agent 진입점이 보이는 Folio OS Home 화면" width="920">
-
-<img src="docs/assets/screenshots/folio-os-briefing.png" alt="빈 상태의 브리핑 생성 및 검색 화면" width="920">
-
-<img src="docs/assets/screenshots/folio-os-rss-feed.png" alt="빈 상태의 RSS 피드 필터와 검색 화면" width="920">
-
----
-
 ## 0.3.0에서 할 수 있는 일
 
 - Home 화면에서 Folio OS AI Agent와 대화하기

@@ -1,19 +1,65 @@
+# Folio OS keeps three reproducibility gates that Dependabot cannot satisfy on its own:
+#
+#   1. tests/test_todo15_ci_workflow_contract.py pins every action to a commit SHA, so an
+#      action bump fails until the same commit updates ACTION_PINS.
+#   2. CI regenerates the Python locks with --exclude-newer, so a bump to a release
+#      published after that cutoff cannot resolve.
+#   3. CI rejects public/react drift, so a web bump fails until the rebuilt bundle is
+#      committed alongside it.
+#
+# None of those are Dependabot's fault, and none can be fixed inside its pull request. The
+# settings below stop it from opening PRs that can never go green, while keeping the part
+# that is genuinely useful: one grouped monthly notice of what has moved, which a human
+# then lands together with the lock, pin, or bundle change it requires.
+#
+# The labels say what each group needs before it can merge, so the queue explains itself
+# without reading CI logs.
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "build"
+    labels:
+      - "dependencies"
+      - "needs-lock-refresh"
 
   - package-ecosystem: "npm"
     directory: "/web"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      web-dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "build"
+    labels:
+      - "dependencies"
+      - "needs-bundle-rebuild"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "build"
+    labels:
+      - "dependencies"
+      - "needs-action-pin-update"
+
+# Security updates are unaffected by the grouping above and still open immediately and
+# individually. A vulnerability must never wait for the monthly batch.
