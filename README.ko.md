@@ -22,9 +22,10 @@ Folio OS는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 일�
 
 ---
 
-## 0.1에서 할 수 있는 일
+## 0.3.0에서 할 수 있는 일
 
-- Home 화면에서 Folio OS AI Agent와 대화하기
+- 기본 Home인 Pixel Office에서 자료 freshness, 저장 산출물, Agent 활동, 확인할 항목 보기
+- 같은 Agent 대화와 최근 작업을 유지한 채 텍스트 중심 Agent Home으로 전환하기
 - 공개 RSS/뉴스 피드 수집 및 검색
 - 미국/한국 시장 일일 브리핑 생성
 - 중기 시장 상황을 요약한 Market Memory 확인
@@ -33,7 +34,7 @@ Folio OS는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 일�
 - 생성된 보고서를 Obsidian 또는 Notion으로 내보내기
 - LLM CLI/API, 모델 선택, RSS, 자동화, 내보내기 설정 관리
 
-0.1 사용자 화면에서 제외하거나 뒤로 미룬 기능:
+0.3.0 사용자 화면에 포함하지 않은 기능:
 
 - Agent 작업 공간 형태의 Deep Research
 - 대시보드 위젯과 워치리스트 워크플로
@@ -104,9 +105,13 @@ data/
 
 ## 주요 화면
 
-### Home
+### Pixel Office와 Agent Home
 
-Home은 AI Agent의 기본 진입점입니다. 현재 워크스페이스 요약, 자주 쓰는 작업 시작, 리서치 맥락에 대한 질문 등에 사용할 수 있습니다.
+Pixel Office가 기본 Home입니다. 7개 오피스 오브젝트가 뉴스, 시장 맥락, 리서치, 저장 보고서, 메모, 포트폴리오/워치리스트 존재 여부, Agent 상태를 요약합니다. 노트 본문, 포트폴리오 position, raw 작업 오류는 화면 요약에 노출하지 않습니다.
+
+좁은 화면에서는 같은 오브젝트를 읽기 쉬운 카드와 하단 상세 시트로 제공합니다. Settings에서 클래식 애널리스트 또는 경제 탐구생을 고르고 로컬 표시 이름을 붙이거나 움직임을 줄일 수 있습니다.
+
+Agent Home은 텍스트 중심 작업 공간으로 계속 사용할 수 있습니다. 두 Home은 같은 Agent 대화, 모델 선택, 수정 제안, 최근 작업을 공유합니다. 첫 실행에서 기본 화면을 선택하고 나중에 Settings에서 바꿀 수 있습니다.
 
 ### Briefing
 
@@ -128,7 +133,7 @@ Home은 AI Agent의 기본 진입점입니다. 현재 워크스페이스 요약,
 
 ### Settings
 
-AI Agent 모드, LLM CLI/API 설정, 저장된 모델 선택, RSS/자동화, Obsidian, Notion 설정을 관리합니다.
+기본 Home, Agent 캐릭터와 움직임, AI Agent 모드, LLM CLI/API 설정, 저장된 모델 선택, RSS/자동화, Obsidian, Notion 설정을 관리합니다.
 
 ---
 

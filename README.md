@@ -22,9 +22,10 @@ These screenshots were captured from a clean sample workspace with no private re
 
 ---
 
-## What You Can Do In 0.1
+## What You Can Do In 0.3.0
 
-- Chat with the Folio OS AI Agent from the Home screen.
+- Use Pixel Office as the default Home to see research freshness, saved outputs, Agent activity, and items needing attention.
+- Switch to the text-focused Agent Home while keeping the same Agent conversation and recent jobs.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
@@ -33,7 +34,7 @@ These screenshots were captured from a clean sample workspace with no private re
 - Export generated reports to Obsidian or Notion.
 - Configure LLM CLI/API, model choices, RSS, automation, and export settings.
 
-Deferred from the 0.1 user surface:
+Not included in the 0.3.0 user surface:
 
 - Deep Research as a full Agent workspace.
 - Dashboard widgets and watchlist workflows.
@@ -104,9 +105,13 @@ Do not delete `data/`, `research-inbox/`, `config/`, or `.env` unless you intent
 
 ## Main Screens
 
-### Home
+### Pixel Office and Agent Home
 
-Home is the main AI Agent entry point. Use it to ask Folio OS to summarize the current workspace, start common tasks, or reason over the current research context.
+Pixel Office is the default Home. Its seven office objects summarize news, market context, research, saved reports, notes, portfolio/watchlist presence, and Agent status without exposing note bodies, portfolio positions, or raw job errors.
+
+On smaller screens, the same objects appear as readable cards with bottom-sheet details. You can choose Classic Analyst or Economics Student, give the character a local display name, and reduce motion under Settings.
+
+Agent Home remains available as a text-focused workspace. Both Homes share the same Agent conversation, model selection, proposals, and recent jobs. You can choose a default on first launch or change it later under Settings.
 
 ### Briefing
 
@@ -128,7 +133,7 @@ Generate company analysis reports from official data and local research material
 
 ### Settings
 
-Configure AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+Configure the default Home, Agent character and motion, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
 
 ---
 

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sceneId": "classic_analyst",
+  "assets": [
+    { "id": "classic_room_base", "role": "room_base", "src": "/pixel-office/scenes/classic/room-shell-modern-v2.png", "width": 560, "height": 315, "depth": 0 },
+    { "id": "classic_market_board_object", "role": "scene_object", "objectId": "market_board", "src": "/pixel-office/scenes/classic/object-market-board-v1.png", "width": 560, "height": 315, "depth": 11800 },
+    { "id": "classic_memo_board_object", "role": "scene_object", "objectId": "memo_board", "src": "/pixel-office/scenes/classic/object-memo-board-v1.png", "width": 560, "height": 315, "depth": 21300 },
+    { "id": "classic_news_desk_object", "role": "scene_object", "objectId": "news_desk", "src": "/pixel-office/scenes/classic/object-news-desk-v1.png", "width": 560, "height": 315, "depth": 13700 },
+    { "id": "classic_research_desk_object", "role": "scene_object", "objectId": "research_desk", "src": "/pixel-office/scenes/classic/object-research-desk-v1.png", "width": 560, "height": 315, "depth": 17800 },
+    { "id": "classic_report_shelf_object", "role": "scene_object", "objectId": "report_shelf", "src": "/pixel-office/scenes/classic/object-report-shelf-v1.png", "width": 560, "height": 315, "depth": 24900 },
+    { "id": "classic_agent_seat_rug_object", "role": "scene_object", "objectId": "agent_seat", "src": "/pixel-office/scenes/classic/object-agent-seat-rug-v1.png", "width": 560, "height": 315, "depth": 200 },
+    { "id": "classic_agent_seat_chair_object", "role": "scene_object", "objectId": "agent_seat", "src": "/pixel-office/scenes/classic/object-agent-seat-chair-v1.png", "width": 560, "height": 315, "depth": 26300 },
+    { "id": "classic_agent_seat_side_table_object", "role": "scene_object", "objectId": "agent_seat", "src": "/pixel-office/scenes/classic/object-agent-seat-side-table-v1.png", "width": 560, "height": 315, "depth": 27100 },
+    { "id": "classic_agent_seat_coffee_table_object", "role": "scene_object", "objectId": "agent_seat", "src": "/pixel-office/scenes/classic/object-agent-seat-coffee-table-v1.png", "width": 560, "height": 315, "depth": 28200 },
+    { "id": "classic_portfolio_monitor_object", "role": "scene_object", "objectId": "portfolio_monitor", "src": "/pixel-office/scenes/classic/object-portfolio-monitor-v1.png", "width": 560, "height": 315, "depth": 29600 },
+    { "id": "classic_neutral_front", "role": "character_idle", "src": "/pixel-office/characters/classic/neutral-front-v3.png", "width": 64, "height": 96 },
+    { "id": "classic_portrait", "role": "portrait", "src": "/pixel-office/characters/classic/portrait.png", "width": 234, "height": 290 }
+  ]
+}

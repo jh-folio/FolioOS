@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJson, postJson } from "../api";
 import { updateReactAgentContext } from "./agentContext";
+import { useUiPreferences } from "./homePreference";
 import { RouteHero } from "./RouteHero";
 
 type ProviderId = "openai" | "gemini" | "claude";
@@ -162,6 +163,7 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
 }
 
 export function SettingsRoute() {
+  const uiPreferences = useUiPreferences();
   const [tab, setTab] = useState<SettingsTab>("integrations");
   const [settings, setSettings] = useState<SettingsPayload | null>(null);
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
@@ -443,6 +445,76 @@ export function SettingsRoute() {
 
       {tab === "integrations" ? (
         <div id="settings-integrations" className="sub-tab-panel active">
+          <section className="settings-panel input-panel" data-display-settings>
+            <div className="input-panel-header">
+              <div>
+                <h3>화면</h3>
+                <p>기본 Home, Agent 캐릭터와 움직임 방식을 이 브라우저에 저장합니다.</p>
+              </div>
+            </div>
+            <div className="settings-grid">
+              <label className="field">
+                <span>기본 Home</span>
+                <select
+                  value={uiPreferences.preferences.home.mode}
+                  onChange={(event) => uiPreferences.setHome(event.currentTarget.value === "home" ? "home" : "office", true)}
+                >
+                  <option value="office">Pixel Office</option>
+                  <option value="home">Agent Home</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>움직임</span>
+                <select
+                  value={uiPreferences.preferences.motion}
+                  onChange={(event) => uiPreferences.setMotion(event.currentTarget.value === "reduced" ? "reduced" : "system")}
+                >
+                  <option value="system">시스템 설정 따르기</option>
+                  <option value="reduced">움직임 줄이기</option>
+                </select>
+              </label>
+            </div>
+            <div className="settings-grid">
+              <div className="field">
+                <span>캐릭터</span>
+                <div className="settings-segmented" aria-label="Agent 캐릭터">
+                  <button
+                    className={uiPreferences.preferences.character.preset === "classic" ? "active" : ""}
+                    type="button"
+                    onClick={() => uiPreferences.setCharacter("classic")}
+                  >
+                    클래식 애널리스트
+                  </button>
+                  <button
+                    className={uiPreferences.preferences.character.preset === "student" ? "active" : ""}
+                    type="button"
+                    onClick={() => uiPreferences.setCharacter("student")}
+                  >
+                    경제 탐구생
+                  </button>
+                </div>
+              </div>
+              <label className="field">
+                <span>캐릭터 이름</span>
+                <input
+                  type="text"
+                  maxLength={30}
+                  value={uiPreferences.preferences.character.name}
+                  placeholder="선택 사항"
+                  onChange={(event) => uiPreferences.setCharacter(
+                    uiPreferences.preferences.character.preset,
+                    event.currentTarget.value,
+                  )}
+                />
+              </label>
+            </div>
+            <div className="filter-actions settings-actions">
+              <button className="filter-btn clear" type="button" onClick={uiPreferences.reset}>
+                Home 선택과 화면 설정 초기화
+              </button>
+            </div>
+          </section>
+
           <section className="settings-panel input-panel">
             <div className="input-panel-header settings-agent-header">
               <div>

@@ -5,11 +5,14 @@ import { CommandPalette } from "./CommandPalette";
 import { CompanyAnalysisRoute } from "./CompanyAnalysisRoute";
 import { Dashboard } from "./Dashboard";
 import { DeepResearchRoute } from "./DeepResearchRoute";
+import { HomeModeChooser } from "./HomeModeChooser";
 import { MarketMemoryRoute } from "./MarketMemoryRoute";
+import { PixelOfficeRoute } from "./PixelOfficeRoute";
 import { ReactAgentDock } from "./ReactAgentDock";
 import { RssRoute } from "./RssRoute";
 import { SettingsRoute } from "./SettingsRoute";
 import { WatchlistRoute } from "./WatchlistRoute";
+import { preferredHomeRoute, useUiPreferences } from "./homePreference";
 import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } from "./routes";
 import { useShellStatus } from "./statusStore";
 
@@ -21,6 +24,12 @@ const NAV_GROUPS: Array<{ title: string; routes: RouteId[] }> = [
 ];
 
 const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
+  office: (
+    <svg className="react-left-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 20V8l9-5 9 5v12" />
+      <path d="M7 20v-7h10v7M9 9h.01M12 9h.01M15 9h.01" />
+    </svg>
+  ),
   home: (
     <svg className="react-left-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M3 10.5 12 3l9 7.5" />
@@ -93,7 +102,7 @@ const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
 };
 
 function currentHash() {
-  return window.location.hash || toHash("home");
+  return window.location.hash || toHash(preferredHomeRoute());
 }
 
 function useRouteState(): { hash: string; routeId: RouteId } {
@@ -134,6 +143,8 @@ async function waitForServerAndReload(setStatus: (value: string) => void) {
 export function AppShell() {
   const { hash, routeId } = useRouteState();
   const active = routeById(routeId);
+  const uiPreferences = useUiPreferences();
+  const preferredHome = preferredHomeRoute(uiPreferences.preferences);
   const status = useShellStatus();
   const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem("folio.react.navCollapsed") === "1");
   const [agentOpen, setAgentOpen] = useState(() => localStorage.getItem("folio.react.agentClosed") !== "1");
@@ -144,7 +155,9 @@ export function AppShell() {
   const routeHostRef = useRef<HTMLElement | null>(null);
   const previousRouteRef = useRef<RouteId>(routeId);
   const scrollByRouteRef = useRef<Record<string, number>>({});
-  const agentVisible = active.id !== "home";
+  const agentVisible = active.id !== "home" && active.id !== "office";
+  const showHomeChooser = (active.id === "home" || active.id === "office")
+    && !uiPreferences.preferences.home.choiceSeen;
   const shellAgentClass = agentVisible && agentOpen ? " is-agent-open" : " is-agent-closed";
 
   useEffect(() => {
@@ -223,6 +236,7 @@ export function AppShell() {
 
   function renderRoutePane(paneRouteId: RouteId) {
     const route = routeById(paneRouteId);
+    if (route.id === "office") return <PixelOfficeRoute />;
     if (route.id === "home") return <AgentHome />;
     if (route.id === "dashboard") return <Dashboard />;
     if (route.id === "briefing") return <BriefingRoute />;
@@ -242,7 +256,7 @@ export function AppShell() {
           type="button"
           className="react-shell-brand"
           onClick={() => {
-            navigateToRoute("home");
+            navigateToRoute(preferredHome);
           }}
           aria-label="홈으로 이동"
         >
@@ -277,7 +291,8 @@ export function AppShell() {
               <h3>{group.title}</h3>
               <div className="react-left-nav-items">
                 {group.routes.map((routeIdValue) => {
-                  const route = NAV_ROUTES.find((item) => item.id === routeIdValue);
+                  const resolvedRouteId = group.title === "Home" ? preferredHome : routeIdValue;
+                  const route = NAV_ROUTES.find((item) => item.id === resolvedRouteId);
                   if (!route) return null;
                   return (
                     <span className="react-left-nav-entry" key={route.id}>
@@ -323,6 +338,14 @@ export function AppShell() {
           open={agentOpen}
           onOpen={() => setAgentOpen(true)}
           onClose={() => setAgentOpen(false)}
+        />
+      )}
+      {showHomeChooser && (
+        <HomeModeChooser
+          onChoose={(mode) => {
+            uiPreferences.setHome(mode, true);
+            window.location.hash = toHash(mode);
+          }}
         />
       )}
       <CommandPalette />

@@ -12,7 +12,11 @@
 
 `web/` React/TypeScript SPA가 routing, navigation, Agent Home, Dashboard, Report Reader, Notes, Settings를 소유한다. `public/app.js`는 더 이상 화면 상태나 view 전환을 관리하지 않고, 검증된 Markdown/visual/source 렌더러를 React에 제공하는 bridge-only 역할만 맡는다. React 전환 자체는 [REACT_SPA_REWRITE_PLAN.md](../../roadmap/completed/REACT_SPA_REWRITE_PLAN.md)에 완료 이력으로 남기고, 이후 제품 순서는 [0.1 Release Plan](../../roadmap/release/0.1_RELEASE_PLAN.md)과 [0.2+ Product Roadmap](../../roadmap/release/0.2_PLUS_PLAN.md)을 따른다.
 
-`#/home`은 React가 직접 렌더하는 Agent Home이다. Home은 큰 `Folio OS` hero, 빠른 실행, 최근 보고서 칩 디자인을 유지하면서 hero와 빠른 실행 사이에 Codex/검색 메인 화면형 프롬프트 박스를 둔다. 프롬프트 전송은 `/api/agent/chat`으로 job을 만들고 `/api/jobs/{id}`를 polling하며, 수정 proposal은 `/api/agent/proposals/{id}` 승인/거절 API를 사용한다. 모델 선택은 `/api/agent-bridge/settings`의 현재 provider/adapter `modelChoices`를 따른다. 대화 로그는 보고서 evidence와 분리해 브라우저 localStorage에 저장하고, 사용자가 `새 대화`로 즉시 비울 수 있다. Home 하단에는 `/api/jobs` 기반 최근 Agent/빠른 실행 작업 목록을 표시한다. Home에서는 전역 Agent Dock을 표시하지 않는다.
+`#/office`는 0.3.0의 기본 Home인 Pixel Office다. read-only `/api/pixel-office` 요약을 7개 의미 있는 오브젝트로 표시하고, 기존 `/api/jobs`의 redacted 프론트 모델을 이용해 Agent 활동·완료·실패 상태를 갱신한다. 데스크톱에서는 lazy-loaded PixiJS 게임 장면+React semantic hotspot+overlay 상세 패널을 사용하고, 980px 이하에서는 Agent 미니 장면+상태 카드+하단 시트를 사용한다. Agent는 authored waypoint 경로로 대응 가구까지 실제 이동하며 발 위치로 Y-depth를 정렬한다. 상세 dialog는 Escape, focus trap, 원래 오브젝트 focus 복귀를 지원한다. 캐릭터 preset은 프로젝트 원본 `Classic Analyst`와 `Economics Student` 두 개만 노출하며, 사용자 이름과 움직임 줄이기 설정을 함께 저장한다.
+
+`#/home`은 React가 직접 렌더하는 기존 Agent Home이다. Home은 큰 `Folio OS` hero, 빠른 실행, 최근 보고서 칩 디자인을 유지하면서 hero와 빠른 실행 사이에 Codex/검색 메인 화면형 프롬프트 박스를 둔다. 프롬프트 전송은 `/api/agent/chat`으로 job을 만들고 `/api/jobs/{id}`를 polling하며, 수정 proposal은 `/api/agent/proposals/{id}` 승인/거절 API를 사용한다. 모델 선택은 `/api/agent-bridge/settings`의 현재 provider/adapter `modelChoices`를 따른다. 대화 로그는 보고서 evidence와 분리해 브라우저 localStorage에 저장하고, 사용자가 `새 대화`로 즉시 비울 수 있다. Home 하단에는 `/api/jobs` 기반 최근 Agent/빠른 실행 작업 목록을 표시한다.
+
+Pixel Office와 Agent Home은 `web/src/app/agentWorkspace/`의 같은 브라우저 대화·모델·proposal·최근 작업 상태를 사용한다. 첫 실행 chooser, 각 Home의 전환 버튼, Settings > 화면에서 기본 Home을 선택한다. 명시한 보고서 딥링크는 이 선택으로 바뀌지 않는다. 두 Home에서는 전역 Agent Dock을 표시하지 않는다.
 
 `#/dashboard`는 React monitoring route지만 0.1 기본 사용자 nav에서는 숨긴다. `/api/dashboard`로 인덱스·최근 보고서 현황을, `/api/investment-review`로 투자 리뷰 요약·체크포인트·포트폴리오 영향을 읽고, `/api/market-widgets/settings`를 `FolioTradingViewWidgets.renderDashboardBoard()`에 넘겨 Current Market 위젯 보드를 렌더한다. 투자 리뷰 갱신은 `POST /api/investment-review/generate`를 사용한다. 위젯 추가/수정/초기화는 React route가 `/api/market-widgets/settings`에 저장한다.
 
@@ -34,7 +38,7 @@ React Shell의 타이포그래피는 새 값을 만들지 않고 레거시 토�
 
 `#/watchlist`는 React Watchlist route지만 0.1 기본 사용자 nav에서는 숨긴다. `/api/watchlist`로 저장 목록을 읽고 저장하며, `/api/watchlist/resolve`로 티커/회사명을 정규화하고, `/api/watchlist/overview`로 카드용 태그·뉴스 카운트를 읽는다. 카드 클릭은 `#/watchlist/{item}` detail hash로 상세 화면을 열고, `/api/watchlist/detail` 결과를 `FolioTradingViewWidgets.renderWatchlistDetail()`에 넘겨 TradingView 위젯 parity를 유지한다. 카드와 상세 화면은 `watchlist-*`, `compact-item`, `input-panel`, `filter-btn` 클래스를 재사용한다.
 
-`#/settings`는 React Settings route다. `/api/settings`, `/api/agent-bridge/settings`, `/api/obsidian/settings`, `/api/automation/settings`를 직접 소비하며, AI Agent/API/Notion/Obsidian/자동화 설정을 `settings-panel`, `input-panel`, `settings-grid`, `filter-btn` 클래스 위에 렌더한다. AI Agent 설정은 ON/OFF와 LLM CLI/API 모드 토글을 한 패널에서 관리한다. 모델 필드는 마지막으로 불러온 `modelChoices`를 select로 표시하며, 새로고침은 `/api/settings?refresh=true`와 `/api/agent-bridge/settings?refresh=true`로 model catalog를 강제 갱신한다.
+`#/settings`는 React Settings route다. `/api/settings`, `/api/agent-bridge/settings`, `/api/obsidian/settings`, `/api/automation/settings`를 직접 소비하며, AI Agent/API/Notion/Obsidian/자동화 설정을 `settings-panel`, `input-panel`, `settings-grid`, `filter-btn` 클래스 위에 렌더한다. `화면` 패널은 기본 Home, Classic/Student 캐릭터, 선택 이름, 시스템 모션/움직임 줄이기만 제공한다. AI Agent 설정은 ON/OFF와 LLM CLI/API 모드 토글을 한 패널에서 관리한다. 모델 필드는 마지막으로 불러온 `modelChoices`를 select로 표시하며, 새로고침은 `/api/settings?refresh=true`와 `/api/agent-bridge/settings?refresh=true`로 model catalog를 강제 갱신한다.
 
 포트폴리오와 standalone 투자 노트 탭은 프론트엔드에서 숨김/비활성화한다. 기존 `data/portfolio*.json`, portfolio API, native notes API/storage는 유지하며, 보고서 옆 투자 노트 패널도 계속 유지한다.
 
@@ -50,7 +54,7 @@ React Shell의 타이포그래피는 새 값을 만들지 않고 레거시 토�
 
 ## 담당 범위
 
-- 0.1 노출 범위: Home / 브리핑 / RSS 피드(뉴스 검색 포함) / 기업 분석 / 시장 내러티브 / 설정
+- 0.3.0 노출 범위: Pixel Office / Agent Home / 브리핑 / RSS 피드(뉴스 검색 포함) / 기업 분석 / 시장 내러티브 / 설정
 - 브리핑 탭은 생성 컨트롤과 저장 보고서 피드가 **한 화면으로 통합**되어 있다(과거 `생성`/`목록` 하위 탭·사이드바 하위 탭 제거). 생성 박스는 단일 패널(`브리핑 설정`: 시장 범위 세그먼트·브리핑 유형)과 하단 액션 바(`새로고침` → `오늘 브리핑 생성` → 날짜 입력 → `이 날짜로 생성`)다. 저장 피드는 최신순 카드(제목·기준일·생성 시각)에 시장·유형·날짜·텍스트 필터와 `시장별/날짜별` 보기 모드를 제공하고, 카드별 휴지통으로 확인 후 삭제(`DELETE /api/briefings/{date}`)한다. 브리핑은 **생성 결과·카드 클릭 모두 React `ReportReaderShell`** 로 브리핑 탭 본문 자리에서 열린다(노션식). 리더가 열리면 목록/생성 패널은 숨고, 상단 브레드크럼(`브리핑 › {날짜}`)·브라우저 뒤로가기·좌측 nav의 브리핑 클릭으로 목록에 돌아온다. URL 해시 `#/briefing/{date}/{us|kr|both}`가 리더 상태의 source of truth라 새로고침·딥링크가 복원된다. 데스크톱 리더는 grid 2열: 본문이 좌측 사이드바 옆부터 우측 컬럼 앞까지 채우고, 우측 컬럼은 **조작 레일(위) + 투자 노트(아래, 상시 표시·저장 노트 자동 로드)** 다(책갈피 손잡이 제거). 기업분석·딥리서치도 React route에서는 공통 reader를 사용한다.
 - 좌측 navigation, Agent Dock, 보고서 hero
 - Markdown 렌더링, Notion/Obsidian/HTML 내보내기 버튼
