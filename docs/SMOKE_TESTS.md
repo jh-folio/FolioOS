@@ -1,12 +1,20 @@
-# Folio OS 0.2.4 Smoke Tests
+# Folio OS 0.3.0 Smoke Tests
 
 Run these checks against a clean local workspace or a synthetic packaged fixture. Do not use real credentials, private notes, portfolio data, or provider transcripts as evidence.
 
 ## Startup and identity
 
 1. Start Folio OS with `start.ps1`, `start.sh`, or `start-archive.cmd`.
-2. Open `http://127.0.0.1:8787/api/health` and confirm `status=ok`, `version=0.2.4`, the expected commit, PID, and workspace identity.
-3. Confirm Home, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, and Settings are visible; Dashboard and Watchlist are absent from the default navigation.
+2. Open `http://127.0.0.1:8787/api/health` and confirm `status=ok`, `version=0.3.0`, the expected commit, PID, and workspace identity.
+3. Confirm Home, Dashboard, Watchlist, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, and Settings are visible.
+
+## Appearance and responsive navigation
+
+1. In Settings > 화면, select Light, Dark, and System and confirm the active theme changes without a flash of the wrong theme after reload.
+2. Confirm existing browser profiles without a saved theme start in Light and new profiles start in System mode.
+3. At desktop width, confirm grouped left navigation and the Agent dock do not cover route content.
+4. At tablet/mobile width, confirm navigation becomes one horizontally scrollable row and the Agent starts collapsed.
+5. Use keyboard-only navigation to activate `본문으로 건너뛰기`, open and close the command palette, and reach every public route with a visible focus indicator.
 
 ## Deep Research exposure
 
@@ -34,7 +42,7 @@ At desktop, tablet, and mobile widths:
 4. Inspect `/api/agent/work-log`: entries may contain only bounded task/status/timing/engine/artifact/proposal metadata. Prompts, replies, Markdown, diffs, attachments, paths, credentials, and raw provider output must be absent.
 5. Restart the server and confirm the same saved report, proposal state, Smart Collection revision, and Work Log metadata reopen safely.
 
-## Stage 0.2.4 integrated workflow matrix
+## Stage 0.3.0 integrated workflow matrix
 
 Run every scenario with a **synthetic fixture root**. Never point these checks at
 the real `data/`, `config/`, `research-inbox/`, `.env`, portfolio, watchlist, or
@@ -63,7 +71,7 @@ user-note locations.
    must not appear in unrelated responses.
 3. Request the explicit Agent risk explanation and confirm fallback contains challenging
    evidence and limitations but no recommendation, target price, sizing, or execution copy.
-4. Confirm Portfolio and Watchlist remain absent from default navigation.
+4. Confirm Dashboard and Watchlist remain visible while unrelated screens expose only bounded portfolio/watchlist context.
 
 ### Browser viewport pass
 
@@ -79,6 +87,7 @@ py -3 -m pytest tests/test_version_contract.py web/tests/test_navigation_contrac
 npm --prefix web test
 npm --prefix web run typecheck
 npm --prefix web run build
+npm --prefix web run test:ui
 git diff --exit-code -- public/react/folio-react.js
 ```
 

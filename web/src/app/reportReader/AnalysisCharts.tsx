@@ -35,7 +35,13 @@ type ChartTooltip = {
   y?: number;
 } | null;
 
-const COLORS = ["#0f172a", "#2f6f9f", "#3d8f64", "#c99a33", "#9a5b72"];
+const COLORS = [
+  "var(--folio-chart-1)",
+  "var(--folio-chart-2)",
+  "var(--folio-chart-3)",
+  "var(--folio-chart-4)",
+  "var(--folio-chart-5)",
+];
 
 const SERIES_LABELS: Record<string, string> = {
   revenue: "Revenue",
@@ -137,7 +143,7 @@ function BarsChart({
 
   return (
     <svg className="analysis-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={chart.title || "기업 분석 차트"}>
-      <line x1={left} y1={zeroY} x2={width - 12} y2={zeroY} stroke="#d8dee8" strokeWidth="1" />
+      <line x1={left} y1={zeroY} x2={width - 12} y2={zeroY} stroke="var(--folio-border)" strokeWidth="1" />
       {labels.map((label, labelIndex) => (
         <g key={label}>
           {series.map((item, seriesIndex) => {
@@ -205,7 +211,7 @@ function LineChart({
     <svg className="analysis-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={chart.title || "기업 분석 차트"}>
       {[0, 0.5, 1].map((tick) => {
         const y = top + tick * plotHeight;
-        return <line key={tick} x1={left} y1={y} x2={width - 12} y2={y} stroke="#eef2f7" strokeWidth="1" />;
+        return <line key={tick} x1={left} y1={y} x2={width - 12} y2={y} stroke="var(--folio-border)" strokeWidth="1" />;
       })}
       {series.map((item, seriesIndex) => {
         const points = item.values.map((value, index) => (

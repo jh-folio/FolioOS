@@ -66,11 +66,12 @@ test("Deep Research references personal context only after a user click", async 
   assert.doesNotMatch(deep, /useEffect\(\(\) => \{[\s\S]{0,500}setUserContext\(/);
 });
 
-test("navigation scope remains hidden and responsive card styling is bounded", async () => {
+test("navigation exposes Watchlist while responsive context card styling stays bounded", async () => {
   const routes = await source("app/routes.ts");
   const css = await readFile(new URL("../../public/styles.css", import.meta.url), "utf8");
 
-  assert.match(routes, /id: "watchlist"[^\n]+visibleInNav: false/);
+  assert.match(routes, /id: "watchlist", label: "워치리스트", group: "home"/);
+  assert.doesNotMatch(routes, /id: "watchlist"[^\n]+visibleInNav: false/);
   assert.doesNotMatch(routes, /id: "portfolio"/);
   assert.match(css, /\.investment-context-card\s*\{[\s\S]*?min-width:\s*0/);
   assert.match(css, /\.investment-context-ledger\s*\{[\s\S]*?grid-template-columns/);

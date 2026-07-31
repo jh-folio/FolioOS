@@ -24,8 +24,10 @@
   --folio-ink: #07111f;
   --folio-ink-soft: #213047;
   --folio-ink-muted: #44505f;
+  --folio-ink-subtle: #6f7b8a;
   --folio-ink-inverse: #eef3f9;
-  --folio-gold: #c79a45;
+  /* Light surfaces need a deeper gold for readable 12px labels (WCAG AA). */
+  --folio-gold: #795a1d;
   --folio-gold-soft: #efe0b8;
   --folio-burgundy: #8a1024;
   --folio-red-soft: #f8e3e8;
@@ -33,11 +35,17 @@
   --folio-blue-soft: #e6f1fb;
   --folio-green: #3b6d11;
   --folio-green-soft: #eaf3de;
+  --folio-warning: #8a5a00;
   /* 계층 구분색(Personal Overlay=purple / Thesis=teal): 원색과 muted의 중간 채도(인식성↔미니멀 균형) (Step 1) */
   --folio-purple: #5b51a3;
   --folio-purple-soft: #e9e6f6;
   --folio-teal: #266c5b;
   --folio-teal-soft: #e4f2ec;
+  --folio-chart-1: #185fa5;
+  --folio-chart-2: #8a1024;
+  --folio-chart-3: #3b6d11;
+  --folio-chart-4: #b7791f;
+  --folio-chart-5: #7c5a8a;
   --folio-border: #dde2e9;
   --folio-border-strong: #c4ccd6;
   --folio-shadow: 0 6px 14px rgba(7, 17, 31, 0.045), 0 0 10px rgba(7, 17, 31, 0.025);
@@ -110,6 +118,55 @@
   --radius-pill: 999px;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --folio-bg: #0b1220;
+  --folio-bg-soft: #0f1828;
+  --folio-surface: #131e30;
+  --folio-surface-2: #1a273a;
+  --folio-surface-clean: #111c2d;
+  --folio-surface-muted: #1a273a;
+  --folio-surface-dark: #09111e;
+  --folio-surface-black: #070d17;
+  --folio-surface-dark-2: #1b2a41;
+  --folio-ink: #edf3fa;
+  --folio-ink-soft: #d6e0ec;
+  --folio-ink-muted: #aebdce;
+  --folio-ink-subtle: #8798ab;
+  --folio-ink-inverse: #f5f8fc;
+  --folio-gold: #e0b45e;
+  --folio-gold-soft: #493b22;
+  --folio-burgundy: #f18a9d;
+  --folio-red-soft: #3d2029;
+  --folio-blue: #72b7f2;
+  --folio-blue-soft: #19334d;
+  --folio-green: #9dcd72;
+  --folio-green-soft: #203821;
+  --folio-warning: #f5d27c;
+  --folio-purple: #b9acef;
+  --folio-purple-soft: #302b4d;
+  --folio-teal: #81cbb9;
+  --folio-teal-soft: #173b35;
+  --folio-chart-1: #72b7f2;
+  --folio-chart-2: #f18a9d;
+  --folio-chart-3: #9dcd72;
+  --folio-chart-4: #e0b45e;
+  --folio-chart-5: #c7a7d9;
+  --folio-border: #314158;
+  --folio-border-strong: #50627a;
+  --folio-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+  --link: #9dccf5;
+  --color-risk: #ff9b91;
+  --color-warning-bg: #392f18;
+  --color-warning-text: #f5d27c;
+  --color-error-bg: #3d2029;
+  --color-error-text: #ffb2bd;
+  --elev-1: 0 6px 18px rgba(0, 0, 0, 0.2);
+  --elev-2: 0 10px 26px rgba(0, 0, 0, 0.28);
+  --elev-overlay: 0 22px 54px rgba(0, 0, 0, 0.42);
+  --focus-ring: 0 0 0 3px rgba(114, 183, 242, 0.32);
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -127,6 +184,25 @@ body {
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 
+.react-skip-link {
+  position: fixed;
+  z-index: 10000;
+  top: 10px;
+  left: 10px;
+  padding: 10px 14px;
+  border: 2px solid var(--folio-blue);
+  border-radius: 8px;
+  background: var(--folio-surface-clean);
+  color: var(--folio-ink);
+  font-weight: 800;
+  transform: translateY(-160%);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.react-skip-link:focus {
+  transform: translateY(0);
+}
+
 input, textarea, select {
   width: 100%;
   border: 1px solid var(--border);
@@ -137,8 +213,47 @@ input, textarea, select {
 }
 
 input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
-  outline: 2px solid var(--folio-surface-dark);
+  outline: 2px solid var(--folio-blue);
   outline-offset: 2px;
+}
+
+.settings-theme-options {
+  width: min(100%, 520px);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.settings-theme-options button {
+  min-height: 44px;
+  border: 1px solid var(--folio-border);
+  border-radius: 10px;
+  background: var(--folio-surface-clean);
+  color: var(--folio-ink-soft);
+  font-weight: 700;
+}
+
+.settings-theme-options button.active {
+  border-color: var(--folio-blue);
+  background: var(--folio-blue-soft);
+  color: var(--folio-ink);
+}
+
+.settings-theme-status {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .page {
@@ -217,7 +332,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   padding: 56px 14px 18px;
   border: 1px solid var(--folio-border, #dde2e9);
   border-radius: var(--folio-radius, 8px);
-  background: rgba(245, 247, 250, 0.96);
+  background: color-mix(in srgb, var(--folio-bg-soft) 96%, transparent);
   box-shadow: var(--elev-1, 0 4px 12px rgba(7, 17, 31, 0.045));
   overflow: visible;
 }
@@ -321,7 +436,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   gap: 6px;
 }
 
-.react-left-nav-group[data-nav-group="System"] {
+.react-left-nav-group[data-nav-group="system"] {
   margin-top: auto;
 }
 
@@ -370,12 +485,12 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .react-left-nav-item:hover {
-  background: rgba(7, 17, 31, 0.06);
+  background: color-mix(in srgb, var(--folio-ink) 7%, transparent);
   color: var(--folio-ink, #07111f);
 }
 
 .react-left-nav-item.active {
-  background: rgba(7, 17, 31, 0.10);
+  background: color-mix(in srgb, var(--folio-ink) 11%, transparent);
   color: var(--folio-ink, #07111f);
   font-weight: 700;
 }
@@ -488,7 +603,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   width: 20px;
   height: 1px;
   margin: 9px auto 0;
-  background: rgba(7, 17, 31, 0.16);
+  background: color-mix(in srgb, var(--folio-ink) 16%, transparent);
 }
 
 .react-shell.is-nav-collapsed .react-left-nav-item {
@@ -803,10 +918,10 @@ body:has(#folioReactRoot .react-shell) main.page {
   display: grid;
   gap: 6px;
   padding: 11px 13px;
-  border: 1px solid #f2d2d2;
-  border-left: 3px solid #c94747;
+  border: 1px solid color-mix(in srgb, var(--color-error-text) 34%, var(--folio-border));
+  border-left: 3px solid var(--color-error-text);
   border-radius: var(--folio-radius, 8px);
-  background: #fff7f7;
+  background: var(--color-error-bg);
   color: var(--folio-ink, #07111f);
 }
 
@@ -852,7 +967,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   height: 26px;
   border: 1px solid var(--folio-border, #dde2e9);
   border-radius: 50%;
-  background: #fff;
+  background: var(--folio-surface-clean);
 }
 
 .react-agent-mini-logo svg {
@@ -1118,7 +1233,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 .react-route-hero-description {
   max-width: 920px;
   margin: 12px 0 0;
-  color: #244364;
+  color: var(--folio-ink-muted);
   font-size: var(--fs-base, 1.0625rem);
   font-weight: 500;
   line-height: 1.5;
@@ -1263,7 +1378,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 .agent-home-proposal {
   display: grid;
   gap: 10px;
-  background: #fff;
+  background: var(--folio-surface-clean);
 }
 
 .agent-home-proposal > div:first-child {
@@ -1309,7 +1424,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   width: 100%;
   border: 1px solid var(--folio-border, #dde2e9);
   border-radius: var(--folio-radius, 8px);
-  background: #fff;
+  background: var(--folio-surface-clean);
   color: var(--folio-ink, #07111f);
   font: inherit;
 }
@@ -1377,7 +1492,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 
 .agent-home-error {
   margin: 0;
-  color: #9b1c1c;
+  color: var(--color-error-text);
   font-size: var(--fs-xs, 0.75rem);
   font-weight: 800;
 }
@@ -1744,16 +1859,16 @@ body:has(#folioReactRoot .react-shell) main.page {
 
 .agent-home-job.running .agent-home-job-meta,
 .agent-home-job.queued .agent-home-job-meta {
-  color: #a46a16;
+  color: var(--color-warning-text);
 }
 
 .agent-home-job.done .agent-home-job-meta {
-  color: #22664e;
+  color: var(--folio-green);
 }
 
 .agent-home-job.failed .agent-home-job-meta,
 .agent-home-job.cancelled .agent-home-job-meta {
-  color: #9b1c1c;
+  color: var(--color-error-text);
 }
 
 .agent-home-empty {
@@ -1824,6 +1939,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   border-radius: var(--folio-radius, 8px);
   font-size: var(--fs-sm, 0.9375rem);
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .react-dashboard-error {
@@ -2087,7 +2203,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   min-height: 46px;
   border: 1px solid var(--folio-border, #dde2e9);
   border-radius: var(--folio-radius, 8px);
-  background: #fff;
+  background: var(--folio-surface-clean);
   color: var(--folio-ink, #07111f);
   font: inherit;
   font-size: var(--fs-base, 1.0625rem);
@@ -2262,7 +2378,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   min-height: 36px;
   border: 1px solid var(--folio-border, #dde2e9);
   border-radius: var(--folio-radius, 8px);
-  background: #fff;
+  background: var(--folio-surface-clean);
   color: var(--folio-ink, #07111f);
   font: inherit;
   font-size: var(--fs-sm, 0.9375rem);
@@ -2387,7 +2503,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   min-height: 38px;
   border: 1px solid var(--folio-border, #dde2e9);
   border-radius: var(--folio-radius, 8px);
-  background: #fff;
+  background: var(--folio-surface-clean);
   color: var(--folio-ink, #07111f);
   font: inherit;
   font-size: var(--fs-sm, 0.9375rem);
@@ -2861,7 +2977,7 @@ body:has(#folioReactRoot .react-shell) main.page {
     grid-row: 2;
     min-height: 0;
     margin: 12px 12px 0;
-    padding: 14px;
+    padding: 8px 10px;
   }
 
   .react-shell-nav-toggle,
@@ -2870,14 +2986,27 @@ body:has(#folioReactRoot .react-shell) main.page {
   }
 
   .react-left-nav {
-    gap: 10px;
-  }
-
-  .react-left-nav-items {
     display: flex;
+    flex-direction: row;
     gap: 6px;
     overflow-x: auto;
-    padding-bottom: 2px;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+  }
+
+  .react-left-nav-group,
+  .react-left-nav-items {
+    display: contents;
+  }
+
+  .react-left-nav-group h3,
+  .react-left-nav-separator {
+    display: none;
+  }
+
+  .react-left-nav-entry {
+    display: block;
+    flex: 0 0 auto;
   }
 
   .react-left-nav-item {
@@ -3055,9 +3184,12 @@ body:has(#folioReactRoot .react-shell) main.page {
   }
 
   .react-agent-dock {
-    grid-column: 1;
-    grid-row: 4;
-    min-height: 420px;
+    position: fixed;
+    z-index: 100;
+    inset: auto 0 0;
+    width: 100%;
+    height: min(640px, 86dvh);
+    min-height: 0;
     border-left: 0;
     border-top: 1px solid var(--folio-border-strong, #c4ccd6);
     border-radius: 12px 12px 0 0;
@@ -3137,12 +3269,16 @@ body:has(#folioReactRoot .react-shell) main.page {
   }
 
   .react-agent-dock {
-    grid-column: 1;
-    grid-row: 4;
-    min-height: 420px;
-    border-left: 0;
+    position: fixed;
+    z-index: 100;
+    right: 18px;
+    bottom: 18px;
+    width: min(460px, calc(100vw - 36px));
+    height: min(640px, calc(100dvh - 36px));
+    min-height: 0;
+    border-left: 1px solid var(--folio-border-strong, #c4ccd6);
     border-top: 1px solid var(--folio-border-strong, #c4ccd6);
-    border-radius: 12px 12px 0 0;
+    border-radius: 12px;
     box-shadow: var(--elev-overlay, 0 18px 44px rgba(7, 17, 31, 0.16));
   }
 
@@ -3699,7 +3835,7 @@ body.left-sidebar-collapsed .left-sidebar {
   margin: 0;
   color: var(--folio-ink-inverse);
 }
-.hero .hero-brand:hover h1 { color: #fff; }
+.hero .hero-brand:hover h1 { color: var(--folio-ink-inverse); }
 .hero .eyebrow { font-size: 10.5px; letter-spacing: 0.14em; color: rgba(238, 243, 249, 0.6); }
 /* 상단바 = 브랜드(좌) · 우측 Actions 영역(상태 + 정보 + 재시작).
    중앙 본문 영역을 비워 콘텐츠 가독성에 집중하도록 한다. */
@@ -4117,9 +4253,9 @@ h1 {
 }
 
 .meta-badge.warn {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  border-color: color-mix(in srgb, var(--folio-warning) 36%, var(--folio-border));
+  color: var(--color-warning-text);
 }
 
 .meta-label {
@@ -4327,14 +4463,14 @@ button:disabled {
   gap: 7px;
   background: var(--folio-surface-clean);
   border-color: var(--folio-purple);
-  color: #463ea0;
+  color: var(--folio-purple);
   text-decoration: none;
 }
 
 .filter-btn.obsidian:hover, a.filter-btn.obsidian:hover {
   background: var(--folio-purple-soft);
   border-color: var(--folio-purple);
-  color: #463ea0;
+  color: var(--folio-purple);
   transform: translateY(-1px);
 }
 
@@ -4904,8 +5040,8 @@ button:disabled {
 }
 
 .portfolio-comment.warn {
-  border-color: rgba(180, 83, 9, 0.28);
-  background: #fffaf0;
+  border-color: color-mix(in srgb, var(--folio-warning) 32%, var(--folio-border));
+  background: var(--color-warning-bg);
 }
 
 .portfolio-comment strong {
@@ -5055,8 +5191,8 @@ button:disabled {
   color: var(--folio-green);
 }
 .portfolio-pnl-badge.negative {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--folio-red-soft);
+  color: var(--folio-burgundy);
 }
 .portfolio-pnl-badge.neutral {
   background: var(--folio-surface-muted);
@@ -5075,7 +5211,7 @@ button:disabled {
   line-height: 1;
   color: var(--fg-subtle);
 }
-.portfolio-watchlist-add:hover:not(:disabled) { color: #f59e0b; }
+.portfolio-watchlist-add:hover:not(:disabled) { color: var(--folio-gold); }
 .portfolio-watchlist-add:disabled { opacity: 0.45; cursor: default; }
 
 .portfolio-chart {
@@ -5261,14 +5397,14 @@ button:disabled {
   border-radius: 8px;
   background: var(--folio-surface-2);
   padding: 13px 14px;
-  color: #0b0d0f;
+  color: var(--folio-ink);
   font: inherit;
   font-weight: 700;
 }
 
 .preset-draft-row input:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.18);
-  background: #fff;
+  outline: 2px solid color-mix(in srgb, var(--folio-blue) 28%, transparent);
+  background: var(--folio-surface-clean);
 }
 
 .preset-draft-status {
@@ -5467,7 +5603,7 @@ button:disabled {
 
 
 .positive { color: var(--folio-green); }
-.negative { color: #b42318; }
+.negative { color: var(--color-risk); }
 
 .card, .headline, .result, .note, .compact-item {
   background: var(--card-bg);
@@ -5730,7 +5866,7 @@ button:disabled {
 }
 
 .rv-positive { background: var(--folio-green-soft); color: var(--folio-green); }
-.rv-watch { background: var(--folio-gold-soft); color: #8a5a00; }
+.rv-watch { background: var(--folio-gold-soft); color: var(--folio-warning); }
 .rv-negative { background: var(--folio-red-soft); color: var(--folio-burgundy); }
 .rv-neutral { background: var(--folio-surface-muted); color: var(--folio-ink-muted); }
 
@@ -5913,16 +6049,16 @@ button:disabled {
 .personal-overlay {
   max-width: 1280px;
   margin: 18px auto 0;
-  border: 1px solid #ddd6fe;
-  border-left: 4px solid #7c3aed;
+  border: 1px solid color-mix(in srgb, var(--folio-purple) 30%, var(--folio-border));
+  border-left: 4px solid var(--folio-purple);
   border-radius: 10px;
-  background: #faf9ff;
+  background: color-mix(in srgb, var(--folio-purple-soft) 44%, var(--folio-surface-clean));
   padding: 16px 18px;
 }
 .overlay-banner {
   font-size: 13px;
-  color: #6d28d9;
-  background: #f3f0ff;
+  color: var(--folio-purple);
+  background: var(--folio-purple-soft);
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 10px;
@@ -5935,19 +6071,19 @@ button:disabled {
   margin-bottom: 10px;
 }
 .overlay-meta .tag {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--folio-purple-soft);
+  color: var(--folio-purple);
   font-weight: 600;
 }
 .overlay-meta .stance-reinforced { background: var(--folio-green-soft); color: var(--folio-green); }
 .overlay-meta .stance-weakened,
-.overlay-meta .stance-conflicted { background: #fee2e2; color: #991b1b; }
+.overlay-meta .stance-conflicted { background: var(--folio-red-soft); color: var(--folio-burgundy); }
 .overlay-linked {
   margin-top: 12px;
-  border-top: 1px dashed #ddd6fe;
+  border-top: 1px dashed color-mix(in srgb, var(--folio-purple) 30%, var(--folio-border));
   padding-top: 10px;
 }
-.overlay-linked h5 { margin: 0 0 6px; font-size: 13px; color: #6d28d9; }
+.overlay-linked h5 { margin: 0 0 6px; font-size: 13px; color: var(--folio-purple); }
 .overlay-linked ul { margin: 0; padding-left: 18px; }
 .overlay-linked li { margin: 2px 0; }
 
@@ -5955,8 +6091,8 @@ button:disabled {
 .thesis-delta {
   max-width: 1280px;
   margin: 18px auto 0;
-  border-left: 4px solid #0f766e;
-  background: #f8fffd;
+  border-left: 4px solid var(--folio-teal);
+  background: color-mix(in srgb, var(--folio-teal-soft) 42%, var(--folio-surface-clean));
 }
 
 .thesis-delta-head {
@@ -5983,9 +6119,9 @@ button:disabled {
   display: grid;
   gap: 8px;
   padding: 12px 14px;
-  border: 1px solid #ccfbf1;
+  border: 1px solid color-mix(in srgb, var(--folio-teal) 28%, var(--folio-border));
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--folio-surface-clean);
 }
 
 .thesis-core p {
@@ -5998,8 +6134,8 @@ button:disabled {
 }
 
 .thesis-verdict {
-  background: #ccfbf1;
-  color: #115e59;
+  background: var(--folio-teal-soft);
+  color: var(--folio-teal);
 }
 
 .thesis-verdict.verdict-strengthened {
@@ -6010,8 +6146,8 @@ button:disabled {
 .thesis-verdict.verdict-weakened,
 .thesis-verdict.verdict-at_risk,
 .thesis-verdict.verdict-broken {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--folio-red-soft);
+  color: var(--folio-burgundy);
 }
 
 .thesis-delta-grid {
@@ -6023,7 +6159,7 @@ button:disabled {
 .thesis-delta-grid h5 {
   margin: 0 0 8px;
   font-size: var(--fs-sm);
-  color: #0f766e;
+  color: var(--folio-teal);
 }
 
 .thesis-evidence-list {
@@ -6038,7 +6174,7 @@ button:disabled {
   display: grid;
   gap: 4px;
   padding: 10px 0;
-  border-top: 1px solid #d9f5ee;
+  border-top: 1px solid color-mix(in srgb, var(--folio-teal) 24%, var(--folio-border));
 }
 
 .thesis-evidence-list strong {
@@ -6060,7 +6196,7 @@ button:disabled {
   padding: 10px 12px;
   line-height: 1.5;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--folio-surface-clean) 72%, transparent);
   color: var(--folio-ink-soft);
   box-shadow: 0 8px 20px rgba(7, 17, 31, 0.04);
 }
@@ -6072,15 +6208,15 @@ button:disabled {
 }
 
 .generation-status.warn {
-  background: #fff8eb;
-  color: #8a551d;
-  border-color: #ead2a3;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-color: color-mix(in srgb, var(--folio-warning) 34%, var(--folio-border));
 }
 
 .generation-status.working {
-  background: #f3f7fb;
-  color: #315a7c;
-  border-color: #cbd9e6;
+  background: var(--folio-blue-soft);
+  color: var(--folio-blue);
+  border-color: color-mix(in srgb, var(--folio-blue) 30%, var(--folio-border));
 }
 
 /* 보고서 생성 상태 = 보고서 본문이 아니라 컨트롤(액션 박스/생성 패널) 안의 작은 캡션 */
@@ -6342,7 +6478,7 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 18px;
-  background: #fff;
+  background: var(--folio-surface-clean);
   overflow-wrap: anywhere;
 }
 
@@ -6394,7 +6530,7 @@ button:disabled {
 }
 
 .audit-row.warn strong {
-  color: #9b3412;
+  color: var(--color-warning-text);
 }
 
 .story-map-nodes {
@@ -6412,7 +6548,7 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 18px;
-  background: #ffffff;
+  background: var(--folio-surface-clean);
   overflow-wrap: anywhere;
 }
 
@@ -6468,7 +6604,7 @@ button:disabled {
 .regime-metrics .tag {
   background: #eef6f3;
   border-color: #c9ded7;
-  color: #245246;
+  color: var(--folio-teal);
   flex: 0 0 auto;
   align-self: flex-start;
   width: fit-content;
@@ -7349,7 +7485,7 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
-  background: #ffffff;
+  background: var(--folio-surface-clean);
 }
 
 .analysis-chart-card:last-child:nth-child(odd) {
@@ -7447,7 +7583,7 @@ button:disabled {
 }
 
 .analysis-chart-warning {
-  color: #9a3412;
+  color: var(--color-warning-text);
 }
 
 .analysis-chart-tooltip {
@@ -7456,10 +7592,10 @@ button:disabled {
   min-width: 112px;
   max-width: 220px;
   padding: 8px 10px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid var(--folio-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  background: color-mix(in srgb, var(--folio-surface-clean) 96%, transparent);
+  box-shadow: var(--elev-overlay);
   color: var(--folio-ink);
   pointer-events: none;
   transform: translate(-50%, -100%);
@@ -7600,8 +7736,8 @@ button:disabled {
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+  background: var(--folio-surface-clean);
+  box-shadow: var(--elev-overlay);
 }
 
 .ticker-suggest button {
@@ -10218,8 +10354,8 @@ body.report-reader-open { overflow: hidden; }
 }
 
 .topicrpt-quality .state-chip.quality-ok { background: var(--folio-green-soft); color: var(--folio-green); }
-.topicrpt-quality .state-chip.quality-warn { background: #fef9c3; color: #854d0e; }
-.topicrpt-quality .state-chip.quality-bad { background: #fee2e2; color: #991b1b; }
+.topicrpt-quality .state-chip.quality-warn { background: var(--color-warning-bg); color: var(--color-warning-text); }
+.topicrpt-quality .state-chip.quality-bad { background: var(--folio-red-soft); color: var(--folio-burgundy); }
 
 .topicrpt-quality .regime-metrics .tag {
   background: var(--card-bg);
@@ -11629,7 +11765,7 @@ main.page {
 
 .market-direction-chip {
   background: var(--folio-gold-soft);
-  color: #765300;
+  color: var(--folio-warning);
   border-color: color-mix(in srgb, var(--folio-gold) 38%, var(--folio-border));
 }
 
@@ -11647,7 +11783,7 @@ main.page {
 
 .market-direction-chip.direction-warning {
   background: var(--folio-gold-soft);
-  color: #765300;
+  color: var(--folio-warning);
   border-color: color-mix(in srgb, var(--folio-gold) 38%, var(--folio-border));
 }
 
@@ -11677,9 +11813,9 @@ main.page {
 }
 
 .market-driver-card.momentum-agent .market-driver-chip {
-  background: color-mix(in srgb, var(--folio-blue) 10%, white);
+  background: color-mix(in srgb, var(--folio-blue) 10%, var(--folio-surface-clean));
   color: var(--folio-blue);
-  border-color: color-mix(in srgb, var(--folio-blue) 18%, white);
+  border-color: color-mix(in srgb, var(--folio-blue) 18%, var(--folio-surface-clean));
 }
 
 .market-driver-card p {
@@ -12531,9 +12667,9 @@ main.page {
 
 .work-log-item-title { display: grid; gap: 3px; flex: 1 1 100%; min-width: 0; }
 .work-log-item-title strong { overflow-wrap: anywhere; }
-.work-log-status { color: #174f3b !important; background: #e5f3eb !important; }
+.work-log-status { color: var(--folio-green) !important; background: var(--folio-green-soft) !important; }
 .work-log-error-code,
-.work-log-fallback { color: #813a2b !important; background: #f8e7df !important; }
+.work-log-fallback { color: var(--color-error-text) !important; background: var(--color-error-bg) !important; }
 .work-log-item-side { display: grid; justify-items: end; gap: 10px; min-width: 150px; }
 .work-log-item-side time { font-size: 13px; color: var(--folio-ink-muted, #736b61); }
 .work-log-footer { margin-top: 16px; }
@@ -12564,7 +12700,7 @@ main.page {
 .work-log-dialog h3,
 .work-log-dialog p { margin: 0; }
 .work-log-dialog label { display: flex; align-items: flex-start; gap: 9px; }
-.work-log-proposal-surface { display: grid; gap: 14px; margin-top: 18px; padding: 18px; border: 1px solid #cfaa62; border-radius: 14px; background: #fff8e8; }
+.work-log-proposal-surface { display: grid; gap: 14px; margin-top: 18px; padding: 18px; border: 1px solid var(--folio-gold); border-radius: 14px; background: var(--color-warning-bg); }
 .work-log-proposal-surface pre { max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 @media (max-width: 760px) {

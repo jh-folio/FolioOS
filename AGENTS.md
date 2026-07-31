@@ -230,21 +230,22 @@ features/company_analysis/financial_quality_prompt.md
 | Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장 | source-grounded |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
-0.2 기본 사용자 화면에서의 노출 상태:
+0.3 기본 사용자 화면에서의 노출 상태:
 
-- **보이는 핵심 화면**: Home/AI Agent, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
+- **보이는 핵심 화면**: Home/AI Agent, Dashboard, Watchlist, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
 - **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
 - **Agent 실행 경계**: freshness/health/context 배지는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명은 사용자의 명시적 action에서만 Agent를 실행한다.
-- **숨김/축소 유지**: Dashboard와 Watchlist route/storage는 딥링크 호환을 위해 유지하지만 0.2.4 기본 nav/Home/command palette에는 노출하지 않는다. Portfolio와 Investment Review의 독립 화면도 전면 재출시로 설명하지 않으며, 개인 맥락은 기존 보이는 리서치 화면의 제한된 projection으로만 노출한다.
-- **문서 원칙**: 사용자용 README는 0.2.4에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
+- **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
+- **숨김/축소 유지**: Portfolio와 Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 기존 보이는 리서치 화면의 제한된 projection으로만 노출한다.
+- **문서 원칙**: 사용자용 README는 0.3.0에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
 
 ### 설계 확정·구현 예정
 
 | 작업 | 계획 위치 | 범위 |
 |---|---|---|
 | 0.1 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Home/Agent, Briefing, RSS, Market Memory v3, Company Analysis v2, Agent-assisted Investment Notes v2, Settings/Automation 간소화, release QA |
-| 0.2.4 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | note/thesis intelligence, Smart Collection workspace, 제한된 Portfolio/Watchlist Investment Context, integrated release QA |
-| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | dark mode, portfolio/watchlist 독립 화면 재평가, installer/tray polish |
+| 0.3.0 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Light/Dark/System, Dashboard/Watchlist 공개, 공개 화면 WCAG 2.2 AA, responsive/release QA |
+| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | 고급 portfolio/note workflow 재평가, installer/tray polish |
 | AI Agent Mode hardening | 로컬 `roadmap/` 문서가 있을 때만 참고 | CLI/API bridge preflight, Direct Bridge 안정화, proposal writeback, job lifecycle, restart recovery, context/log retention |
 
 > 개선안 01~04(Personal Overlay / Thesis Tracker / Regime 추적 v2 / Topic Report v2)와 post-v1 Step 6~11은 구현되어 위 표로 승격되었다.

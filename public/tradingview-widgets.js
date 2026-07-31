@@ -116,7 +116,7 @@
       width: "100%",
       height: "100%",
       largeChartUrl: "",
-      isTransparent: true,
+      isTransparent: false,
       showSymbolLogo: true,
       tabs: preset.tabs || [],
     };

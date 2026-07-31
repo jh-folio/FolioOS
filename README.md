@@ -4,15 +4,17 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.2.4 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.3.0 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.2.4
+## What You Can Do In 0.3.0
 
 - Chat with the Folio OS AI Agent from the Home screen.
+- Review market, report, checkpoint, and portfolio context from the Dashboard.
+- Maintain a local company, sector, and theme Watchlist with related news.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
@@ -23,13 +25,13 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Review a metadata-only Agent Work Log and explicitly approve or reject report revision proposals.
 - Write report-side Folio Notes.
 - Export generated reports to Obsidian or Notion.
-- Configure LLM CLI/API, model choices, RSS, automation, and export settings.
+- Choose Light, Dark, or System appearance across the workspace.
+- Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Deferred from the 0.2 user surface:
+Deferred from the 0.3 user surface:
 
-- Standalone Dashboard and Watchlist workflows.
 - Advanced portfolio management and standalone note-management workflows.
-- Dark mode and installer/tray-app polish.
+- Installer/tray-app polish.
 
 ---
 
@@ -98,6 +100,14 @@ Do not delete `data/`, `research-inbox/`, `config/`, or `.env` unless you intent
 
 Home is the main AI Agent entry point. Use it to ask Folio OS to summarize the current workspace, start common tasks, or reason over the current research context.
 
+### Dashboard
+
+Dashboard brings current-market widgets, recent reports, checkpoints, and bounded portfolio context into one review screen. Market widgets use TradingView and retain their source attribution.
+
+### Watchlist
+
+Track companies, sectors, and themes in a local Watchlist, then inspect the related news cards and market response. Watchlist data stays in the local workspace.
+
 ### Briefing
 
 Create and read daily market briefings. Briefings use news/RSS-style inputs and stored market snapshots where available. If AI is configured, Folio OS can use it for richer writing; otherwise it falls back to rule-based generation.
@@ -130,11 +140,11 @@ Home and Deep Research share a bounded, metadata-only Work Log. It stores task t
 
 Briefing, Company Analysis, and Deep Research can show rule-calculated note/thesis freshness, contradictions, uncertainties, counter-evidence, and checkpoints without an API key or CLI. Home, Market Memory, Smart Collections, and Deep Research can also show a bounded Investment Context assembled from ticker links in local portfolio/watchlist data. These automatic views are read-only metadata and never alter Canonical reports.
 
-Agent synthesis runs only after an explicit action such as `Review with latest evidence`, `Ask Agent what changed`, or `Explain risk with Agent`. Portfolio and Watchlist remain hidden as standalone top-level routes in the default 0.2.4 navigation; their bounded context does not imply a relaunched portfolio/watchlist product or provide trading advice.
+Agent synthesis runs only after an explicit action such as `Review with latest evidence`, `Ask Agent what changed`, or `Explain risk with Agent`. Dashboard and Watchlist are visible in the 0.3.0 navigation, while portfolio context remains bounded and read-only outside its dedicated runtime. These views do not provide trading advice.
 
 ### Settings
 
-Configure AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+Configure appearance, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
 
 ---
 

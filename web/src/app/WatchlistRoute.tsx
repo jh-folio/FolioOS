@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getJson, postJson } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
+import { useThemePreference } from "./themePreference";
 
 type WatchlistOverviewItem = {
   item?: string;
@@ -98,6 +99,7 @@ function isWatchlistHash() {
 }
 
 export function WatchlistRoute() {
+  const { resolved: resolvedTheme } = useThemePreference();
   const [items, setItems] = useState<string[]>([]);
   const [cards, setCards] = useState<WatchlistOverviewItem[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -188,7 +190,7 @@ export function WatchlistRoute() {
     return () => {
       window.FolioTradingViewWidgets?.cleanup?.(target);
     };
-  }, [detail, detailLoading]);
+  }, [detail, detailLoading, resolvedTheme]);
 
   async function persistWatchlist(nextItems: string[], message?: string) {
     setSaving(true);
