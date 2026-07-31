@@ -264,17 +264,32 @@ function StateMeta({ stateRef }: { stateRef: MarketStateRef | null }) {
   );
 }
 
-function StateGap({ state, stateRef, error, drivers }: { state: Exclude<MarketStateStatus, "current">; stateRef: MarketStateRef | null; error?: string; drivers: Driver[] }) {
-  const title = state === "stale" ? "최신 상태를 다시 만들어야 합니다" : state === "fallback" ? "참고용 내러티브만 있습니다" : "아직 생성된 시장 상태가 없습니다";
+function StaleNotice({ stateRef }: { stateRef: MarketStateRef }) {
+  const message = stateRef.freshnessReason === "new_relevant_evidence"
+    ? "새 외부 자료가 들어왔습니다."
+    : REASON_COPY[stateRef.freshnessReason] || "최신성을 다시 확인해야 합니다.";
+  const evidenceTime = stateRef.freshnessReason === "new_relevant_evidence"
+    ? displaySnapshotTime(stateRef.relevantEvidenceWatermark || undefined)
+    : "";
+  return (
+    <div className="market-state-stale-notice" data-qa="market-state-stale-notice" role="status" aria-live="polite">
+      <strong>업데이트 필요</strong>
+      <span>{message} 이전 스냅샷을 표시 중입니다.</span>
+      {evidenceTime ? <time dateTime={stateRef.relevantEvidenceWatermark || undefined}>새 자료 기준 {evidenceTime}</time> : null}
+    </div>
+  );
+}
+
+function StateGap({ state, stateRef, error, drivers }: { state: Exclude<MarketStateStatus, "current" | "stale">; stateRef: MarketStateRef | null; error?: string; drivers: Driver[] }) {
+  const title = state === "fallback" ? "참고용 내러티브만 있습니다" : "아직 생성된 시장 상태가 없습니다";
   const copy = error
     ? `시장 상태 응답을 사용할 수 없습니다: ${error}`
     : REASON_COPY[stateRef?.freshnessReason || ""] || "현재 상태를 검증할 수 없습니다. 업데이트 후 다시 확인하세요.";
   return (
-    <section className={`market-state-gap state-${state}`} role={state === "stale" ? "alert" : "status"}>
+    <section className={`market-state-gap state-${state}`} role="status">
       <span>{STATE_LABELS[state]}</span>
       <h3>{title}</h3>
       <p>{copy}</p>
-      {state === "stale" && stateRef?.freshnessReason === "new_relevant_evidence" ? <small>새 외부 자료 기준 {displaySnapshotTime(stateRef.relevantEvidenceWatermark || undefined) || "확인됨"}</small> : null}
       {state === "fallback" && drivers.length ? <p>기존 내러티브 {drivers.length}건은 탐색 단서일 뿐, 현재 투자 판단으로 사용하지 마세요.</p> : null}
     </section>
   );
@@ -303,6 +318,7 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
   const visibleSummary = activePayload?.plainConclusion || activePayload?.summary || "";
   const reasonSummary = activePayload?.reasonSummary || activePayload?.sourceSummary || activePayload?.stance || "";
   const interpretation = splitNarrative(reasonSummary);
+  const showsSnapshot = state === "current" || state === "stale";
   const briefs = activePayload?.briefs?.length ? activePayload.briefs : [
     { label: "현재 판단", value: visibleSummary },
     { label: "시장 해석", value: reasonSummary },
@@ -326,7 +342,8 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
         </div>
       </div>
       <StateMeta stateRef={ref} />
-      {state === "current" && availableMarkets.length > 1 ? (
+      {state === "stale" && ref ? <StaleNotice stateRef={ref} /> : null}
+      {showsSnapshot && availableMarkets.length > 1 ? (
         <div className="market-scope-tabs" role="tablist" aria-label="시장 범위 선택" data-scope={activeMarket} data-count={availableMarkets.length}>
           {availableMarkets.map((key) => (
             <button
@@ -342,9 +359,9 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
           ))}
         </div>
       ) : null}
-      {state === "current" ? (
+      {showsSnapshot ? (
         <>
-        <p className="market-state-current-note">{REASON_COPY[ref?.freshnessReason || "within_window"]}</p>
+        {state === "current" ? <p className="market-state-current-note">{REASON_COPY[ref?.freshnessReason || "within_window"]}</p> : null}
         <div className="market-state-overview" data-qa="market-state-posture">
           {reasonSummary ? (
             <section className="market-state-interpretation">
@@ -410,7 +427,7 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
       {(activePayload?.watchItems?.length || briefs[3]?.value) ? <section className="market-state-next-checks" data-qa="market-state-next-checks"><h3>다음 확인</h3><ul>{(activePayload?.watchItems || [briefs[3]?.value]).filter(Boolean).slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul></section> : null}
       </>
       ) : <StateGap state={state} stateRef={ref} error={error} drivers={drivers} />}
-      {state === "current" && payload?.sourceRefs?.length ? (
+      {showsSnapshot && payload?.sourceRefs?.length ? (
         <details className="market-state-sources">
           <summary>사용한 출처 {payload.sourceRefs.length}개</summary>
           <ul>

@@ -104,6 +104,7 @@ Market/macro context extension:
 - `POST /api/memory/state-snapshot`은 RSS 단기 digest와 기존 중기 상태를 Agent/LLM context pack으로 묶어 현재 시장 전체판단 스냅샷을 생성한다.
 - `GET /api/memory/state-snapshot`은 최신 스냅샷을 반환한다.
 - 화면용 판단은 LLM이 snapshot 안에 쓰는 `beginnerSummary`, `actionGuide`, 그리고 드라이버별 `directionLabel`/`marketImpact`/`nextMemoryCheck`를 우선 사용한다. 코드는 이 값을 검증하고 렌더링할 뿐, 정상 경로에서 시장 판단을 규칙으로 새로 만들지 않는다.
+- `stale` 스냅샷은 본문을 가리지 않는다. 화면 상단의 한 줄 최신성 알림으로 업데이트 필요 사유와 새 자료 기준 시각을 표시하고, 이전 스냅샷의 시장 해석·행동 가이드·드라이버·반대 근거·불확실성·출처는 계속 읽을 수 있게 유지한다. 단, stale 판단을 현재 상태로 승격하거나 보고서 evidence로 주입하지 않는다.
 - Snapshot은 선택적으로 `marketViews.overall/us/kr`를 포함한다. 화면은 스냅샷에 시장별 view가 있으면 `종합 / 미국장 / 한국장` 세그먼트로 같은 `시장 해석`과 `판단 및 투자 행동` 구조를 전환한다.
 - 상단은 요인 나열이 아니라 `시장 해석`과 `판단 및 투자 행동` 두 개의 큰 본문으로 구성한다. `시장 해석`에는 기존 source-grounded 요약을 보존하고, `판단 및 투자 행동`에는 결론, 행동 가이드, 다음 확인 항목을 묶어 보여준다.
 - 드라이버 카드는 `도움/부담/변동성/중립` 같은 방향 칩과 짧은 판단 요약을 먼저 보여준다. 세부 근거는 카드 안 `근거 보기` 접기에 `근거 요약`, `시장 영향`, `다음 확인`만 간결하게 표시한다.

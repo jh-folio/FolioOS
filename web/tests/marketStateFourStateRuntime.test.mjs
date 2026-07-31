@@ -22,15 +22,21 @@ test("four Market State fixtures render exactly one honest structural state", as
     assert.match(html, /data-qa=\"market-state-asof\"/);
     assert.match(html, /data-qa=\"market-state-source\"/);
     assert.doesNotMatch(html, /taxonomy|story map|family suggestion|audit/i);
-    if (state === "current") {
+    if (state === "current" || state === "stale") {
       assert.match(html, /data-qa=\"market-state-drivers\"/);
       assert.match(html, /data-qa=\"market-state-counter-evidence\"/);
       assert.match(html, /data-qa=\"market-state-uncertainties\"/);
       assert.match(html, /data-qa=\"market-state-next-checks\"/);
+      assert.match(html, /data-qa=\"market-state-posture\"/);
     } else {
       assert.doesNotMatch(html, /data-qa=\"market-state-posture\"/);
     }
-    if (state === "stale") assert.match(html, /새 외부 자료|new_relevant_evidence/);
+    if (state === "stale") {
+      assert.match(html, /data-qa=\"market-state-stale-notice\"/);
+      assert.match(html, /새 외부 자료/);
+      assert.match(html, /이전 스냅샷을 표시 중입니다/);
+      assert.doesNotMatch(html, /최신 상태를 다시 만들어야 합니다/);
+    }
     if (state === "fallback") assert.match(html, /현재 투자 판단으로 사용하지/);
     if (state === "empty") assert.match(html, /아직 생성된 시장 상태가 없습니다/);
   }
