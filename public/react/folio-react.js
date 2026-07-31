@@ -6939,52 +6939,52 @@ function Gt({ surface: e, pageSize: t = 20, defaultFilter: n = "all", refreshKey
 		}
 	}
 	let W = l?.entries || [], ne = !!(l && s + t < l.total), re = Ht(W[0], d && !l), ie = a !== "all" || (l?.total ?? 0) > 1, ae = !!(l && l.total > t), oe = /* @__PURE__ */ (0, m.jsxs)(m.Fragment, { children: [
-		/* @__PURE__ */ (0, m.jsxs)("header", {
+		!i && /* @__PURE__ */ (0, m.jsx)("header", {
 			className: "work-log-head",
-			children: [/* @__PURE__ */ (0, m.jsxs)("div", { children: [!i && /* @__PURE__ */ (0, m.jsx)("p", {
+			children: /* @__PURE__ */ (0, m.jsxs)("div", { children: [/* @__PURE__ */ (0, m.jsx)("p", {
 				className: "section-kicker",
 				children: "Agent Work Log"
-			}), !i && /* @__PURE__ */ (0, m.jsx)("h2", { children: "Agent 작업 기록" })] }), /* @__PURE__ */ (0, m.jsx)("div", {
-				className: "work-log-actions",
-				children: /* @__PURE__ */ (0, m.jsx)("button", {
-					className: "filter-btn clear icon-btn",
+			}), /* @__PURE__ */ (0, m.jsx)("h2", { children: "Agent 작업 기록" })] })
+		}),
+		/* @__PURE__ */ (0, m.jsxs)("div", {
+			className: "work-log-toolbar",
+			children: [ie ? /* @__PURE__ */ (0, m.jsx)("div", {
+				className: "work-log-filters",
+				"data-qa": "work-log-filter",
+				"aria-label": "작업 범주",
+				children: [
+					"all",
+					"companion",
+					"task"
+				].map((e) => /* @__PURE__ */ (0, m.jsx)("button", {
 					type: "button",
-					"data-qa": "work-log-refresh",
-					disabled: d,
-					onClick: () => void z(),
-					"aria-label": "작업 기록 새로고침",
-					"data-tooltip": "새로고침",
-					children: /* @__PURE__ */ (0, m.jsxs)("svg", {
-						width: "15",
-						height: "15",
-						viewBox: "0 0 16 16",
-						fill: "none",
-						stroke: "currentColor",
-						strokeWidth: "1.5",
-						strokeLinecap: "round",
-						strokeLinejoin: "round",
-						"aria-hidden": "true",
-						children: [/* @__PURE__ */ (0, m.jsx)("path", { d: "M13.5 8a5.5 5.5 0 1 1-1.6-3.9" }), /* @__PURE__ */ (0, m.jsx)("path", { d: "M13.5 2.5V6H10" })]
-					})
+					className: `filter-btn${a === e ? " active" : ""}`,
+					"data-qa": `work-log-filter-${e}`,
+					"aria-pressed": a === e,
+					onClick: () => V(e),
+					children: e === "all" ? "전체" : e === "companion" ? "대화" : "작업"
+				}, e))
+			}) : /* @__PURE__ */ (0, m.jsx)("span", {}), /* @__PURE__ */ (0, m.jsx)("button", {
+				className: "filter-btn clear icon-btn",
+				type: "button",
+				"data-qa": "work-log-refresh",
+				disabled: d,
+				onClick: () => void z(),
+				"aria-label": "작업 기록 새로고침",
+				"data-tooltip": "새로고침",
+				children: /* @__PURE__ */ (0, m.jsxs)("svg", {
+					width: "15",
+					height: "15",
+					viewBox: "0 0 16 16",
+					fill: "none",
+					stroke: "currentColor",
+					strokeWidth: "1.5",
+					strokeLinecap: "round",
+					strokeLinejoin: "round",
+					"aria-hidden": "true",
+					children: [/* @__PURE__ */ (0, m.jsx)("path", { d: "M13.5 8a5.5 5.5 0 1 1-1.6-3.9" }), /* @__PURE__ */ (0, m.jsx)("path", { d: "M13.5 2.5V6H10" })]
 				})
 			})]
-		}),
-		ie && /* @__PURE__ */ (0, m.jsx)("div", {
-			className: "work-log-filters",
-			"data-qa": "work-log-filter",
-			"aria-label": "작업 범주",
-			children: [
-				"all",
-				"companion",
-				"task"
-			].map((e) => /* @__PURE__ */ (0, m.jsx)("button", {
-				type: "button",
-				className: `filter-btn${a === e ? " active" : ""}`,
-				"data-qa": `work-log-filter-${e}`,
-				"aria-pressed": a === e,
-				onClick: () => V(e),
-				children: e === "all" ? "전체" : e === "companion" ? "대화" : "보고서 작업"
-			}, e))
 		}),
 		d && !l && /* @__PURE__ */ (0, m.jsx)("p", {
 			"data-qa": "work-log-loading",

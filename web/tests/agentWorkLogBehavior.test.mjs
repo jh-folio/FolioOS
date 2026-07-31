@@ -35,8 +35,10 @@ test("Work Log hides controls that cannot act on the current data", async () => 
   const source = await readFile(new URL("../src/app/AgentWorkLog.tsx", import.meta.url), "utf8");
   assert.match(source, /const showFilters = filter !== "all" \|\| \(data\?\.total \?\? 0\) > 1/);
   assert.match(source, /const showPagination = Boolean\(data && data\.total > pageSize\)/);
-  assert.match(source, /\{showFilters && \(/);
+  assert.match(source, /\{showFilters \? \(/);
   assert.match(source, /\{showPagination && </);
+  // 필터와 새로고침은 한 줄을 공유한다. 접힌 머리말 아래에 빈 행이 생기면 안 된다.
+  assert.match(source, /className="work-log-toolbar"/);
   assert.match(source, /data-qa="work-log-refresh"[\s\S]*?aria-label="작업 기록 새로고침"/);
 });
 

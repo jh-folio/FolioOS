@@ -231,7 +231,9 @@ public/react/folio-react.js
 - 홈 열은 하나의 폭(`min(100%, 920px)`)을 공유한다. 작업 기록만 내용 폭으로 줄어들면
   화면이 어긋나 보인다.
 - 접혀 있을 때는 한 줄짜리 정보라 카드 테두리·배경을 없애고, 펼칠 때만 판을 세운다.
-- 헤더에는 새로고침 아이콘 버튼 하나만 둔다. `기록 숨기기`는 푸터의 조용한 텍스트 버튼
+- 범주 필터와 새로고침은 한 줄(`.work-log-toolbar`)을 공유한다. 접힌 머리말 아래에 버튼만
+  있는 빈 행이 생기지 않게 하기 위해서다. 좁은 화면에서도 이 줄은 유지하고 필터만 줄바꿈한다.
+- 범주 라벨은 `전체 / 대화 / 작업`이다. `기록 숨기기`는 푸터의 조용한 텍스트 버튼
   (`.work-log-quiet-btn`)이고, 보존 안내와 metadata-only 고지도 푸터 작은 글씨로 둔다.
 - 예전 `jobs.json` 마이그레이션은 일회성 유지보수라 Work Log가 아니라 설정의
   `이전 작업 기록` 패널(`WorkLogMigration.tsx`)에 둔다. preview → confirm 2단계와 충돌 차단은
@@ -272,3 +274,16 @@ public/react/folio-react.js
 - 설정 화면의 기본 Home·캐릭터 선택은 감췄다. `움직임 줄이기`는 Pixel Office와 무관한
   접근성 설정이라 남긴다.
 - 재개 조건은 `.planning/pixel-office-game-scene-upgrade/DEFERRED_CHECKPOINT.md`를 따른다.
+
+## TradingView 위젯과 테마
+
+TradingView 임베드는 생성 시점의 config로 iframe을 만든다. 나중에 문서 테마만 바꿔서는
+이미 떠 있는 위젯 색이 바뀌지 않으므로, 테마가 바뀌면 **위젯을 다시 심어야 한다**.
+
+- `public/tradingview-widgets.js`가 렌더한 대상(`renderDashboardBoard`,
+  `renderWatchlistDetail`)을 재생 가능한 형태로 기억했다가 `folio:theme-changed`와
+  시스템 `prefers-color-scheme` 변경에서 다시 그린다.
+- 해석된 테마는 `document.documentElement.dataset.theme`을 먼저 본다. `.dark` 클래스는
+  fallback이다.
+- `cleanup()`은 등록도 함께 지운다. 화면을 떠난 대상이 남아 있으면 테마가 바뀔 때마다
+  분리된 노드에 다시 그리려 한다.

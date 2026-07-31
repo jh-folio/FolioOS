@@ -183,19 +183,22 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
   const showPagination = Boolean(data && data.total > pageSize);
   const body = (
     <>
-      <header className="work-log-head">
-        <div>{!collapsible && <p className="section-kicker">Agent Work Log</p>}{!collapsible && <h2>Agent 작업 기록</h2>}</div>
-        <div className="work-log-actions">
-          <button className="filter-btn clear icon-btn" type="button" data-qa="work-log-refresh" disabled={loading} onClick={() => void load()} aria-label="작업 기록 새로고침" data-tooltip="새로고침">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2.5V6H10" /></svg>
-          </button>
-        </div>
-      </header>
-      {showFilters && (
-        <div className="work-log-filters" data-qa="work-log-filter" aria-label="작업 범주">
-          {(["all", "companion", "task"] as const).map((value) => <button key={value} type="button" className={`filter-btn${filter === value ? " active" : ""}`} data-qa={`work-log-filter-${value}`} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{value === "all" ? "전체" : value === "companion" ? "대화" : "보고서 작업"}</button>)}
-        </div>
+      {!collapsible && (
+        <header className="work-log-head">
+          <div><p className="section-kicker">Agent Work Log</p><h2>Agent 작업 기록</h2></div>
+        </header>
       )}
+      {/* 범주 필터와 새로고침은 같은 줄에 둔다. 접힌 머리말 아래에 빈 행이 생기지 않는다. */}
+      <div className="work-log-toolbar">
+        {showFilters ? (
+          <div className="work-log-filters" data-qa="work-log-filter" aria-label="작업 범주">
+            {(["all", "companion", "task"] as const).map((value) => <button key={value} type="button" className={`filter-btn${filter === value ? " active" : ""}`} data-qa={`work-log-filter-${value}`} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{value === "all" ? "전체" : value === "companion" ? "대화" : "작업"}</button>)}
+          </div>
+        ) : <span />}
+        <button className="filter-btn clear icon-btn" type="button" data-qa="work-log-refresh" disabled={loading} onClick={() => void load()} aria-label="작업 기록 새로고침" data-tooltip="새로고침">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2.5V6H10" /></svg>
+        </button>
+      </div>
       {loading && !data && <p data-qa="work-log-loading" role="status">작업 기록을 불러오는 중입니다.</p>}
       {listError && <p className="react-dashboard-error" data-qa="work-log-error" data-error-code={listError} role="alert">작업 기록을 불러오지 못했습니다. ({listError})</p>}
       {clearError && <p className="react-dashboard-error" data-qa="work-log-clear-error" data-error-code={clearError}>숨기기 미리보기가 만료되었거나 실패했습니다. 다시 미리보세요. ({clearError})</p>}
