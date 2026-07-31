@@ -33,6 +33,14 @@ Use this checklist before changing the repository visibility to Public.
 
 ## Validation
 
+Run these locally *before* pushing. Every item here has failed a real release at least
+once; the order is cheapest-first so a failure stops you early.
+
+- [ ] `python scripts/install_gitleaks.py --version 8.30.1 --verify-checksum`, then
+      `gitleaks git --redact=100` over the full history passes. Run this first — a leak
+      found after a push means rewriting history, not just fixing a file.
+- [ ] `git status --porcelain` is clean and no build tool, binary, or downloaded artifact
+      is tracked. `.tools/` and `dist/` must stay ignored.
 - [ ] `python -m py_compile app.py` passes.
 - [ ] Python tests pass.
 - [ ] `py -3 scripts/public_release_audit.py` passes.
@@ -41,8 +49,14 @@ Use this checklist before changing the repository visibility to Public.
 - [ ] Web typecheck passes.
 - [ ] Web tests pass.
 - [ ] Web build passes.
-- [ ] Chromium desktop/mobile theme, accessibility, keyboard, and overflow gates pass.
-- [ ] GitHub Actions CI passes.
+- [ ] `npm run build` leaves `git status --porcelain -- public/react` empty. Any built
+      file must be pinned to LF in `.gitattributes`, or Windows CI reports bundle drift.
+- [ ] Chromium desktop/mobile theme, accessibility, keyboard, and overflow gates pass
+      (`npm run test:ui`). This is the gate most often skipped locally and the one that
+      catches route-contract regressions.
+- [ ] GitHub Actions CI passes on all three operating systems, including the
+      `Canonical Ubuntu release package` job.
+- [ ] CodeQL analysis passes for both python and javascript-typescript.
 
 ## Release
 
@@ -53,3 +67,20 @@ Use this checklist before changing the repository visibility to Public.
 - [ ] The full 0.3 packaged Browser scenario set and privacy evidence are confirmed at the release SHA.
 - [ ] The `v0.3.0` tag points to the clean release commit.
 - [ ] Repository visibility is changed to Public only after all checks pass.
+
+## After the release
+
+These do not block the tag, but leaving them undone is how a repository rots.
+
+- [ ] Triage every open Dependabot PR into one of three buckets: mergeable as-is,
+      blocked by one of our own reproducibility gates, or superseded. The gates that
+      block them are the pinned action SHAs in `tests/test_todo15_ci_workflow_contract.py`,
+      the `--exclude-newer` lock cutoff, and the `public/react` bundle drift check —
+      none of which Dependabot can satisfy on its own. Record the reasoning in an issue
+      rather than re-deriving it every release.
+- [ ] Merge the PRs that are genuinely green. Close the ones that can never be, with the
+      reason, so the queue reflects reality.
+- [ ] Update the issues this release closed or changed. A feature that shipped, was cut,
+      or was put on hold should say so on its issue; the next reader should not have to
+      read the diff to find out.
+- [ ] Confirm Dependabot alerts, secret scanning, and push protection are still enabled.
