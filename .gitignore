@@ -16,3 +16,6 @@ __pycache__/
 *.py[cod]
 data/
 /config/
+
+# Checksum-verified tools downloaded by scripts/install_gitleaks.py. Never commit binaries.
+.tools/

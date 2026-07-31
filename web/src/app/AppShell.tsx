@@ -103,7 +103,14 @@ const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
 };
 
 function currentHash() {
-  return window.location.hash || toHash(preferredHomeRoute());
+  // Pixel Office 보류: 코드는 남기지만 사용자가 도달할 수 있는 입구는 두지 않는다.
+  // 오래된 북마크나 직접 입력으로 미완성 화면에 들어가는 일이 없어야 한다.
+  const hash = window.location.hash || toHash(preferredHomeRoute());
+  if (/^#\/?office(?:\/|$)/.test(hash)) {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`);
+    return toHash("home");
+  }
+  return hash;
 }
 
 function useRouteState(): { hash: string; routeId: RouteId } {

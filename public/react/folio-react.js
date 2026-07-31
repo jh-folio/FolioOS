@@ -17729,7 +17729,8 @@ var bc = [
 	})
 };
 function Sc() {
-	return window.location.hash || Pr(Mo());
+	let e = window.location.hash || Pr(Mo());
+	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Pr("home")) : e;
 }
 function Cc() {
 	let [e, t] = (0, p.useState)(() => Sc());

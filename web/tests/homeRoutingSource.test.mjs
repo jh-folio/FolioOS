@@ -18,15 +18,17 @@ test("Home preference uses versioned guarded storage defaults", () => {
   assert.match(preferences, /motion === "reduced" \? "reduced" : "system"/);
 });
 
-test("Pixel Office is held: the runtime survives but nothing in the UI leads to it", () => {
+test("Pixel Office is held: the runtime survives but nothing reaches it", () => {
   // 코드와 에셋은 보존한다. 재개할 때 처음부터 다시 만들지 않기 위해서다.
   assert.match(routes, /\| "office"/);
   assert.match(shell, /<PixelOfficeRoute \/>/);
 
-  // 사용자 화면에는 진입점이 없다: 내비게이션, 기본 진입, 첫 실행 선택, 홈 전환 버튼 모두 제거.
+  // 진입점은 전부 막는다: 내비게이션, 기본 진입, 첫 실행 선택, 홈 전환 버튼,
+  // 그리고 오래된 북마크로 들어오는 #/office까지.
   assert.match(routes, /id: "office"[^\n]*visibleInNav: false/);
   assert.match(routes, /const DEFAULT_ROUTE: RouteId = "home"/);
   assert.match(shell, /const showHomeChooser = false/);
+  assert.match(shell, /replaceState[\s\S]{0,300}#\/home/);
   assert.doesNotMatch(home, /HomeModeSwitch/);
   assert.match(preferences, /return "home";/);
 });
