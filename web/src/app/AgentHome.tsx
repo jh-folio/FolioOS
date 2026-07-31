@@ -108,7 +108,7 @@ const WELCOME_MESSAGE: AgentMessage = {
   id: "welcome",
   role: "assistant",
   text: "무엇을 조사하거나 정리할까요? 질문으로 시작해도 되고, 보고서 수정 작업을 지시해도 됩니다.",
-  notice: "저장 변경은 proposal 승인 전에는 반영되지 않습니다.",
+  notice: "저장된 보고서 변경은 수정 제안을 승인하기 전에는 반영되지 않습니다.",
 };
 
 function messageId() {
@@ -238,6 +238,7 @@ export function AgentHome() {
   const [quickBusy, setQuickBusy] = useState("");
   const [quickStatus, setQuickStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const pollControllers = useRef(new Map<string, AbortController>());
@@ -583,6 +584,7 @@ export function AgentHome() {
           <header className="home-hero agent-home-hero">
             <p className="eyebrow">Local Investment Research Workspace</p>
             <h1>Folio OS</h1>
+            <p className="agent-home-tagline">AI Agent에게 투자 리서치를 요청하고 여기서 대화를 이어가세요.</p>
           </header>
 
           <form className="agent-home-prompt" onSubmit={handleSubmit}>
@@ -596,7 +598,7 @@ export function AgentHome() {
                     event.currentTarget.form?.requestSubmit();
                   }
                 }}
-                placeholder="Folio OS에서 무엇을 빌드할까요?"
+                placeholder="오늘 어떤 투자 리서치를 도와드릴까요?"
                 rows={3}
               />
               <div className="agent-home-toolbar">
@@ -614,19 +616,31 @@ export function AgentHome() {
                   <span className="agent-home-provider">{adapter?.label || adapter?.id || "Folio OS"}</span>
                 </div>
                 <div className="agent-home-toolbar-right">
-                  <select aria-label="모델" value={model} onChange={(event) => persistModel(event.target.value)}>
-                    {modelChoices.length > 0 ? modelChoices.map((choice) => (
-                      <option key={choice.value} value={choice.value}>
-                        {choice.label}
-                      </option>
-                    )) : <option value="">모델 목록 없음</option>}
-                  </select>
-                  <select aria-label="노력 단계" value={effort} onChange={(event) => setEffort(event.target.value)}>
-                    <option value="low">낮음</option>
-                    <option value="medium">중간</option>
-                    <option value="high">높음</option>
-                    <option value="max">최대</option>
-                  </select>
+                  <button
+                    type="button"
+                    className="agent-home-icon-btn agent-home-advanced-toggle"
+                    aria-expanded={showAdvanced}
+                    onClick={() => setShowAdvanced((current) => !current)}
+                  >
+                    상세 설정
+                  </button>
+                  {showAdvanced && (
+                    <>
+                      <select aria-label="모델" value={model} onChange={(event) => persistModel(event.target.value)}>
+                        {modelChoices.length > 0 ? modelChoices.map((choice) => (
+                          <option key={choice.value} value={choice.value}>
+                            {choice.label}
+                          </option>
+                        )) : <option value="">모델 목록 없음</option>}
+                      </select>
+                      <select aria-label="노력 단계" value={effort} onChange={(event) => setEffort(event.target.value)}>
+                        <option value="low">낮음</option>
+                        <option value="medium">중간</option>
+                        <option value="high">높음</option>
+                        <option value="max">최대</option>
+                      </select>
+                    </>
+                  )}
                   <button className="agent-home-send" type="submit" disabled={busy || !input.trim()} aria-label="전송" data-tooltip="전송">
                     {busy ? "..." : "↑"}
                   </button>
@@ -655,7 +669,7 @@ export function AgentHome() {
           </form>
 
           <div className="home-launcher agent-home-launcher" role="group" aria-label="빠른 실행">
-            <button className="launch-tile primary" type="button" onClick={() => runQuickAction("briefing")} disabled={quickBusy === "briefing"}>
+            <button className="launch-tile" type="button" onClick={() => runQuickAction("briefing")} disabled={quickBusy === "briefing"}>
               {quickBusy === "briefing" ? "생성 중" : "오늘 브리핑 생성"}
             </button>
             <button className="launch-tile" type="button" onClick={() => runQuickAction("rss")} disabled={quickBusy === "rss"}>
@@ -750,7 +764,7 @@ export function AgentHome() {
           </section>
         )}
 
-        <AgentWorkLog surface="home" pageSize={20} refreshKey={workLogRefreshKey} />
+        <AgentWorkLog surface="home" pageSize={20} refreshKey={workLogRefreshKey} collapsible />
       </div>
     </div>
   );

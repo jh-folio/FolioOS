@@ -86,18 +86,6 @@ config/                        # 회사 마스터/별칭 설정
 start.sh / start.ps1           # macOS·Linux / Windows 실행 스크립트
 ```
 
-폴더 역할:
-
-```text
-features/          # 기능별 README, prompt, Python 런타임 코드
-features/common/   # 공통 유틸, 공통 시장 데이터, Polars 기반 계산 보조
-web/               # React SPA 소스. 화면 routing/navigation/Agent/readers/settings 소유
-public/            # 정적 entrypoint, bridge-only JS, CSS, third-party visual wrapper, React build output
-research-inbox/    # 사용자가 직접 넣거나 RSS가 수집한 원천 자료
-data/              # 앱이 생성한 DB, 캐시, 저장 보고서, 포트폴리오 입력값
-config/            # 사용자가 직접 보정할 수 있는 마스터/별칭 설정
-```
-
 Python 패키지명에는 하이픈을 쓸 수 없으므로 런타임 코드는 underscore 폴더를 사용한다.
 예: `features/company_analysis`, `features/common/research_library/rss`, `features/common/research_library/indexing`.
 새 import와 새 코드는 `features/` 기준으로 작성한다.
@@ -254,29 +242,7 @@ features/company_analysis/financial_quality_prompt.md
 
 ## 9. 기능별 문서
 
-작업 전에 [features 인덱스](features/README.md)를 보고, 관련 기능 README를 먼저 읽는다.
-
-- [기능 폴더 인덱스](features/README.md)
-- [자료 수집/RSS/인덱싱/검색](features/common/research_library/README.md)
-- [일일 브리핑](features/daily_briefing/README.md)
-- [기업 분석](features/company_analysis/README.md)
-- [포트폴리오](features/portfolio/README.md)
-- [LLM/설정/Web Search](features/llm_settings/README.md)
-- [Notion 내보내기](features/notion_export/README.md)
-- [Obsidian 연동](features/obsidian/README.md)
-- [테마분석 보고서](features/topic_report/README.md)
-- [Smart Collections](features/smart_collections/README.md)
-- [프론트엔드 UI](features/frontend_ui/README.md)
-- [워치리스트/메모](features/watchlist_notes/README.md)
-- [Native Investment Notes](features/investment_notes/README.md)
-- [시장 내러티브 메모리](features/market_memory/README.md)
-- [Personal Overlay](features/personal_overlay/README.md)
-- [Thesis Tracking](features/thesis_tracking/README.md)
-- [Research Quality](features/common/research_quality/README.md)
-- [Quality Generation](features/common/quality_generation/README.md)
-- [AI Agent Mode](features/agent_mode/README.md)
-- [투자 리뷰](features/investment_review/README.md)
-- [Data Source Reliability](features/common/data_reliability/README.md)
+작업 전에 [features 인덱스](features/README.md)를 보고, 관련 기능 README를 먼저 읽는다. 기능별 README 링크 목록은 features/README.md가 관리한다.
 
 ---
 
@@ -531,6 +497,7 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - README는 기본적으로 화면 탭 단위로 정리한다. 여러 탭에서 함께 쓰는 자료·품질·연동 기능은 `features/common/` 또는 명확한 통합 폴더(예: `features/obsidian/`)의 상위 README에서 관리하고, 하위 README를 불필요하게 늘리지 않는다.
 - `roadmap/`은 개인 개발용 로컬 계획 폴더이며 GitHub/source archive/릴리즈 패키지에는 포함하지 않는다. 새 대형 작업은 `master`에서 독립 브랜치를 따고, 사용자가 로컬 roadmap 문서를 유지하는 경우에만 그 문서에 제품 순서와 진행 상태를 반영한다.
 - 앞으로 계획 관리는 GitHub Issues와 로컬 계획문서를 함께 사용한다. 공개적으로 추적할 작업은 GitHub Issue를 기준으로 삼고, 세부 실행 메모·개인 맥락·agent handoff는 `roadmap/` 또는 공개-safe한 `docs/superpowers/` 계획문서에 둔다. 자세한 규칙은 `docs/PLANNING_WORKFLOW.md`를 따른다.
+- 브랜치를 `master`에 머지하기 전에, 변경을 작성한 세션이 아니라 **새 컨텍스트에서 diff를 리뷰한다**(서브에이전트 리뷰 또는 `/code-review`). 작성자 세션은 자기 가정을 그대로 물려받아 같은 오류를 놓친다. 리뷰어에게는 변경 의도와 관련 기능 README를 함께 주고, 특히 §5 아키텍처 원칙(2계층 분리, 3계층 데이터 위계, 확증편향 방지, enum 검증, 자기참조 금지) 위반 여부를 확인한다.
 
 ---
 

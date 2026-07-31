@@ -90,9 +90,9 @@ function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
   return (
     <section className="topicrpt-provenance" aria-labelledby="dr-provenance-heading">
       <div className="topicrpt-provenance-heading">
-        <p className="section-kicker">PROVENANCE</p>
+        <p className="section-kicker">사용한 자료와 생성 과정</p>
         <h2 id="dr-provenance-heading">리서치 근거 추적</h2>
-        <p>승인 계획, 외부 근거, 자료 공백과 개인 가설을 서로 다른 레이어로 확인합니다.</p>
+        <p>승인한 계획, 외부 근거, 부족한 자료, 내 생각을 서로 구분해 보여줍니다.</p>
       </div>
       {report.contractWarnings.length > 0 && (
         <div className="topicrpt-contract-warning" role="status">
@@ -179,12 +179,12 @@ function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
         </section>
 
         <section className="topicrpt-provenance-panel topicrpt-provenance-wide" data-qa="dr-collection-resolution" aria-labelledby="dr-collection-resolution-heading">
-          <h3 id="dr-collection-resolution-heading">Collection 실행 스냅샷</h3>
+          <h3 id="dr-collection-resolution-heading">자료 모음 실행 기록</h3>
           {resolution ? (
             <>
               <dl className="topicrpt-provenance-facts topicrpt-provenance-facts-wide">
-                <div><dt>Collection</dt><dd>{resolution.collectionId || "직접 범위"}</dd></div>
-                <div><dt>Revision</dt><dd>{resolution.collectionRevision ?? "—"}</dd></div>
+                <div><dt>자료 모음</dt><dd>{resolution.collectionId || "직접 범위"}</dd></div>
+                <div><dt>버전</dt><dd>{resolution.collectionRevision ?? "—"}</dd></div>
                 <div><dt>후보</dt><dd>{resolution.eligibleTotal ?? "—"}건</dd></div>
                 <div><dt>선택 근거</dt><dd>{resolution.selectedEvidenceIds.length}건</dd></div>
                 <div><dt>후보 상한</dt><dd>{resolution.candidateCap ?? "—"}</dd></div>
@@ -198,13 +198,13 @@ function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
         </section>
 
         <aside className="topicrpt-hypothesis-panel" data-qa="dr-user-context-hypothesis" aria-labelledby="dr-user-context-heading">
-          <p className="section-kicker">HYPOTHESIS · 근거 아님</p>
+          <p className="section-kicker">내 생각·가설 · 근거 아님</p>
           <h3 id="dr-user-context-heading">사용자 컨텍스트</h3>
           <p>{userContext || "이 보고서에는 사용자 컨텍스트가 기록되지 않았습니다."}</p>
         </aside>
 
         <aside className="topicrpt-hypothesis-panel topicrpt-provenance-wide" data-qa="dr-overlay-hypothesis" aria-labelledby="dr-overlay-heading">
-          <p className="section-kicker">PERSONAL OVERLAY · HYPOTHESIS</p>
+          <p className="section-kicker">내 투자 관점과 비교 · 가설</p>
           <h3 id="dr-overlay-heading">개인 해석</h3>
           <PersonalOverlayView overlay={overlay} staleQa="dr-overlay-stale" />
         </aside>
@@ -227,8 +227,8 @@ export function MarketStateReportContext({ resolution }: { resolution?: MarketSt
           : status === "excluded" ? "요청 정책에 따라 시장 상태를 제외했습니다."
             : "시장 상태 참조를 확인할 수 없습니다.";
   return (
-    <aside className={`topicrpt-market-state-context state-${status}`} data-qa="dr-market-state-context" data-status={status} aria-label="별도 Market State 컨텍스트">
-      <div><span>Market State · source-grounded context</span><strong>{status}</strong></div>
+    <aside className={`topicrpt-market-state-context state-${status}`} data-qa="dr-market-state-context" data-status={status} aria-label="별도 시장 상태 배경">
+      <div><span>시장 상태 · 근거 기반 배경</span><strong>{status}</strong></div>
       <p>{statusCopy}</p>
       {ref ? <dl><div><dt>기준 시각</dt><dd>{ref.asOf || "없음"}</dd></div><div><dt>최신성</dt><dd>{ref.freshnessReason}</dd></div><div><dt>출처</dt><dd>{ref.sourceKind}</dd></div><div><dt>범위</dt><dd>{ref.scope}</dd></div></dl> : null}
       <small>이 컨텍스트는 외부 근거 목록·인용·가설에 포함되지 않습니다.</small>
@@ -400,9 +400,9 @@ function PlanReview({
   return (
     <section className="input-panel topicrpt-plan-panel" data-qa="dr-plan" aria-labelledby="dr-plan-heading">
       <div className="input-panel-header">
-        <span className="section-kicker">PLAN REVIEW</span>
+        <span className="section-kicker">조사 계획 확인</span>
         <h2 id="dr-plan-heading">실행 전에 리서치 계획을 확인하세요</h2>
-        <p>계획의 범위와 자료 상태를 확인한 뒤에만 생성 작업을 시작합니다. 이 계획은 승인된 요청의 일부로 기록됩니다.</p>
+        <p>계획의 범위와 자료 상태를 확인한 뒤에만 생성 작업을 시작합니다. 이 계획은 승인한 요청의 일부로 기록됩니다.</p>
       </div>
       <div className="topicrpt-plan-grid">
         <div className="topicrpt-plan-card">
@@ -429,17 +429,17 @@ function PlanReview({
           {renderList(plan.dataGapsLikely)}
         </div>
         <div className="topicrpt-plan-card">
-          <span className="topicrpt-plan-label">Collection 스냅샷</span>
+          <span className="topicrpt-plan-label">저장한 자료 모음</span>
           {approvedRequest.collectionRef ? (
-            <p>저장된 외부 근거 필터 · {approvedRequest.collectionRef.id} · revision {approvedRequest.collectionRef.revision}<br />eligible {preview.resolution.eligibleTotal ?? 0} · selected {preview.resolution.selectedEvidenceIds.length}<br /><small>컬렉션은 근거가 아니며 서버가 일치 자료를 해석합니다.</small></p>
-          ) : <p>저장 필터 없이 전체 허용 자료에서 확인합니다.</p>}
+            <p>저장한 자료 모음 사용 · {approvedRequest.collectionRef.id} · 버전 {approvedRequest.collectionRef.revision}<br />후보 {preview.resolution.eligibleTotal ?? 0}건 · 선택 {preview.resolution.selectedEvidenceIds.length}건<br /><small>자료 모음은 근거 자체가 아니며, 일치하는 자료를 실행 시점에 다시 확인합니다.</small></p>
+          ) : <p>저장한 자료 모음 없이 전체 허용 자료에서 확인합니다.</p>}
           {zeroEvidence.required && (
             <p className="topicrpt-zero-evidence" data-qa={`dr-readiness-${reason === "no_index" ? "no-index" : reason || "zero-evidence"}`} data-reason-code={reason || undefined}>
               {reason === "no_index" ? "인덱스 없음" : reason === "filtered_empty" ? "필터 결과 없음" : "일치 자료 없음"} · 실행 전 확인 필요
             </p>
           )}
-          <span className="topicrpt-plan-label">Market State</span>
-          <p>{approvedRequest.marketStatePolicy} · scope {approvedRequest.marketStateScope}<br /><small>실행 시 status · as-of · freshness · source를 별도 컨텍스트로 기록합니다.</small></p>
+          <span className="topicrpt-plan-label">시장 상태 배경</span>
+          <p>{approvedRequest.marketStatePolicy === "exclude" ? "제외" : "현재 상태 포함"} · 범위 {approvedRequest.marketStateScope === "AUTO" ? "자동" : approvedRequest.marketStateScope}<br /><small>실행 시 상태, 기준 시각, 최신성, 출처를 별도 배경으로 기록합니다.</small></p>
         </div>
       </div>
       {zeroEvidence.required && reason && zeroEvidence.resolutionFingerprint && (
@@ -912,7 +912,7 @@ export function DeepResearchRoute() {
         <section className="topicrpt-report-state" data-qa="dr-report-loading" role="status" aria-live="polite" aria-busy="true">
           <p className="section-kicker">DEEP RESEARCH</p>
           <h1 tabIndex={-1}>저장된 리포트를 여는 중입니다</h1>
-          <p>Canonical 보고서와 구조화된 근거 원장을 함께 확인하고 있습니다.</p>
+          <p>보고서 본문과 함께 사용한 자료 목록을 불러오는 중입니다.</p>
         </section>
       </div>
     );
@@ -989,8 +989,8 @@ export function DeepResearchRoute() {
       <RouteHero
         eyebrow="Deep Research"
         title="딥 리서치"
-        description="투자 질문을 먼저 실행 계획으로 정리한 뒤, 외부 근거와 시장 상태를 구분해 bounded research를 생성합니다."
-        actions={<button className="filter-btn clear" type="button" onClick={() => void loadReports()} disabled={loading}>{loading ? "불러오는 중" : "다시 읽기"}</button>}
+        description="투자 질문을 실행 계획으로 정리해 확인한 뒤, 정해진 자료 범위 안에서 근거를 구분한 보고서를 생성합니다."
+        actions={<button className="filter-btn clear" type="button" onClick={() => void loadReports()} disabled={loading}>{loading ? "불러오는 중" : "새로고침"}</button>}
       />
 
       {phase === "readiness" && <p className="react-dashboard-warning" data-qa="dr-readiness-loading" role="status">저장된 리포트와 자료 상태를 확인하는 중입니다.</p>}
@@ -1000,9 +1000,9 @@ export function DeepResearchRoute() {
       {phase !== "plan-review" && phase !== "generation" && (
         <form className="input-panel topicrpt-form" onSubmit={handlePreview} noValidate>
           <div className="input-panel-header">
-            <span className="section-kicker">QUESTION FIRST</span>
+            <span className="section-kicker">투자 질문</span>
             <h2>무엇을 투자 판단으로 확인하고 싶나요?</h2>
-            <p>질문은 1~500자로 입력하세요. 컨텍스트는 가설로만 전달되며 외부 근거로 승격되지 않습니다.</p>
+            <p>질문은 1~500자로 입력하세요. 추가로 적는 조건은 내 생각(가설)로만 전달되며 외부 근거로 쓰이지 않습니다.</p>
           </div>
           <div className="topicrpt-topic-row">
             <div className="topicrpt-preset-btns" aria-label="리서치 모드">
@@ -1014,36 +1014,41 @@ export function DeepResearchRoute() {
             <textarea data-qa="dr-question" value={question} onChange={(event) => setQuestion(event.currentTarget.value)} maxLength={500} rows={4} placeholder="예: 미국 전력 수요 증가가 12개월 내 반도체 공급망과 관련 기업에 어떤 영향을 줄까?" required aria-describedby="dr-question-help" />
             <small id="dr-question-help">{question.length}/500</small>
           </label>
-          <label className="field topicrpt-context-field">
-            <span>추가 컨텍스트 <em>(선택)</em></span>
-            <textarea data-qa="dr-context" value={userContext} onChange={(event) => setUserContext(event.currentTarget.value)} maxLength={4000} rows={4} placeholder="예: 보유 종목, 관심 지역, 확인할 기간 등. 이 내용은 hypothesis로 표시됩니다." />
-          </label>
-          <InvestmentContextCard mode="deep-research" onReference={referenceInvestmentContext} />
-          <SmartCollectionsPanel
-            selectedRef={selectedCollectionRef}
-            onSelectedRef={setSelectedCollectionRef}
-            onBusyChange={setCollectionBusy}
-            onOpenDetail={(collectionId) => { window.location.hash = deepResearchCollectionHash(collectionId); }}
-            disabled={phase === "plan-loading" || loading}
-          />
+          <details className="topicrpt-advanced" data-qa="dr-advanced" open={Boolean(userContext.trim() || selectedCollectionRef)}>
+            <summary>분석 조건 추가 <em>(선택)</em></summary>
+            <label className="field topicrpt-context-field">
+              <span>추가 조건</span>
+              <textarea data-qa="dr-context" value={userContext} onChange={(event) => setUserContext(event.currentTarget.value)} maxLength={4000} rows={4} placeholder="예: 보유 종목, 관심 지역, 확인할 기간 등. 이 내용은 내 생각(가설)로 표시됩니다." />
+            </label>
+            <InvestmentContextCard mode="deep-research" onReference={referenceInvestmentContext} />
+            <SmartCollectionsPanel
+              selectedRef={selectedCollectionRef}
+              onSelectedRef={setSelectedCollectionRef}
+              onBusyChange={setCollectionBusy}
+              onOpenDetail={(collectionId) => { window.location.hash = deepResearchCollectionHash(collectionId); }}
+              disabled={phase === "plan-loading" || loading}
+            />
+            <div className="topicrpt-policy-row">
+              <label className="field topicrpt-policy-field">
+                <span>시장 상태 배경</span>
+                <select value={marketStatePolicy} onChange={(event) => setMarketStatePolicy(event.currentTarget.value as MarketStatePolicy)}>
+                  <option value="include_current">현재 상태 포함</option>
+                  <option value="exclude">제외</option>
+                </select>
+              </label>
+              <label className="field topicrpt-policy-field">
+                <span>시장 상태 범위</span>
+                <select value={marketStateScope} onChange={(event) => setMarketStateScope(event.currentTarget.value as MarketStateScope)}>
+                  <option value="AUTO">자동</option>
+                  <option value="GLOBAL">글로벌</option>
+                  <option value="US">미국</option>
+                  <option value="KR">한국</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <div className="topicrpt-action-row">
-            <label className="field topicrpt-policy-field">
-              <span>Market State 정책</span>
-              <select value={marketStatePolicy} onChange={(event) => setMarketStatePolicy(event.currentTarget.value as MarketStatePolicy)}>
-                <option value="include_current">현재 상태 포함</option>
-                <option value="exclude">제외</option>
-              </select>
-            </label>
-            <label className="field topicrpt-policy-field">
-              <span>Market State 범위</span>
-              <select value={marketStateScope} onChange={(event) => setMarketStateScope(event.currentTarget.value as MarketStateScope)}>
-                <option value="AUTO">자동</option>
-                <option value="GLOBAL">글로벌</option>
-                <option value="US">미국</option>
-                <option value="KR">한국</option>
-              </select>
-            </label>
-            <span className="topicrpt-policy-note">Deep research · 최대 2라운드</span>
+            <span className="topicrpt-policy-note">심층 조사 · 최대 2라운드</span>
             <button className="filter-btn apply" type="submit" data-qa="dr-preview" disabled={isBusy}>{phase === "plan-loading" ? "계획 준비 중" : "계획 미리보기"}</button>
           </div>
           <input type="hidden" value={customLabel} data-legacy-topic={topicKey} readOnly aria-hidden="true" />
@@ -1066,7 +1071,7 @@ export function DeepResearchRoute() {
         />
       )}
 
-      {phase === "generation" && <section className="input-panel topicrpt-generation-panel" data-qa="dr-generation" aria-live="polite"><span className="section-kicker">GENERATING</span><h2>승인된 계획을 실행하는 중입니다</h2><p data-qa="dr-generation-status">{status || "작업 상태를 확인하는 중입니다."}</p></section>}
+      {phase === "generation" && <section className="input-panel topicrpt-generation-panel" data-qa="dr-generation" aria-live="polite"><span className="section-kicker">생성 중</span><h2>승인한 계획을 실행하는 중입니다</h2><p data-qa="dr-generation-status">{status || "작업 상태를 확인하는 중입니다."}</p></section>}
 
       {status && phase !== "generation" && phase !== "report" && <p className="react-dashboard-warning" data-qa="dr-status" role="status">{status}</p>}
 

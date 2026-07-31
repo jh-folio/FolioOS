@@ -188,3 +188,62 @@ public/react/folio-react.js
   실행되며 추천 없는 controlled 결과 또는 규칙 fallback을 카드 안에 표시한다.
 - checkpoint 생성·확인은 native investment note 저장소만 변경하며, 네 route의 context
   재조회 결과가 동일하게 갱신되어야 한다.
+
+## 홈·딥 리서치 UX 단순화 (0.3.x)
+
+- 홈은 Agent 입력창이 유일한 중심 요소다. placeholder는 "오늘 어떤 투자 리서치를
+  도와드릴까요?"이며, 모델/노력 단계 선택은 입력창의 `상세 설정` 토글 뒤로 숨긴다.
+- 브리핑/RSS/기업 분석/딥 리서치 바로가기는 주 버튼 없는 간결한 빠른 실행 버튼이다.
+  홈의 주 행동은 Agent 입력 하나만 유지한다.
+- `AgentWorkLog`는 `collapsible` prop을 지원한다. 홈에서는 접힌 `<details>` 요약
+  ("최근 작업: …")만 먼저 보여주고 펼치면 전체 기록을 보여준다. 딥 리서치는 기존 그대로다.
+- 딥 리서치 단계 라벨은 한국어를 사용한다: 투자 질문 → 조사 계획 확인 → 생성 중.
+  보고서 하단 추적 섹션은 "사용한 자료와 생성 과정", 사용자 입력은 "내 생각·가설 · 근거 아님",
+  overlay는 "내 투자 관점과 비교 · 가설"로 표시한다.
+- 추가 컨텍스트, Investment Context 카드, Smart Collection 선택, 시장 상태 배경 정책은
+  `분석 조건 추가 (선택)` `<details>`(`.topicrpt-advanced`) 안에 접혀 있다. 입력값이나
+  선택된 Collection이 있으면 열린 상태로 렌더링한다.
+- Smart Collection은 사용자 화면에서 "저장한 자료 모음"으로 부르고 `revision`은 "버전"으로
+  표기한다. 설명 문장에서 bounded research, Canonical, hypothesis 같은 내부 영문 용어를
+  쓰지 않는다(짧은 영문 부제목·기능명은 허용).
+- 근거 부족 확인(zero-evidence confirm)과 수정 제안 승인 절차는 단순화 후에도 숨기지 않는다.
+
+## Agent 작업 기록 표시 규칙 (0.3.x)
+
+- Work Log API는 계속 안전한 코드 값만 준다. 화면 문구는 `web/src/app/workLogCopy.ts`의
+  `workLogItemCopy()`가 그 코드를 사람이 읽는 문장으로 바꿔서 만든다. 컴포넌트는 코드 값을
+  그대로 렌더링하지 않는다.
+- 항목 한 건은 **무슨 작업(제목) · 지금 상태(배지) · 결과 한 줄 · 보조 설명** 순서로 보여준다.
+  예: "일일 브리핑 생성 / 완료 / 브리핑 1건 저장 / AI CLI · Codex".
+- `tone`은 `running|done|failed|cancelled|waiting` 다섯 가지이며 배지 색과 카드 왼쪽 띠에
+  함께 쓴다. 실패는 오류 코드 대신 원인 문장("AI 도구 실행이 실패했습니다")으로 표시한다.
+- 승인 대기 중인 수정 제안은 별도 강조 줄(`.work-log-attention`)로 항상 보이게 둔다.
+  단순화 과정에서 승인 절차를 숨기지 않는다.
+- 지금 아무 일도 할 수 없는 컨트롤은 그리지 않는다. 범주 필터는 기록이 2건 이상이거나 이미
+  범주를 좁혀둔 상태일 때만, 페이지 이동은 전체 건수가 한 페이지를 넘을 때만 렌더링한다.
+- 헤더에는 새로고침 아이콘 버튼 하나만 둔다. `기록 숨기기`는 푸터의 조용한 텍스트 버튼
+  (`.work-log-quiet-btn`)이고, 보존 안내와 metadata-only 고지도 푸터 작은 글씨로 둔다.
+- 예전 `jobs.json` 마이그레이션은 일회성 유지보수라 Work Log가 아니라 설정의
+  `이전 작업 기록` 패널(`WorkLogMigration.tsx`)에 둔다. preview → confirm 2단계와 충돌 차단은
+  그대로 유지한다.
+- 사전에 없는 새 코드가 오면 코드 원문을 그대로 노출해 정보가 사라지지 않게 한다.
+  새 taskType/errorCode를 추가하면 `workLogCopy.ts` 사전도 함께 채운다.
+
+## 다크 모드 색 계약 (0.3.x)
+
+- 색은 전부 `:root`와 `:root[data-theme="dark"]`의 토큰으로만 쓴다. 스타일시트 본문에
+  밝은 색 리터럴(`#fff`, `rgba(255,255,255,…)`, `rgba(245,247,250,…)`)을 직접 쓰지 않는다.
+- 반투명 표면과 잉크 틴트는 두 테마에서 각각 정의한다:
+  `--folio-tint-weak`, `--folio-tint-strong`, `--folio-surface-translucent`,
+  `--folio-surface-float`, `--folio-surface-veil`, `--folio-toggle-track`.
+- accent 위에 올라가는 글자는 `--folio-on-accent`를 쓴다. accent는 다크에서 밝아지므로
+  글자색이 뒤집혀야 한다.
+- 다크 표면은 색이 아니라 어둠으로 위계를 만든다. 색상 222°를 유지하되 채도는 10% 안쪽으로
+  묶어 남색이 아닌 중성 회색으로 읽히게 한다(배경 `#0e0f11`, 카드 `#202227`, 테두리 `#373b43`).
+  강조색은 의미를 지니므로 색상을 유지하고 채도만 10%p 낮춰 회색 위에서 튀지 않게 한다.
+- 세그먼트 토글의 선택 알약은 `--folio-segment-active` / `--folio-segment-active-ink`를 쓴다.
+  라이트는 밝은 트랙 위 어두운 알약, 다크는 어두운 트랙 위 밝은 알약이며 트랙 대비 3:1
+  (WCAG 1.4.11)을 넘겨야 한다.
+- `var(--token)`을 쓰려면 그 토큰이 반드시 어딘가에 정의돼 있어야 한다. 정의가 없으면
+  라이트 리터럴 fallback이 다크에도 고정되거나(대비 파괴), fallback이 없는 선언은 통째로
+  무효가 된다(포커스 링 소실). `web/tests/workLogCopySource.test.mjs`가 이를 검사한다.

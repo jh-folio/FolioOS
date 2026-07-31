@@ -193,7 +193,7 @@ Work Log는 SharedJob과 현재 proposal 파일에서 요청 시점에 파생되
 
 - `GET /api/agent/work-log` — `kind=all|companion|task`, `limit`, `offset`으로 파생 목록을 조회한다.
 - `POST /api/agent/work-log/clear-preview` → `DELETE /api/agent/work-log` — preview token으로 현재 보이기만 숨긴다. SharedJob, 보고서, proposal 파일은 변경하거나 삭제하지 않는다.
-- `POST /api/agent/work-log/migration-preview` → `POST /api/agent/work-log/migration-confirm` — legacy `jobs.json`을 명시적으로 preview한 뒤 v2 job store로 이동한다.
+- `POST /api/agent/work-log/migration-preview` → `POST /api/agent/work-log/migration-confirm` — legacy `jobs.json`을 명시적으로 preview한 뒤 v2 job store로 이동한다. 일회성 유지보수이므로 화면 진입점은 Work Log가 아니라 설정의 `이전 작업 기록` 패널이다.
 
 보존 표시는 최대 30일/200건이며, companion만 `category=companion`, artifact-producing task는 `category=task`다. 동기 direct Briefing/Company, index/RSS/setup/install은 Work Log에 들어가지 않는다. Direct Topic과 CLI/Agent Briefing·Company는 SharedJob이므로 포함된다.
 

@@ -135,7 +135,7 @@ export function InvestmentContextCardView({
       >
         <div className="investment-context-head">
           <div>
-            <p>PERSONAL CONTEXT · HYPOTHESIS</p>
+            <p>내 투자 맥락 · 가설 (근거 아님)</p>
             <h2>개인 리서치 연결이 아직 없습니다</h2>
           </div>
           {dismissible && onDismiss ? <button type="button" className="investment-context-dismiss" aria-label="개인 맥락 카드 닫기" onClick={onDismiss}>×</button> : null}
@@ -155,7 +155,7 @@ export function InvestmentContextCardView({
     >
       <div className="investment-context-head">
         <div>
-          <p>PERSONAL CONTEXT · HYPOTHESIS</p>
+          <p>내 투자 맥락 · 가설 (근거 아님)</p>
           <h2>{copy.title}</h2>
           <span>{copy.description}</span>
         </div>

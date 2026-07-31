@@ -3,6 +3,7 @@ import { getJson, postJson } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 import { useThemePreference, type ThemePreference } from "./themePreference";
+import { WorkLogMigrationControl } from "./WorkLogMigration";
 
 type ProviderId = "openai" | "gemini" | "claude";
 type SettingsTab = "integrations" | "admin";
@@ -720,6 +721,15 @@ export function SettingsRoute() {
                 {busy === "cache-cleanup" ? "정리 중" : "오래된 캐시 정리"}
               </button>
             </div>
+          </section>
+          <section className="settings-panel input-panel">
+            <div className="input-panel-header">
+              <div>
+                <h3>이전 작업 기록</h3>
+                <p>예전 버전이 남긴 작업 기록 파일을 현재 저장소로 한 번만 옮깁니다. 보고서와 제안 파일은 건드리지 않습니다.</p>
+              </div>
+            </div>
+            <WorkLogMigrationControl />
           </section>
         </div>
       )}

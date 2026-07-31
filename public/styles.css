@@ -116,55 +116,100 @@
 
   /* radius — 기존 --folio-radius(8px) 유지, 펄/원형은 의미 리터럴 */
   --radius-pill: 999px;
+
+  /* 반투명 표면과 잉크 틴트 — 라이트/다크에서 각각 재정의해야 하는 값만 토큰으로 둔다.
+     리터럴로 두면 다크 모드에서 밝은 판이 그대로 남아 대비가 깨진다. */
+  --folio-tint-weak: rgba(7, 17, 31, 0.06);     /* hover, code, pill 배경 */
+  --folio-tint-strong: rgba(7, 17, 31, 0.10);   /* active nav */
+  --folio-surface-translucent: rgba(245, 247, 250, 0.96); /* sticky sidebar */
+  --folio-surface-float: rgba(255, 255, 255, 0.96);       /* tooltip, floating 편집기 */
+  --folio-surface-veil: rgba(255, 255, 255, 0.6);         /* 카드 위 옅은 판 */
+  --folio-toggle-track: #d7dde6;
+
+  /* 과거 스타일이 정의 없이 참조하던 별칭. 정의가 없으면 라이트 리터럴 fallback이 고정되거나
+     선언 자체가 무효가 되어(포커스 링 소실 등) 다크 모드에서 깨진다. 항상 테마 토큰으로 잇는다. */
+  --folio-surface-soft: var(--folio-surface-2);
+  --folio-segment-active: var(--folio-surface-dark);
+  --folio-segment-active-ink: var(--folio-ink-inverse);
+  --folio-accent: var(--folio-teal);
+  --folio-on-accent: var(--folio-ink-inverse); /* accent 위 글자색 — 다크에서는 accent가 밝아져 뒤집힌다 */
+  --folio-muted: var(--folio-ink-muted);
+  --folio-danger: var(--color-error-text);
+  --folio-focus: var(--folio-blue);
+  --folio-radius-sm: 6px;
+  --agent-accent: var(--folio-gold);
+  --react-agent-accent: var(--folio-gold);
+  --bg-card: var(--folio-surface-clean);
+  --bg-input: var(--folio-surface-clean);
+  --fg: var(--folio-ink);
+  --fg-subtle: var(--folio-ink-subtle);
+  --text: var(--folio-ink);
+  --elev-3: var(--elev-overlay);
+  --fs-2xs: 0.6875rem;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
+/* 다크 표면은 색이 아니라 어둠으로 위계를 만든다.
+   색상 222°는 유지하되 채도는 10% 안쪽으로 묶어 남색이 아닌 중성 회색으로 읽히게 한다.
+   강조색만 의미를 지니므로 색상은 그대로 두고 채도만 낮춰 회색 위에서 튀지 않게 한다. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --folio-bg: #0b1220;
-  --folio-bg-soft: #0f1828;
-  --folio-surface: #131e30;
-  --folio-surface-2: #1a273a;
-  --folio-surface-clean: #111c2d;
-  --folio-surface-muted: #1a273a;
-  --folio-surface-dark: #09111e;
-  --folio-surface-black: #070d17;
-  --folio-surface-dark-2: #1b2a41;
-  --folio-ink: #edf3fa;
-  --folio-ink-soft: #d6e0ec;
-  --folio-ink-muted: #aebdce;
-  --folio-ink-subtle: #8798ab;
-  --folio-ink-inverse: #f5f8fc;
-  --folio-gold: #e0b45e;
-  --folio-gold-soft: #493b22;
-  --folio-burgundy: #f18a9d;
-  --folio-red-soft: #3d2029;
-  --folio-blue: #72b7f2;
-  --folio-blue-soft: #19334d;
-  --folio-green: #9dcd72;
-  --folio-green-soft: #203821;
-  --folio-warning: #f5d27c;
-  --folio-purple: #b9acef;
-  --folio-purple-soft: #302b4d;
-  --folio-teal: #81cbb9;
-  --folio-teal-soft: #173b35;
-  --folio-chart-1: #72b7f2;
-  --folio-chart-2: #f18a9d;
-  --folio-chart-3: #9dcd72;
-  --folio-chart-4: #e0b45e;
-  --folio-chart-5: #c7a7d9;
-  --folio-border: #314158;
-  --folio-border-strong: #50627a;
+  --folio-bg: #0e0f11;
+  --folio-bg-soft: #121416;
+  --folio-surface: #17181c;
+  --folio-surface-2: #202227;
+  --folio-surface-clean: #151619;
+  --folio-surface-muted: #202227;
+  --folio-surface-dark: #0b0c0e;
+  --folio-surface-black: #090a0b;
+  --folio-surface-dark-2: #25272d;
+  --folio-ink: #f1f2f4;
+  --folio-ink-soft: #dcdfe4;
+  --folio-ink-muted: #b7bcc8;
+  --folio-ink-subtle: #9299ab;
+  --folio-ink-inverse: #f4f5f7;
+  --folio-gold: #d6b168;
+  --folio-gold-soft: #443927;
+  --folio-burgundy: #ea91a1;
+  --folio-red-soft: #38252b;
+  --folio-blue: #7ab6ea;
+  --folio-blue-soft: #1e3348;
+  --folio-green: #9ec37c;
+  --folio-green-soft: #243425;
+  --folio-warning: #eecf83;
+  --folio-purple: #bcb1ea;
+  --folio-purple-soft: #343147;
+  --folio-teal: #8ac2b4;
+  --folio-teal-soft: #1b3732;
+  --folio-chart-1: #7ab6ea;
+  --folio-chart-2: #ea91a1;
+  --folio-chart-3: #9ec37c;
+  --folio-chart-4: #d6b168;
+  --folio-chart-5: #c5add3;
+  --folio-border: #373b43;
+  --folio-border-strong: #555b68;
   --folio-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
-  --link: #9dccf5;
-  --color-risk: #ff9b91;
-  --color-warning-bg: #392f18;
-  --color-warning-text: #f5d27c;
-  --color-error-bg: #3d2029;
-  --color-error-text: #ffb2bd;
+  --link: #a2ccf0;
+  --color-risk: #faa097;
+  --color-warning-bg: #352d1c;
+  --color-warning-text: #eecf83;
+  --color-error-bg: #38252b;
+  --color-error-text: #fbb6c0;
   --elev-1: 0 6px 18px rgba(0, 0, 0, 0.2);
   --elev-2: 0 10px 26px rgba(0, 0, 0, 0.28);
   --elev-overlay: 0 22px 54px rgba(0, 0, 0, 0.42);
-  --focus-ring: 0 0 0 3px rgba(114, 183, 242, 0.32);
+  --focus-ring: 0 0 0 3px rgba(122, 182, 234, 0.32);
+  --folio-tint-weak: rgba(240, 241, 244, 0.08);
+  --folio-tint-strong: rgba(240, 241, 244, 0.15);
+  --folio-surface-translucent: rgba(21, 22, 25, 0.96);
+  --folio-surface-float: rgba(32, 34, 39, 0.98);
+  --folio-surface-veil: rgba(240, 241, 244, 0.04);
+  --folio-toggle-track: #3a3d45;
+  --folio-on-accent: var(--folio-surface-black);
+  /* 라이트에서는 어두운 알약이 밝은 트랙 위에 오지만, 다크에서는 반대로 밝은 알약이 올라와야
+     "선택됨"이 자연스럽게 읽힌다. 트랙 대비 3:1(WCAG 1.4.11)을 넘기는 밝기로 고정한다. */
+  --folio-segment-active: #6b6e75;
+  --folio-segment-active-ink: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -1479,7 +1524,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   max-width: 100%;
   padding: 5px 8px;
   border-radius: var(--radius-pill, 999px);
-  background: rgba(7, 17, 31, 0.06);
+  background: var(--folio-tint-weak);
   color: var(--folio-ink-soft, #213047);
   font-size: var(--fs-xs, 0.75rem);
   font-weight: 700;
@@ -2333,8 +2378,9 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .react-rss-pagination button.active {
-  background: var(--folio-accent, #1c7c54);
-  border-color: var(--folio-accent, #1c7c54);
+  background: var(--folio-accent);
+  border-color: var(--folio-accent);
+  color: var(--folio-on-accent);
 }
 
 .react-market-memory-route {
@@ -2451,7 +2497,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   left: 4px;
   width: calc((100% - 12px) / 2);
   border-radius: 999px;
-  background: var(--folio-surface-dark, #101829);
+  background: var(--folio-segment-active);
   box-shadow: var(--elev-1, 0 4px 12px rgba(7, 17, 31, 0.045));
   transform: translateX(0);
   transition: transform 180ms var(--ease, ease), background 180ms var(--ease, ease);
@@ -2475,7 +2521,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .react-analysis-style-toggle button.active {
-  color: var(--folio-ink-inverse, #eef3f9);
+  color: var(--folio-segment-active-ink);
 }
 
 .react-analysis-api-note {
@@ -2657,7 +2703,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .react-briefing-generation .brief-gen-panel {
-  background: rgba(255, 255, 255, 0.74);
+  background: var(--folio-surface-veil);
 }
 
 .react-briefing-generation .brief-gen-panel-head {
@@ -2947,7 +2993,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 .react-markdown code {
   padding: 2px 5px;
   border-radius: 5px;
-  background: rgba(7, 17, 31, 0.06);
+  background: var(--folio-tint-weak);
   font-size: 0.92em;
 }
 
@@ -3406,11 +3452,11 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .left-nav-item:hover {
-  background: rgba(7, 17, 31, 0.06);
+  background: var(--folio-tint-weak);
 }
 
 .left-nav-item.active {
-  background: rgba(7, 17, 31, 0.10);
+  background: var(--folio-tint-strong);
   color: var(--folio-ink);
   font-weight: 700;
 }
@@ -3496,11 +3542,11 @@ body:has(#folioReactRoot .react-shell) main.page {
   transition: background 0.14s ease;
 }
 .left-nav-subtab:hover {
-  background: rgba(7, 17, 31, 0.06);
+  background: var(--folio-tint-weak);
   color: var(--folio-ink);
 }
 .left-nav-subtab.active {
-  background: rgba(7, 17, 31, 0.10);
+  background: var(--folio-tint-strong);
   color: var(--folio-ink);
   font-weight: 700;
 }
@@ -3614,7 +3660,7 @@ body.left-sidebar-collapsed .left-nav-caret { display: none; }
     margin: 0;
     border-width: 0 1px 0 0;
     border-radius: 0;
-    background: rgba(245, 247, 250, 0.96);
+    background: var(--folio-surface-translucent);
     box-shadow: none;
     overflow: visible;
   }
@@ -3709,9 +3755,9 @@ body.left-sidebar-collapsed .left-nav-caret { display: none; }
     min-width: max-content;
     max-width: 220px;
     padding: 7px 10px;
-    border: 1px solid rgba(7, 17, 31, 0.14);
+    border: 1px solid var(--folio-border-strong);
     border-radius: 9px;
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--folio-surface-float);
     color: var(--folio-ink);
     box-shadow: 0 12px 28px rgba(7, 17, 31, 0.12);
     font-size: var(--fs-xs);
@@ -6602,8 +6648,8 @@ button:disabled {
 }
 
 .regime-metrics .tag {
-  background: #eef6f3;
-  border-color: #c9ded7;
+  background: var(--folio-teal-soft);
+  border-color: var(--folio-border);
   color: var(--folio-teal);
   flex: 0 0 auto;
   align-self: flex-start;
@@ -7038,7 +7084,7 @@ button:disabled {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: rgba(248, 250, 252, 0.98);
+  background: var(--folio-surface-translucent);
 }
 
 .market-widget-group-editor-head {
@@ -7927,7 +7973,7 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   border: 1px solid var(--folio-border);
   border-radius: 12px;
   padding: 26px 20px 18px;
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--folio-surface-veil);
 }
 .brief-gen-panel-head { position: absolute;
   top: -10px;
@@ -7981,7 +8027,7 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   left: calc(4px + 42px + 4px);
   width: calc((100% - 42px - 20px) / 3);
   border-radius: 999px;
-  background: var(--folio-surface-dark, #101829);
+  background: var(--folio-segment-active);
   box-shadow: var(--elev-1, 0 4px 12px rgba(7, 17, 31, 0.045));
   transform: translateX(0);
   transition: transform 180ms var(--ease, ease), background 180ms var(--ease, ease);
@@ -8033,7 +8079,7 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   white-space: nowrap;
 }
 .brief-market-segment input:checked + span {
-  color: var(--folio-ink-inverse, #eef3f9);
+  color: var(--folio-segment-active-ink);
 }
 .brief-market-segment input:focus-visible + span {
   outline: 2px solid var(--folio-focus);
@@ -10475,7 +10521,7 @@ body.report-reader-open { overflow: hidden; }
     height: calc(100vh - 88px);
     border: 0;
     border-radius: 12px;
-    background: rgba(245, 247, 250, 0.98);
+    background: var(--folio-surface-translucent);
     box-shadow: var(--elev-1);
   }
 }
@@ -12223,7 +12269,7 @@ main.page {
   width: 70px;
   height: 38px;
   border-radius: 999px;
-  background: #d7dde6;
+  background: var(--folio-toggle-track);
   box-shadow: inset 0 1px 2px rgba(7, 17, 31, 0.16);
   transition: background var(--dur-fast) var(--ease);
 }
@@ -12328,7 +12374,7 @@ main.page {
   left: 4px;
   width: calc((100% - 12px) / 2);
   border-radius: 999px;
-  background: var(--folio-surface-dark);
+  background: var(--folio-segment-active);
   box-shadow: var(--elev-1);
   transform: translateX(0);
   transition: transform 180ms var(--ease), background 180ms var(--ease);
@@ -12353,7 +12399,7 @@ main.page {
 }
 
 .settings-segmented button.active {
-  color: var(--folio-ink-inverse);
+  color: var(--folio-segment-active-ink);
 }
 
 .cache-summary {
@@ -12648,31 +12694,100 @@ main.page {
 }
 
 .work-log-item-main {
-  display: flex;
+  display: grid;
+  gap: 4px;
   flex: 1 1 420px;
   min-width: 0;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
-.work-log-item-main > span,
-.work-log-item-title span {
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(29, 44, 58, .06);
-  color: var(--folio-ink-muted, #736b61);
-  font-size: 13px;
+.work-log-item-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.work-log-item-title strong {
+  overflow-wrap: anywhere;
+  font-size: var(--fs-sm);
+}
+
+/* 상태는 코드가 아니라 한국어 배지로만 보여준다. 색은 결과 성격을 나타낸다. */
+.work-log-badge {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--folio-tint-weak);
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.work-log-badge[data-tone="done"] { background: var(--folio-green-soft); color: var(--folio-green); }
+.work-log-badge[data-tone="running"] { background: var(--folio-blue-soft); color: var(--folio-blue); }
+.work-log-badge[data-tone="failed"] { background: var(--color-error-bg); color: var(--color-error-text); }
+.work-log-badge[data-tone="cancelled"],
+.work-log-badge[data-tone="waiting"] { background: var(--folio-tint-weak); color: var(--folio-ink-muted); }
+
+.work-log-outcome {
+  margin: 0;
+  color: var(--folio-ink);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.work-log-item[data-tone="failed"] .work-log-outcome { color: var(--color-error-text); }
+
+.work-log-detail {
+  margin: 0;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-xs);
   overflow-wrap: anywhere;
 }
 
-.work-log-item-title { display: grid; gap: 3px; flex: 1 1 100%; min-width: 0; }
-.work-log-item-title strong { overflow-wrap: anywhere; }
-.work-log-status { color: var(--folio-green) !important; background: var(--folio-green-soft) !important; }
-.work-log-error-code,
-.work-log-fallback { color: var(--color-error-text) !important; background: var(--color-error-bg) !important; }
+.work-log-attention {
+  margin: 2px 0 0;
+  padding: 4px 9px;
+  border-radius: var(--folio-radius);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  justify-self: start;
+}
+
+/* 상태별 왼쪽 띠로 목록을 훑을 때 결과를 바로 구분한다. */
+.work-log-item { border-left: 3px solid var(--folio-border); }
+.work-log-item[data-tone="done"] { border-left-color: var(--folio-green); }
+.work-log-item[data-tone="running"] { border-left-color: var(--folio-blue); }
+.work-log-item[data-tone="failed"] { border-left-color: var(--color-error-text); }
 .work-log-item-side { display: grid; justify-items: end; gap: 10px; min-width: 150px; }
 .work-log-item-side time { font-size: 13px; color: var(--folio-ink-muted, #736b61); }
-.work-log-footer { margin-top: 16px; }
+.work-log-footer { margin-top: 16px; align-items: flex-end; }
+.work-log-footer-note { display: grid; gap: 2px; min-width: 0; flex: 1 1 320px; }
+.work-log-footer-note p { margin: 0; color: var(--folio-ink-muted); font-size: var(--fs-xs); }
+.work-log-footer-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* 자주 쓰지 않는 정리 동작은 주 버튼처럼 보이지 않게 둔다. */
+.work-log-quiet-btn {
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.work-log-quiet-btn:hover:not(:disabled) { color: var(--folio-ink); }
+.work-log-quiet-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.work-log-head .icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
 .work-log-empty { padding: 28px 12px; text-align: center; color: var(--folio-ink-muted, #736b61); }
 
 .work-log-dialog-backdrop {
@@ -12718,4 +12833,92 @@ main.page {
   .work-log button,
   .work-log-dialog button { width: 100%; }
   .work-log-dialog { width: min(100%, 480px); padding: 18px; }
+}
+
+/* ---------------------------------------------------------------------------
+   0.3.x UX 단순화: 홈 Agent 중심 + 딥 리서치 단계형 입력
+   --------------------------------------------------------------------------- */
+
+.agent-home-tagline {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+/* 홈 빠른 실행: 큰 카드 대신 간결한 보조 버튼 */
+.agent-home .agent-home-launcher {
+  grid-template-columns: repeat(4, minmax(0, 160px));
+}
+.agent-home .agent-home-launcher .launch-tile {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+
+/* 홈 입력창 상세 설정 토글 */
+.agent-home-advanced-toggle {
+  width: auto;
+  padding: 0 10px;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+
+/* 딥 리서치: 분석 조건 추가(접힘) */
+.topicrpt-advanced {
+  border: 1px solid var(--border);
+  border-radius: var(--folio-radius);
+  background: var(--folio-surface-clean);
+  padding: 0;
+}
+.topicrpt-advanced > summary {
+  cursor: pointer;
+  padding: 12px 16px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  list-style-position: inside;
+}
+.topicrpt-advanced > summary em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+.topicrpt-advanced[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+.topicrpt-advanced > :not(summary) {
+  margin: 12px 16px;
+}
+.topicrpt-policy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Agent Work Log: 홈에서는 최근 상태 요약 후 펼쳐보기 */
+.work-log-collapse > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+}
+.work-log-collapse > summary strong {
+  font-size: var(--fs-sm);
+}
+.work-log-collapse .work-log-latest {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.work-log-collapse[open] > summary {
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .agent-home .agent-home-launcher {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .topicrpt-policy-row {
+    flex-direction: column;
+  }
 }

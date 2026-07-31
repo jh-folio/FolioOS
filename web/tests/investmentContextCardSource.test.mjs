@@ -19,7 +19,7 @@ test("Investment Context uses one bounded hypothesis-only API contract", async (
   assert.match(card, /\/api\/investment-context\/summary/);
   assert.match(card, /layer: "hypothesis"/);
   assert.match(card, /data-layer=\{contextBoundary\.layer\}/);
-  assert.match(card, /PERSONAL CONTEXT · HYPOTHESIS/);
+  assert.match(card, /내 투자 맥락 · 가설 \(근거 아님\)/);
   assert.match(card, /reuseAsEvidence/);
   assert.doesNotMatch(card, /quantity|costBasis|averagePrice|portfolioTotal|noteBody/);
   assert.doesNotMatch(card, /매수|매도|buy|sell|target price|position size/i);

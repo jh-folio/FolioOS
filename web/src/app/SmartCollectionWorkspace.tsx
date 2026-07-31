@@ -279,9 +279,9 @@ export function SmartCollectionsPanel({
     <section className="topicrpt-collections-panel" data-qa="collection-panel" aria-labelledby="collection-heading">
       <div className="topicrpt-collections-head">
         <div>
-          <span className="section-kicker">SMART COLLECTIONS</span>
-          <h3 id="collection-heading">외부 근거 필터</h3>
-          <p>저장된 검색 규칙이며 근거 자체나 사용자 가설이 아닙니다. 서버가 계획 시점에 일치 자료를 다시 확인합니다.</p>
+          <span className="section-kicker">Smart Collections</span>
+          <h3 id="collection-heading">저장한 자료 모음 사용 <em>(선택)</em></h3>
+          <p>미리 저장해 둔 검색 규칙으로 자료 범위를 좁힙니다. 근거 자체가 아니며, 계획 시점에 일치하는 자료를 다시 확인합니다.</p>
         </div>
         <div className="topicrpt-collections-actions">
           <button className="filter-btn clear" type="button" data-qa="collection-reload" disabled={loadingList || busy || disabled} onClick={() => void loadCollections()}>{loadingList ? "불러오는 중" : "다시 불러오기"}</button>
@@ -293,10 +293,10 @@ export function SmartCollectionsPanel({
       {conflict && (
         <div className="react-dashboard-warning topicrpt-collection-alert" data-qa="collection-conflict" role="alert">
           <strong>{conflict.code === "duplicate_name" ? "같은 이름이 이미 있습니다" : "다른 탭에서 정의가 변경되었습니다"}</strong>
-          <span>{conflict.currentRevision ? `현재 revision ${conflict.currentRevision}. ` : ""}입력 내용은 유지했습니다. 최신 revision을 불러온 뒤 다시 저장하세요.</span>
+          <span>{conflict.currentRevision ? `현재 버전 ${conflict.currentRevision}. ` : ""}입력 내용은 유지했습니다. 최신 버전을 불러온 뒤 다시 저장하세요.</span>
           {conflict.code === "duplicate_name"
             ? <button className="filter-btn clear" type="button" onClick={() => setConflict(null)}>이름 수정</button>
-            : <button className="filter-btn clear" type="button" onClick={() => void loadCollections(true)}>최신 revision 불러오기</button>}
+            : <button className="filter-btn clear" type="button" onClick={() => void loadCollections(true)}>최신 버전 불러오기</button>}
         </div>
       )}
 
@@ -304,12 +304,12 @@ export function SmartCollectionsPanel({
         <div className="topicrpt-collection-browser">
           <div className="topicrpt-collection-subhead"><strong>저장된 규칙</strong><span>{total}개</span></div>
           <div className="topicrpt-collection-list" data-qa="collection-list" aria-busy={loadingList}>
-            {!loadingList && !error && !collections.length && <div className="topicrpt-collection-empty" data-qa="collection-empty" data-empty-kind="list" role="status">저장된 외부 근거 필터가 없습니다. 새 컬렉션을 만들어 반복할 검색 범위를 저장하세요.</div>}
+            {!loadingList && !error && !collections.length && <div className="topicrpt-collection-empty" data-qa="collection-empty" data-empty-kind="list" role="status">저장한 자료 모음이 없습니다. 새 컬렉션을 만들어 반복해 쓸 검색 범위를 저장하세요.</div>}
             {collections.map((collection) => {
               const isSelected = selectedRef?.id === collection.id && selectedRef.revision === collection.revision;
               return (
                 <button className={`topicrpt-collection-item${isSelected ? " is-selected" : ""}`} type="button" data-qa="collection-item" data-collection-id={collection.id} data-revision={collection.revision} aria-pressed={isSelected} disabled={busy || disabled} onClick={() => void previewCollection(collection)} key={collection.id}>
-                  <span><strong>{collection.name}</strong><small>revision {collection.revision}</small></span>
+                  <span><strong>{collection.name}</strong><small>버전 {collection.revision}</small></span>
                   <small>{collectionFilterSummary(collection)}</small>
                 </button>
               );
@@ -327,7 +327,7 @@ export function SmartCollectionsPanel({
         </div>
 
         <section className="topicrpt-collection-results" data-qa="collection-results" aria-busy={previewLoading} aria-live="polite">
-          <div className="topicrpt-collection-subhead"><strong>Live match</strong><span>{previewLoading ? "확인 중" : preview ? `${preview.total}건` : "규칙 선택 전"}</span></div>
+          <div className="topicrpt-collection-subhead"><strong>현재 일치 자료</strong><span>{previewLoading ? "확인 중" : preview ? `${preview.total}건` : "규칙 선택 전"}</span></div>
           {preview && preview.total === 0 && <div className="topicrpt-collection-empty" data-qa="collection-empty" data-empty-kind="matches" role="status">현재 일치 자료가 0건입니다. 계획은 근거 부족 확인을 거쳐야 하며, 이 컬렉션 자체가 근거로 사용되지는 않습니다.</div>}
           {preview && preview.items.length > 0 && (
             <ul className="topicrpt-collection-samples">
@@ -499,10 +499,10 @@ export function SmartCollectionWorkspace({
       </div>
 
       <header className="topicrpt-collection-workspace-title">
-        <p className="section-kicker">SAVED FILTER · SOURCE-GROUNDED INTAKE</p>
+        <p className="section-kicker">저장한 자료 모음</p>
         <h1>{workspace.collection.name}</h1>
-        <p>저장된 검색 규칙이며 외부 근거 자체가 아닙니다. 새 리서치를 시작하면 서버가 이 ID와 revision으로 자료를 다시 확인합니다.</p>
-        <small>{collectionFilterSummary(workspace.collection)} · revision {workspace.collection.revision}</small>
+        <p>저장된 검색 규칙이며 외부 근거 자체가 아닙니다. 새 리서치를 시작하면 이 규칙의 ID와 버전으로 자료를 다시 확인합니다.</p>
+        <small>{collectionFilterSummary(workspace.collection)} · 버전 {workspace.collection.revision}</small>
       </header>
 
       {message && <p className="react-dashboard-warning" role="status">{message}</p>}
