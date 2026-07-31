@@ -4,7 +4,7 @@
 
 [English README](README.md)
 
-Folio OS 0.2.4는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 일일 브리핑, 시장 맥락, 기업 분석, 근거 추적이 가능한 Deep Research로 정리해 주는 로컬 투자 리서치 도구입니다.
+Folio OS 0.3.0은 내 PC에 저장한 시장 뉴스와 리서치 자료를 모아 일일 브리핑, 시장 맥락, 기업 분석, 근거 추적이 가능한 Deep Research로 정리해 주는 로컬 투자 리서치 도구입니다.
 
 자료와 생성된 보고서는 기본적으로 내 컴퓨터에 저장됩니다. LLM/API 연동은 선택 사항이며, 사용자가 설정한 경우에만 사용됩니다.
 
@@ -22,9 +22,11 @@ Folio OS 0.2.4는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모�
 
 ---
 
-## 0.2.4에서 할 수 있는 일
+## 0.3.0에서 할 수 있는 일
 
 - Home 화면에서 Folio OS AI Agent와 대화하기
+- 대시보드에서 시장·보고서·체크포인트·포트폴리오 맥락 함께 점검하기
+- 로컬 워치리스트에서 기업·섹터·테마와 관련 뉴스 추적하기
 - 공개 RSS/뉴스 피드 수집 및 검색
 - 미국/한국 시장 일일 브리핑 생성
 - 중기 시장 상황을 요약한 Market Memory 확인
@@ -35,13 +37,13 @@ Folio OS 0.2.4는 내 PC에 저장한 시장 뉴스와 리서치 자료를 모�
 - 메타데이터 전용 Agent Work Log 확인과 보고서 수정 제안의 명시적 승인/거절
 - 보고서 옆 Folio Note 작성
 - 생성된 보고서를 Obsidian 또는 Notion으로 내보내기
-- LLM CLI/API, 모델 선택, RSS, 자동화, 내보내기 설정 관리
+- 전체 화면을 라이트·다크·시스템 테마로 전환하기
+- LLM CLI/API, 모델 선택, RSS, 자동화, 화면, 내보내기 설정 관리
 
-0.2 사용자 화면에서 제외하거나 뒤로 미룬 기능:
+0.3.0 사용자 화면에 포함하지 않은 기능:
 
-- 독립 Dashboard와 Watchlist 워크플로
 - 고급 포트폴리오 관리와 독립 노트 관리 워크플로
-- 다크 모드와 설치 프로그램/트레이 앱 수준의 마감 작업
+- 설치 프로그램/트레이 앱 수준의 마감 작업
 
 ---
 
@@ -108,7 +110,17 @@ data/
 
 ### Home
 
-Home은 AI Agent의 기본 진입점입니다. 현재 워크스페이스 요약, 자주 쓰는 작업 시작, 리서치 맥락에 대한 질문 등에 사용할 수 있습니다.
+Home은 AI Agent에게 투자 리서치를 요청하는 화면입니다. 입력창에 질문하거나 보고서 수정을 지시하고, 브리핑 생성·RSS 수집·기업 분석·딥 리서치는 빠른 실행 버튼으로 바로 시작할 수 있습니다.
+
+아래쪽 Agent 작업 기록은 최근 상태만 한 줄로 보여주고, 펼치면 전체 기록을 확인할 수 있습니다. 작업 내용 원문이나 개인 자료는 표시하지 않습니다.
+
+### Dashboard
+
+현재 시장 위젯, 최근 보고서, 체크포인트, 제한된 포트폴리오 맥락을 한 화면에서 점검합니다. 시장 위젯은 TradingView를 사용하며 출처 표기를 유지합니다.
+
+### Watchlist
+
+관심 기업·섹터·테마를 로컬 워치리스트에 저장하고 관련 뉴스 카드와 시장 반응을 확인합니다. 워치리스트 데이터는 로컬 워크스페이스에 남습니다.
 
 ### Briefing
 
@@ -142,11 +154,11 @@ Home과 Deep Research는 제한된 메타데이터 전용 Work Log를 공유합�
 
 Briefing, Company Analysis, Deep Research는 API Key나 CLI 없이도 규칙으로 계산한 노트/thesis freshness, 충돌, 불확실성, 반대 근거, 체크포인트를 보여줄 수 있습니다. Home, Market Memory, Smart Collection, Deep Research에는 로컬 Portfolio/Watchlist의 ticker 연결에서 만든 제한된 Investment Context도 표시됩니다. 이런 자동 표시는 읽기 전용 메타데이터이며 Canonical 보고서를 바꾸지 않습니다.
 
-Agent 종합은 `최신 근거로 검토`, `Agent에게 변화 묻기`, `Agent로 위험 설명`처럼 사용자가 명시적으로 실행한 경우에만 시작됩니다. Portfolio와 Watchlist의 독립 최상위 route는 0.2.4 기본 navigation에서 계속 숨겨져 있습니다. 제한된 맥락 표시는 Portfolio/Watchlist 제품 재출시나 투자 권고를 뜻하지 않습니다.
+Agent 종합은 `최신 근거로 검토`, `Agent에게 변화 묻기`, `Agent로 위험 설명`처럼 사용자가 명시적으로 실행한 경우에만 시작됩니다. 0.3.0 navigation에는 Dashboard와 Watchlist가 표시되며, 전용 런타임 밖의 Portfolio 맥락은 계속 제한된 읽기 전용 정보로 유지됩니다. 이 화면들은 투자 권고를 제공하지 않습니다.
 
 ### Settings
 
-AI Agent 모드, LLM CLI/API 설정, 저장된 모델 선택, RSS/자동화, Obsidian, Notion 설정을 관리합니다.
+화면 테마와 움직임, AI Agent 모드, LLM CLI/API 설정, 저장된 모델 선택, RSS/자동화, Obsidian, Notion 설정을 관리합니다.
 
 ---
 

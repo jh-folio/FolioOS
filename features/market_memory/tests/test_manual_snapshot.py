@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from features.automation import service as automation_service
 from features.market_memory.attempt_store import (
+    AttemptMode,
     AttemptScope,
     AttemptStatus,
     AttemptStore,
@@ -198,6 +199,28 @@ def test_missing_attempt_is_reconstructed_from_valid_manual_reference(tmp_path: 
 
     assert state.attempts[0].id == running.id
     assert state.attempts[0].status is AttemptStatus.SUCCESS
+
+
+def test_job_snapshot_is_ignored_before_manual_timestamp_validation(tmp_path: Path) -> None:
+    store = AttemptStore(tmp_path / "attempts.json")
+    reference = UpdateAttemptRef(
+        id="msa_12345678-1234-4234-8234-123456789abc",
+        scope=AttemptScope.GLOBAL,
+        mode=AttemptMode.COMBINED_JOB,
+        jobId="job_12345678-1234-4234-8234-123456789abc",
+        operationId="op_market_memory_update",
+        startedAt=NOW + timedelta(milliseconds=20),
+        inputWatermark=None,
+    )
+    committed = CommittedManualSnapshot(
+        snapshotId="mss_combined",
+        savedAt=NOW,
+        updateAttemptRef=reference,
+    )
+
+    state = recover_manual_attempts(store, (committed,), NOW + timedelta(hours=1))
+
+    assert state.attempts == ()
 
 
 def test_mismatched_reference_fails_closed_without_rewriting_store(tmp_path: Path) -> None:

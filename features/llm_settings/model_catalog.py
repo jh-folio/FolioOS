@@ -38,7 +38,12 @@ API_MODEL_FALLBACKS = {
 }
 
 CLI_MODEL_FALLBACKS = {
-    "codex": API_MODEL_FALLBACKS["openai"],
+    "codex": [
+        {"value": "gpt-5.6-sol", "label": "GPT-5.6 Sol"},
+        {"value": "gpt-5.6-terra", "label": "GPT-5.6 Terra"},
+        {"value": "gpt-5.6-luna", "label": "GPT-5.6 Luna"},
+        *API_MODEL_FALLBACKS["openai"],
+    ],
     "claude": API_MODEL_FALLBACKS["claude"],
     "antigravity": [
         {"value": "gemini-3.5-pro", "label": "Gemini 3.5 Pro"},

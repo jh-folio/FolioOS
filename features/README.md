@@ -9,7 +9,7 @@
 | --- | --- | --- |
 | `daily_briefing/` | 브리핑 탭 | 미국장·한국장 범위별 브리핑, 이슈·출처 다양성, 생성 당시 가격 series·히트맵 사이드카, 생성 당시/현재 REST snapshot 전환, Lightweight Charts·Plotly 렌더링과 PNG 내보내기, 저장·품질 모드 |
 | `company_analysis/` | 기업 분석 탭 | SEC/DART 숫자, 공시 문단, 로컬 자료를 결합한 기업분석 |
-| `topic_report/` | 딥 리서치 탭 | 0.2.4 질문-first 계획 승인, Smart Collection 재사용, 근거 추적 보고서(내부 Topic Report v2 호환) |
+| `topic_report/` | 딥 리서치 탭 | 0.3.0 질문-first 계획 승인, Smart Collection 재사용, 근거 추적 보고서(내부 Topic Report v2 호환) |
 | `smart_collections/` | 딥 리서치 내부 워크스페이스 | 결정적 저장 필터, 상태/reason, 제한된 snapshot 변화와 recovery |
 | `portfolio/` | 포트폴리오 탭 | 보유 포지션, 목표 프리셋, 리서치용 백테스트 |
 | `market_memory/` | 시장 내러티브 탭 | 중기 내러티브, regime 추세, story family 관리 |
@@ -24,6 +24,7 @@
 | `thesis_tracking/` | 기업/대시보드 공통 | 기업 thesis 등록, 최신 근거 대비 Delta 생성, Obsidian export |
 | `agent_mode/` | 보고서 생성 공통 | Codex/Claude Code 같은 외부 AI 에이전트용 context pack 생성과 writeback |
 | `frontend_ui/` | 웹 UI | 탭 구조, 렌더링, 모바일 대응, Markdown/Plotly 주의점 |
+| `pixel_office/` | Pixel Office Home | 기존 리서치·보고서·Agent 상태를 redacted 7-object 계약으로 요약하는 read-only Home 기반 |
 | `common/` | 공통 기반 | 자료 레이어, 품질/근거성, 시장 데이터, 공통 스키마, 유틸 |
 
 ## 공통 기반 폴더
@@ -58,4 +59,4 @@
 - 사용자 데이터가 들어가는 `data/`, `research-inbox/`, `config/`는 기능 문서에서 경로를 명확히 적되, 임의 삭제나 초기화를 안내하지 않습니다.
 - Python import 경로와 문서 경로는 underscore 이름을 기준으로 합니다. 하이픈 이름의 중복 폴더를 만들지 않습니다.
 
-0.2.4 기본 사용자 화면은 Home, 브리핑, RSS 피드, 시장 내러티브, 기업 분석, 딥 리서치, 설정입니다. 보고서 가설 검토, Smart Collection 상세, Investment Context의 자동 표시는 규칙 기반 읽기 전용이며 Agent는 사용자의 명시적 버튼 실행에서만 시작합니다. Dashboard와 Watchlist route는 호환을 위해 남지만 기본 navigation/Home/command palette에서는 숨깁니다.
+0.3.0 기본 사용자 화면은 Home, 대시보드, 워치리스트, 브리핑, RSS 피드, 시장 내러티브, 기업 분석, 딥 리서치, 설정입니다. 전체 공개 화면은 Light/Dark/System 테마와 반응형 탐색을 지원합니다. 보고서 가설 검토, Smart Collection 상세, Investment Context의 자동 표시는 규칙 기반 읽기 전용이며 Agent는 사용자의 명시적 버튼 실행에서만 시작합니다.

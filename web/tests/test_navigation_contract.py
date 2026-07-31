@@ -70,7 +70,7 @@ def _exposure_issues(routes: str, shell: str, home: str, palette: str) -> list[s
 def _current_claim_issues(files: dict[str, str]) -> list[str]:
     issues: list[str] = []
     for path, text in files.items():
-        if path in {"README.md", "README.ko.md", "installation.md"} and "0.2" not in text:
+        if path in {"README.md", "README.ko.md", "installation.md"} and "0.3" not in text:
             issues.append(f"{path}:version")
     return issues
 
@@ -108,27 +108,31 @@ def test_deep_research_exposure_contract() -> None:
     assert "data-qa={item.qa}" in palette
 
 
-def test_deferred_routes_remain_hidden() -> None:
+def test_public_routes_are_exposed() -> None:
     routes = _source("web/src/app/routes.ts")
-    assert re.search(r'id: "dashboard"[^\n]+visibleInNav: false', routes)
-    assert re.search(r'id: "watchlist"[^\n]+visibleInNav: false', routes)
+    shell = _source("web/src/app/AppShell.tsx")
+    assert not re.search(r'id: "dashboard"[^\n]+visibleInNav: false', routes)
+    assert not re.search(r'id: "watchlist"[^\n]+visibleInNav: false', routes)
+    assert 'routes: ["home", "dashboard", "watchlist"]' in shell
+    assert 'id="folio-main-content"' in shell
+    assert 'href="#folio-main-content"' in shell
 
 
-def test_machine_version_authority_matches_024_release() -> None:
+def test_machine_version_authority_matches_030_release() -> None:
     version = _source("VERSION").strip()
     package = json.loads(_source("web/package.json"))
-    assert version == "0.2.4"
+    assert version == "0.3.0"
     assert package["version"] == version
 
 
-def test_documented_020_scope_matches_english_and_korean() -> None:
+def test_documented_030_scope_matches_english_and_korean() -> None:
     for relative in REQUIRED_DOCS:
         assert (ROOT / relative).is_file(), relative
 
     english = _source("README.md")
     korean = _source("README.ko.md")
-    assert "What You Can Do In 0.2.4" in english
-    assert "0.2.4에서 할 수 있는 일" in korean
+    assert "What You Can Do In 0.3.0" in english
+    assert "0.3.0에서 할 수 있는 일" in korean
     for text in (english, korean):
         assert "Deep Research" in text
         assert "Smart Collection" in text
@@ -174,7 +178,7 @@ def test_topic_report_endpoint_inventory_has_no_public_save_route() -> None:
 
 
 def test_detects_version_drift() -> None:
-    files = {"README.md": "Folio OS 0.1", "README.ko.md": "Folio OS 0.2", "installation.md": "Folio OS 0.2"}
+    files = {"README.md": "Folio OS 0.1", "README.ko.md": "Folio OS 0.3", "installation.md": "Folio OS 0.3"}
     assert _current_claim_issues(files) == ["README.md:version"]
 
 

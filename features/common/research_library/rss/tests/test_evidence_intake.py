@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
 from features.common.research_library.indexing.service import canonical_news_source, parse_rssarchive_markdown
 from features.common.research_library.rss.service import (
     RSS_CACHE_TABLE,
+    _collection_created_count,
     _dedupe_rss_rows,
     _repair_cached_media,
     archive_item,
@@ -74,6 +75,12 @@ def test_retry_policy_defaults_to_no_repeated_fetch():
     assert should_retry_existing_item("fetch_failed") is False
     assert should_retry_existing_item("fetch_failed", retry_failed=True) is True
     assert should_retry_existing_item("summary_only", retry_summary_only=True) is True
+
+
+def test_collection_created_count_uses_collector_summary():
+    output = "Saved: article.md [full_text]\nDone. Created 3 file(s). Updated 1 file(s). Upgraded 0 legacy file(s). Status: {}"
+    assert _collection_created_count(output) == 3
+    assert _collection_created_count("RSS collection failed.") is None
 
 
 def test_relevance_score_accepts_market_items_and_penalizes_noise():

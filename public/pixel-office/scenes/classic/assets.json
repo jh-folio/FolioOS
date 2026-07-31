@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "sceneId": "classic_analyst",
+  "assets": [
+    {
+      "id": "classic_room_base",
+      "role": "room_base",
+      "src": "/pixel-office/scenes/classic/room-shell-modern-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 0
+    },
+    {
+      "id": "classic_agent_seat_rug_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-agent-seat-rug-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 200,
+      "objectId": "agent_seat"
+    },
+    {
+      "id": "classic_market_board_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-market-board-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 11800,
+      "objectId": "market_board"
+    },
+    {
+      "id": "classic_news_desk_workstation_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-news-desk-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 15900,
+      "objectId": "news_desk"
+    },
+    {
+      "id": "classic_research_desk_workstation_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-research-desk-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 19100,
+      "objectId": "research_desk"
+    },
+    {
+      "id": "classic_news_desk_chair_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-news-desk-chair-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 21200,
+      "objectId": "news_desk"
+    },
+    {
+      "id": "classic_memo_board_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-memo-board-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 22300,
+      "objectId": "memo_board"
+    },
+    {
+      "id": "classic_report_shelf_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-report-shelf-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 22500,
+      "objectId": "report_shelf"
+    },
+    {
+      "id": "classic_research_desk_chair_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-research-desk-chair-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 23800,
+      "objectId": "research_desk"
+    },
+    {
+      "id": "classic_agent_seat_chair_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-agent-seat-chair-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 27800,
+      "objectId": "agent_seat"
+    },
+    {
+      "id": "classic_agent_seat_side_table_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-agent-seat-side-table-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 27900,
+      "objectId": "agent_seat"
+    },
+    {
+      "id": "classic_portfolio_workstation_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-portfolio-monitor-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 28700,
+      "objectId": "portfolio_monitor"
+    },
+    {
+      "id": "classic_agent_seat_coffee_table_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-agent-seat-coffee-table-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 30200,
+      "objectId": "agent_seat"
+    },
+    {
+      "id": "classic_portfolio_chair_object",
+      "role": "scene_object",
+      "src": "/pixel-office/scenes/classic/object-portfolio-chair-v2.png",
+      "width": 560,
+      "height": 315,
+      "depth": 31300,
+      "objectId": "portfolio_monitor"
+    },
+    {
+      "id": "classic_neutral_front",
+      "role": "character_idle",
+      "src": "/pixel-office/characters/classic/neutral-front-v3.png",
+      "width": 64,
+      "height": 96
+    },
+    {
+      "id": "classic_character_atlas",
+      "role": "character_atlas",
+      "src": "/pixel-office/characters/classic/sprite-sheet-alpha.png",
+      "width": 256,
+      "height": 576
+    },
+    {
+      "id": "classic_portrait",
+      "role": "portrait",
+      "src": "/pixel-office/characters/classic/portrait.png",
+      "width": 234,
+      "height": 290
+    }
+  ]
+}

@@ -54,3 +54,18 @@ test("reload recovery fetches the exact same id and clears only invalid or termi
   assert.equal(unavailable.id, validId);
   assert.equal(storage.getItem(resume.MARKET_MEMORY_ACTIVE_JOB_KEY), validId);
 });
+
+test("reload discovers an active market-memory job even before its id was stored", async (t) => {
+  const vite = await createServer({ configFile: false, root: webRoot, server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  t.after(() => vite.close());
+  const resume = await vite.ssrLoadModule("/src/app/marketMemoryJobResume.ts");
+  const storage = new MemoryStorage();
+  const recovery = await resume.discoverActiveMarketMemoryJob(() => Promise.resolve([
+    { id: "job_00000000-0000-4000-8000-000000000000", taskType: "briefing", status: "running" },
+    { id: validId, taskType: "market_memory_update", status: "running", progress: 20 },
+  ]), storage);
+
+  assert.equal(recovery.kind, "active");
+  assert.equal(recovery.job.id, validId);
+  assert.equal(storage.getItem(resume.MARKET_MEMORY_ACTIVE_JOB_KEY), validId);
+});

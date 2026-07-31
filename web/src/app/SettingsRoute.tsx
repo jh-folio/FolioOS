@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJson, postJson } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
+import { useUiPreferences } from "./homePreference";
 import { RouteHero } from "./RouteHero";
+import { useThemePreference, type ThemePreference } from "./themePreference";
+import { WorkLogMigrationControl } from "./WorkLogMigration";
 
 type ProviderId = "openai" | "gemini" | "claude";
 type SettingsTab = "integrations" | "admin";
@@ -117,16 +120,23 @@ function ToggleSwitch({
   checked,
   onChange,
   label,
+  ariaLabel,
   compact = false,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
+  ariaLabel?: string;
   compact?: boolean;
 }) {
   return (
     <label className={`settings-switch${compact ? " settings-switch-compact" : ""}${checked ? " is-on" : ""}`}>
-      <input checked={checked} onChange={(event) => onChange(event.currentTarget.checked)} type="checkbox" />
+      <input
+        aria-label={ariaLabel || label || "설정 전환"}
+        checked={checked}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+        type="checkbox"
+      />
       <span className="settings-switch-track" aria-hidden="true"><span className="settings-switch-thumb" /></span>
       {label ? (
         <span className="settings-switch-copy">
@@ -162,6 +172,8 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
 }
 
 export function SettingsRoute() {
+  const theme = useThemePreference();
+  const uiPreferences = useUiPreferences();
   const [tab, setTab] = useState<SettingsTab>("integrations");
   const [settings, setSettings] = useState<SettingsPayload | null>(null);
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
@@ -443,6 +455,50 @@ export function SettingsRoute() {
 
       {tab === "integrations" ? (
         <div id="settings-integrations" className="sub-tab-panel active">
+          <section className="settings-panel input-panel" data-display-settings>
+            <div className="input-panel-header">
+              <div>
+                <h3>화면</h3>
+                <p>이 브라우저의 색상 모드와 움직임 방식을 저장합니다.</p>
+              </div>
+              <span className="settings-theme-status" aria-live="polite">
+                현재 {theme.resolved === "dark" ? "다크" : "라이트"}
+              </span>
+            </div>
+            <div className="field">
+              <span id="themePreferenceLabel">테마</span>
+              <div className="settings-theme-options" role="group" aria-labelledby="themePreferenceLabel">
+                {([
+                  ["light", "라이트"],
+                  ["dark", "다크"],
+                  ["system", "시스템"],
+                ] as Array<[ThemePreference, string]>).map(([value, label]) => (
+                  <button
+                    type="button"
+                    className={theme.preference === value ? "active" : ""}
+                    aria-pressed={theme.preference === value}
+                    onClick={() => theme.setPreference(value)}
+                    key={value}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-grid">
+              <label className="field">
+                <span>움직임</span>
+                <select
+                  value={uiPreferences.preferences.motion}
+                  onChange={(event) => uiPreferences.setMotion(event.currentTarget.value === "reduced" ? "reduced" : "system")}
+                >
+                  <option value="system">시스템 설정 따르기</option>
+                  <option value="reduced">움직임 줄이기</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
           <section className="settings-panel input-panel">
             <div className="input-panel-header settings-agent-header">
               <div>
@@ -454,7 +510,7 @@ export function SettingsRoute() {
               <div className="field">
                 <span>실행 방식</span>
                 <div className="settings-agent-mode-row">
-                  <ToggleSwitch checked={agentEnabled} onChange={setAgentEnabled} compact />
+                  <ToggleSwitch ariaLabel="AI Agent 사용" checked={agentEnabled} onChange={setAgentEnabled} compact />
                   <div className="settings-segmented" aria-label="AI Agent 실행 방식" data-mode={agentMode}>
                     <button className={agentMode === "cli" ? "active" : ""} type="button" onClick={() => setAgentMode("cli")}>LLM CLI</button>
                     <button className={agentMode === "api" ? "active" : ""} type="button" onClick={() => setAgentMode("api")}>LLM API</button>
@@ -602,10 +658,10 @@ export function SettingsRoute() {
                     <strong>RSS 수집</strong>
                     <p>뉴스 피드를 정해진 간격으로 가져와 research inbox와 인덱스에 반영합니다.</p>
                   </div>
-                  <ToggleSwitch checked={Boolean(automation.rss?.enabled)} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, enabled: checked } })} compact />
+                  <ToggleSwitch ariaLabel="RSS 자동 수집" checked={Boolean(automation.rss?.enabled)} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, enabled: checked } })} compact />
                 </div>
                 <label className="field"><span>수집 간격</span><select value={String(automation.rss?.intervalMinutes || 60)} onChange={(event) => setAutomation({ ...automation, rss: { ...automation.rss, intervalMinutes: event.currentTarget.value } })}><option value="15">15분마다</option><option value="30">30분마다</option><option value="60">1시간마다</option><option value="180">3시간마다</option></select></label>
-                <div className="automation-inline-switch"><span>기사 전문 저장 (무료 공개 본문만, 로컬 보관용)</span><ToggleSwitch checked={automation.rss?.saveFullText !== false} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, saveFullText: checked } })} compact /></div>
+                <div className="automation-inline-switch"><span>기사 전문 저장 (무료 공개 본문만, 로컬 보관용)</span><ToggleSwitch ariaLabel="기사 전문 저장" checked={automation.rss?.saveFullText !== false} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, saveFullText: checked } })} compact /></div>
               </section>
 
               <section className="automation-card">
@@ -615,10 +671,10 @@ export function SettingsRoute() {
                     <strong>시장 메모리 업데이트</strong>
                     <p>최근 RSS와 시장 자료를 중기 시장 판단용 컨텍스트로 정리합니다.</p>
                   </div>
-                  <ToggleSwitch checked={Boolean(automation.marketMemory?.enabled)} onChange={(checked) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, enabled: checked } })} compact />
+                  <ToggleSwitch ariaLabel="Market Memory 자동 정리" checked={Boolean(automation.marketMemory?.enabled)} onChange={(checked) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, enabled: checked } })} compact />
                 </div>
                 <label className="field"><span>정리 간격</span><select value={String(automation.marketMemory?.intervalMinutes || 1440)} onChange={(event) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, intervalMinutes: event.currentTarget.value } })}><option value="720">12시간마다</option><option value="1440">하루마다</option><option value="2880">이틀마다</option><option value="10080">일주일마다</option></select></label>
-                <div className="automation-inline-switch"><span>RSS 수집 직후에도 정리</span><ToggleSwitch checked={Boolean(automation.marketMemory?.runAfterRss)} onChange={(checked) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, runAfterRss: checked } })} compact /></div>
+                <div className="automation-inline-switch"><span>RSS 수집 직후에도 정리</span><ToggleSwitch ariaLabel="RSS 수집 직후 Market Memory 정리" checked={Boolean(automation.marketMemory?.runAfterRss)} onChange={(checked) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, runAfterRss: checked } })} compact /></div>
               </section>
 
               <section className="automation-card">
@@ -628,13 +684,13 @@ export function SettingsRoute() {
                     <strong>브리핑 생성</strong>
                     <p>지정한 시각에 RSS와 Market Memory를 반영해 일일 브리핑을 생성합니다.</p>
                   </div>
-                  <ToggleSwitch checked={Boolean(automation.briefing?.enabled)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, enabled: checked } })} compact />
+                  <ToggleSwitch ariaLabel="일일 브리핑 자동 생성" checked={Boolean(automation.briefing?.enabled)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, enabled: checked } })} compact />
                 </div>
                 <div className="settings-grid compact">
                   <label className="field"><span>브리핑 시각</span><input value={automation.briefing?.time || "08:00"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, time: event.currentTarget.value } })} type="time" /></label>
                   <label className="field"><span>시장 범위</span><select value={automation.briefing?.marketScope || "both"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, marketScope: event.currentTarget.value } })}><option value="both">미국+한국</option><option value="us">미국</option><option value="kr">한국</option></select></label>
                 </div>
-                <div className="automation-inline-switch"><span>브리핑 전 RSS/Memory 실행</span><ToggleSwitch checked={Boolean(automation.briefing?.runPrerequisites)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, runPrerequisites: checked } })} compact /></div>
+                <div className="automation-inline-switch"><span>브리핑 전 RSS/Memory 실행</span><ToggleSwitch ariaLabel="브리핑 전 RSS와 Market Memory 실행" checked={Boolean(automation.briefing?.runPrerequisites)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, runPrerequisites: checked } })} compact /></div>
               </section>
             </div>
             <div className="filter-actions settings-actions">
@@ -679,6 +735,15 @@ export function SettingsRoute() {
                 {busy === "cache-cleanup" ? "정리 중" : "오래된 캐시 정리"}
               </button>
             </div>
+          </section>
+          <section className="settings-panel input-panel">
+            <div className="input-panel-header">
+              <div>
+                <h3>이전 작업 기록</h3>
+                <p>예전 버전이 남긴 작업 기록 파일을 현재 저장소로 한 번만 옮깁니다. 보고서와 제안 파일은 건드리지 않습니다.</p>
+              </div>
+            </div>
+            <WorkLogMigrationControl />
           </section>
         </div>
       )}

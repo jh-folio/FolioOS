@@ -3,6 +3,7 @@ import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
 import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
+import { useThemePreference } from "./themePreference";
 
 type DashboardPayload = {
   index?: {
@@ -119,6 +120,7 @@ function itemLabel(item: { ticker?: string; name?: string }) {
 }
 
 function CurrentMarketWidgetBoard() {
+  const { resolved: resolvedTheme } = useThemePreference();
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [settings, setSettings] = useState<MarketWidgetSettings | null>(null);
   const [error, setError] = useState("");
@@ -184,7 +186,7 @@ function CurrentMarketWidgetBoard() {
     return () => {
       window.FolioTradingViewWidgets?.cleanup?.(target);
     };
-  }, [settings]);
+  }, [resolvedTheme, settings]);
 
   async function saveWidgetSettings(nextSettings: MarketWidgetSettings) {
     const saved = await postJson<MarketWidgetSettings>("/api/market-widgets/settings", nextSettings);

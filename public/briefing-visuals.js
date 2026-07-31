@@ -842,6 +842,33 @@
     }
   }
 
+  function applyChartTheme() {
+    const theme = chartTheme();
+    for (const record of chartRecords.values()) {
+      try {
+        if (record.kind === "lightweight") {
+          record.chart.applyOptions({
+            layout: {
+              background: { type: "solid", color: theme.background },
+              textColor: theme.text,
+              attributionLogo: true,
+            },
+            grid: {
+              vertLines: { visible: false },
+              horzLines: { color: theme.grid },
+            },
+          });
+        } else if (record.kind === "plotly" && root.Plotly?.relayout) {
+          root.Plotly.relayout(record.element, {
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: theme.background,
+            "font.color": theme.text,
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
   function cleanup(container) {
     for (const [id, record] of chartRecords) {
       if (container && !container.querySelector(`[data-visual-export-id="${id}"]`)) continue;
@@ -1010,10 +1037,13 @@
     return [];
   }
 
+  root?.addEventListener?.("folio:theme-changed", applyChartTheme);
+
   return {
     render,
     renderInline,
     relayout,
+    applyChartTheme,
     cleanup,
     captureImages,
     replaceWithStaticImages,

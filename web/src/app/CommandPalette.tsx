@@ -50,6 +50,8 @@ export function CommandPalette() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open || dashboard) return;
@@ -127,17 +129,22 @@ export function CommandPalette() {
     setActiveIndex((current) => Math.min(current, Math.max(0, filtered.length - 1)));
   }, [filtered.length]);
 
-  function close() {
+  function close(restoreFocus = true) {
     setOpen(false);
     setQuery("");
     setActiveIndex(0);
+    const previousFocus = previousFocusRef.current;
+    previousFocusRef.current = null;
+    if (restoreFocus && previousFocus) {
+      window.requestAnimationFrame(() => previousFocus.focus({ preventScroll: true }));
+    }
   }
 
   function execute(index = activeIndex) {
     const item = filtered[index];
     if (!item) return;
     item.run();
-    close();
+    close(false);
   }
 
   useEffect(() => {
@@ -145,7 +152,12 @@ export function CommandPalette() {
       const key = event.key || "";
       if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === "k") {
         event.preventDefault();
-        setOpen((value) => !value);
+        if (open) {
+          close();
+        } else {
+          previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setOpen(true);
+        }
         return;
       }
       if (!open) return;
@@ -167,6 +179,29 @@ export function CommandPalette() {
       if (key === "Enter") {
         event.preventDefault();
         execute();
+        return;
+      }
+      if (key === "Tab") {
+        const dialog = dialogRef.current;
+        const focusable = dialog
+          ? Array.from(dialog.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+          )).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true")
+          : [];
+        if (!focusable.length) {
+          event.preventDefault();
+          dialog?.focus({ preventScroll: true });
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -177,8 +212,15 @@ export function CommandPalette() {
 
   return (
     <div className="command-palette react-command-palette" data-react-command-palette>
-      <button className="command-backdrop" type="button" aria-label="명령 팔레트 닫기" onClick={close} />
-      <section className="command-dialog" role="dialog" aria-modal="true" aria-labelledby="reactCommandPaletteTitle">
+      <button className="command-backdrop" type="button" aria-label="명령 팔레트 닫기" onClick={() => close()} />
+      <section
+        ref={dialogRef}
+        className="command-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reactCommandPaletteTitle"
+        tabIndex={-1}
+      >
         <div className="command-input-row">
           <span className="command-mark" aria-hidden="true">⌘K</span>
           <input

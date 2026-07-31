@@ -49,9 +49,15 @@
     }[char]));
   }
 
+  function resolvedTheme() {
+    const root = document.documentElement;
+    if (root.dataset.theme === "dark" || root.dataset.theme === "light") return root.dataset.theme;
+    return root.classList.contains("dark") ? "dark" : "light";
+  }
+
   function themeValue(theme) {
     if (theme === "dark" || theme === "light") return theme;
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+    return resolvedTheme();
   }
 
   function unavailable(container, message = "TradingView 위젯을 불러오지 못했습니다.") {
@@ -116,7 +122,7 @@
       width: "100%",
       height: "100%",
       largeChartUrl: "",
-      isTransparent: true,
+      isTransparent: false,
       showSymbolLogo: true,
       tabs: preset.tabs || [],
     };
@@ -154,7 +160,7 @@
       height: "100%",
       locale: "kr",
       colorTheme: themeValue(widget.theme),
-      isTransparent: true,
+      isTransparent: false,
     };
   }
 
@@ -209,7 +215,7 @@
   function economicCalendarConfig(widget) {
     return {
       colorTheme: themeValue(widget.theme),
-      isTransparent: true,
+      isTransparent: false,
       width: "100%",
       height: "100%",
       locale: "kr",
@@ -237,7 +243,7 @@
         symbols: tickerSymbols(widget),
         showSymbolLogo: true,
         colorTheme: themeValue(widget.theme),
-        isTransparent: true,
+        isTransparent: false,
         displayMode: "adaptive",
         locale: "kr",
       };
@@ -269,6 +275,8 @@
   }
 
   function cleanup(root = document) {
+    if (root !== document) mounted.delete(root);
+    forget(root);
     root.querySelectorAll(".tv-widget-body").forEach((node) => {
       node.innerHTML = "";
     });
@@ -276,6 +284,7 @@
 
   function renderDashboardBoard(target, settings, options = {}) {
     if (!target) return;
+    remember(target, () => renderDashboardBoard(target, settings, options));
     const widgets = settings?.dashboard?.widgets || [];
     const presets = settings?.catalog?.presets || {};
     target.innerHTML = "";
@@ -299,6 +308,7 @@
 
   function renderWatchlistDetail(target, detail) {
     if (!target) return;
+    remember(target, () => renderWatchlistDetail(target, detail));
     const symbol = detail?.company?.tradingViewSymbol || "";
     target.innerHTML = "";
     if (!symbol) {
@@ -317,6 +327,39 @@
       embed(body, widget, {});
     });
   }
+
+  const mounted = new Map();
+  let mountedTheme = resolvedTheme();
+
+  function remember(target, replay) {
+    if (!target) return;
+    mounted.set(target, replay);
+  }
+
+  function forget(root) {
+    for (const target of Array.from(mounted.keys())) {
+      if (!target.isConnected || (root && root !== document && root.contains(target))) {
+        mounted.delete(target);
+      }
+    }
+  }
+
+  function redrawForTheme() {
+    const next = resolvedTheme();
+    if (next === mountedTheme) return;
+    mountedTheme = next;
+    for (const [target, replay] of Array.from(mounted.entries())) {
+      if (!target.isConnected) {
+        mounted.delete(target);
+        continue;
+      }
+      replay();
+    }
+  }
+
+  window.addEventListener("folio:theme-changed", redrawForTheme);
+  // 시스템 테마를 따르는 사용자는 folio 이벤트 없이 색이 바뀐다.
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", redrawForTheme);
 
   window.FolioTradingViewWidgets = {
     ALLOWED_WIDGET_TYPES,

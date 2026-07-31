@@ -4,7 +4,7 @@ import json
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
@@ -88,6 +88,14 @@ class ManualSnapshotCommand:
     date: str | None = None
 
 
+def _stored_instant_utc_z(value: object) -> str:
+    text = str(value).strip()
+    parsed = datetime.fromisoformat(text[:-1] + "+00:00" if text.endswith("Z") else text)
+    if parsed.tzinfo is None:
+        raise ValueError("timezone_required")
+    return parsed.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
 def _committed_manual_snapshots(path: Path) -> tuple[CommittedManualSnapshot, ...]:
     if not path.is_file():
         return ()
@@ -113,13 +121,13 @@ def _committed_manual_snapshots(path: Path) -> tuple[CommittedManualSnapshot, ..
             committed.append(
                 CommittedManualSnapshot(
                     snapshotId=str(snapshot_id),
-                    savedAt=str(as_of),
+                    savedAt=_stored_instant_utc_z(as_of),
                     updateAttemptRef=UpdateAttemptRef.model_validate_json(
                         json.dumps(payload["updateAttemptRef"])
                     ),
                 )
             )
-        except ValidationError as error:
+        except (ValidationError, ValueError) as error:
             raise ManualSnapshotRepairRequiredError() from error
     return tuple(committed)
 

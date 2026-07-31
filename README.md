@@ -4,15 +4,29 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.2.4 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.3.0 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.2.4
+## Visual Preview
+
+These screenshots were captured from a clean sample workspace with no private research material, reports, portfolio data, or API keys.
+
+<img src="docs/assets/screenshots/folio-os-home.png" alt="Folio OS Home screen with the AI Agent entry point" width="920">
+
+<img src="docs/assets/screenshots/folio-os-briefing.png" alt="Folio OS Briefing screen with empty-state briefing controls" width="920">
+
+<img src="docs/assets/screenshots/folio-os-rss-feed.png" alt="Folio OS RSS Feed screen with empty-state feed filters" width="920">
+
+---
+
+## What You Can Do In 0.3.0
 
 - Chat with the Folio OS AI Agent from the Home screen.
+- Review market, report, checkpoint, and portfolio context from the Dashboard.
+- Maintain a local company, sector, and theme Watchlist with related news.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
@@ -23,13 +37,13 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Review a metadata-only Agent Work Log and explicitly approve or reject report revision proposals.
 - Write report-side Folio Notes.
 - Export generated reports to Obsidian or Notion.
-- Configure LLM CLI/API, model choices, RSS, automation, and export settings.
+- Choose Light, Dark, or System appearance across the workspace.
+- Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Deferred from the 0.2 user surface:
+Not included in the 0.3.0 user surface:
 
-- Standalone Dashboard and Watchlist workflows.
 - Advanced portfolio management and standalone note-management workflows.
-- Dark mode and installer/tray-app polish.
+- Installer/tray-app polish.
 
 ---
 
@@ -96,7 +110,17 @@ Do not delete `data/`, `research-inbox/`, `config/`, or `.env` unless you intent
 
 ### Home
 
-Home is the main AI Agent entry point. Use it to ask Folio OS to summarize the current workspace, start common tasks, or reason over the current research context.
+Home is where you ask the AI Agent for research. Type a question or ask it to revise a saved report, and start a briefing, an RSS collection, a company analysis, or deep research from the quick actions.
+
+The Agent work log below shows only the latest status as a single line; expand it for the full history. It never shows the body of a task or your private research material.
+
+### Dashboard
+
+Dashboard brings current-market widgets, recent reports, checkpoints, and bounded portfolio context into one review screen. Market widgets use TradingView and retain their source attribution.
+
+### Watchlist
+
+Track companies, sectors, and themes in a local Watchlist, then inspect the related news cards and market response. Watchlist data stays in the local workspace.
 
 ### Briefing
 
@@ -130,11 +154,11 @@ Home and Deep Research share a bounded, metadata-only Work Log. It stores task t
 
 Briefing, Company Analysis, and Deep Research can show rule-calculated note/thesis freshness, contradictions, uncertainties, counter-evidence, and checkpoints without an API key or CLI. Home, Market Memory, Smart Collections, and Deep Research can also show a bounded Investment Context assembled from ticker links in local portfolio/watchlist data. These automatic views are read-only metadata and never alter Canonical reports.
 
-Agent synthesis runs only after an explicit action such as `Review with latest evidence`, `Ask Agent what changed`, or `Explain risk with Agent`. Portfolio and Watchlist remain hidden as standalone top-level routes in the default 0.2.4 navigation; their bounded context does not imply a relaunched portfolio/watchlist product or provide trading advice.
+Agent synthesis runs only after an explicit action such as `Review with latest evidence`, `Ask Agent what changed`, or `Explain risk with Agent`. Dashboard and Watchlist are visible in the 0.3.0 navigation, while portfolio context remains bounded and read-only outside its dedicated runtime. These views do not provide trading advice.
 
 ### Settings
 
-Configure AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+Configure appearance and motion, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
 
 ---
 

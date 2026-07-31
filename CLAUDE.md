@@ -86,18 +86,6 @@ config/                        # 회사 마스터/별칭 설정
 start.sh / start.ps1           # macOS·Linux / Windows 실행 스크립트
 ```
 
-폴더 역할:
-
-```text
-features/          # 기능별 README, prompt, Python 런타임 코드
-features/common/   # 공통 유틸, 공통 시장 데이터, Polars 기반 계산 보조
-web/               # React SPA 소스. 화면 routing/navigation/Agent/readers/settings 소유
-public/            # 정적 entrypoint, bridge-only JS, CSS, third-party visual wrapper, React build output
-research-inbox/    # 사용자가 직접 넣거나 RSS가 수집한 원천 자료
-data/              # 앱이 생성한 DB, 캐시, 저장 보고서, 포트폴리오 입력값
-config/            # 사용자가 직접 보정할 수 있는 마스터/별칭 설정
-```
-
 Python 패키지명에는 하이픈을 쓸 수 없으므로 런타임 코드는 underscore 폴더를 사용한다.
 예: `features/company_analysis`, `features/common/research_library/rss`, `features/common/research_library/indexing`.
 새 import와 새 코드는 `features/` 기준으로 작성한다.
@@ -228,23 +216,25 @@ features/company_analysis/financial_quality_prompt.md
 | 투자 리뷰 | `investment_review` | regime/thesis/portfolio/checkpoints/obsidian을 묶은 투자 리뷰 홈 | Personal Overlay |
 | 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그 | — |
 | Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장 | source-grounded |
+| Pixel Office (보류) | `pixel_office` | 리서치 상태를 하나의 픽셀 오피스 장면으로 보여준다. 0.3.0에서는 배선을 전부 끊고 릴리즈 패키지에서도 제외한다. 소스(백엔드 service·PixiJS 씬·13개 오브젝트 레이어)는 재개용으로 저장소에만 남는다. | 보류 |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
-0.2 기본 사용자 화면에서의 노출 상태:
+0.3 기본 사용자 화면에서의 노출 상태:
 
-- **보이는 핵심 화면**: Home/AI Agent, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
+- **보이는 핵심 화면**: Home/AI Agent, Dashboard, Watchlist, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
 - **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
 - **Agent 실행 경계**: freshness/health/context 배지는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명은 사용자의 명시적 action에서만 Agent를 실행한다.
-- **숨김/축소 유지**: Dashboard와 Watchlist route/storage는 딥링크 호환을 위해 유지하지만 0.2.4 기본 nav/Home/command palette에는 노출하지 않는다. Portfolio와 Investment Review의 독립 화면도 전면 재출시로 설명하지 않으며, 개인 맥락은 기존 보이는 리서치 화면의 제한된 projection으로만 노출한다.
-- **문서 원칙**: 사용자용 README는 0.2.4에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
+- **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
+- **숨김/축소 유지**: Portfolio와 Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 기존 보이는 리서치 화면의 제한된 projection으로만 노출한다.
+- **문서 원칙**: 사용자용 README는 0.3.0에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
 
 ### 설계 확정·구현 예정
 
 | 작업 | 계획 위치 | 범위 |
 |---|---|---|
 | 0.1 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Home/Agent, Briefing, RSS, Market Memory v3, Company Analysis v2, Agent-assisted Investment Notes v2, Settings/Automation 간소화, release QA |
-| 0.2.4 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | note/thesis intelligence, Smart Collection workspace, 제한된 Portfolio/Watchlist Investment Context, integrated release QA |
-| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | dark mode, portfolio/watchlist 독립 화면 재평가, installer/tray polish |
+| 0.3.0 공개 릴리즈 | 로컬 `roadmap/` 문서가 있을 때만 참고 | Light/Dark/System, Dashboard/Watchlist 공개, 공개 화면 WCAG 2.2 AA, responsive/release QA |
+| 후속 제품 로드맵 | 로컬 `roadmap/` 문서가 있을 때만 참고 | 고급 portfolio/note workflow 재평가, installer/tray polish |
 | AI Agent Mode hardening | 로컬 `roadmap/` 문서가 있을 때만 참고 | CLI/API bridge preflight, Direct Bridge 안정화, proposal writeback, job lifecycle, restart recovery, context/log retention |
 
 > 개선안 01~04(Personal Overlay / Thesis Tracker / Regime 추적 v2 / Topic Report v2)와 post-v1 Step 6~11은 구현되어 위 표로 승격되었다.
@@ -253,29 +243,7 @@ features/company_analysis/financial_quality_prompt.md
 
 ## 9. 기능별 문서
 
-작업 전에 [features 인덱스](features/README.md)를 보고, 관련 기능 README를 먼저 읽는다.
-
-- [기능 폴더 인덱스](features/README.md)
-- [자료 수집/RSS/인덱싱/검색](features/common/research_library/README.md)
-- [일일 브리핑](features/daily_briefing/README.md)
-- [기업 분석](features/company_analysis/README.md)
-- [포트폴리오](features/portfolio/README.md)
-- [LLM/설정/Web Search](features/llm_settings/README.md)
-- [Notion 내보내기](features/notion_export/README.md)
-- [Obsidian 연동](features/obsidian/README.md)
-- [테마분석 보고서](features/topic_report/README.md)
-- [Smart Collections](features/smart_collections/README.md)
-- [프론트엔드 UI](features/frontend_ui/README.md)
-- [워치리스트/메모](features/watchlist_notes/README.md)
-- [Native Investment Notes](features/investment_notes/README.md)
-- [시장 내러티브 메모리](features/market_memory/README.md)
-- [Personal Overlay](features/personal_overlay/README.md)
-- [Thesis Tracking](features/thesis_tracking/README.md)
-- [Research Quality](features/common/research_quality/README.md)
-- [Quality Generation](features/common/quality_generation/README.md)
-- [AI Agent Mode](features/agent_mode/README.md)
-- [투자 리뷰](features/investment_review/README.md)
-- [Data Source Reliability](features/common/data_reliability/README.md)
+작업 전에 [features 인덱스](features/README.md)를 보고, 관련 기능 README를 먼저 읽는다. 기능별 README 링크 목록은 features/README.md가 관리한다.
 
 ---
 
@@ -530,6 +498,7 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - README는 기본적으로 화면 탭 단위로 정리한다. 여러 탭에서 함께 쓰는 자료·품질·연동 기능은 `features/common/` 또는 명확한 통합 폴더(예: `features/obsidian/`)의 상위 README에서 관리하고, 하위 README를 불필요하게 늘리지 않는다.
 - `roadmap/`은 개인 개발용 로컬 계획 폴더이며 GitHub/source archive/릴리즈 패키지에는 포함하지 않는다. 새 대형 작업은 `master`에서 독립 브랜치를 따고, 사용자가 로컬 roadmap 문서를 유지하는 경우에만 그 문서에 제품 순서와 진행 상태를 반영한다.
 - 앞으로 계획 관리는 GitHub Issues와 로컬 계획문서를 함께 사용한다. 공개적으로 추적할 작업은 GitHub Issue를 기준으로 삼고, 세부 실행 메모·개인 맥락·agent handoff는 `roadmap/` 또는 공개-safe한 `docs/superpowers/` 계획문서에 둔다. 자세한 규칙은 `docs/PLANNING_WORKFLOW.md`를 따른다.
+- 브랜치를 `master`에 머지하기 전에, 변경을 작성한 세션이 아니라 **새 컨텍스트에서 diff를 리뷰한다**(서브에이전트 리뷰 또는 `/code-review`). 작성자 세션은 자기 가정을 그대로 물려받아 같은 오류를 놓친다. 리뷰어에게는 변경 의도와 관련 기능 README를 함께 주고, 특히 §5 아키텍처 원칙(2계층 분리, 3계층 데이터 위계, 확증편향 방지, enum 검증, 자기참조 금지) 위반 여부를 확인한다.
 
 ---
 

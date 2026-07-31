@@ -3,7 +3,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 test("Agent Home source exposes the React-owned chat workspace contract", async () => {
-  const source = await readFile(new URL("../src/app/AgentHome.tsx", import.meta.url), "utf8");
+  const sources = await Promise.all([
+    "../src/app/AgentHome.tsx",
+    "../src/app/agentWorkspace/useAgentWorkspace.ts",
+    "../src/app/agentWorkspace/AgentComposer.tsx",
+    "../src/app/agentWorkspace/AgentThread.tsx",
+  ].map((path) => readFile(new URL(path, import.meta.url), "utf8")));
+  const source = sources.join("\n");
   const lifecycle = await readFile(new URL("../src/app/agentProposalLifecycle.ts", import.meta.url), "utf8");
 
   assert.match(source, /data-agent-home/);

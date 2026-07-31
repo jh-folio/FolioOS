@@ -623,7 +623,11 @@ export function BriefingRoute() {
         <div className="report-feed-view-row">
           <span>시장</span>
           <label className="report-feed-view-pill">
-            <select value={archiveMarket} onChange={(event) => setArchiveMarket(event.currentTarget.value as ArchiveMarketFilter)}>
+            <select
+              aria-label="브리핑 시장"
+              value={archiveMarket}
+              onChange={(event) => setArchiveMarket(event.currentTarget.value as ArchiveMarketFilter)}
+            >
               <option value="all">전체</option>
               <option value="us">미국장</option>
               <option value="kr">한국장</option>
@@ -632,7 +636,11 @@ export function BriefingRoute() {
           </label>
           <span>유형</span>
           <label className="report-feed-view-pill">
-            <select value={archiveType} onChange={(event) => setArchiveType(event.currentTarget.value)}>
+            <select
+              aria-label="브리핑 유형"
+              value={archiveType}
+              onChange={(event) => setArchiveType(event.currentTarget.value)}
+            >
               <option value="all">전체</option>
               {Object.entries(BRIEFING_TYPE_LABELS).map(([value, label]) => (
                 <option value={value} key={value}>{label}</option>
@@ -641,7 +649,11 @@ export function BriefingRoute() {
           </label>
           <span>보기</span>
           <label className="report-feed-view-pill">
-            <select value={archiveView} onChange={(event) => setArchiveView(event.currentTarget.value as ArchiveViewMode)}>
+            <select
+              aria-label="브리핑 보기 방식"
+              value={archiveView}
+              onChange={(event) => setArchiveView(event.currentTarget.value as ArchiveViewMode)}
+            >
               <option value="recent">최근</option>
               <option value="month">월별</option>
               <option value="market">시장별</option>

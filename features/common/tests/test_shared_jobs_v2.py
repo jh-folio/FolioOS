@@ -352,6 +352,38 @@ def test_cancelled_worker_exception_terminalizes_cancelled_and_scrubs_private_st
     assert not (tmp_path / "job-context" / job.id).exists()
 
 
+def test_legacy_jobs_accept_iso_utc_offsets_without_rewriting_legacy_file(tmp_path: Path) -> None:
+    legacy_path = tmp_path / "jobs.json"
+    payload = {
+        "legacy-offset": {
+            "id": "legacy-offset",
+            "kind": "index",
+            "status": "done",
+            "createdAt": "2026-07-17T00:00:00.123456+00:00",
+            "startedAt": "2026-07-17T00:00:01+00:00",
+            "updatedAt": "2026-07-17T00:00:02+00:00",
+            "finishedAt": "2026-07-17T00:00:03+00:00",
+            "result": {
+                "count": 1,
+                "generatedAt": "2026-07-17T00:00:03+00:00",
+                "incremental": True,
+                "sqlite": "x",
+            },
+        }
+    }
+    legacy_path.write_text(json.dumps(payload), encoding="utf-8")
+    before = legacy_path.read_text(encoding="utf-8")
+
+    store = jobs.SharedJobStore(tmp_path / "jobs-v2.json", legacy_path, clock=_clock)
+    job = store.merged().jobs[0]
+
+    assert job.createdAt == "2026-07-17T00:00:00.123456Z"
+    assert job.startedAt == "2026-07-17T00:00:01Z"
+    assert job.updatedAt == "2026-07-17T00:00:02Z"
+    assert job.finishedAt == "2026-07-17T00:00:03Z"
+    assert legacy_path.read_text(encoding="utf-8") == before
+
+
 def test_v2_wins_identical_collision_and_reports_distinct_collision(tmp_path: Path) -> None:
     # Given: one normalized legacy job migrated into v2
     legacy_path = tmp_path / "jobs.json"

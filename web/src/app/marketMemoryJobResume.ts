@@ -9,12 +9,17 @@ const JOB_STATUSES = new Set<JobStatus>([
 
 export type MarketMemoryJob = {
   id: string;
+  taskType?: string;
+  label?: string;
   status: JobStatus;
   progress?: number;
   message?: string;
   error?: string;
   result?: Record<string, unknown>;
 };
+
+const MARKET_MEMORY_TASK_TYPE = "market_memory_update";
+const MARKET_MEMORY_JOB_LABEL = "LLM CLI 시장 메모리 업데이트";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 type RecoveryResult =
@@ -40,6 +45,13 @@ function validJob(value: unknown, expectedId: string): value is MarketMemoryJob 
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const job = value as Partial<MarketMemoryJob>;
   return job.id === expectedId && JOB_STATUSES.has(job.status as JobStatus);
+}
+
+function activeMarketMemoryJob(value: unknown): value is MarketMemoryJob {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const job = value as Partial<MarketMemoryJob>;
+  if (!validJobId(job.id) || !JOB_STATUSES.has(job.status as JobStatus) || !isActiveJobStatus(job.status as JobStatus)) return false;
+  return job.taskType === MARKET_MEMORY_TASK_TYPE || (job.taskType === undefined && job.label === MARKET_MEMORY_JOB_LABEL);
 }
 
 export function clearMarketMemoryJobId(storage: StorageLike | null = defaultStorage()) {
@@ -94,4 +106,21 @@ export async function recoverMarketMemoryJob(
   if (isActiveJobStatus(value.status)) return { kind: "active", job: value };
   clearMarketMemoryJobId(storage);
   return { kind: "terminal", job: value };
+}
+
+export async function discoverActiveMarketMemoryJob(
+  fetchJobs: () => Promise<unknown>,
+  storage: StorageLike | null = defaultStorage(),
+): Promise<RecoveryResult> {
+  let value: unknown;
+  try {
+    value = await fetchJobs();
+  } catch {
+    return { kind: "none" };
+  }
+  if (!Array.isArray(value)) return { kind: "invalid" };
+  const job = value.find(activeMarketMemoryJob);
+  if (!job) return { kind: "none" };
+  persistMarketMemoryJobId(job.id, storage);
+  return { kind: "active", job };
 }

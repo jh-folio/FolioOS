@@ -55,6 +55,10 @@ EXCLUDED_DIR_NAMES = {
 
 EXCLUDED_PARTS = {
     "tests",
+    # Pixel Office는 보류 상태다. 소스는 저장소에 남기지만 릴리즈 패키지에는 넣지 않는다.
+    # 사용자가 도달할 수 없는 기능의 백엔드와 0.87MB짜리 스프라이트를 배포할 이유가 없다.
+    "pixel_office",
+    "pixel-office",
 }
 
 EXCLUDED_SUFFIXES = {

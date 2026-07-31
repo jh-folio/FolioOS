@@ -385,6 +385,7 @@ export function RssRoute() {
           <span>시장</span>
           <label className="report-feed-view-pill">
             <select
+              aria-label="RSS 시장"
               value={filters.market}
               onChange={(event) => applyMarketFilter(event.currentTarget.value)}
               disabled={loading}

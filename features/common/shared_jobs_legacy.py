@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 
 from features.common.jcs import JsonValue
 from features.common.shared_jobs_projection import new_shared_job, project_terminal_result, utc_z
@@ -22,6 +22,19 @@ from features.common.shared_jobs_schema import (
 def _string(raw: Mapping[str, JsonValue], key: str) -> str | None:
     value = raw.get(key)
     return value if isinstance(value, str) and value else None
+
+
+def _utc_timestamp(value: str | None, fallback: str | None = None) -> str | None:
+    candidate = value or fallback
+    if candidate is None:
+        return None
+    try:
+        parsed = datetime.fromisoformat(candidate.replace("Z", "+00:00"))
+    except ValueError:
+        return fallback
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 def _result(raw: Mapping[str, JsonValue]) -> dict[str, str | int | bool | None]:
@@ -47,11 +60,15 @@ def _result(raw: Mapping[str, JsonValue]) -> dict[str, str | int | bool | None]:
         "savedCount",
         "snapshotId",
     }
-    return {
+    projected = {
         key: item
         for key, item in value.items()
         if key in allowed and (item is None or isinstance(item, (str, int, bool)))
     }
+    generated_at = projected.get("generatedAt")
+    if isinstance(generated_at, str):
+        projected["generatedAt"] = _utc_timestamp(generated_at)
+    return projected
 
 
 def _kind(raw: Mapping[str, JsonValue]) -> JobKind:
@@ -140,8 +157,8 @@ def normalize_legacy_job(job_id: str, raw: Mapping[str, JsonValue], clock) -> Sh
     )
     status = _status(raw)
     now = utc_z(clock())
-    created = _string(raw, "createdAt") or now
-    updated = _string(raw, "updatedAt") or created
+    created = _utc_timestamp(_string(raw, "createdAt"), now) or now
+    updated = _utc_timestamp(_string(raw, "updatedAt"), created) or created
     progress_value = raw.get("progress")
     progress = progress_value if isinstance(progress_value, int) else (100 if status in {JobStatus.DONE, JobStatus.CANCELLED} else 0)
     values = base.model_dump(mode="json")
@@ -152,9 +169,9 @@ def normalize_legacy_job(job_id: str, raw: Mapping[str, JsonValue], clock) -> Sh
             "messageCode": status.value,
             "progress": max(0, min(progress, 100)),
             "createdAt": created,
-            "startedAt": _string(raw, "startedAt"),
+            "startedAt": _utc_timestamp(_string(raw, "startedAt")),
             "updatedAt": updated,
-            "finishedAt": _string(raw, "finishedAt") if status.value.startswith("failed") or status in {JobStatus.DONE, JobStatus.CANCELLED} else None,
+            "finishedAt": _utc_timestamp(_string(raw, "finishedAt"), updated) if status.value.startswith("failed") or status in {JobStatus.DONE, JobStatus.CANCELLED} else None,
             "errorCode": ErrorCode.INTERNAL_ERROR.value if status.value.startswith("failed") else None,
         }
     )
@@ -172,5 +189,5 @@ def normalize_legacy_job(job_id: str, raw: Mapping[str, JsonValue], clock) -> Sh
         return SharedJob.model_validate(values)
     projection = project_terminal_result(interim, status, _result(raw), ErrorCode.INTERNAL_ERROR)
     values["resultProjection"] = projection.model_dump(mode="json")
-    values["finishedAt"] = _string(raw, "finishedAt") or updated
+    values["finishedAt"] = _utc_timestamp(_string(raw, "finishedAt"), updated) or updated
     return SharedJob.model_validate(values)

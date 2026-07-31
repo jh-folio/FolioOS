@@ -26,8 +26,7 @@ test("Work Log source exposes safe controls and never renders broad job body fie
   for (const selector of [
     "work-log-loading", "work-log-empty", "work-log-error", "work-log-retention",
     "work-log-page-prev", "work-log-page-next", "work-log-clear-preview",
-    "work-log-clear-confirm", "work-log-migration-preview", "work-log-migration-confirm",
-    "work-log-proposal-open", "proposal-approval-surface",
+    "work-log-clear-confirm", "work-log-proposal-open", "proposal-approval-surface",
   ]) assert.match(source, new RegExp(`data-qa=["']${selector}["']`));
 
   assert.match(source, /getJson<AgentProposalRecord>/);

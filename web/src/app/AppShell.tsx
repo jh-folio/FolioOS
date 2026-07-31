@@ -10,15 +10,16 @@ import { ReactAgentDock } from "./ReactAgentDock";
 import { RssRoute } from "./RssRoute";
 import { SettingsRoute } from "./SettingsRoute";
 import { WatchlistRoute } from "./WatchlistRoute";
+import { preferredHomeRoute, useUiPreferences } from "./homePreference";
 import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } from "./routes";
 import { useShellStatus } from "./statusStore";
 import { activateReactAgentContextScope } from "./agentContext";
 
-const NAV_GROUPS: Array<{ title: string; routes: RouteId[] }> = [
-  { title: "Home", routes: ["home"] },
-  { title: "News", routes: ["briefing", "rss", "market-memory"] },
-  { title: "Research", routes: ["analysis", "deep-research"] },
-  { title: "System", routes: ["settings"] },
+const NAV_GROUPS: Array<{ id: string; title: string; routes: RouteId[] }> = [
+  { id: "home", title: "홈", routes: ["home", "dashboard", "watchlist"] },
+  { id: "news", title: "뉴스", routes: ["briefing", "rss", "market-memory"] },
+  { id: "research", title: "리서치", routes: ["analysis", "deep-research"] },
+  { id: "system", title: "시스템", routes: ["settings"] },
 ];
 
 const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
@@ -94,7 +95,14 @@ const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
 };
 
 function currentHash() {
-  return window.location.hash || toHash("home");
+  // Pixel Office 보류: 코드는 남기지만 사용자가 도달할 수 있는 입구는 두지 않는다.
+  // 오래된 북마크나 직접 입력으로 미완성 화면에 들어가는 일이 없어야 한다.
+  const hash = window.location.hash || toHash(preferredHomeRoute());
+  if (/^#\/?office(?:\/|$)/.test(hash)) {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`);
+    return toHash("home");
+  }
+  return hash;
 }
 
 function useRouteState(): { hash: string; routeId: RouteId } {
@@ -135,15 +143,22 @@ async function waitForServerAndReload(setStatus: (value: string) => void) {
 export function AppShell() {
   const { hash, routeId } = useRouteState();
   const active = routeById(routeId);
+  const uiPreferences = useUiPreferences();
+  const preferredHome = preferredHomeRoute(uiPreferences.preferences);
   const status = useShellStatus();
   const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem("folio.react.navCollapsed") === "1");
-  const [agentOpen, setAgentOpen] = useState(() => localStorage.getItem("folio.react.agentClosed") !== "1");
+  const [agentOpen, setAgentOpen] = useState(() => {
+    const stored = localStorage.getItem("folio.react.agentClosed");
+    if (stored !== null) return stored !== "1";
+    return !window.matchMedia("(max-width: 1024px)").matches;
+  });
   const [visitedRoutes, setVisitedRoutes] = useState<Set<RouteId>>(() => new Set([routeId]));
   const [routeHashes, setRouteHashes] = useState<Record<string, string>>(() => ({ [routeId]: currentHash() }));
   const [restartStatus, setRestartStatus] = useState("");
   const [restarting, setRestarting] = useState(false);
   const routeHostRef = useRef<HTMLElement | null>(null);
   const previousRouteRef = useRef<RouteId>(routeId);
+  const routeFocusReadyRef = useRef(false);
   const scrollByRouteRef = useRef<Record<string, number>>({});
   const agentVisible = active.id !== "home";
   const shellAgentClass = agentVisible && agentOpen ? " is-agent-open" : " is-agent-closed";
@@ -176,6 +191,11 @@ export function AppShell() {
   }, [hash, routeId]);
 
   useEffect(() => {
+    if (!routeFocusReadyRef.current) {
+      routeFocusReadyRef.current = true;
+      previousRouteRef.current = routeId;
+      return;
+    }
     const host = routeHostRef.current;
     const previousRoute = previousRouteRef.current;
     if (host) {
@@ -243,12 +263,19 @@ export function AppShell() {
 
   return (
     <div className={`react-shell${navCollapsed ? " is-nav-collapsed" : ""}${shellAgentClass}${agentVisible ? "" : " is-agent-suppressed"}`}>
+      <a
+        className="react-skip-link"
+        href="#folio-main-content"
+        onClick={() => window.requestAnimationFrame(() => routeHostRef.current?.focus({ preventScroll: true }))}
+      >
+        본문으로 건너뛰기
+      </a>
       <header className="react-shell-topbar">
         <button
           type="button"
           className="react-shell-brand"
           onClick={() => {
-            navigateToRoute("home");
+            navigateToRoute(preferredHome);
           }}
           aria-label="홈으로 이동"
         >
@@ -279,15 +306,16 @@ export function AppShell() {
         <nav className="react-left-nav" aria-label="Folio OS 화면">
           <div className="react-left-nav-title">Navigate</div>
           {NAV_GROUPS.map((group) => (
-            <section className="react-left-nav-group" data-nav-group={group.title} key={group.title}>
+            <section className="react-left-nav-group" data-nav-group={group.id} key={group.id}>
               <h3>{group.title}</h3>
               <div className="react-left-nav-items">
                 {group.routes.map((routeIdValue) => {
-                  const route = NAV_ROUTES.find((item) => item.id === routeIdValue);
+                  const resolvedRouteId = group.title === "Home" ? preferredHome : routeIdValue;
+                  const route = NAV_ROUTES.find((item) => item.id === resolvedRouteId);
                   if (!route) return null;
                   return (
                     <span className="react-left-nav-entry" key={route.id}>
-                      {group.title === "Home" && route.id === "dashboard" && <span className="react-left-nav-separator" aria-hidden="true" />}
+                      {group.id === "home" && route.id === "dashboard" && <span className="react-left-nav-separator" aria-hidden="true" />}
                       <button
                         type="button"
                         data-tooltip={route.label}
@@ -309,7 +337,7 @@ export function AppShell() {
         </nav>
       </aside>
 
-      <main className="react-shell-main">
+      <main className="react-shell-main" id="folio-main-content">
         <section className="react-route-host" data-route={active.id} ref={routeHostRef} tabIndex={-1}>
           {ROUTES.filter((route) => visitedRoutes.has(route.id)).map((route) => (
             <div

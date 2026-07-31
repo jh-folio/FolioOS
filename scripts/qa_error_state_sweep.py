@@ -1,4 +1,4 @@
-"""Never read real user roots; run the Stage 0.2.4 cross-feature error sweep."""
+"""Never read real user roots; run the 0.3.0 cross-feature error sweep."""
 from __future__ import annotations
 
 import argparse

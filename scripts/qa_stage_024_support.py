@@ -1,4 +1,4 @@
-"""Shared host-only support for Stage 0.2.4 focused QA scenarios."""
+"""Shared host-only support for the retained focused QA scenarios."""
 from __future__ import annotations
 
 import json

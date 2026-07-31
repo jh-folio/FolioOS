@@ -642,7 +642,11 @@ export function CompanyAnalysisRoute() {
         <div className="report-feed-view-row">
           <span>보기</span>
           <label className="report-feed-view-pill">
-            <select value={reportView} onChange={(event) => setReportView(event.currentTarget.value as AnalysisViewMode)}>
+            <select
+              aria-label="기업 분석 보기 방식"
+              value={reportView}
+              onChange={(event) => setReportView(event.currentTarget.value as AnalysisViewMode)}
+            >
               <option value="recent">최근</option>
               <option value="company">기업별</option>
               <option value="month">월별</option>

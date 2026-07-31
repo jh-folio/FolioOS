@@ -152,11 +152,11 @@ Keep the server process running while using the app.
 
 ---
 
-## 0.2 Launcher Notes
+## 0.3 Launcher Notes
 
-For 0.2, the current startup scripts are the supported launch path. They may show server logs in the terminal, which is normal and useful for troubleshooting.
+For 0.3, the current startup scripts are the supported launch path. They may show server logs in the terminal, which is normal and useful for troubleshooting.
 
-A quieter Windows launcher or tray-style app remains later polish and is not required for 0.2.
+A quieter Windows launcher or tray-style app remains later polish and is not required for 0.3.
 
 ---
 
@@ -171,11 +171,11 @@ Do not delete these unless you intentionally want to remove local data:
 
 Development-only folders such as `web/`, `docs/`, and `roadmap/` are needed for source development, but are not required in a normal user runtime package if the built frontend under `public/` is current. Source/developer archives can still include them.
 
-Maintainers can create a clean 0.2 user package from reviewed tracked inputs with:
+Maintainers can create a clean 0.3 user package from reviewed tracked inputs with:
 
 ```powershell
-py -3 scripts\package_release.py --version v0.2.4
-py -3 scripts\verify_release.py --release-dir dist\FolioOS-v0.2.4
+py -3 scripts\package_release.py --version v0.3.0
+py -3 scripts\verify_release.py --release-dir dist\FolioOS-v0.3.0
 ```
 
 The package includes the built React bundle, so normal users do not need Node.js. Deep Research remains local-first: its reports are stored under `data/topic-reports/`, Smart Collections under `data/smart-collections.json`, and Agent Work Log entries contain metadata only.

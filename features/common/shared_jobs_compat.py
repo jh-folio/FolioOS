@@ -110,6 +110,7 @@ def compatibility_job(job: SharedJob, live_detail: TerminalLiveDetail | None = N
     return {
         "id": job.id,
         "kind": job.kind.value,
+        "taskType": job.taskType.value,
         "label": LABELS[job.labelCode.value],
         "status": job.status.value,
         "progress": job.progress,

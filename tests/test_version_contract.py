@@ -16,7 +16,7 @@ def test_machine_versions_derive_release_version() -> None:
     lock = json.loads((ROOT / "web" / "package-lock.json").read_text(encoding="utf-8"))
     app_source = (ROOT / "app.py").read_text(encoding="utf-8")
 
-    assert version == "0.2.4"
+    assert version == "0.3.0"
     assert package["version"] == version
     assert lock["version"] == version
     assert lock["packages"][""]["version"] == version
@@ -35,10 +35,10 @@ def test_release_cli_defaults_to_version_file() -> None:
     )
 
     assert result.returncode == 0, result.stderr
-    assert "FolioOS-v0.2.4" in result.stdout
+    assert "FolioOS-v0.3.0" in result.stdout
 
 
-def test_deep_research_navigation_is_exposed_for_020() -> None:
+def test_public_research_navigation_is_exposed_for_030() -> None:
     route_source = (ROOT / "web" / "src" / "app" / "routes.ts").read_text(encoding="utf-8")
     shell_source = (ROOT / "web" / "src" / "app" / "AppShell.tsx").read_text(encoding="utf-8")
     home_source = (ROOT / "web" / "src" / "app" / "AgentHome.tsx").read_text(encoding="utf-8")
@@ -53,5 +53,6 @@ def test_deep_research_navigation_is_exposed_for_020() -> None:
     assert "host.focus({ preventScroll: true })" in shell_source
     assert 'tabIndex={-1}' in shell_source
 
-    assert re.search(r'id: "dashboard"[^\n]+visibleInNav: false', route_source)
-    assert re.search(r'id: "watchlist"[^\n]+visibleInNav: false', route_source)
+    assert not re.search(r'id: "dashboard"[^\n]+visibleInNav: false', route_source)
+    assert not re.search(r'id: "watchlist"[^\n]+visibleInNav: false', route_source)
+    assert 'routes: ["home", "dashboard", "watchlist"]' in shell_source
