@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "sceneId": "classic_analyst",
+  "logicalSize": {
+    "width": 560,
+    "height": 315
+  },
+  "tileSize": 16,
+  "spawnNode": "agent_seat",
+  "routeNodes": {
+    "news_desk": {
+      "x": 230,
+      "y": 224
+    },
+    "market_board": {
+      "x": 408,
+      "y": 130
+    },
+    "research_desk": {
+      "x": 340,
+      "y": 172
+    },
+    "report_shelf": {
+      "x": 494,
+      "y": 149
+    },
+    "memo_board": {
+      "x": 48,
+      "y": 235
+    },
+    "portfolio_monitor": {
+      "x": 216,
+      "y": 247
+    },
+    "agent_seat": {
+      "x": 428,
+      "y": 258
+    },
+    "room_hub": {
+      "x": 224,
+      "y": 236
+    },
+    "north_hub": {
+      "x": 344,
+      "y": 152
+    },
+    "south_hub": {
+      "x": 332,
+      "y": 236
+    }
+  },
+  "routeEdges": [
+    [
+      "room_hub",
+      "south_hub"
+    ],
+    [
+      "south_hub",
+      "north_hub"
+    ],
+    [
+      "research_desk",
+      "north_hub"
+    ],
+    [
+      "agent_seat",
+      "south_hub"
+    ],
+    [
+      "news_desk",
+      "room_hub"
+    ],
+    [
+      "memo_board",
+      "room_hub"
+    ],
+    [
+      "report_shelf",
+      "north_hub"
+    ],
+    [
+      "market_board",
+      "north_hub"
+    ],
+    [
+      "portfolio_monitor",
+      "room_hub"
+    ]
+  ]
+}

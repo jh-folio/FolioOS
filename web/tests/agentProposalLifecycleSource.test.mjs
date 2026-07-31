@@ -4,11 +4,18 @@ import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
+// Agent Home의 대화/제안 로직은 Pixel Office와 공유하는 워크스페이스 모듈이 소유한다.
+const readHome = async () => (await Promise.all([
+  "../src/app/AgentHome.tsx",
+  "../src/app/agentWorkspace/useAgentWorkspace.ts",
+  "../src/app/agentWorkspace/AgentThread.tsx",
+].map(read))).join("\n");
+
 test("Agent polling is shared, bounded, abortable, and recoverable without server cancellation", async () => {
   const [polling, dock, home] = await Promise.all([
     read("../src/app/agentPolling.ts"),
     read("../src/app/ReactAgentDock.tsx"),
-    read("../src/app/AgentHome.tsx"),
+    readHome(),
   ]);
   assert.match(polling, /AGENT_POLL_TIMEOUT_MS\s*=\s*120_000/);
   assert.match(polling, /AGENT_POLL_INTERVAL_MS\s*=\s*1_000/);
@@ -25,7 +32,7 @@ test("proposal terminal results notify Work Log and exactly one owning reader re
   const [lifecycle, dock, home, workLog, briefing, company, deep] = await Promise.all([
     read("../src/app/agentProposalLifecycle.ts"),
     read("../src/app/ReactAgentDock.tsx"),
-    read("../src/app/AgentHome.tsx"),
+    readHome(),
     read("../src/app/AgentWorkLog.tsx"),
     read("../src/app/BriefingRoute.tsx"),
     read("../src/app/CompanyAnalysisRoute.tsx"),
@@ -62,7 +69,7 @@ test("proposal content is bounded to the active approval surface and excluded fr
   const [lifecycle, dock, home, api] = await Promise.all([
     read("../src/app/agentProposalLifecycle.ts"),
     read("../src/app/ReactAgentDock.tsx"),
-    read("../src/app/AgentHome.tsx"),
+    readHome(),
     read("../src/api.ts"),
   ]);
   assert.match(lifecycle, /MAX_PROPOSAL_DIFF_CHARS/);
@@ -78,7 +85,7 @@ test("Dock and Home use one proposalId hydration helper for initial and resumed 
   const [lifecycle, dock, home] = await Promise.all([
     read("../src/app/agentProposalLifecycle.ts"),
     read("../src/app/ReactAgentDock.tsx"),
-    read("../src/app/AgentHome.tsx"),
+    readHome(),
   ]);
   assert.match(lifecycle, /hydrateAgentProposalFromResult/);
   assert.match(lifecycle, /\/api\/agent\/proposals\/\$\{encodeURIComponent\(proposalId\)\}/);

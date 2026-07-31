@@ -216,6 +216,7 @@ features/company_analysis/financial_quality_prompt.md
 | 투자 리뷰 | `investment_review` | regime/thesis/portfolio/checkpoints/obsidian을 묶은 투자 리뷰 홈 | Personal Overlay |
 | 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그 | — |
 | Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장 | source-grounded |
+| Pixel Office | `pixel_office` | 리서치 상태를 하나의 픽셀 오피스 장면으로 보여주는 기본 Home. metadata-only `GET /api/pixel-office` + PixiJS 씬(방 셸·13개 오브젝트 레이어·경로 그래프·깊이 정렬) | metadata |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
 0.3 기본 사용자 화면에서의 노출 상태:

@@ -10,9 +10,23 @@ Your files and generated reports stay local by default. LLM/API integrations are
 
 ---
 
+## Visual Preview
+
+These screenshots were captured from a clean sample workspace with no private research material, reports, portfolio data, or API keys.
+
+<img src="docs/assets/screenshots/folio-os-home.png" alt="Folio OS Home screen with the AI Agent entry point" width="920">
+
+<img src="docs/assets/screenshots/folio-os-briefing.png" alt="Folio OS Briefing screen with empty-state briefing controls" width="920">
+
+<img src="docs/assets/screenshots/folio-os-rss-feed.png" alt="Folio OS RSS Feed screen with empty-state feed filters" width="920">
+
+---
+
 ## What You Can Do In 0.3.0
 
-- Chat with the Folio OS AI Agent from the Home screen.
+- Use Pixel Office as the default Home to see research freshness, saved outputs, Agent activity, and items needing attention.
+- Switch to the text-focused Agent Home while keeping the same Agent conversation and Work Log.
+- Chat with the Folio OS AI Agent from either Home.
 - Review market, report, checkpoint, and portfolio context from the Dashboard.
 - Maintain a local company, sector, and theme Watchlist with related news.
 - Collect and search public RSS/news feeds.
@@ -28,7 +42,7 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Deferred from the 0.3 user surface:
+Not included in the 0.3.0 user surface:
 
 - Advanced portfolio management and standalone note-management workflows.
 - Installer/tray-app polish.
@@ -96,9 +110,13 @@ Do not delete `data/`, `research-inbox/`, `config/`, or `.env` unless you intent
 
 ## Main Screens
 
-### Home
+### Pixel Office and Agent Home
 
-Home is the main AI Agent entry point. Use it to ask Folio OS to summarize the current workspace, start common tasks, or reason over the current research context.
+Pixel Office is the default Home. Its seven office objects summarize news, market context, research, saved reports, notes, portfolio/watchlist presence, and Agent status without exposing note bodies, portfolio positions, or raw job errors.
+
+On smaller screens, the same objects appear as readable cards with bottom-sheet details. You can choose Classic Analyst or Economics Student, give the character a local display name, and reduce motion under Settings.
+
+Agent Home remains available as a text-focused workspace. Both Homes share the same Agent conversation, model selection, proposals, and recent jobs. You can choose a default on first launch or change it later under Settings.
 
 ### Dashboard
 
@@ -144,7 +162,7 @@ Agent synthesis runs only after an explicit action such as `Review with latest e
 
 ### Settings
 
-Configure appearance, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+Configure appearance, the default Home, Agent character and motion, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
 
 ---
 

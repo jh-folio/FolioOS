@@ -35,7 +35,7 @@ test("React theme preference and Settings expose light, dark, and system", async
   assert.match(settings, /\["system", "시스템"\]/);
 });
 
-test("dark token palette exists and deferred Pixel Office hashes return home", async () => {
+test("dark token palette exists and Pixel Office is a real route again", async () => {
   const [css, shell] = await Promise.all([
     readFile(cssUrl, "utf8"),
     readFile(shellUrl, "utf8"),
@@ -43,8 +43,9 @@ test("dark token palette exists and deferred Pixel Office hashes return home", a
   assert.match(css, /:root\[data-theme="dark"\]/);
   assert.match(css, /color-scheme: dark/);
   assert.match(css, /--color-warning-bg:/);
-  assert.match(shell, /\^#\\\/\?office/);
-  assert.match(shell, /replaceState[\s\S]*#\/home/);
+  // Pixel Office가 다시 구현되었으므로 #/office를 홈으로 되돌리지 않는다.
+  assert.doesNotMatch(shell, /replaceState[\s\S]{0,200}#\/home/);
+  assert.match(shell, /<PixelOfficeRoute \/>/);
 });
 
 test("native report charts respond to the resolved document theme", async () => {

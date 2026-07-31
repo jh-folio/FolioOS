@@ -1,4 +1,5 @@
 export type RouteId =
+  | "office"
   | "home"
   | "dashboard"
   | "briefing"
@@ -17,7 +18,8 @@ export type AppRoute = {
 };
 
 export const ROUTES: AppRoute[] = [
-  { id: "home", label: "홈", group: "home" },
+  { id: "office", label: "Pixel Office", group: "home" },
+  { id: "home", label: "Agent Home", group: "home" },
   { id: "dashboard", label: "대시보드", group: "home" },
   { id: "briefing", label: "브리핑", group: "research" },
   { id: "rss", label: "RSS 피드", group: "research" },
@@ -30,7 +32,7 @@ export const ROUTES: AppRoute[] = [
 
 export const NAV_ROUTES = ROUTES.filter((route) => route.visibleInNav !== false);
 
-const DEFAULT_ROUTE: RouteId = "home";
+const DEFAULT_ROUTE: RouteId = "office";
 
 export function parseHashRoute(hash: string): RouteId {
   const cleaned = hash.replace(/^#\/?/, "").split("/")[0];

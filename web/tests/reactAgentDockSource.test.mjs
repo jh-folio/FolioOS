@@ -111,7 +111,12 @@ test("React Agent Dock surfaces preflight failures visibly", async () => {
 
 test("React Agent model dropdowns persist discovered choices instead of free text", async () => {
   const dockSource = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
-  const homeSource = await readFile(new URL("../src/app/AgentHome.tsx", import.meta.url), "utf8");
+  const homeSource = (await Promise.all([
+    "../src/app/AgentHome.tsx",
+    "../src/app/agentWorkspace/useAgentWorkspace.ts",
+    "../src/app/agentWorkspace/presenters.ts",
+    "../src/app/agentWorkspace/AgentComposer.tsx",
+  ].map((path) => readFile(new URL(path, import.meta.url), "utf8")))).join("\n");
 
   assert.match(dockSource, /modelChoicesFor/);
   assert.match(dockSource, /persistModel/);
