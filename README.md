@@ -19,10 +19,10 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
 - Generate company analysis reports from local evidence and official data where available.
-- Run question-first Deep Research: review an evidence plan before execution, reuse Smart Collections, inspect deterministic collection health and bounded changes, and reopen reports with provenance, gaps, quality, and Market State shown as separate layers.
-- Save report-side thoughts as hypotheses, review note/thesis freshness and challenging evidence, and track revision-safe checkpoints without requiring an Agent.
-- See bounded, read-only Investment Context from portfolio/watchlist ticker links on existing research screens without exposing quantities, prices, weights, or note bodies.
-- Review a metadata-only Agent Work Log and explicitly approve or reject report revision proposals.
+- Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, and your own thinking kept as separate layers.
+- Keep your own notes beside a report and check how old they are, what argues against them, and what you said you would follow up on — no AI required.
+- See the tickers you track quietly linked into related research screens, without exposing quantities, prices, weights, or note bodies.
+- Read a work log that shows what the AI did without storing what it wrote, and approve or reject any change it proposes to a saved report.
 - Write report-side Folio Notes.
 - Export generated reports to Obsidian or Notion.
 - Choose Light, Dark, or System appearance across the workspace.
@@ -104,7 +104,7 @@ The Agent work log below shows only the latest status as a single line; expand i
 
 ### Dashboard
 
-Dashboard brings current-market widgets, recent reports, checkpoints, and bounded portfolio context into one review screen. Market widgets use TradingView and retain their source attribution.
+Dashboard brings current-market widgets, recent reports, checkpoints, and a limited portfolio view into one review screen. Market widgets use TradingView and retain their source attribution.
 
 ### Watchlist
 
@@ -130,19 +130,29 @@ Generate company analysis reports from official data and local research material
 
 ### Deep Research
 
-Start with an investment question, inspect the proposed research plan and live evidence preview, then approve execution. Smart Collections are reusable local filters stored in `data/smart-collections.json`; they are metadata, not evidence. Their nested workspace shows deterministic health/reason badges, bounded snapshot changes, and current resolved evidence. Opening or refreshing it never starts an Agent automatically. Saved reports live under `data/topic-reports/` and record the approved plan, resolved external evidence, execution provenance, data gaps, quality, and a separate Market State reference. User context and report-side notes remain hypotheses and never become citations or evidence counts.
+Ask an investment question and Folio OS shows you the research plan and the material it can actually use before anything runs. You approve, then it generates.
 
-Direct API and selected CLI execution use the same approved request. If an engine is unavailable, Folio OS may fall back to a rules-based report and records that fallback. A report with no usable external evidence requires explicit confirmation and is clearly labelled as evidence-limited. Existing Canonical Markdown changes only through an explicit revision proposal approval.
+You can add your own context — holdings you care about, a period to check — under the optional analysis conditions. That text is carried as **your hypothesis and is never counted as evidence**. You can also narrow the search with a saved collection of material; those are search rules stored in `data/smart-collections.json`, not evidence themselves. The detail view shows how many items currently match and what changed since last time. Opening or refreshing it never starts the AI on its own.
+
+Reports are saved under `data/topic-reports/` with the plan you approved, the sources used, the gaps that remain, a quality assessment, and the market state at the time. Inside a report, external sources and your own thinking are always shown as separate layers.
+
+If the AI is unavailable, Folio OS writes a rules-based report and says so. When no external material is available at all, it generates only after you confirm, and the report states that its evidence is thin. An already-saved report changes **only when you approve a revision proposal**.
 
 ### Agent Work Log
 
-Home and Deep Research share a bounded, metadata-only Work Log. It stores task type, status, timing, engine/fallback metadata, artifact counts, and proposal state—not prompts, chat transcripts, report Markdown, diffs, attachments, local paths, credentials, or raw provider output.
+A line per task showing what the AI did and how it ended: the kind of work, its current state, and what was saved.
+
+**The content of the work is never stored.** Not the question you typed, the conversation, the report body, the diff, attachments, local paths, API keys, or the AI tool's raw output.
 
 ### Research Intelligence Boundaries
 
-Briefing, Company Analysis, and Deep Research can show rule-calculated note/thesis freshness, contradictions, uncertainties, counter-evidence, and checkpoints without an API key or CLI. Home, Market Memory, Smart Collections, and Deep Research can also show a bounded Investment Context assembled from ticker links in local portfolio/watchlist data. These automatic views are read-only metadata and never alter Canonical reports.
+Briefing, Company Analysis, and Deep Research show what plain rules can determine without any AI configured: how old your notes are, where recent material contradicts them, and which follow-ups have come due.
 
-Agent synthesis runs only after an explicit action such as `Review with latest evidence`, `Ask Agent what changed`, or `Explain risk with Agent`. Dashboard and Watchlist are visible in the 0.3.0 navigation, while portfolio context remains bounded and read-only outside its dedicated runtime. These views do not provide trading advice.
+If you track tickers, related research screens quietly link to them. Quantities, prices, weights, and note bodies are never shown there.
+
+**These automatic views are read-only and never change a report.** The AI interprets something only when you ask it to — `Review with latest evidence`, `Ask Agent what changed`, `Explain risk with Agent`.
+
+None of these screens tell you what to buy or sell.
 
 ### Settings
 

@@ -512,5 +512,6 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - **`AGENTS.md`와 `CLAUDE.md`**: 본문을 항상 동일하게 유지한다. 기능 카탈로그(§8)·링크 목록(§9)·기능 경계(§10)에 새 기능을 두 파일 모두 반영한다.
 - **`README.md` / `README.ko.md`(최상위 사용자 문서)**: 사용자가 직접 쓰는 0.2 기능만 현재 기능으로 설명한다. 두 문서는 같은 제품 범위를 유지한다.
 - **README에 스크린샷을 넣지 않는다**: 화면 미리보기 섹션을 두지 않는다. 이미지는 UI가 바뀔 때마다 낡고, 낡은 스크린샷은 없는 것보다 나쁘다. 화면 설명은 글로 한다.
+- **README 용어는 화면과 같아야 한다**: 화면에서 쓰지 않는 내부 용어(hypothesis, Canonical, provenance, bounded, metadata-only, freshness, artifact, fallback 등)를 사용자 문서 설명 문장에 쓰지 않는다. 기능명과 짧은 영문 부제목(Deep Research, Market Memory, Smart Collection)은 허용하되, 그것이 무엇인지 설명하는 문장은 화면에 표시되는 말과 같은 단어로 쓴다. UI 문구를 바꾸면 README도 함께 바꾼다.
 - **`README.dev.md`**: 이전 장문 README 백업이다. 일반 사용자 릴리즈 문서로 링크하거나 포함하지 않는다.
 - **신규 기능 표기 규칙**: §8에서 "구현됨 / 구현 예정"을 분리해 유지한다. 예정 기능은 구현 완료(해당 Step의 Acceptance Criteria 충족) 전까지 "있는 기능"으로 서술하지 않는다.
