@@ -1,8 +1,8 @@
-yfinance>=1.5.1
+yfinance>=1.5.2
 beautifulsoup4>=4.15.0
 pykrx>=1.0.0
 jinja2>=3.1.6
 keyring>=25.7.0
-polars>=1.42.1
-fastapi>=0.139.0
+polars>=1.43.1
+fastapi>=0.140.13
 uvicorn>=0.51.0
