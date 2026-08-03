@@ -97,3 +97,28 @@ export type InvestmentReviewPayload = {
   recentReports?: RecentReport[];
 };
 
+export type ConsultationMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt?: string;
+  status?: string;
+  engine?: string;
+};
+
+export type ConsultationSession = {
+  id: string;
+  title: string;
+  scope: { kind: string; id?: string; marketScope?: string; tickers?: string[] };
+  status: "active" | "archived";
+  revision: number;
+  messages?: ConsultationMessage[];
+  messageCount?: number;
+  continuationOf?: string;
+  continuedBy?: string;
+  updatedAt?: string;
+  layer: "hypothesis";
+  sourceLayer: "user_consultation";
+  reuseAsEvidence: false;
+};
+

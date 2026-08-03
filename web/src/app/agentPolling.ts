@@ -79,3 +79,13 @@ export async function pollAgentJobBounded<T extends PollableAgentJob>(
   if (current.status !== "done") throw new AgentJobTerminalError(current);
   return current;
 }
+
+export function pollAgentJobUntilTerminal<T extends PollableAgentJob>(
+  job: T,
+  options: { signal?: AbortSignal; intervalMs?: number } = {},
+) {
+  return pollAgentJobBounded(job, {
+    ...options,
+    timeoutMs: Number.POSITIVE_INFINITY,
+  });
+}

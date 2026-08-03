@@ -5,7 +5,7 @@ import { RouteHero } from "./RouteHero";
 import { InvestmentContextCard } from "./InvestmentContextCard";
 import { setReactAgentContextScope } from "./agentContext";
 import type { MarketStateContextProjection } from "./marketStateContext";
-import { AgentJobTerminalError, AgentPollTimeout, pollAgentJobBounded } from "./agentPolling";
+import { AgentJobTerminalError, pollAgentJobUntilTerminal } from "./agentPolling";
 import { clearMarketMemoryJobId, discoverActiveMarketMemoryJob, persistMarketMemoryJobId, readMarketMemoryJobId, recoverMarketMemoryJob } from "./marketMemoryJobResume";
 
 type AgentJob = {
@@ -103,11 +103,7 @@ export function MarketMemoryRoute() {
           await finishJob(recovery.job);
         } catch (err) {
           if (!current) return;
-          if (err instanceof AgentPollTimeout) {
-            persistMarketMemoryJobId(err.job.id);
-            setResumableJob(err.job as AgentJob);
-            setStatus("서버 작업은 계속되고 있습니다. 같은 작업의 상태를 다시 확인할 수 있습니다.");
-          } else if (err instanceof AgentJobTerminalError) {
+          if (err instanceof AgentJobTerminalError) {
             clearMarketMemoryJobId();
             setResumableJob(null);
             setError(err.message);
@@ -142,7 +138,7 @@ export function MarketMemoryRoute() {
     const controller = new AbortController();
     pollController.current = controller;
     try {
-      const done = await pollAgentJobBounded(job, { signal: controller.signal });
+      const done = await pollAgentJobUntilTerminal(job, { signal: controller.signal });
       applyResult((done.result || {}) as MemoryResult);
     } finally {
       if (pollController.current === controller) pollController.current = null;
@@ -162,11 +158,7 @@ export function MarketMemoryRoute() {
         await finishJob(response);
       } else applyResult(response);
     } catch (err) {
-      if (err instanceof AgentPollTimeout) {
-        persistMarketMemoryJobId(err.job.id);
-        setResumableJob(err.job as AgentJob);
-        setStatus("서버 작업은 계속되고 있습니다. 같은 작업의 상태를 다시 확인할 수 있습니다.");
-      } else if (err instanceof AgentJobTerminalError) {
+      if (err instanceof AgentJobTerminalError) {
         clearMarketMemoryJobId();
         setResumableJob(null);
         setError(err.message);
@@ -188,11 +180,7 @@ export function MarketMemoryRoute() {
     try {
       await finishJob(resumableJob);
     } catch (err) {
-      if (err instanceof AgentPollTimeout) {
-        persistMarketMemoryJobId(err.job.id);
-        setResumableJob(err.job as AgentJob);
-        setStatus("서버 작업은 계속되고 있습니다. 잠시 후 같은 작업을 다시 확인하세요.");
-      } else if (err instanceof AgentJobTerminalError) {
+      if (err instanceof AgentJobTerminalError) {
         clearMarketMemoryJobId();
         setResumableJob(null);
         setError(err.message);

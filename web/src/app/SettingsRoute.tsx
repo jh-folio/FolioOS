@@ -33,6 +33,9 @@ type SettingsPayload = {
   fred?: { hasApiKey?: boolean; apiKeyMasked?: string };
   bok?: { hasApiKey?: boolean; apiKeyMasked?: string };
   notion?: { hasToken?: boolean; tokenMasked?: string; hasDb?: boolean; dbIdMasked?: string; dbId?: string };
+  fastOrigin?: {
+    benzinga?: { enabled?: boolean; hasApiKey?: boolean; apiKeyMasked?: string; hasAuthorizedFeed?: boolean; feedUrlMasked?: string };
+  };
 };
 
 type AgentAdapter = {
@@ -58,6 +61,8 @@ type AgentSettings = {
 
 type AutomationSettings = {
   rss?: { enabled?: boolean; intervalMinutes?: number | string; saveFullText?: boolean };
+  signals?: { enabled?: boolean; intervalMinutes?: number | string };
+  marketCalendar?: { enabled?: boolean; intervalMinutes?: number | string };
   marketMemory?: { enabled?: boolean; intervalMinutes?: number | string; runAfterRss?: boolean };
   briefing?: {
     enabled?: boolean;
@@ -157,6 +162,14 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
       intervalMinutes: form.rss?.intervalMinutes || 60,
       saveFullText: form.rss?.saveFullText !== false,
     },
+    signals: {
+      enabled: Boolean(form.signals?.enabled),
+      intervalMinutes: form.signals?.intervalMinutes || 1,
+    },
+    marketCalendar: {
+      enabled: Boolean(form.marketCalendar?.enabled),
+      intervalMinutes: form.marketCalendar?.intervalMinutes || 360,
+    },
     marketMemory: {
       enabled: Boolean(form.marketMemory?.enabled),
       intervalMinutes: form.marketMemory?.intervalMinutes || 1440,
@@ -188,6 +201,11 @@ export function SettingsRoute() {
   const [agentProvider, setAgentProvider] = useState("codex");
   const [agentModel, setAgentModel] = useState("");
   const [apiDraft, setApiDraft] = useState({ fred: "", bok: "", dart: "" });
+  const [fastOriginDraft, setFastOriginDraft] = useState({
+    benzingaEnabled: false,
+    benzingaFeedUrl: "",
+    benzingaApiKey: "",
+  });
   const [notionDraft, setNotionDraft] = useState({ token: "", dbId: "" });
   const [vaultPath, setVaultPath] = useState("");
   const [llmStatus, setLlmStatus] = useState<Record<string, LlmTestResult & { checking?: boolean }>>({});
@@ -214,6 +232,11 @@ export function SettingsRoute() {
         getJson<ObsidianSettings>("/api/obsidian/settings"),
       ]);
       setSettings(settingsPayload);
+      setFastOriginDraft({
+        benzingaEnabled: Boolean(settingsPayload.fastOrigin?.benzinga?.enabled),
+        benzingaFeedUrl: "",
+        benzingaApiKey: "",
+      });
       setAgentEnabled(settingsPayload.agent?.enabled !== false);
       setAgentMode(settingsPayload.agent?.mode === "api" ? "api" : "cli");
       const nextProvider = providerOrDefault(settingsPayload.llm?.provider);
@@ -361,6 +384,9 @@ export function SettingsRoute() {
         fred: { apiKey: apiDraft.fred.trim() },
         bok: { apiKey: apiDraft.bok.trim() },
         dart: { apiKey: apiDraft.dart.trim() },
+        fastOrigin: {
+          benzinga: { enabled: fastOriginDraft.benzingaEnabled, authorizedFeedUrl: fastOriginDraft.benzingaFeedUrl.trim(), apiKey: fastOriginDraft.benzingaApiKey.trim() },
+        },
       });
       setSettings(payload);
       setApiDraft({
@@ -368,6 +394,11 @@ export function SettingsRoute() {
         bok: "",
         dart: "",
       });
+      setFastOriginDraft((current) => ({
+        ...current,
+        benzingaFeedUrl: "",
+        benzingaApiKey: "",
+      }));
       setStatus("외부 데이터 API 설정을 저장했습니다.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "API 설정 저장에 실패했습니다.");
@@ -625,6 +656,28 @@ export function SettingsRoute() {
           </section>
 
           <section className="settings-panel input-panel">
+            <div className="input-panel-header">
+              <h3>저지연 뉴스 리드</h3>
+              <p>속보 매체는 확인 전 lead로만 표시되며, 보고서 근거·품질 점수·중대한 변화 판정에는 포함되지 않습니다.</p>
+            </div>
+            <div className="settings-notice warn" role="note">
+              <strong>보안·이용 조건</strong>
+              <span>공식 WebSocket 또는 사용 권한이 있는 RSS URL만 입력하세요. 유료 본문 우회나 페이지 스크래핑은 하지 않으며 원문·이미지·인증 URL은 저장하지 않습니다. 새 스트림 설정은 서버 재시작 후 적용될 수 있습니다.</span>
+            </div>
+            <div className="automation-routines fast-origin-settings">
+              <section className="automation-card">
+                <div className="automation-card-head">
+                  <div><span>Free RSS first</span><strong>Benzinga</strong><p>무료 RSS를 우선 사용하고 API Key는 향후 공식 API 연결 확인용으로만 보관합니다.</p></div>
+                  <ToggleSwitch ariaLabel="Benzinga 사용" checked={fastOriginDraft.benzingaEnabled} onChange={(checked) => setFastOriginDraft({ ...fastOriginDraft, benzingaEnabled: checked })} compact />
+                </div>
+                <label className="field"><span>공식 RSS URL</span><input value={fastOriginDraft.benzingaFeedUrl} onChange={(event) => setFastOriginDraft({ ...fastOriginDraft, benzingaFeedUrl: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.fastOrigin?.benzinga?.hasAuthorizedFeed ? `${settings.fastOrigin.benzinga.feedUrlMasked} 저장됨` : "https://... (공식 RSS만)"} /></label>
+                <label className="field"><span>API Key (선택)</span><input value={fastOriginDraft.benzingaApiKey} onChange={(event) => setFastOriginDraft({ ...fastOriginDraft, benzingaApiKey: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.fastOrigin?.benzinga?.hasApiKey ? `${settings.fastOrigin.benzinga.apiKeyMasked} 저장됨` : "선택 사항"} /></label>
+              </section>
+            </div>
+            <div className="filter-actions settings-actions"><button className="filter-btn apply" type="button" onClick={saveApiSettings} disabled={busy === "api"}>뉴스 리드 설정 저장</button></div>
+          </section>
+
+          <section className="settings-panel input-panel">
             <div className="input-panel-header"><h3>Notion 연동</h3><p>브리핑과 보고서를 Notion 데이터베이스로 내보냅니다.</p></div>
             <div className="settings-grid">
               <label className="field"><span>Notion 통합 토큰</span><input value={notionDraft.token} onChange={(event) => setNotionDraft({ ...notionDraft, token: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.notion?.hasToken ? `${settings.notion.tokenMasked} 저장됨` : "ntn_..."} /></label>
@@ -662,6 +715,30 @@ export function SettingsRoute() {
                 </div>
                 <label className="field"><span>수집 간격</span><select value={String(automation.rss?.intervalMinutes || 60)} onChange={(event) => setAutomation({ ...automation, rss: { ...automation.rss, intervalMinutes: event.currentTarget.value } })}><option value="15">15분마다</option><option value="30">30분마다</option><option value="60">1시간마다</option><option value="180">3시간마다</option></select></label>
                 <div className="automation-inline-switch"><span>기사 전문 저장 (무료 공개 본문만, 로컬 보관용)</span><ToggleSwitch ariaLabel="기사 전문 저장" checked={automation.rss?.saveFullText !== false} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, saveFullText: checked } })} compact /></div>
+              </section>
+
+              <section className="automation-card">
+                <div className="automation-card-head">
+                  <div>
+                    <span>Fast-origin signals</span>
+                    <strong>저지연 리드 수집</strong>
+                    <p>설정된 속보 RSS와 기존 한국 RSS lead를 규칙 기반으로 수집합니다. Agent는 호출하지 않습니다.</p>
+                  </div>
+                  <ToggleSwitch ariaLabel="저지연 리드 자동 수집" checked={Boolean(automation.signals?.enabled)} onChange={(checked) => setAutomation({ ...automation, signals: { ...automation.signals, enabled: checked } })} compact />
+                </div>
+                <label className="field"><span>확인 간격</span><select value={String(automation.signals?.intervalMinutes || 1)} onChange={(event) => setAutomation({ ...automation, signals: { ...automation.signals, intervalMinutes: event.currentTarget.value } })}><option value="1">1분마다</option><option value="2">2분마다</option><option value="5">5분마다</option><option value="10">10분마다</option></select></label>
+              </section>
+
+              <section className="automation-card">
+                <div className="automation-card-head">
+                  <div>
+                    <span>Market Calendar</span>
+                    <strong>시장 일정 갱신</strong>
+                    <p>경제지표·중앙은행·휴장·실적·공시·배당 일정을 새로 고칩니다. Agent는 호출하지 않습니다.</p>
+                  </div>
+                  <ToggleSwitch ariaLabel="시장 일정 자동 갱신" checked={Boolean(automation.marketCalendar?.enabled)} onChange={(checked) => setAutomation({ ...automation, marketCalendar: { ...automation.marketCalendar, enabled: checked } })} compact />
+                </div>
+                <label className="field"><span>갱신 간격</span><select value={String(automation.marketCalendar?.intervalMinutes || 360)} onChange={(event) => setAutomation({ ...automation, marketCalendar: { ...automation.marketCalendar, intervalMinutes: event.currentTarget.value } })}><option value="60">1시간마다</option><option value="180">3시간마다</option><option value="360">6시간마다</option><option value="720">12시간마다</option></select></label>
               </section>
 
               <section className="automation-card">

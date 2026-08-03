@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getJson, postJson } from "../api";
-import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
+import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 import { useThemePreference } from "./themePreference";
+import { ChangeHistory, type ChangeEvent } from "./watchlist/ChangeHistory";
+import { FastSignalList, type FastSignal, type SignalProviderHealth } from "./watchlist/FastSignalList";
+import { ConsultationEntry } from "./watchlist/ConsultationEntry";
 
 type WatchlistOverviewItem = {
   item?: string;
@@ -35,6 +38,9 @@ type WatchlistDetail = {
   news?: WatchlistNews[];
   newsCount?: number;
   warnings?: string[];
+  fastSignals?: FastSignal[];
+  signalProviderHealth?: SignalProviderHealth[];
+  changeHistory?: ChangeEvent[];
 };
 
 function normalizeItems(items: unknown[]) {
@@ -182,6 +188,26 @@ export function WatchlistRoute() {
   }, [detailItem]);
 
   useEffect(() => {
+    const ticker = detail?.company?.ticker;
+    if (!ticker) return undefined;
+    let alive = true;
+    async function refreshFastSignals() {
+      try {
+        const [signals, health] = await Promise.all([
+          getJson<{ items?: FastSignal[] }>(`/api/signals?ticker=${encodeURIComponent(ticker || "")}&limit=20`),
+          getJson<{ providers?: SignalProviderHealth[] }>("/api/signals/providers"),
+        ]);
+        if (!alive) return;
+        setDetail((current) => current ? { ...current, fastSignals: signals.items || [], signalProviderHealth: health.providers || [] } : current);
+      } catch {
+        // Provider health is already represented by the last successful detail payload.
+      }
+    }
+    const timer = window.setInterval(refreshFastSignals, 60_000);
+    return () => { alive = false; window.clearInterval(timer); };
+  }, [detail?.company?.ticker]);
+
+  useEffect(() => {
     const target = widgetsRef.current;
     if (!target || !detail || detailLoading) return undefined;
     window.FolioTradingViewWidgets?.cleanup?.(target);
@@ -255,19 +281,17 @@ export function WatchlistRoute() {
                 <p className="section-subtitle">{detailMeta(detail)}</p>
               </div>
               <div className="watchlist-detail-actions">
-                <button
-                  type="button"
-                  className="filter-btn clear"
-                  onClick={() => openReactAgentDock({ surface: "watchlist_detail", reportKind: "watchlist", reportId: detailItem })}
-                >
-                  Agent에게 묻기
-                </button>
+                <ConsultationEntry item={detailItem} />
                 <button className="icon-btn" type="button" aria-label="닫기" data-tooltip="닫기" data-tooltip-pos="left" onClick={() => setWatchlistHash()}>×</button>
               </div>
             </div>
             {error && <p className="react-dashboard-error">{error}</p>}
             <div ref={widgetsRef} className="watchlist-detail-widgets">
               <div className="tradingview-widget-unavailable">TradingView 위젯을 준비하는 중입니다.</div>
+            </div>
+            <div className="watchlist-intelligence-rails">
+              <FastSignalList signals={detail?.fastSignals || []} providers={detail?.signalProviderHealth || []} />
+              <ChangeHistory events={detail?.changeHistory || []} />
             </div>
             <div className="watchlist-detail-news">
               <h3>수집한 뉴스</h3>

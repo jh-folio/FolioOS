@@ -20,6 +20,7 @@ import {
   resetAgentThreadMessages,
   setAgentThreadMessages,
   subscribeAgentThread,
+  shouldShowLegacyConsultationNotice,
 } from "./storage";
 import type {
   AgentJob,
@@ -68,6 +69,7 @@ export function useAgentWorkspace(surface = "agent_home") {
   const [quickStatus, setQuickStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const legacyConsultationImportAvailable = shouldShowLegacyConsultationNotice();
 
   useEffect(() => {
     const scope = surface === "agent_home" ? "home" : "office";
@@ -419,6 +421,7 @@ export function useAgentWorkspace(surface = "agent_home") {
     adapter,
     modelChoices,
     hasConversation,
+    legacyConsultationImportAvailable,
     handleSubmit,
     handleFiles,
     handleProposalAction,

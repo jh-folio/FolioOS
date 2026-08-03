@@ -253,9 +253,12 @@ function stateAge(ref: MarketStateRef | null) {
 }
 
 function StateMeta({ stateRef }: { stateRef: MarketStateRef | null }) {
+  const statusLabel = stateRef?.freshnessReason === "age_exceeded"
+    ? "만료"
+    : stateRef ? STATE_LABELS[stateRef.status] : "확인 불가";
   return (
     <dl className="market-state-meta" aria-label="시장 상태 기준 정보">
-      <div><dt>상태</dt><dd>{stateRef ? STATE_LABELS[stateRef.status] : "확인 불가"}</dd></div>
+      <div><dt>상태</dt><dd>{statusLabel}</dd></div>
       <div data-qa="market-state-asof"><dt>기준 시각</dt><dd>{displaySnapshotTime(stateRef?.asOf || undefined) || "없음"}</dd></div>
       <div><dt>경과</dt><dd>{stateAge(stateRef)}</dd></div>
       <div data-qa="market-state-source"><dt>출처</dt><dd>{stateRef ? SOURCE_LABELS[stateRef.sourceKind] : "응답 검증 실패"}</dd></div>
@@ -265,6 +268,7 @@ function StateMeta({ stateRef }: { stateRef: MarketStateRef | null }) {
 }
 
 function StaleNotice({ stateRef }: { stateRef: MarketStateRef }) {
+  const expired = stateRef.freshnessReason === "age_exceeded";
   const message = stateRef.freshnessReason === "new_relevant_evidence"
     ? "새 외부 자료가 들어왔습니다."
     : REASON_COPY[stateRef.freshnessReason] || "최신성을 다시 확인해야 합니다.";
@@ -273,7 +277,7 @@ function StaleNotice({ stateRef }: { stateRef: MarketStateRef }) {
     : "";
   return (
     <div className="market-state-stale-notice" data-qa="market-state-stale-notice" role="status" aria-live="polite">
-      <strong>업데이트 필요</strong>
+      <strong>{expired ? "최신성 만료" : "업데이트 필요"}</strong>
       <span>{message} 이전 스냅샷을 표시 중입니다.</span>
       {evidenceTime ? <time dateTime={stateRef.relevantEvidenceWatermark || undefined}>새 자료 기준 {evidenceTime}</time> : null}
     </div>
