@@ -4,7 +4,7 @@ import json
 import time
 from pathlib import Path
 
-from features.common.change_intelligence.projection import list_change_events
+from features.common.change_intelligence.projection import lineage_matches_ticker, list_change_events
 from features.common.research_library.signals.service import provider_health
 from features.common.utils import read_json, write_json
 from features.dashboard.schema import native_symbol, normalize_dashboard_settings
@@ -81,9 +81,9 @@ def build_cockpit_payload(data_dir: Path) -> dict:
     watchlist_tickers = {t for t in watchlist_tickers if t} - portfolio_tickers
     implications = []
     for event in changes:
-        lineage = str(event.get("lineageId") or "").upper()
-        matched_portfolio = sorted(t for t in portfolio_tickers if t and t in lineage)
-        matched_watchlist = sorted(t for t in watchlist_tickers if t and t in lineage)
+        lineage = event.get("lineageId")
+        matched_portfolio = sorted(t for t in portfolio_tickers if lineage_matches_ticker(lineage, t))
+        matched_watchlist = sorted(t for t in watchlist_tickers if lineage_matches_ticker(lineage, t))
         if matched_portfolio or matched_watchlist:
             implications.append({
                 "tickers": matched_portfolio + matched_watchlist,

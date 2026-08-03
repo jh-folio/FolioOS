@@ -148,7 +148,9 @@ class AgentCompanionBoundary:
 
     def delete_consultation(self, consultation_id: str, body: dict | None = Body(default=None)):
         try:
-            deleted = delete_session(self._consultation_data_dir(), consultation_id, confirmed=bool((body or {}).get("confirm")))
+            # 삭제는 되돌릴 수 없으므로 JSON true만 동의로 본다. bool()은 "false" 같은
+            # 문자열도 참으로 만들어 store의 명시적 확인 계약보다 느슨해진다.
+            deleted = delete_session(self._consultation_data_dir(), consultation_id, confirmed=(body or {}).get("confirm") is True)
         except PermissionError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if not deleted:

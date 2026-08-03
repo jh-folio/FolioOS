@@ -145,3 +145,17 @@ def test_consultation_http_contract_and_explicit_delete(tmp_path, monkeypatch):
         boundary.delete_consultation(session_id, {"confirm": False})
     assert error.value.status_code == 400
     assert boundary.delete_consultation(session_id, {"confirm": True})["deleted"] is True
+
+
+def test_delete_requires_json_true_not_truthy_string(tmp_path, monkeypatch):
+    """삭제는 복구 불가라 "false" 같은 문자열이 동의로 통과하면 안 된다."""
+    from features.agent_mode import routes
+
+    monkeypatch.setattr(routes, "submit_consultation_job", lambda *_a, **_k: {"id": "j", "status": "queued"})
+    boundary = routes.AgentCompanionBoundary(object(), data_dir=tmp_path)
+    created = boundary.create_consultation({"title": "t", "scope": {"kind": "portfolio"}})
+    for value in ("false", "no", "0", 1, "true"):
+        with pytest.raises(HTTPException) as error:
+            boundary.delete_consultation(created["id"], {"confirm": value})
+        assert error.value.status_code == 400
+    assert boundary.delete_consultation(created["id"], {"confirm": True})["deleted"] is True

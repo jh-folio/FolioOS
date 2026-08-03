@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
+from features.market_calendar.adapters._ticker_market import market_for_ticker
 from features.market_calendar.schema import normalize_event
 
 
@@ -22,7 +23,8 @@ def estimated_earnings_events(tickers: list[str]) -> list[dict]:
                 starts = str(value or "")
             if not starts:
                 continue
-            events.append(normalize_event({"kind": "earnings", "title": f"{ticker} 실적 발표 예정", "tickers": [ticker], "startsAt": starts, "timezone": "America/New_York", "status": "estimated", "source": "yfinance", "provider": "yfinance", "market": "US", "importance": 2}))
+            market, timezone = market_for_ticker(ticker)
+            events.append(normalize_event({"kind": "earnings", "title": f"{ticker} 실적 발표 예정", "tickers": [ticker], "startsAt": starts, "timezone": timezone, "status": "estimated", "source": "yfinance", "provider": "yfinance", "market": market, "importance": 2}))
         except Exception:
             continue
     return events

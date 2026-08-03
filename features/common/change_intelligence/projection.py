@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -75,10 +76,32 @@ def list_change_events(db_path: Path, *, ticker: str = "", limit: int = 50) -> l
             summary = json.loads(row["summary_json"])
         except Exception:
             continue
-        if ticker and ticker.upper() not in json.dumps(summary.get("currentRef") or {}).upper() and ticker.upper() not in str(summary.get("lineageId") or "").upper():
+        if ticker and not lineage_matches_ticker(summary.get("lineageId"), ticker):
             continue
         events.append({**summary, "authorityKind": row["authority_kind"], "authorityId": row["authority_id"], "invalidationToken": row["invalidation_token"]})
     return events
+
+
+def lineage_matches_ticker(lineage_id, ticker: str) -> bool:
+    """Whether a change event's lineage is scoped to ``ticker``.
+
+    Substring matching on a lineage id (or on a stringified ref that carries a
+    sha256 hash) false-positives on short tickers: "F" appears in "BRIEFING",
+    "T" in "BOTH", and both appear in almost every hex digest. Company lineages
+    are compared whole, and other kinds only by exact token.
+    """
+    ticker = str(ticker or "").strip().upper()
+    if not ticker:
+        return False
+    text = str(lineage_id or "").strip()
+    if not text:
+        return False
+    kind, _, rest = text.partition(":")
+    if kind.strip().lower() == "company":
+        return rest.strip().upper() == ticker
+    # Keep "." so 005930.KS survives; split on "-" so topic:NVDA-supply-chain still
+    # yields NVDA. Hyphenated tickers are matched whole by the company branch above.
+    return ticker in {token for token in re.split(r"[^0-9A-Za-z.]+", text.upper()) if token}
 
 
 def repair_change_projection(data_dir: Path, db_path: Path) -> dict:

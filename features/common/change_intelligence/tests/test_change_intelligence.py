@@ -104,3 +104,33 @@ def test_corrupt_market_snapshot_is_skipped_and_preserved_during_repair(tmp_path
     assert result["skipped"] == 1
     with sqlite3.connect(db) as conn:
         assert conn.execute("SELECT payload_json FROM market_state_snapshots WHERE snapshot_id='broken-snapshot'").fetchone()[0] == "{broken"
+
+
+def test_short_tickers_do_not_match_unrelated_lineages():
+    """부분문자열 매칭이면 F가 BRIEFING에, T가 BOTH에 걸려 무관한 이벤트가 쏟아진다."""
+    from features.common.change_intelligence.projection import lineage_matches_ticker
+
+    for lineage in ("briefing:us", "briefing:both", "market_memory:both:medium_term", "topic:retail"):
+        for ticker in ("F", "T", "V", "MA", "AI"):
+            assert lineage_matches_ticker(lineage, ticker) is False, (lineage, ticker)
+
+
+def test_company_lineage_matches_its_own_ticker_only():
+    from features.common.change_intelligence.projection import lineage_matches_ticker
+
+    assert lineage_matches_ticker("company:NVDA", "NVDA") is True
+    assert lineage_matches_ticker("company:nvda", "NVDA") is True
+    assert lineage_matches_ticker("company:NVDA", "V") is False
+    # 점·하이픈이 든 티커가 토큰화로 쪼개지지 않아야 한다.
+    assert lineage_matches_ticker("company:BRK-B", "BRK-B") is True
+    assert lineage_matches_ticker("company:005930.KS", "005930.KS") is True
+    assert lineage_matches_ticker("company:BRK-B", "B") is False
+
+
+def test_topic_lineage_matches_whole_token_not_substring():
+    from features.common.change_intelligence.projection import lineage_matches_ticker
+
+    assert lineage_matches_ticker("topic:NVDA-supply-chain", "NVDA") is True
+    assert lineage_matches_ticker("topic:retail", "AI") is False
+    assert lineage_matches_ticker("", "NVDA") is False
+    assert lineage_matches_ticker("company:NVDA", "") is False

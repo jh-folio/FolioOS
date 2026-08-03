@@ -109,3 +109,14 @@ def test_calendar_target_tickers_include_watchlist(tmp_path, monkeypatch):
     tickers = calendar_service._calendar_target_tickers(tmp_path)
     assert "NVDA" in tickers
     assert "AAPL" in tickers
+
+
+def test_estimated_events_use_listing_market_not_hardcoded_us():
+    """KRX 티커가 US/ET로 저장되면 market=KR 필터에서 사라지고 US에 잘못 뜬다."""
+    from features.market_calendar.adapters._ticker_market import market_for_ticker
+
+    assert market_for_ticker("NVDA") == ("US", "America/New_York")
+    assert market_for_ticker("BRK-B") == ("US", "America/New_York")
+    assert market_for_ticker("005930.KS") == ("KR", "Asia/Seoul")
+    assert market_for_ticker("247540.KQ") == ("KR", "Asia/Seoul")
+    assert market_for_ticker("005930.ks") == ("KR", "Asia/Seoul")

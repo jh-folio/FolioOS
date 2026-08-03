@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
+from features.market_calendar.adapters._ticker_market import market_for_ticker
 from features.market_calendar.schema import normalize_event
 
 
@@ -21,7 +22,8 @@ def estimated_dividend_events(tickers: list[str]) -> list[dict]:
             starts = dt.datetime.fromtimestamp(float(timestamp), tz=dt.timezone.utc).isoformat()
             if starts < (now - dt.timedelta(days=2)).isoformat():
                 continue
-            events.append(normalize_event({"kind": "dividend", "title": f"{ticker} 배당락 예정", "tickers": [ticker], "startsAt": starts, "timezone": "UTC", "allDay": True, "status": "estimated", "source": "yfinance", "provider": "yfinance", "market": "US"}))
+            market, _timezone = market_for_ticker(ticker)
+            events.append(normalize_event({"kind": "dividend", "title": f"{ticker} 배당락 예정", "tickers": [ticker], "startsAt": starts, "timezone": "UTC", "allDay": True, "status": "estimated", "source": "yfinance", "provider": "yfinance", "market": market}))
         except Exception:
             continue
     return events
