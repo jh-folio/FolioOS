@@ -385,6 +385,8 @@ export function WatchlistRoute() {
                 type="button"
                 aria-label={`${item} 워치리스트에서 삭제`}
                 data-tooltip="삭제"
+                // 카드가 overflow: hidden이라 기본 위치(버튼 위)의 툴팁은 카드 밖으로 나가 잘린다.
+                data-tooltip-pos="bottom"
                 onClick={(event) => {
                   event.stopPropagation();
                   removeItem(item);

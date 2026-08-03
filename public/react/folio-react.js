@@ -9191,6 +9191,7 @@ function ur() {
 								onClick: () => V(t.date, t.scope),
 								"aria-label": `${t.date} 브리핑 삭제`,
 								"data-tooltip": "삭제",
+								"data-tooltip-pos": "bottom",
 								children: /* @__PURE__ */ (0, x.jsx)("svg", {
 									width: "14",
 									height: "14",
@@ -10489,6 +10490,7 @@ function fi() {
 									onClick: () => P(e),
 									"aria-label": `${Zr(e)} 삭제`,
 									"data-tooltip": "삭제",
+									"data-tooltip-pos": "bottom",
 									children: /* @__PURE__ */ (0, x.jsx)("svg", {
 										width: "13",
 										height: "13",
@@ -14696,6 +14698,7 @@ function io() {
 									onClick: () => void ke(e),
 									"aria-label": `${Ja(e)} 삭제`,
 									"data-tooltip": "삭제",
+									"data-tooltip-pos": "bottom",
 									children: /* @__PURE__ */ (0, x.jsx)("svg", {
 										width: "13",
 										height: "13",
@@ -18378,6 +18381,7 @@ function rc() {
 								type: "button",
 								"aria-label": `${t} 워치리스트에서 삭제`,
 								"data-tooltip": "삭제",
+								"data-tooltip-pos": "bottom",
 								onClick: (e) => {
 									e.stopPropagation(), M(t);
 								},

@@ -20,6 +20,9 @@ from features.investment_notes.checkpoints import project_checkpoint_notes
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
 NOTES_DIR = DATA_DIR / "notes"
+# 카드 건수를 세기 위해 훑는 검색 결과 상한. 미리보기 개수(limit_per_item)와 분리해야
+# 모든 카드가 미리보기 개수로 고정되지 않는다.
+WATCHLIST_MATCH_SCAN_LIMIT = 200
 
 TRADINGVIEW_QUERY_SYMBOLS = {
     "GEV": "NYSE:GEV",
@@ -465,12 +468,17 @@ def watchlist_overview(limit_per_item: int = 5):
     combined = []
     for item in items:
         # Fix 5: 후보를 넉넉히 뽑은 뒤 companies 필드에 해당 기업이 실제 등장하는 문서만 사용
-        candidates = search_documents(idx, query=item, limit=limit_per_item * 4, scope="news")
-        hits = [h for h in candidates if any(_item_matches_company(item, c) for c in h.get("companies", []))]
-        if not hits:
-            hits = candidates[:limit_per_item]  # 인덱스에 없는 종목은 원래 결과 그대로
+        # 카드에 보여줄 건수는 실제 관련 문서 수라, 미리보기용 상위 N개와 따로 센다.
+        # 예전에는 잘라낸 hits의 길이를 그대로 써서 모든 카드가 limit_per_item(5)으로 고정됐다.
+        candidates = search_documents(idx, query=item, limit=WATCHLIST_MATCH_SCAN_LIMIT, scope="news")
+        matched = [h for h in candidates if any(_item_matches_company(item, c) for c in h.get("companies", []))]
+        if matched:
+            match_count = len(matched)
+            hits = matched[:limit_per_item]
         else:
-            hits = hits[:limit_per_item]
+            # 인덱스에 회사 정보가 없는 종목은 검색 결과를 그대로 쓰되 건수도 같은 기준으로 센다.
+            match_count = len(candidates)
+            hits = candidates[:limit_per_item]
         resolved_company = resolve_watchlist_company(item, hits)
         resolved_company = dict(resolved_company or {})
         resolved_symbol = tradingview_symbol_for_company(resolved_company) or tradingview_symbol_for_query(
@@ -532,7 +540,7 @@ def watchlist_overview(limit_per_item: int = 5):
             "ticker": resolved_company.get("ticker", ""),
             "companyName": resolved_company.get("name") or item,
             "tradingViewSymbol": resolved_symbol,
-            "count": len(hits),
+            "count": match_count,
             "latestDate": hits[0].get("date", "") if hits else "",
             "sources": sources[:4],
             "tags": tags,
