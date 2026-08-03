@@ -23,3 +23,13 @@ test("card delete tooltips open downward so overflow:hidden cards do not clip th
     assert.equal(positioned.length, tooltips.length, `${file}의 삭제 툴팁에 data-tooltip-pos="bottom"이 필요합니다`);
   }
 });
+
+test("change feed explains what changed and against which baseline", async () => {
+  const source = await readFile(new URL("../src/app/dashboard/ChangeFeed.tsx", import.meta.url), "utf8");
+  // 눌러서 이동하기 전에 왜 떴는지 알 수 있어야 한다.
+  assert.match(source, /changeReasonText\(event\)/);
+  assert.match(source, /baselineText\(event\)/);
+  const helpers = await readFile(new URL("../src/app/watchlist/ChangeHistory.tsx", import.meta.url), "utf8");
+  assert.match(helpers, /export function changeReasonText/);
+  assert.match(helpers, /export function baselineText/);
+});

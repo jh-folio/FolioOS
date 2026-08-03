@@ -14370,6 +14370,7 @@ main.page {
 .cockpit-change-feed li[data-status="developing_signal"] .status-chip { color: var(--folio-blue); background: var(--folio-blue-soft); }
 .cockpit-change-feed li[data-status="conflicting_uncertain"] .status-chip { color: var(--folio-gold); background: var(--folio-gold-soft); }
 .cockpit-change-feed strong { color: var(--folio-ink); font-weight: 700; }
+.cockpit-change-reason { display: block; color: var(--folio-ink-soft); font-size: 12.5px; font-style: normal; }
 .cockpit-change-feed time, .cockpit-change-feed small, .cockpit-chart-foot, .cockpit-telemetry { color: var(--folio-ink-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
 .cockpit-chart { grid-column: 1 / -1; }
 .cockpit-chart-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }

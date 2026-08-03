@@ -118,3 +118,17 @@ def test_build_briefing_persists_per_market_reports_and_sidecars():
         link = json.loads((root / "2026-06-20.link.json").read_text(encoding="utf-8"))
         assert link["markdown"].lstrip().startswith("## 한미 시장 연결 분석")
         assert link["date"] == "2026-06-20"
+
+
+def test_projection_follows_the_report_store_not_the_real_data_dir(tmp_path):
+    """테스트 픽스처가 사용자 DB에 변화 이벤트를 남기면 대시보드에 가짜 알림이 뜬다."""
+    from features.common.change_intelligence.service import projection_db_for_report
+    from features.daily_briefing import builder
+
+    default_db = builder.MARKET_MEMORY_DB_PATH
+    # 임시 저장소로 커밋하면 projection도 그 안에 머문다.
+    temp_report = tmp_path / "briefings" / "2026-06-10.us.json"
+    assert projection_db_for_report(temp_report, default_db) == tmp_path / default_db.name
+    # 실제 경로에서는 기존 DB를 그대로 쓴다.
+    real_report = builder.BRIEFINGS_DIR / "2026-08-01.us.json"
+    assert projection_db_for_report(real_report, default_db) == default_db

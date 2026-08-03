@@ -1,4 +1,4 @@
-import { ARTIFACT_KIND_LABELS, type ChangeEvent } from "../watchlist/ChangeHistory";
+import { ARTIFACT_KIND_LABELS, baselineText, changeReasonText, type ChangeEvent } from "../watchlist/ChangeHistory";
 
 export const CHANGE_STATUS_LABELS: Record<string, string> = {
   major_change: "중대한 변화", developing_signal: "발전 중", conflicting_uncertain: "충돌·불확실",
@@ -36,7 +36,9 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
             <button type="button" className="cockpit-change-open" onClick={() => { window.location.hash = changeEventRoute(event); }}>
               <div><span className="status-chip">{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span><time>{event.generatedAt ? new Date(event.generatedAt).toLocaleString("ko-KR") : ""}</time></div>
               <strong>{event.changedItems?.[0]?.subject || artifactLabel(event)}</strong>
+              {changeReasonText(event) ? <em className="cockpit-change-reason">{changeReasonText(event)}</em> : null}
               <small>{artifactLabel(event)}
+                {baselineText(event) ? <> · {baselineText(event)}</> : null}
                 {Number(event.materiality || 0) > 0 ? <> · 중요도 {Math.round(Number(event.materiality) * 100)}</> : null}
                 {Number(event.reliability || 0) > 0 ? <> · 신뢰도 {Math.round(Number(event.reliability) * 100)}</> : null}
               </small>

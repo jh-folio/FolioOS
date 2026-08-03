@@ -1,6 +1,7 @@
 """Comparable baseline selectors for report JSON and Market Memory snapshots."""
 from __future__ import annotations
 
+import datetime as dt
 import json
 import sqlite3
 from pathlib import Path
@@ -14,6 +15,40 @@ REPORT_DIRS = {
     "topic_report": "topic-reports",
 }
 
+# 직전 산출물이 이보다 오래됐으면 비교하지 않는다. 일일 브리핑을 몇 주 전 브리핑과 견주면
+# 사실상 모든 항목이 "변했다"로 나와 중대한 변화 판정이 의미를 잃는다. 비교 대상이 없으면
+# 없다고 말하는 편이 정확하다(baseline_created).
+COMPARABLE_WINDOW_DAYS = {
+    "briefing": 10,
+    "company_analysis": 120,
+    "topic_report": 120,
+    "market_memory": 30,
+}
+DEFAULT_COMPARABLE_WINDOW_DAYS = 30
+
+
+def _parse_as_of(value: str):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            parsed = dt.datetime.fromisoformat(text[:10])
+        except ValueError:
+            return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=dt.timezone.utc)
+
+
+def _within_comparable_window(artifact_kind, current_as_of: str, candidate_as_of: str) -> bool:
+    current = _parse_as_of(current_as_of)
+    candidate = _parse_as_of(candidate_as_of)
+    if current is None or candidate is None:
+        return False
+    window = COMPARABLE_WINDOW_DAYS.get(str(artifact_kind or ""), DEFAULT_COMPARABLE_WINDOW_DAYS)
+    return (current - candidate) <= dt.timedelta(days=window)
+
 
 def _matches(current: dict, candidate: dict) -> bool:
     if current.get("artifactKind") != candidate.get("artifactKind"):
@@ -24,7 +59,13 @@ def _matches(current: dict, candidate: dict) -> bool:
         return False
     current_as_of = str(current.get("asOf") or "")
     candidate_as_of = str(candidate.get("asOf") or "")
-    return not current_as_of or not candidate_as_of or candidate_as_of < current_as_of
+    # 순서를 확인할 수 없으면 기준선으로 쓰지 않는다. 예전에는 asOf가 비면 아무 후보나
+    # 통과시켜, 6월 보고서를 8월 보고서와 비교하는 미래 기준선이 만들어졌다.
+    if not current_as_of or not candidate_as_of:
+        return False
+    if candidate_as_of >= current_as_of:
+        return False
+    return _within_comparable_window(current.get("artifactKind"), current_as_of, candidate_as_of)
 
 
 def select_report_baseline(data_dir: Path, current_basis: dict) -> tuple[dict | None, dict | None]:

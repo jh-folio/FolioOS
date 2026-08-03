@@ -5,8 +5,29 @@ export type ChangeEvent = {
   generatedAt?: string;
   materiality?: number;
   reliability?: number;
-  changedItems?: Array<{ id?: string; subject?: string; change?: string }>;
+  changedItems?: Array<{ id?: string; subject?: string; change?: string; kind?: string; horizon?: string }>;
+  baselineRef?: { id?: string; committedAt?: string };
 };
+
+const CHANGE_KIND_LABELS: Record<string, string> = {
+  added: "새로 등장", removed: "사라짐", changed: "내용 변화",
+};
+
+/** 무엇이 어떻게 달라졌는지 한 줄로. 눌러서 이동하기 전에 이유를 알 수 있어야 한다. */
+export function changeReasonText(event: ChangeEvent): string {
+  const items = event.changedItems || [];
+  if (!items.length) return "";
+  const first = items[0];
+  const verb = CHANGE_KIND_LABELS[String(first.change || "")] || "변화";
+  const rest = items.length > 1 ? ` 외 ${items.length - 1}건` : "";
+  return `${first.subject || "항목"} ${verb}${rest}`;
+}
+
+/** 어떤 산출물과 비교했는지. 비교 대상이 없으면 빈 문자열. */
+export function baselineText(event: ChangeEvent): string {
+  const id = event.baselineRef?.id;
+  return id ? `${id} 대비` : "";
+}
 
 const LABELS: Record<string, string> = {
   major_change: "중대한 변화",

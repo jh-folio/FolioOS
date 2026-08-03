@@ -51,5 +51,21 @@ def decorate_candidate(artifact_kind: str, candidate: dict, *, data_dir: Path, n
     return decorated
 
 
+def projection_db_for_report(report_path: Path, default_db_path: Path) -> Path:
+    """Keep the change projection in the same store as the report being committed.
+
+    Report directories get redirected to temp paths in tests while the module-level
+    database constant does not, so a fixed path let fixture reports write change
+    events into the user's real database — one such event showed up on the
+    dashboard as a live major change.
+    """
+    report_path = Path(report_path)
+    default_db_path = Path(default_db_path)
+    data_dir = report_path.parent.parent
+    if data_dir == default_db_path.parent:
+        return default_db_path
+    return data_dir / default_db_path.name
+
+
 def project_committed_report(db_path: Path, report_path: Path) -> dict:
-    return project_report(Path(db_path), Path(report_path))
+    return project_report(projection_db_for_report(report_path, db_path), Path(report_path))

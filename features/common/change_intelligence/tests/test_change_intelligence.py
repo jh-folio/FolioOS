@@ -134,3 +134,37 @@ def test_topic_lineage_matches_whole_token_not_substring():
     assert lineage_matches_ticker("topic:retail", "AI") is False
     assert lineage_matches_ticker("", "NVDA") is False
     assert lineage_matches_ticker("company:NVDA", "") is False
+
+
+def _basis(kind, artifact_id, as_of, lineage="briefing:us"):
+    return {"artifactKind": kind, "artifactId": artifact_id, "asOf": as_of, "lineageId": lineage}
+
+
+def test_baseline_is_never_newer_than_the_artifact():
+    """6월 보고서를 8월 보고서와 비교하면 사실상 모든 항목이 '변화'로 잡힌다."""
+    from features.common.change_intelligence.baseline import _matches
+
+    current = _basis("briefing", "2026-06-10", "2026-06-10T08:34:23+00:00")
+    newer = _basis("briefing", "2026-08-01", "2026-08-01T10:19:33+00:00")
+    assert _matches(current, newer) is False
+
+
+def test_missing_as_of_never_selects_an_arbitrary_baseline():
+    """순서를 확인할 수 없으면 비교하지 않는다(예전엔 아무 후보나 통과했다)."""
+    from features.common.change_intelligence.baseline import _matches
+
+    assert _matches(_basis("briefing", "x", None), _basis("briefing", "y", "2026-08-01T00:00:00+00:00")) is False
+    assert _matches(_basis("briefing", "x", "2026-08-01T00:00:00+00:00"), _basis("briefing", "y", None)) is False
+
+
+def test_stale_baseline_outside_the_comparable_window_is_rejected():
+    """일일 브리핑을 몇 주 전 것과 견주면 중대한 변화 판정이 의미를 잃는다."""
+    from features.common.change_intelligence.baseline import _matches
+
+    current = _basis("briefing", "2026-08-01", "2026-08-01T00:00:00+00:00")
+    assert _matches(current, _basis("briefing", "2026-07-31", "2026-07-31T00:00:00+00:00")) is True
+    assert _matches(current, _basis("briefing", "2026-07-20", "2026-07-20T00:00:00+00:00")) is False
+    # 기업분석은 분기 단위라 창이 넓다.
+    company = _basis("company_analysis", "NVDA:2026-08-01", "2026-08-01T00:00:00+00:00", "company:NVDA")
+    older = _basis("company_analysis", "NVDA:2026-05-05", "2026-05-05T00:00:00+00:00", "company:NVDA")
+    assert _matches(company, older) is True
