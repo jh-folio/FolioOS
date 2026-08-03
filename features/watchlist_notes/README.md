@@ -2,6 +2,8 @@
 
 이 기능은 사용자가 관심 기업/섹터를 저장하고, 관련 뉴스와 태그를 확인하며, 투자 아이디어 메모를 남기는 보조 기능입니다.
 
+0.4.x 상세 화면은 두 흐름을 분리합니다. `fastSignals`는 approved fast-origin provider의 metadata-only lead이고, `changeHistory`는 새 보고서/시장 내러티브 생성 시 규칙으로 확인된 변화입니다. stale/unhealthy/disabled/unauthorized provider는 headline 대신 health 설명만 표시합니다. signal polling은 fast signal 영역만 갱신하며 Change History는 generation commit 뒤에만 바뀝니다.
+
 ## 담당 범위
 
 - 관심 기업/섹터 목록 저장

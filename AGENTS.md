@@ -136,6 +136,18 @@ Python 패키지명에는 하이픈을 쓸 수 없으므로 런타임 코드는 
 12. Markdown 렌더링 변경은 브리핑과 기업분석을 동시에 깨뜨릴 수 있으므로 React report reader가 호출하는 `public/app.js::renderMarkdown()` bridge 수정 시 주의한다.
 13. `app.py`에 기능 로직을 추가하지 않는다. `app.py`에는 API endpoint, request body 정리, feature service 호출, HTTP 예외 변환만 둔다(§아래 app.py 경량화 규칙).
 
+### UI 구현 일관성 규칙
+
+사용자에게 보이는 화면을 새로 만들거나 구조·스타일·상호작용을 바꾸는 작업은 프로젝트 로컬 `.agents/skills/ui-ux-pro-max/SKILL.md`가 설치된 환경에서는 이를 함께 적용하고, 설치되지 않은 환경에서는 아래 규칙을 직접 따른다. 이 스킬은 패턴 검색과 품질 검수 도구이며 Folio OS의 기존 디자인을 대체하는 새 디자인 시스템 생성기로 사용하지 않는다.
+
+- 구현 전에 `features/frontend_ui/README.md`를 읽고, 브라우저에서 가장 가까운 기존 화면을 데스크톱·모바일로 직접 확인한다. 재사용할 컴포넌트, CSS 클래스, 토큰, 간격, 타이포, 상태 표현과 반응형 동작을 먼저 식별한다.
+- 새 기능은 새 시각 언어를 만들 권한이 아니다. 가장 가까운 기존 패턴을 확장하고, 기존 패턴으로 해결할 수 없는 경우에만 새 패턴을 제안한다.
+- 기존 React + TypeScript + plain CSS 구조를 유지한다. 명시 요청 없이 Tailwind·shadcn·새 UI 프레임워크·새 폰트·새 아이콘 라이브러리를 도입하지 않는다.
+- 색상·타이포·간격은 기존 토큰을 우선한다. 스킬이 추천한 팔레트·폰트·스타일이 기존 계약과 충돌하면 `AGENTS.md`, `features/frontend_ui/README.md`, 기존 토큰과 인접 화면이 우선한다.
+- 사용자가 새 디자인 시스템 산출물을 명시적으로 요청하지 않은 한 스킬의 `--persist`를 실행하거나 `design-system/` 폴더를 만들지 않는다.
+- 완료 전 실제 화면을 데스크톱과 모바일, 지원되는 Light/Dark 테마에서 캡처해 인접 화면과 비교한다. 키보드 focus, reduced motion, 가로 overflow, loading/empty/error 상태를 확인하고 관련 Playwright/axe 및 프론트엔드 검증을 실행한다.
+- UI 작업의 완료 기준은 코드 동작만이 아니라 기존 Folio OS와의 시각적·상호작용적 일관성까지 확인한 상태다.
+
 ### app.py 경량화 규칙
 
 `app.py`는 FastAPI 앱 조립, 라우팅, 요청/응답 변환, 아주 얇은 orchestration만 담당한다.
@@ -173,6 +185,8 @@ data/briefings/                # 저장된 브리핑
 data/company-analysis/         # 저장된 기업분석 보고서
 data/topic-reports/            # 저장된 테마분석 보고서
 data/obsidian-settings.json    # Obsidian Vault 경로
+data/dashboard-settings.json   # Research Cockpit 대시보드 설정
+data/agent-consultations/      # Watchlist/Portfolio 상담 세션 (hypothesis, evidence 아님)
 ```
 
 현재 active prompt 위치:
@@ -201,7 +215,7 @@ features/company_analysis/financial_quality_prompt.md
 | 기업 분석 | `company_analysis` | SEC 숫자+10-K 기반 분석 | Canonical |
 | 테마분석 (Topic Report v2) | `topic_report` | 투자 질문 해결기: Planner→Evidence Pack→유형별 템플릿→Quality Gate→Personal Overlay | Canonical + Personal Overlay |
 | Smart Collections | `smart_collections` | Deep Research 안의 결정적 저장 필터·상태·snapshot 변화/recovery | metadata |
-| 포트폴리오 | `portfolio` | 보유·목표·백테스트 | — |
+| 포트폴리오 | `portfolio` | 보유·목표·백테스트·revision 저장·스크린샷 가져오기(로컬 OCR 기본, 외부 Vision은 매 요청 동의). 0.4에서 공개 화면 복귀 | — |
 | 시장 내러티브 메모리 / Regime 추적 v2 | `market_memory` | 중기 내러티브 상태·taxonomy·momentum/confidence·thesis 연결 | source-grounded |
 | 워치리스트 | `watchlist_notes` | 워치리스트·상세 모달(기업 정보/차트/수집 뉴스) | — |
 | Native Investment Notes | `investment_notes` | Obsidian 없이 운용되는 Folio 로컬 투자 노트와 `native_note_index` | hypothesis 입력 |
@@ -212,21 +226,25 @@ features/company_analysis/financial_quality_prompt.md
 | Thesis Tracking | `thesis_tracking` | 기업 thesis의 강화/유지/약화/이탈 추적 | Personal Overlay |
 | Research Quality | `common/research_quality` | 산출물 공통 품질 평가: sourceGrounding·risk·coverage | source-grounded |
 | Quality Generation | `common/quality_generation` | 생성 품질 목표·자료 루트·preflight·evidence coverage·생성 후 평가·약한 섹션 LLM 개선·telemetry | source-grounded |
-| AI Agent Mode | `agent_mode` | Codex/Claude/Antigravity CLI용 context pack·Direct Bridge·기존 저장소 writeback + 도크 Agent 채팅(`/api/agent/chat`)·수정 제안 diff 승인 writeback(`/api/agent/proposals/{id}`) | source-grounded + Personal Overlay |
+| AI Agent Mode | `agent_mode` | Codex/Claude/Antigravity CLI용 context pack·Direct Bridge·기존 저장소 writeback + 도크 Agent 채팅(`/api/agent/chat`)·수정 제안 diff 승인 writeback(`/api/agent/proposals/{id}`)·Watchlist/Portfolio 상담 세션(`/api/agent/consultations`) | source-grounded + Personal Overlay |
 | 투자 리뷰 | `investment_review` | regime/thesis/portfolio/checkpoints/obsidian을 묶은 투자 리뷰 홈 | Personal Overlay |
-| 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그 | — |
-| Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장 | source-grounded |
+| 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그. 0.4부터 Dashboard Legacy 모드에서만 사용하며 설정 파일은 read-only로 유지 | — |
+| Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장·공식자료 semantic cache/fetch runtime | source-grounded |
+| Fast-Origin Signals | `common/research_library/signals` | 기존 KR RSS(연합인포맥스·연합뉴스)의 빠른 게시 headline을 metadata-only lead로 수집·표시. 자격증명 없이 기본 동작하며 lead는 evidence count/source ledger 제외 | lead (evidence 이전 단계) |
+| Change Intelligence | `common/change_intelligence` | 보고서/스냅샷 커밋 시 artifact-native ChangeBasis 비교로 changeSummary 생성. 추가 LLM 호출 없음 | source-grounded 파생 metadata |
+| 시장 캘린더 | `market_calendar` | 경제지표·중앙은행·휴장일·실적·공시·배당 6종 일정 수집·정규화와 confirmed/estimated badge | — |
+| Research Cockpit 대시보드 | `dashboard` | 변화 피드·네이티브 차트·시장 캘린더·투자 맥락 집계, Cockpit/Legacy 모드 전환 | — |
 | Pixel Office (보류) | `pixel_office` | 리서치 상태를 하나의 픽셀 오피스 장면으로 보여준다. 0.3.0에서는 배선을 전부 끊고 릴리즈 패키지에서도 제외한다. 소스(백엔드 service·PixiJS 씬·13개 오브젝트 레이어)는 재개용으로 저장소에만 남는다. | 보류 |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
-0.3 기본 사용자 화면에서의 노출 상태:
+0.4 기본 사용자 화면에서의 노출 상태:
 
-- **보이는 핵심 화면**: Home/AI Agent, Dashboard, Watchlist, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
-- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름.
-- **Agent 실행 경계**: freshness/health/context 배지는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명은 사용자의 명시적 action에서만 Agent를 실행한다.
+- **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Watchlist의 빠른 시장 신호·변화 이력, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio 상담과 `노트로 정리`, Portfolio 스크린샷 가져오기.
+- **Agent 실행 경계**: freshness/health/context 배지와 `changeSummary`는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 상담 답변은 사용자의 명시적 action에서만 Agent를 실행한다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
-- **숨김/축소 유지**: Portfolio와 Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 기존 보이는 리서치 화면의 제한된 projection으로만 노출한다.
-- **문서 원칙**: 사용자용 README는 0.3.0에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
+- **숨김/축소 유지**: Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 보이는 리서치 화면의 제한된 projection으로만 노출한다. Portfolio 독립 화면은 0.4에서 공개로 복귀했다.
+- **문서 원칙**: 사용자용 README는 현재 릴리즈에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
 
 ### 설계 확정·구현 예정
 
@@ -283,6 +301,10 @@ features/company_analysis/financial_quality_prompt.md
 - 수집은 RSS 단독이 아니라 Folio OS Evidence Intake 경로다. 최종 단위는 `IntakeEvidenceItem`이고 RSS는 `collector=rss` 입력원 중 하나다.
 - 모듈 경계(단방향 DAG): `rss_archive.py`(얇은 CLI/orchestration) → `fetch.py`(HTTP retry/backoff) → `parser.py`(RSS/Atom→raw item) → `article.py`(본문/요약 추출) → `relevance.py`(시장 관련성 게이트) → `normalizer.py`(raw→EvidenceItem) → `policy.py`(dedupe/retry/relevance score/full-text/paywall) → `collectors.py`(official adapter) → `writer.py`(YAML front matter Markdown 아카이브 IO + state) → `store.py`(`research-index.sqlite3::evidence_items`). `rss_archive.py`에는 run-level orchestration만 둔다(parse/fetch/write 로직 추가 금지).
 - 설정 파일로 분리: `config/rss_feeds.yaml`, `config/evidence_sources.yaml`. 코드 수정 없이 feed enable/disable이 가능하다.
+- **피드는 정기적으로 죽는다.** 매체가 호스트를 옮기면 기존 URL이 200 OK와 옛 항목을 계속 반환해 정상처럼 보인다(2026-08 확인: WSJ `feeds.a.dj.com` 3개가 553일, MarketWatch `feeds.marketwatch.com`이 396일 정체 상태로 응답 중이었고 `feeds.content.dowjones.io`가 현행 호스트다). 커버리지가 이상하면 건수가 아니라 **최신 항목 시각**을 먼저 확인한다.
+- `only_publishers`를 지정하면 aggregating 피드에서 해당 발행처 항목만 남기고 저장 시 **원 발행처 이름으로 태그**한다(Yahoo Finance→Reuters). 발행처는 RSS `<source>`에서 읽는다.
+- feed의 `source_type`이 소비 경로를 가른다. 기본 `news`는 브리핑 입력에 포함되고, **`press_release`(PR Newswire·GlobeNewswire 같은 보도자료 와이어)는 `is_news_document()`에서 제외**되어 브리핑에 들어가지 않는다. 같은 문서는 인덱스에 그대로 남아 워치리스트 종목 뉴스와 기업분석 보조자료로 쓰인다. 브리핑은 교차 보도량(`publisherCount`)으로 이슈를 고르는데 보도자료는 발행처가 1곳뿐이라 이슈로 뜨지 않으면서 클러스터링만 흐리기 때문이다.
+- feed는 **직접 피드**와 **aggregator 경유**로 성격이 다르다. 직접 피드(CNBC·Yahoo Finance·The Guardian·BBC·한국 매체)는 본문까지 확보되지만, `news.google.com` 검색 경유(Reuters·Bloomberg·WSJ·Barron's 등)는 `AGGREGATOR_REDIRECT_HOSTS` 정책상 기사 HTML을 가져오지 않아 **제목·링크만 남는다**. 커버리지 논의에서 수집 건수와 실제 사용 가능한 본문 수를 구분한다. Reuters·AP·Bloomberg 등은 공개 RSS를 종료했거나 라이선스 전용이라(2026-08 확인: Reuters 401·도메인 소멸, AP 401/404) 제목 신호로만 유지하며, 제3자 RSS 변환기나 scraping으로 우회하지 않는다.
 - 신규 Markdown은 YAML front matter(`collector`/`source_type`/`normalized_url`/`collection_status`/`reliability_tier`/`query` 등) + body section 포맷이다. legacy line-oriented Markdown은 읽기 호환을 유지한다.
 - CLI 기본 실행은 기사 전문을 저장하지 않는다. `--save-full-text` 명시 시에만 `Full Text` 섹션에 전문을 쓴다. 웹 앱이 실행하는 수집(RSS 수집 버튼/자동화)은 설정 탭의 `rss.saveFullText`(automation-settings, 기본 켜짐)에 따라 이 플래그를 전달한다. 유료 본문 우회는 금지한다.
 - paywall 판정은 게이트 문구("구독 후 이용", "subscribe to continue" 등) 기준이다. 한국 뉴스 푸터의 "구독"/"로그인" 단어만으로 유료벽 판정하지 않으며, 충분한 공개 본문이 추출되면 페이지 내 구독 배너가 full_text 판정을 막지 않는다. `news.google.com` 리다이렉트 링크는 기사 HTML을 가져오지 않고 RSS 요약을 유지한 `summary_only`로 저장한다(aggregator 페이지 요약으로 덮어쓰기 금지). 기사 페이지 요청은 표준 브라우저 UA를 사용한다.
@@ -340,6 +362,8 @@ features/company_analysis/financial_quality_prompt.md
 - 백테스트는 리서치용이다. yfinance 과거 가격과 일자별 환율을 사용하며, 실제 세금/수수료/체결오차/배당 처리에는 한계가 있다.
 - 백테스트 실행 결과는 자동 저장하지 않는다. 사용자가 결과 카드의 저장 버튼을 눌렀을 때만 저장한다.
 - 거래 내역 기반 원가 계산, 배당 현금흐름, 자동 리밸런싱 제안은 아직 범위 밖이다.
+- 저장은 additive `revision`을 가지며 `expectedRevision` 불일치 시 409와 최신본을 반환한다. 동시 수정은 사용자가 최신본과 다시 합친다.
+- 스크린샷 가져오기는 사용자 설치 Tesseract(kor+eng) preflight 기반 로컬 OCR이 기본이고 자동 설치하지 않는다. preview는 draft만 반환하며 원본 이미지·raw OCR·word box를 저장하지 않고 temp 파일을 항상 정리한다. 외부 Vision은 매 요청 명시적 동의 후에만 사용한다.
 
 ### Obsidian 내보내기
 
@@ -442,6 +466,53 @@ features/company_analysis/financial_quality_prompt.md
 - Folio OS가 내보내는 1차 보고서/내러티브는 `generated_by: Folio OS`, `source_layer: primary_processed`, `reuse_as_evidence: false`를 가진다.
 - frontmatter validator는 type/ticker/topic/source_layer/reuse_as_hypothesis 누락과 `generated_by`·`user_synthesis` 충돌을 감지한다.
 - API는 `/api/obsidian-workflow/create-note`, `/api/obsidian-workflow/linked-notes`, `/api/obsidian-workflow/validate`를 사용한다.
+
+### Fast-Origin Signals (빠른 시장 신호)
+
+- 로직은 `features/common/research_library/signals/`에 둔다. 수집 단위는 metadata-only lead(제목/URL/시각/티커/신뢰 등급)이며 본문·이미지·provider raw response·비밀값을 저장하지 않는다.
+- provider allowlist는 Benzinga·기존 한국 RSS 2종으로 고정한다. 새 provider는 별도 계획 변경 없이 추가하지 않는다. Investing.com은 공개 피드 주소가 없고 약관상 사전 승인이 필요해, FinancialJuice는 한 줄짜리 지표 속보라 브리핑·기업분석 어느 쪽에도 쓰임이 없어 0.4.x 범위에서 **제외**한다(어댑터·설정·자격증명·WebSocket 런타임 모두 제거).
+- **자격증명이 필요 없는 경로는 사용자 설정 없이 기본 동작한다.** 사용자에게 묻는 것은 사용자만 제공할 수 있는 값(키·승인 주소)뿐이다.
+  - 한국 RSS: `promote_kr_rss_leads()`는 이미 수집된 `evidence_items` 행을 다시 읽을 뿐 네트워크·자격증명을 쓰지 않으므로, signals 자동화와 무관하게 **RSS 수집 작업에서도 함께 실행**한다. 대상 매체는 연합인포맥스·연합뉴스이며 매일경제는 일반 RSS로만 분류한다.
+  - Benzinga: 공식 공개 피드 목록이 2026-08 기준 비어 있거나 404라 기본 비활성이며 `disabled_reason`을 config에 남긴다. 사용자가 유효한 피드 주소를 넣으면 동작한다.
+- `signal-provider-settings.json` 오버레이는 사용자가 명시적으로 바꾼 provider만 담는다. 항목이 없으면 config 기본값을 유지하며, 파일 부재가 곧 "전부 꺼짐"을 뜻하지 않는다.
+- automation `signals` 작업은 기본 활성(5분 간격)이다. 공개 피드만 대상으로 하며 조건부 GET(ETag/Last-Modified)으로 재요청 비용을 낮춘다.
+- `evidence_items.intake_stage=lead`는 `is_countable_evidence()`에서 항상 제외되고 source ledger에 들어가지 않는다. corroboration/공식 확인 후 승격된 row만 evidence가 된다.
+- retention 기본값: 일반 lead 3일, Watchlist/Portfolio 관련 14일, corroborated 30일.
+- polling provider는 automation의 `signals` kind로 실행한다. 승인된 provider가 모두 polling RSS라 상시 WebSocket 연결은 두지 않는다(`start_signal_runtime`은 lifespan 호환용 no-op).
+- run log에는 provider/count/status/error code만 남기고 headline/raw payload를 남기지 않는다.
+
+### Change Intelligence
+
+- 로직은 `features/common/change_intelligence/`에 둔다. 보고서/스냅샷 commit 시 artifact별 adapter(briefing/company/topic/market_memory)가 native 구조화 입력으로 `ChangeBasis`를 만들고 공통 comparator가 `changeSummary`를 생성한다. markdown은 comparator 입력이 아니다.
+- status enum: `baseline_created | major_change | developing_signal | conflicting_uncertain | no_material_change | insufficient_basis`. `major_change`는 높은 materiality와 tier-1 근거 1개 또는 독립 tier-2 근거 2개 이상이 필요하며 unconfirmed lead만으로는 만들 수 없다.
+- 권위 저장소: Briefing/Company/Topic은 보고서 JSON의 `changeSummary`, Market Memory는 `market_state_snapshots.payload_json`. `market-memory.sqlite3::change_event_index`는 양쪽에서 재구축 가능한 projection이며 projection 실패는 commit을 롤백하지 않는다.
+- 변화 판정은 생성 작업의 입력을 재사용하며 추가 LLM/Agent 호출을 만들지 않는다. RSS/index job에는 change hook이 없다.
+- 수동 저장(`POST /api/analysis-reports`)이나 proposal 승인 편집은 새 change event를 만들지 않는다.
+
+### 시장 캘린더 (Market Calendar)
+
+- 로직은 `features/market_calendar/`에 둔다. `features/common/market_calendar.py`(거래일 helper)와는 별개 모듈이다.
+- event kind는 `macro | central_bank | holiday | earnings | filing | dividend` 6종만 허용하고 `market-memory.sqlite3::market_calendar_events`에 upsert한다.
+- `confirmed | estimated | tentative | actual`을 source tier로 결정한다. 회사 IR/공식 일정이 우선이고 yfinance/Nasdaq 등 제3자 예정치는 `estimated`로만 표시한다.
+- NYSE/KRX 휴장일과 FOMC는 공식 발표 연간 일정을 adapter에 전사해 등재한다(confirmed + 공식 sourceUrl, 새 연도 공시 시 표만 갱신). 미국 지표 발표일은 `FRED_API_KEY`가 있을 때만 수집하고 없으면 `fred_key_required`를 남긴다. 실적/배당은 포트폴리오+워치리스트 티커 대상 yfinance estimated이며, 워치리스트 표시명은 SEC company_tickers 기반 `sec_ticker_for_name()`으로 해석한다.
+- raw page/PDF를 장기 보존하지 않고 normalized event와 source URL만 저장한다. refresh는 automation job이며 Agent를 호출하지 않는다.
+
+### Research Cockpit 대시보드
+
+- 로직은 `features/dashboard/`에 둔다. 기본 `dashboardMode=cockpit`이며 Legacy 모드로 실제 전환할 수 있다.
+- 기존 `data/market-widget-settings.json`은 삭제·수정하지 않고 read-only fallback으로만 읽는다. 새 설정은 `data/dashboard-settings.json`에 저장한다.
+- 초기 cockpit payload에는 외부 network 호출·chart series·iframe이 없고 차트/일정 상세는 lazy fetch한다. 네이티브 차트는 `GET /api/market/chart`와 기존 Lightweight Charts 전역을 재사용한다.
+- 기존 `/api/dashboard` 응답은 기존 consumer 호환을 위해 유지한다.
+
+### Agent 상담 (Consultation)
+
+- 로직은 `features/agent_mode/consultation_*.py`에 둔다. `data/agent-consultations/{sessionId}.json` JSON-per-session이 권위 저장소이며 research inbox/index 경로 밖이라 어떤 evidence loader·indexer도 읽지 않는다.
+- 세션·메시지·노트 snapshot은 `layer=hypothesis`, `sourceLayer=user_consultation`, `reuseAsEvidence=false`를 코드 상수로 강제한다.
+- 모델 입력은 전체 transcript가 아니라 rolling summary + 최근 8개 메시지 + 서버가 재조회한 최신 리서치 context로 구성한 32,000자 이하 pack이다.
+- memory 갱신은 규칙 기반 rolling summary다. 계획의 구조화 memoryPatch 계약은 미도입 상태이며 상세는 `.planning/folio-os-0.4-x-research-intelligence/task_plan.md`의 구현 편차 기록을 본다.
+- user turn을 먼저 저장한 뒤 Agent job을 실행하므로 재시작 후에도 질문이 남고 retry할 수 있다. `operationId`로 중복 응답을 막는다.
+- `노트로 정리` 명시적 action만 Native Investment Note snapshot을 만들며 노트에도 `consultationRef`와 hypothesis 경계가 유지된다.
+- Work Log/API/exception/telemetry에 transcript·session memory·Portfolio 민감 context를 남기지 않는다.
 
 ---
 

@@ -14,6 +14,7 @@ from features.common.canonical_identity import ReportKind
 from features.common.canonical_report_state import load_report
 from features.common.canonical_report_types import WriteKind
 from features.common.canonical_reports import commit_sync, prepare
+from features.common.change_intelligence.service import decorate_candidate, project_committed_report
 from features.common.dataframe_ops import top_records
 from features.common.market_data.providers import fetch_korea_market_data
 from features.common.market_data.snapshot import fetch_market_snapshot
@@ -518,6 +519,10 @@ def build_briefing(
                 existing = read_json(BRIEFINGS_DIR / briefing_file_name(date), None)
                 existing = briefing_scope_view(existing, scope) if isinstance(existing, dict) else None
             scoped_briefing = _merge_with_existing(scoped_briefing, existing, scope)
+            scoped_briefing = decorate_candidate(
+                "briefing", scoped_briefing, data_dir=DATA_DIR,
+                native_context={"generationDocs": docs}, generation_provenance=True,
+            )
             try:
                 sidecar = _sidecar_for_market(visual_result.get("sidecar") or {}, scope)
                 if sidecar.get("snapshots"):
@@ -535,10 +540,16 @@ def build_briefing(
                 candidate=scoped_briefing,
             )
             commit_sync(prepared)
+            projection = project_committed_report(MARKET_MEMORY_DB_PATH, report_path)
             committed = load_report(report_path)
             if committed is None:
                 raise RuntimeError("canonical briefing commit did not persist the report")
             saved_reports[scope] = committed
+            saved_reports[scope]["changeIntelligence"] = {
+                **(saved_reports[scope].get("changeIntelligence") or {}),
+                "projectionStatus": projection.get("status"),
+                "invalidationToken": projection.get("invalidationToken") or (saved_reports[scope].get("changeIntelligence") or {}).get("invalidationToken"),
+            }
         if market_scope == "both" and link_analysis:
             write_json(
                 BRIEFINGS_DIR / briefing_link_file_name(date),

@@ -156,6 +156,17 @@ py -3 -m features.agent_mode.cli personal_overlay --pack data\agent-context\pers
 - 수치가 pack이나 직접 확인한 출처에 없으면 추정하지 않고 data gap으로 남깁니다.
 - `generation.mode = "agent"`를 저장해 agent-authored 산출물임을 표시합니다.
 
+## Persistent Investment Consultation (0.4)
+
+- 상담은 `data/agent-consultations/{sessionId}.json`에 JSON-per-session으로 원자 저장한다.
+- 상담 안에서는 bounded memory와 최근 turn으로 문맥을 이어가지만 `layer=hypothesis`, `sourceLayer=user_consultation`, `reuseAsEvidence=false`를 고정한다.
+- research index, source ledger, Canonical 보고서, Market Memory, Change Intelligence에는 상담 transcript를 넣지 않는다.
+- user turn을 Agent 실행 전에 먼저 저장하므로 재시작 뒤 `retryMessageId`로 이어갈 수 있다. 500-message/2-MiB 경계에서는 연결된 continuation session을 만든다.
+- Agent job과 Work Log에는 transcript·memory·Portfolio 상세를 남기지 않고 session/message ID와 terminal status만 남긴다.
+- 보고서 proposal/writeback을 사용하지 않는다. 별도 `노트로 정리` preview를 명시적으로 확정할 때만 Native Note snapshot을 만든다.
+
+API: `POST/GET /api/agent/consultations`, `GET/POST/DELETE /api/agent/consultations/{id}`, `POST .../{id}/messages|archive|note`.
+
 ## Global Agent Companion
 
 The global Agent starts in Companion Mode on every screen. Companion Mode can answer questions, summarize visible context, suggest next actions, and explain implications without mutating saved reports or Market Memory.

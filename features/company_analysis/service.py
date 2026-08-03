@@ -11,6 +11,7 @@ from features.common.canonical_identity import ReportKind
 from features.common.canonical_report_state import load_report
 from features.common.canonical_report_types import WriteKind
 from features.common.canonical_reports import commit_sync, prepare
+from features.common.change_intelligence.service import decorate_candidate, project_committed_report
 from features.common.utils import normalize, now_iso, read_json, write_json
 from features.company_analysis import financial_engine
 from features.company_analysis.dart_client import build_dart_summary
@@ -791,6 +792,12 @@ def save_analysis_report(report):
     report["id"] = report.get("id") or rid
     report["saved"] = True
     path = ANALYSIS_REPORTS_DIR / f"{report['id']}.json"
+    # Manual POSTs without generation provenance/ChangeBasis remain ordinary
+    # canonical saves and do not emit a synthetic change event.
+    if isinstance(report.get("changeBasis"), dict):
+        report["changeBasis"] = {**report["changeBasis"], "artifactId": report["id"]}
+        report.pop("changeSummary", None)
+        report = decorate_candidate("company_analysis", report, data_dir=DATA_DIR, generation_provenance=True)
     prepared = prepare(
         report_kind=ReportKind.COMPANY_ANALYSIS,
         exact_path=path,
@@ -798,9 +805,12 @@ def save_analysis_report(report):
         candidate=report,
     )
     commit_sync(prepared)
+    projection = project_committed_report(MARKET_MEMORY_DB_PATH, path) if report.get("changeSummary") else {"status": "skipped"}
     committed = load_report(path)
     if committed is None:
         raise RuntimeError("canonical company report commit did not persist the report")
+    if report.get("changeSummary"):
+        committed["changeIntelligence"] = {**(committed.get("changeIntelligence") or {}), "projectionStatus": projection.get("status"), "invalidationToken": projection.get("invalidationToken") or (committed.get("changeIntelligence") or {}).get("invalidationToken")}
     return committed
 
 

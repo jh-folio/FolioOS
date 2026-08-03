@@ -172,6 +172,7 @@ def normalize_note(payload: dict | None, existing: dict | None = None) -> dict:
     linked_reports = _clean_list(payload.get("linkedReports") or payload.get("linked_reports") or existing.get("linkedReports"))
     report_kind = _clean_text(payload.get("reportKind") or existing.get("reportKind"))
     report_id = _clean_text(payload.get("reportId") or existing.get("reportId"))
+    consultation_ref = _clean_text(payload.get("consultationRef") or existing.get("consultationRef"))[:96]
     if report_id and report_id not in linked_reports:
         linked_reports.append(report_id)
     note = {
@@ -191,9 +192,10 @@ def normalize_note(payload: dict | None, existing: dict | None = None) -> dict:
         "reportId": report_id,
         "status": _clean_text(payload.get("status") or existing.get("status") or "active")[:32],
         "layer": "hypothesis",
-        "sourceLayer": "user_synthesis",
+        "sourceLayer": "user_consultation" if consultation_ref else "user_synthesis",
         "reuseAsHypothesis": True,
         "reuseAsEvidence": False,
+        "consultationRef": consultation_ref,
         "createdAt": existing.get("createdAt") or now,
         "updatedAt": now,
     }
@@ -305,7 +307,7 @@ def _row_to_note(row: sqlite3.Row, *, include_body: bool = False, clock=None) ->
         "updatedAt": row["updated_at"],
     }
     if include_body:
-        note.update({k: saved.get(k, note.get(k, "")) for k in ("body", "label", "reportKind", "reportId")})
+        note.update({k: saved.get(k, note.get(k, "")) for k in ("body", "label", "reportKind", "reportId", "consultationRef")})
     else:
         note["summary"] = str(saved.get("body") or "").replace("\n", " ").strip()[:180]
     if note["noteType"] == "checkpoint":

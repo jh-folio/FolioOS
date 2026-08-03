@@ -55,7 +55,7 @@ test("deep-research route no longer falls back to the legacy topicrpt view", asy
   assert.doesNotMatch(source, /id: "deep-research", label: "딥 리서치", group: "research", legacyViewId: "topicrpt"/);
 });
 
-test("Deep Research and the 0.3 workspace routes are exposed in navigation", async () => {
+test("Deep Research and the 0.4 workspace routes are exposed in navigation", async () => {
   const routeSource = await readFile(new URL("../src/app/routes.ts", import.meta.url), "utf8");
   const shellSource = await readFile(new URL("../src/app/AppShell.tsx", import.meta.url), "utf8");
   const homeSource = await readFile(new URL("../src/app/AgentHome.tsx", import.meta.url), "utf8");
@@ -68,7 +68,8 @@ test("Deep Research and the 0.3 workspace routes are exposed in navigation", asy
   assert.doesNotMatch(routeSource, /id: "(?:dashboard|watchlist)"[^\n]+visibleInNav: false/);
   assert.match(routeSource, /export const NAV_ROUTES = ROUTES\.filter/);
   assert.match(shellSource, /routes: \["analysis", "deep-research"\]/);
-  assert.match(shellSource, /routes: \["home", "dashboard", "watchlist"\]/);
+  assert.match(shellSource, /routes: \["home", "dashboard"\]/);
+  assert.match(shellSource, /routes: \["watchlist", "portfolio"\]/);
   assert.match(homeSource, /runQuickAction\("deep-research"\)/);
   assert.match(homeSource, /data-qa="home-deep-research"/);
   assert.match(paletteSource, /NAV_ROUTES\.map/);

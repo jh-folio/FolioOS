@@ -219,6 +219,53 @@ def _market_connection():
     return connection
 
 
+def run_consultation_job(data_dir: Path, session_id: str, user_message_id: str, *, progress=None, job_id: str = "") -> dict[str, str]:
+    """Answer one saved consultation turn and persist the reply outside job telemetry."""
+    progress = progress or (lambda *_args, **_kwargs: None)
+    from features.agent_mode import bridge
+    from features.agent_mode.consultation_context import assemble_consultation_context
+    from features.agent_mode.consultation_prompt import build_consultation_prompt, rules_fallback
+    from features.agent_mode.consultation_store import append_assistant_message, get_session
+
+    session = get_session(data_dir, session_id)
+    user_message = next((row for row in session.get("messages") or [] if row.get("id") == user_message_id and row.get("role") == "user"), None)
+    if not user_message:
+        raise ValueError("consultation_user_message_not_found")
+    progress("상담 문맥을 조립하고 있습니다.", 20)
+    context = assemble_consultation_context(data_dir, session_id)
+    prompt = build_consultation_prompt(context["serialized"], str(user_message.get("content") or ""))
+    engine = "rules"
+    reply = rules_fallback(str(user_message.get("content") or ""))
+    try:
+        if bridge.bridge_status().get("available"):
+            progress("Agent가 상담 답변을 작성하고 있습니다.", 50)
+            result = bridge.run_agent_prompt(prompt, job_id=job_id)
+            output = str(result.get("output") or "").strip()
+            if output:
+                reply = output
+                engine = str(result.get("adapter") or "cli")[:30]
+    except Exception:
+        # Transcript and private provider errors never enter job result or telemetry.
+        engine = "rules"
+    append_assistant_message(data_dir, session_id, user_message_id, reply, engine=engine)
+    return {"sessionId": session_id, "messageId": user_message_id, "status": "answered"}
+
+
+def submit_consultation_job(data_dir: Path, session_id: str, user_message_id: str) -> dict:
+    job = jobs.submit_job(
+        "agent_bridge",
+        "투자 상담",
+        run_consultation_job,
+        Path(data_dir),
+        session_id,
+        user_message_id,
+        pass_job_id=True,
+        dedicated_thread=True,
+    )
+    job["generationMode"] = "llm_cli"
+    return job
+
+
 def commit_thesis_output(job_id: str, pack: dict, payload: dict) -> dict[str, str | int | bool | None]:
     _running(job_id, TaskType.THESIS_DELTA)
     ticker, delta = agent_service.prepare_thesis_delta_writeback(pack, payload)

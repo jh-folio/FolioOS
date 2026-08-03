@@ -303,8 +303,9 @@ def normalize_market_widget_settings(payload) -> dict:
     }
 
 
-def get_market_widget_settings() -> dict:
-    payload = read_json(SETTINGS_PATH, None)
+def get_market_widget_settings(data_dir: Path | None = None) -> dict:
+    path = (Path(data_dir) / "market-widget-settings.json") if data_dir is not None else SETTINGS_PATH
+    payload = read_json(path, None)
     if not isinstance(payload, dict):
         payload = deepcopy(DEFAULT_SETTINGS)
     return normalize_market_widget_settings(payload)

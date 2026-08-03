@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
@@ -19,6 +19,17 @@ from features.investment_review.service import InvestmentContextRuntime, Investm
 from features.smart_collections.routes import failure_response
 from features.smart_collections.service import CollectionServiceError, SmartCollectionService
 from features.smart_collections.store import CollectionStoreUnavailableError
+from features.agent_mode.consultation_store import (
+    append_user_message,
+    create_session,
+    delete_session,
+    get_session,
+    list_sessions,
+    update_session,
+)
+from features.agent_mode.job_runtime import submit_consultation_job
+from features.agent_mode.consultation_schema import NOTE_TYPES
+from features.investment_notes.service import save_note
 
 
 class AgentCompanionBoundary:
@@ -31,6 +42,7 @@ class AgentCompanionBoundary:
         evidence_loader=None,
     ) -> None:
         self.collection_service = collection_service
+        self.data_dir = Path(data_dir) if data_dir is not None else None
         self.investment_context_service = investment_context_service
         self.evidence_loader = evidence_loader
         if self.investment_context_service is None and data_dir is not None:
@@ -88,6 +100,86 @@ class AgentCompanionBoundary:
             self.evidence_loader,
         )
 
+    def _consultation_data_dir(self) -> Path:
+        if self.data_dir is None:
+            raise HTTPException(status_code=503, detail="consultation_unavailable")
+        return self.data_dir
+
+    def create_consultation(self, body: dict | None = Body(default=None)):
+        return create_session(self._consultation_data_dir(), body or {})
+
+    def list_consultations(self, scope: str = "", status: str = "", cursor: str = "", limit: int = Query(default=30, ge=1, le=100)):
+        return list_sessions(self._consultation_data_dir(), scope=scope, status=status, cursor=cursor, limit=limit)
+
+    def get_consultation(self, consultation_id: str):
+        session = get_session(self._consultation_data_dir(), consultation_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="consultation_not_found")
+        return session
+
+    def update_consultation(self, consultation_id: str, body: dict | None = Body(default=None)):
+        try:
+            return update_session(self._consultation_data_dir(), consultation_id, body or {})
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="consultation_not_found") from exc
+
+    def add_consultation_message(self, consultation_id: str, body: dict | None = Body(default=None)):
+        body = body or {}
+        try:
+            appended = append_user_message(
+                self._consultation_data_dir(),
+                consultation_id,
+                str(body.get("message") or ""),
+                operation_id=str(body.get("operationId") or ""),
+                retry_message_id=str(body.get("retryMessageId") or ""),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="consultation_not_found") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409 if str(exc) == "consultation_archived" else 400, detail=str(exc)) from exc
+        job = submit_consultation_job(self._consultation_data_dir(), appended["session"]["id"], appended["message"]["id"])
+        return {"sessionId": appended["session"]["id"], "messageId": appended["message"]["id"], "revision": appended["session"].get("revision"), "job": job, "idempotent": appended["idempotent"]}
+
+    def archive_consultation(self, consultation_id: str):
+        try:
+            return update_session(self._consultation_data_dir(), consultation_id, {"status": "archived"})
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="consultation_not_found") from exc
+
+    def delete_consultation(self, consultation_id: str, body: dict | None = Body(default=None)):
+        try:
+            deleted = delete_session(self._consultation_data_dir(), consultation_id, confirmed=bool((body or {}).get("confirm")))
+        except PermissionError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not deleted:
+            raise HTTPException(status_code=404, detail="consultation_not_found")
+        return {"deleted": True, "id": consultation_id}
+
+    def consultation_note(self, consultation_id: str, body: dict | None = Body(default=None)):
+        body = body or {}
+        session = get_session(self._consultation_data_dir(), consultation_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="consultation_not_found")
+        note_type = str(body.get("noteType") or "investment_note")
+        if note_type not in NOTE_TYPES:
+            raise HTTPException(status_code=400, detail="consultation_note_type_invalid")
+        messages = session.get("messages") or []
+        selected = str(body.get("messageId") or "")
+        assistant = next((row for row in reversed(messages) if row.get("role") == "assistant" and (not selected or row.get("id") == selected)), {})
+        user = next((row for row in reversed(messages) if row.get("role") == "user" and (not assistant or row.get("id") == assistant.get("inReplyTo"))), {})
+        note_payload = {
+            "noteType": note_type,
+            "title": str(body.get("title") or session.get("title") or "상담 정리")[:160],
+            "body": str(body.get("body") or "\n\n".join(filter(None, [f"## 질문\n{user.get('content','')}" if user else "", f"## 상담 정리\n{assistant.get('content','')}" if assistant else ""])))[:24_000],
+            "ticker": str(body.get("ticker") or ((session.get("scope") or {}).get("tickers") or [""])[0]),
+            "consultationRef": consultation_id,
+            "sourceLayer": "user_consultation",
+            "reuseAsEvidence": False,
+        }
+        if body.get("preview") is not False:
+            return {"preview": True, "note": note_payload, "persisted": False}
+        return {"preview": False, "persisted": True, "note": save_note(note_payload)}
+
     def router(self) -> APIRouter:
         router = APIRouter(tags=["agent"])
         router.add_api_route("/api/agent/companion", self.companion, methods=["POST"])
@@ -97,4 +189,12 @@ class AgentCompanionBoundary:
             self.explain_investment_context,
             methods=["POST"],
         )
+        router.add_api_route("/api/agent/consultations", self.create_consultation, methods=["POST"])
+        router.add_api_route("/api/agent/consultations", self.list_consultations, methods=["GET"])
+        router.add_api_route("/api/agent/consultations/{consultation_id}", self.get_consultation, methods=["GET"])
+        router.add_api_route("/api/agent/consultations/{consultation_id}", self.update_consultation, methods=["POST"])
+        router.add_api_route("/api/agent/consultations/{consultation_id}", self.delete_consultation, methods=["DELETE"])
+        router.add_api_route("/api/agent/consultations/{consultation_id}/messages", self.add_consultation_message, methods=["POST"])
+        router.add_api_route("/api/agent/consultations/{consultation_id}/archive", self.archive_consultation, methods=["POST"])
+        router.add_api_route("/api/agent/consultations/{consultation_id}/note", self.consultation_note, methods=["POST"])
         return router

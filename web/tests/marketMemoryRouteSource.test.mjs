@@ -13,8 +13,9 @@ test("Market Memory route owns the memory workflow shell", async () => {
   assert.doesNotMatch(source, /\/api\/memory\/state-snapshot/);
   assert.match(polling, /\/api\/jobs\/\$\{encodeURIComponent\(current\.id\)\}/);
   assert.match(source, /시장 메모리 업데이트/);
-  assert.match(source, /pollAgentJobBounded/);
-  assert.match(source, /AgentPollTimeout/);
+  assert.match(source, /pollAgentJobUntilTerminal/);
+  assert.doesNotMatch(source, /AgentPollTimeout|pollAgentJobBounded/);
+  assert.match(polling, /timeoutMs:\s*Number\.POSITIVE_INFINITY/);
   assert.match(source, /data-qa="market-state-job-still-running"/);
   assert.match(source, /data-qa="market-state-job-resume"/);
   assert.match(source, /recoverMarketMemoryJob/);

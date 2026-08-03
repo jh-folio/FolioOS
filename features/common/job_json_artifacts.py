@@ -46,6 +46,17 @@ class JobArtifactWorkspace:
         fault_hook: FaultHook | None = None,
     ) -> None:
         self.committer.commit(bundle, store, lifecycle, fault_hook=fault_hook)
+        # Projection is deliberately post-commit. A broken derived index must
+        # never roll back an authoritative report JSON.
+        try:
+            from features.common.change_intelligence.service import project_committed_report
+
+            db_path = self.stager.data_root / "market-memory.sqlite3"
+            for artifact in bundle.artifacts:
+                if artifact.canonical is not None:
+                    project_committed_report(db_path, artifact.exact_path)
+        except Exception:
+            pass
 
     def discard(self, bundle: StagedJobBundle) -> None:
         staging_root = (self.stager.data_root / "job-staging").resolve(strict=False)

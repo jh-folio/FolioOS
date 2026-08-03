@@ -72,10 +72,10 @@ test("settings route no longer falls back to the legacy settings view", async ()
   assert.doesNotMatch(source, /id: "settings", label: "설정", group: "system", legacyViewId: "settings"/);
 });
 
-test("React navigation hides portfolio and standalone notes routes", async () => {
+test("React navigation exposes Portfolio and keeps standalone notes hidden", async () => {
   const source = await readFile(new URL("../src/app/routes.ts", import.meta.url), "utf8");
 
-  assert.doesNotMatch(source, /label: "포트폴리오"/);
+  assert.match(source, /label: "포트폴리오"/);
   assert.doesNotMatch(source, /label: "투자 노트"/);
   assert.doesNotMatch(source, /legacyViewId: "portfolio"/);
   assert.doesNotMatch(source, /legacyViewId: "notes"/);

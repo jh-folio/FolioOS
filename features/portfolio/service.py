@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -12,6 +13,7 @@ from fastapi import HTTPException
 
 from features.common.dataframe_ops import aggregate_portfolio
 from features.common.utils import now_iso, kst_date, read_json, write_json
+from features.portfolio.schema import expected_revision as parse_expected_revision, portfolio_document
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data"
@@ -20,6 +22,13 @@ PORTFOLIO_PRESETS_PATH = DATA_DIR / "portfolio-presets.json"
 PORTFOLIO_PRICE_CACHE_DIR = DATA_DIR / "portfolio-price-cache"
 BACKTESTS_DIR = DATA_DIR / "portfolio-backtests"
 BACKTEST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+_PORTFOLIO_WRITE_LOCK = threading.RLock()
+
+
+class PortfolioRevisionConflict(Exception):
+    def __init__(self, latest: dict):
+        super().__init__("portfolio_revision_conflict")
+        self.latest = latest
 
 
 
@@ -418,10 +427,12 @@ def normalize_portfolio_position(row, resolve: bool = False):
     }
 
 
-def get_portfolio():
-    data = read_json(PORTFOLIO_PATH, {"positions": [], "cash": []})
+def get_portfolio(data_dir: Path | None = None):
+    path = (Path(data_dir) / "portfolio.json") if data_dir is not None else PORTFOLIO_PATH
+    data = read_json(path, {"positions": [], "cash": []})
     if isinstance(data, list):
         data = {"positions": data, "cash": []}
+    data = portfolio_document(data)
     positions = [normalize_portfolio_position(row) for row in data.get("positions", []) if isinstance(row, dict)]
     cash = []
     for row in data.get("cash", []) if isinstance(data.get("cash", []), list) else []:
@@ -429,11 +440,13 @@ def get_portfolio():
         amount = _float_value((row or {}).get("amount"), 0.0)
         if currency and amount:
             cash.append({"currency": currency, "amount": amount})
-    return {"positions": positions, "cash": cash}
+    return {"schemaVersion": 2, "revision": data["revision"], "positions": positions, "cash": cash, "updatedAt": data["updatedAt"]}
 
 
-def save_portfolio(body):
+def save_portfolio(body, *, expected_revision: int | None = None, data_dir: Path | None = None):
     data = body if isinstance(body, dict) else {}
+    path = (Path(data_dir) / "portfolio.json") if data_dir is not None else PORTFOLIO_PATH
+    expected = parse_expected_revision(data) if expected_revision is None else max(0, int(expected_revision))
     positions = [normalize_portfolio_position(row, resolve=True) for row in data.get("positions", []) if isinstance(row, dict)]
     positions = [row for row in positions if row.get("ticker") and row.get("quantity") > 0]
     cash = []
@@ -442,8 +455,12 @@ def save_portfolio(body):
         amount = _float_value((row or {}).get("amount"), 0.0)
         if currency and amount:
             cash.append({"currency": currency, "amount": amount})
-    payload = {"positions": positions, "cash": cash, "updatedAt": now_iso()}
-    write_json(PORTFOLIO_PATH, payload)
+    with _PORTFOLIO_WRITE_LOCK:
+        latest = get_portfolio(data_dir)
+        if expected is not None and expected != latest["revision"]:
+            raise PortfolioRevisionConflict(latest)
+        payload = {"schemaVersion": 2, "revision": latest["revision"] + 1, "positions": positions, "cash": cash, "updatedAt": now_iso()}
+        write_json(path, payload)
     return payload
 
 

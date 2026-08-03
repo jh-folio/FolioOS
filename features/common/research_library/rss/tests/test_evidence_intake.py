@@ -619,3 +619,70 @@ if __name__ == "__main__":
     test_official_collector_stub_does_not_make_fake_data()
     test_evidence_store_upserts_item()
     print("ok")
+
+
+def test_parser_extracts_publisher_from_rss_source_tag():
+    from features.common.research_library.rss.parser import parse_feed
+
+    xml = (
+        b"<rss><channel><item>"
+        b"<title>Capital One closes accounts</title>"
+        b"<link>https://finance.yahoo.com/news/capital-one</link>"
+        b"<pubDate>Sun, 02 Aug 2026 12:00:00 GMT</pubDate>"
+        b'<source url="http://www.reuters.com/">Reuters</source>'
+        b"</item></channel></rss>"
+    )
+    rows = parse_feed(xml)
+    assert len(rows) == 1
+    assert rows[0]["publisher"] == "Reuters"
+
+
+def test_publisher_filter_keeps_only_configured_outlets_and_retags():
+    from features.common.research_library.rss.rss_archive import _matched_publisher, feed_item_allowed
+
+    feed = {"media": "Yahoo Finance", "only_publishers": ["Reuters"]}
+    reuters = {"publisher": "Reuters", "title": "t", "link": "https://finance.yahoo.com/a"}
+    fool = {"publisher": "Motley Fool", "title": "t", "link": "https://finance.yahoo.com/b"}
+    assert feed_item_allowed(feed, reuters) is True
+    assert feed_item_allowed(feed, fool) is False
+    # 저장 시에는 aggregator가 아니라 원 발행처로 태그한다.
+    assert _matched_publisher(feed, reuters) == "Reuters"
+    assert _matched_publisher(feed, fool) == ""
+
+
+def test_unfiltered_feed_keeps_every_item():
+    from features.common.research_library.rss.rss_archive import feed_item_allowed
+
+    feed = {"media": "BBC", "only_publishers": []}
+    assert feed_item_allowed(feed, {"publisher": "", "title": "t"}) is True
+    assert feed_item_allowed(feed, {"publisher": "Anything", "title": "t"}) is True
+
+
+def test_press_release_feeds_are_tagged_and_excluded_from_briefing_only():
+    """와이어는 기업 자료로 분리한다: 브리핑 입력에서만 빠지고 검색·기업분석에는 남는다."""
+    import datetime as dt
+
+    from features.common.research_library.rss.normalizer import rss_item_to_evidence
+    from features.daily_briefing.service import is_news_document
+
+    item = {
+        "title": "Acme Corp Reports Q2 Results",
+        "link": "https://www.prnewswire.com/news-releases/acme-q2.html",
+        "description": "Acme announced results",
+        "published_at_utc": dt.datetime(2026, 8, 3, 12, 0, tzinfo=dt.timezone.utc),
+    }
+    wire_feed = {"media": "PR Newswire", "source_type": "press_release", "default_market": "US"}
+    news_feed = {"media": "CNBC", "source_type": "news", "default_market": "US"}
+
+    wire = rss_item_to_evidence(item=item, source="PR Newswire", feed=wire_feed)
+    news = rss_item_to_evidence(item=item, source="CNBC", feed=news_feed)
+    assert wire["source_type"] == "press_release"
+    assert news["source_type"] == "news"
+
+    base = "research-inbox/rss/2026-08-03 12-00-00 - x.md"
+    # 브리핑 입력에서는 제외
+    assert is_news_document({"path": base, "sourceType": "press_release"}) is False
+    # 일반 뉴스는 그대로 통과
+    assert is_news_document({"path": base, "sourceType": "news"}) is True
+    # source_type이 없는 기존 문서도 회귀 없이 통과해야 한다
+    assert is_news_document({"path": base}) is True

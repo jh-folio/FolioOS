@@ -122,6 +122,33 @@ def test_freshness_uses_exact_injected_utc_boundary(
     assert ref["resolvedAt"] == NOW_TEXT
 
 
+@pytest.mark.parametrize(("as_of", "expected"), [
+    ("2026-07-16T12:00:01Z", "within_window"),
+    ("2026-07-16T12:00:00Z", "within_window"),
+    ("2026-07-16T11:59:59Z", "new_relevant_evidence"),
+])
+def test_new_evidence_waits_for_24_hour_grace_period(
+    tmp_path: Path, as_of: str, expected: str,
+) -> None:
+    # Given evidence newer than the snapshot input / When the snapshot is at the grace boundary / Then only age >24h is stale.
+    watermark = "2026-07-16T11:00:00Z"
+    _seed_snapshot(
+        tmp_path / "market.sqlite3",
+        as_of=as_of,
+        watermarks={"GLOBAL": watermark, "US": watermark, "KR": watermark},
+    )
+    _seed_index(tmp_path / "research.sqlite3", [
+        ("new", '{"markets":["GLOBAL"]}', "2026-07-17T00:00:00Z"),
+    ])
+
+    ref = resolve_market_state_ref(_query(tmp_path))
+
+    assert (ref["status"], ref["freshnessReason"]) == (
+        "current" if expected == "within_window" else "stale",
+        expected,
+    )
+
+
 @pytest.mark.parametrize(("as_of", "watermarks", "live", "attempts", "expected"), [
     ("not-a-time", {"US": None}, "2026-07-16T00:00:00Z", ({"scope": "GLOBAL", "status": "failed", "finishedAt": NOW_TEXT},), "invalid_as_of"),
     ("2026-07-17T12:00:01Z", {"US": None}, "2026-07-16T00:00:00Z", (), "future_as_of"),
@@ -187,7 +214,7 @@ def test_evidence_watermark_is_canonical_utc_z_for_current_stale_fallback_and_ca
     stale_root.mkdir()
     _seed_snapshot(
         stale_root / "market.sqlite3",
-        as_of="2026-07-16T12:00:00Z",
+        as_of="2026-07-16T11:59:59Z",
         watermarks={"GLOBAL": "2026-07-16T10:14:37Z", "US": "2026-07-16T10:14:37Z", "KR": None},
     )
     _seed_index(stale_root / "research.sqlite3", [("stale", '{"markets":["US"]}', raw)])

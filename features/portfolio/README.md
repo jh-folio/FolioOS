@@ -5,6 +5,8 @@
 ## 담당 기능
 
 - 현재 보유 포지션 입력
+- `revision`/`expectedRevision` 기반 동시 편집 충돌 방지(불일치 시 409와 최신본 반환)
+- 증권사 화면 이미지의 local-first OCR preview/import (원본·raw OCR 비보관)
 - 티커 기반 종목명, 시장, 통화, 섹터, 자산군 자동 매칭
 - `yfinance` 현재가 기반 평가금액, 손익, 비중 계산
 - KRW/USD가 섞인 포트폴리오의 USD 기준 환산 비중 계산
@@ -67,6 +69,7 @@ data/portfolio-fx-cache.json
 ```text
 GET    /api/portfolio
 POST   /api/portfolio
+POST   /api/portfolio/import-image/preview?mode=local|vision&consent=false|true
 GET    /api/portfolio/summary
 GET    /api/portfolio/analytics
 GET    /api/portfolio/resolve?ticker=...
@@ -83,6 +86,8 @@ POST   /api/portfolio/backtests/save     # 화면에 표시된 결과를 사용�
 GET    /api/portfolio/backtests/{backtest_id}
 DELETE /api/portfolio/backtests/{backtest_id}
 ```
+
+`POST /api/portfolio`는 선택적으로 `expectedRevision`을 받는다. 현재 revision과 다르면 저장하지 않고 409를 반환한다. 과거 `portfolio.json`은 revision 0으로 읽고 첫 저장부터 additive schema v2로 승격한다.
 
 ## ETF 섹터 분류
 
@@ -111,8 +116,13 @@ thesis, checkpoint, 보고서, Smart Collection과 연결할 수 있다. 연결 
 평가금액, 손익, 비중은 포함하지 않는다.
 
 이 projection은 Home, Market Memory, Smart Collection, Deep Research의 개인 맥락
-카드에서만 사용한다. Portfolio route는 계속 기본 navigation에서 숨기며, 연결 결과는
-리서치 점검을 돕는 hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 아니다.
+카드와 0.4.3의 Portfolio route에서 사용한다. 연결 결과는 리서치 점검을 돕는
+hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 아니다.
+
+이미지 가져오기는 로컬 Tesseract `kor+eng` preview를 기본으로 하며 설치 여부를 먼저
+표시한다. 원본 이미지, crop 이미지, raw OCR text와 bbox는 저장하지 않는다. 외부 Vision은
+매 요청의 명시적 동의가 있을 때만 crop/redaction 미리보기를 전송하며 결과를 즉시 저장하지
+않고 사용자가 편집표를 확인한 뒤 revision-safe 저장을 별도로 실행한다.
 
 ## 아직 범위 밖인 기능
 

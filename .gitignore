@@ -11,6 +11,9 @@ start-lan.cmd
 .agents/
 .claude/
 .superpowers/
+.gjc/
+.planning/
+independent-verdict.json
 __pycache__/
 .pytest_cache/
 *.py[cod]

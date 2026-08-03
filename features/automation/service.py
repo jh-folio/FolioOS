@@ -9,10 +9,12 @@ from features.automation.schema import normalize_settings
 from features.agent_mode.bridge import submit_agent_task
 from features.agent_mode.generation_mode import llm_override_for_mode
 from features.common.research_library.rss.service import import_rssarchive
+from features.common.research_library.signals.runtime import collect_signals_once, promote_kr_rss_leads
 from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.daily_briefing.builder import build_briefing
 from features.llm_settings.client import default_generation_mode
 from features.market_memory.digest import run_rss_market_memory_update
+from features.market_calendar.service import refresh_calendar
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
@@ -92,6 +94,20 @@ def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | N
         if not cfg.get("enabled"):
             return False
         last = _last_run_for("rss", runs)
+        finished = _parse_iso((last or {}).get("finishedAt", ""))
+        return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
+    if kind == "signals":
+        cfg = settings["signals"]
+        if not cfg.get("enabled"):
+            return False
+        last = _last_run_for("signals", runs)
+        finished = _parse_iso((last or {}).get("finishedAt", ""))
+        return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
+    if kind == "marketCalendar":
+        cfg = settings["marketCalendar"]
+        if not cfg.get("enabled"):
+            return False
+        last = _last_run_for("marketCalendar", runs)
         finished = _parse_iso((last or {}).get("finishedAt", ""))
         return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
     if kind == "marketMemory":
@@ -202,6 +218,16 @@ def run_automation_once(kind: str) -> dict:
     try:
         if kind == "rss":
             result = import_rssarchive(run_collection=True)
+            # 한국 lead 표시는 이미 수집한 행을 다시 읽을 뿐이라 네트워크도 자격증명도 쓰지 않는다.
+            # signals 자동화를 꺼둔 사용자도 RSS만 돌리면 빠른 신호가 보이도록 여기서 함께 처리한다.
+            try:
+                result = {**result, "krFastOriginLeads": promote_kr_rss_leads(DATA_DIR)}
+            except Exception:
+                pass
+        elif kind == "signals":
+            result = collect_signals_once(DATA_DIR, ROOT / "config" / "evidence_sources.yaml")
+        elif kind == "marketCalendar":
+            result = refresh_calendar(DATA_DIR)
         elif kind == "marketMemory":
             result = run_rss_market_memory_update()
         elif kind == "briefingPrerequisites":
@@ -226,6 +252,10 @@ def run_due_automations(now: dt.datetime | None = None) -> dict:
     runs = list_runs(100)
     executed = []
     rss_ran = False
+    if automation_due("signals", settings=settings, now=now, runs=runs):
+        executed.append(run_automation_once("signals"))
+    if automation_due("marketCalendar", settings=settings, now=now, runs=runs):
+        executed.append(run_automation_once("marketCalendar"))
     if automation_due("rss", settings=settings, now=now, runs=runs):
         executed.append(run_automation_once("rss"))
         rss_ran = True

@@ -96,11 +96,36 @@ def item_within_recency_window(item, *, collected_at_utc=None, max_age_days=None
     return published_at >= collected_at - dt.timedelta(days=days)
 
 
+def _matched_publisher(feed: dict, item: dict) -> str:
+    """Return the configured publisher this item came from, or "" when unfiltered."""
+    allowed = feed.get("only_publishers") or []
+    if not allowed:
+        return ""
+    publisher = str(item.get("publisher") or "").strip().lower()
+    if not publisher:
+        return ""
+    for name in allowed:
+        target = str(name).strip().lower()
+        if target and (publisher == target or publisher.startswith(target)):
+            return str(name).strip()
+    return ""
+
+
+def feed_item_allowed(feed: dict, item: dict) -> bool:
+    """Publisher-filtered feeds keep only items from the configured outlets."""
+    if not (feed.get("only_publishers") or []):
+        return True
+    return bool(_matched_publisher(feed, item))
+
+
 def build_manifest_item(task):
     """Enrich one accepted raw item into a manifest entry with its EvidenceItem."""
     feed, item, existing_path = task
     body = collect_article_body(item["link"], item["description"])
-    media = canonical_media(feed["media"], item.get("link", ""), item.get("title", ""))
+    # On a publisher-filtered aggregating feed the item belongs to the originating
+    # outlet, so it is stored under that outlet rather than the aggregator.
+    matched_publisher = _matched_publisher(feed, item)
+    media = canonical_media(matched_publisher or feed["media"], item.get("link", ""), item.get("title", ""))
     combined = {**item, **body, "media": media, "existing_path": str(existing_path) if existing_path else ""}
     combined["normalized_url"] = normalize_url(combined.get("link", ""))
     combined["relevance_score"] = calculate_relevance_score(combined)
@@ -192,6 +217,9 @@ def main():
     collected_at_utc = dt.datetime.now(dt.timezone.utc)
     for feed, items in feed_results:
         for item in items:
+            if not feed_item_allowed(feed, item):
+                rejected += 1
+                continue
             score = calculate_relevance_score(item)
             item["relevance_score"] = score
             if not item_within_recency_window(item, collected_at_utc=collected_at_utc):

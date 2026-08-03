@@ -1,0 +1,1 @@
+"""Normalized market calendar."""

@@ -28,6 +28,7 @@ Agent 응답은 `[대화]`(짧은 대화 답변)와 `[투자 노트]`(완성 노
 - `rawThoughts`는 사용자가 자유 작성 칸에 남긴 원문 생각 기록입니다.
 - `interactionLog`는 Agent가 어떤 정리를 했는지 남기는 상호작용 기록입니다.
 - 모든 native note는 `layer=hypothesis`, `sourceLayer=user_synthesis`, `reuseAsHypothesis=true`, `reuseAsEvidence=false`입니다.
+- 상담에서 명시적으로 만든 snapshot은 `consultationRef`를 보존하고 `sourceLayer=user_consultation`을 사용한다. 이 경우도 `reuseAsEvidence=false`이며 transcript 전체를 자동 누적하지 않는다.
 - 사용자 노트는 근거(evidence)가 아니며 Canonical 보고서 본문을 수정하지 않습니다.
 - Agent가 정리한 노트는 `agent_assisted` 태그와 `interactionLog`로 사용자 작성 판단과 구분합니다.
 

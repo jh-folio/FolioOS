@@ -22,6 +22,8 @@ _INSTANT = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\
 _STORED_OFFSET_INSTANT = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$"
 )
+NEW_EVIDENCE_GRACE = timedelta(hours=24)
+SNAPSHOT_EXPIRY = timedelta(hours=72)
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,11 +214,12 @@ def _snapshot_ref(query: MarketStateRefQuery, snapshot: Mapping[str, JsonValue])
         ref["freshnessReason"] = "missing_input_watermark"
         return ref
     ref["inputWatermark"] = str(raw_input) if raw_input is not None else None
-    if query.now - as_of > timedelta(hours=72):
+    snapshot_age = query.now - as_of
+    if snapshot_age > SNAPSHOT_EXPIRY:
         ref["freshnessReason"] = "age_exceeded"
         return ref
     live_at = _instant(live) if live else None
-    if live_at and input_at and live_at > input_at:
+    if snapshot_age > NEW_EVIDENCE_GRACE and live_at and input_at and live_at > input_at:
         ref["freshnessReason"] = "new_relevant_evidence"
         return ref
     for attempt in query.failed_attempts:

@@ -16,6 +16,7 @@ from features.common.job_json_producer_types import (
 )
 from features.common.job_json_schema import JobArtifactValidationError, StagedJobBundle
 from features.common.job_report_producers import company_spec, overlay_spec, quality_repair_spec, topic_spec
+from features.common.change_intelligence.service import decorate_candidate
 from features.common.shared_jobs_schema import SharedJob, StorageKind, TaskType
 
 
@@ -57,15 +58,38 @@ class JobJsonProducers:
 
     def stage_briefing(self, job: SharedJob, request: BriefingJobRequest) -> StagedJobBundle:
         self._require(job, TaskType.BRIEFING)
-        return self.workspace.stage(job, briefing_specs(self.data_root, request), terminal_result=request.terminal_result)
+        reports = {
+            scope: decorate_candidate(
+                "briefing",
+                {**request.reports[scope], "date": request.date, "marketScope": scope},
+                data_dir=self.data_root,
+                generation_provenance=True,
+            )
+            for scope in request.scopes
+        }
+        decorated = BriefingJobRequest(
+            date=request.date, scopes=request.scopes, reports=reports, visuals=request.visuals,
+            link=request.link, terminal_result=request.terminal_result,
+        )
+        return self.workspace.stage(job, briefing_specs(self.data_root, decorated), terminal_result=request.terminal_result)
 
     def stage_company(self, job: SharedJob, request: ReportJobRequest) -> StagedJobBundle:
         self._require(job, TaskType.COMPANY_ANALYSIS)
-        return self.workspace.stage(job, [company_spec(self.data_root, request)], terminal_result=request.terminal_result)
+        from features.company_analysis.service import analysis_report_id
+        report = dict(request.report)
+        if not report.get("id") and isinstance(report.get("company"), dict) and report.get("generatedAt"):
+            report["id"] = analysis_report_id(report["company"], report["generatedAt"])
+        report = decorate_candidate("company_analysis", report, data_dir=self.data_root, generation_provenance=True)
+        return self.workspace.stage(job, [company_spec(self.data_root, ReportJobRequest(report, request.terminal_result))], terminal_result=request.terminal_result)
 
     def stage_topic(self, job: SharedJob, request: ReportJobRequest) -> StagedJobBundle:
         self._require(job, TaskType.TOPIC_REPORT)
-        return self.workspace.stage(job, [topic_spec(self.data_root, request)], terminal_result=request.terminal_result)
+        from features.topic_report.service import _stable_topic_id
+        report = dict(request.report)
+        if not report.get("id") and report.get("date") and report.get("topicKey") and report.get("topicLabel"):
+            report["id"] = _stable_topic_id(str(report["date"]), str(report["topicKey"]), str(report["topicLabel"]))
+        report = decorate_candidate("topic_report", report, data_dir=self.data_root, generation_provenance=True)
+        return self.workspace.stage(job, [topic_spec(self.data_root, ReportJobRequest(report, request.terminal_result))], terminal_result=request.terminal_result)
 
     def stage_overlay(self, job: SharedJob, request: OverlayJobRequest) -> StagedJobBundle:
         self._require(job, TaskType.PERSONAL_OVERLAY)

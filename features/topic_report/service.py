@@ -17,6 +17,7 @@ from features.common.canonical_identity import (
 from features.common.canonical_report_state import load_report
 from features.common.canonical_report_types import WriteKind
 from features.common.canonical_reports import commit_sync, prepare
+from features.common.change_intelligence.service import decorate_candidate, project_committed_report
 from features.common.market_data.tape import build_market_tape
 from features.common.research_schema.checkpoints import checkpoints_from_markdown
 from features.common.research_schema.data_gaps import data_gaps_from_messages
@@ -641,6 +642,7 @@ def save_topic_report(report: dict) -> dict:
             if isinstance(item, dict) and not item.get("artifactId"):
                 item["artifactId"] = report_id
     path = _reports_dir() / filename
+    saved = decorate_candidate("topic_report", saved, data_dir=DATA_DIR, generation_provenance=True)
     prepared = prepare(
         report_kind=ReportKind.TOPIC_REPORT,
         exact_path=path,
@@ -648,9 +650,11 @@ def save_topic_report(report: dict) -> dict:
         candidate=saved,
     )
     commit_sync(prepared)
+    projection = project_committed_report(MARKET_MEMORY_DB_PATH, path)
     committed = load_report(path)
     if committed is None:
         raise RuntimeError("canonical topic report commit did not persist the report")
+    committed["changeIntelligence"] = {**(committed.get("changeIntelligence") or {}), "projectionStatus": projection.get("status"), "invalidationToken": projection.get("invalidationToken") or (committed.get("changeIntelligence") or {}).get("invalidationToken")}
     return committed
 
 

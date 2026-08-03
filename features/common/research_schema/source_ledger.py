@@ -9,6 +9,7 @@ from features.common.research_schema.enums import (
     normalize_evidence_role,
     normalize_reliability,
 )
+from features.common.research_schema.evidence import is_countable_evidence
 
 
 def _clean(value, limit: int = 360) -> str:
@@ -79,6 +80,8 @@ def source_ledger_from_items(
     seen: set[str] = set()
     for value in values or []:
         if not isinstance(value, dict):
+            continue
+        if not is_countable_evidence(value):
             continue
         entry = normalize_source_entry(value, artifact_type=artifact_type, artifact_id=artifact_id)
         key = entry["url"] or entry["path"] or f"{entry['title']}|{entry['source']}|{entry['date']}"

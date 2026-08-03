@@ -113,26 +113,27 @@ def test_public_routes_are_exposed() -> None:
     shell = _source("web/src/app/AppShell.tsx")
     assert not re.search(r'id: "dashboard"[^\n]+visibleInNav: false', routes)
     assert not re.search(r'id: "watchlist"[^\n]+visibleInNav: false', routes)
-    assert 'routes: ["home", "dashboard", "watchlist"]' in shell
+    assert 'routes: ["home", "dashboard"]' in shell
+    assert 'routes: ["watchlist", "portfolio"]' in shell
     assert 'id="folio-main-content"' in shell
     assert 'href="#folio-main-content"' in shell
 
 
-def test_machine_version_authority_matches_030_release() -> None:
+def test_machine_version_authority_matches_043_release() -> None:
     version = _source("VERSION").strip()
     package = json.loads(_source("web/package.json"))
-    assert version == "0.3.0"
+    assert version == "0.4.3"
     assert package["version"] == version
 
 
-def test_documented_030_scope_matches_english_and_korean() -> None:
+def test_documented_043_scope_matches_english_and_korean() -> None:
     for relative in REQUIRED_DOCS:
         assert (ROOT / relative).is_file(), relative
 
     english = _source("README.md")
     korean = _source("README.ko.md")
-    assert "What You Can Do In 0.3.0" in english
-    assert "0.3.0에서 할 수 있는 일" in korean
+    assert "What You Can Do In 0.4.3" in english
+    assert "0.4.3에서 할 수 있는 일" in korean
     for text in (english, korean):
         assert "Deep Research" in text
         assert "Smart Collection" in text

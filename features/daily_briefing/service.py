@@ -86,6 +86,11 @@ def read_briefing_prompt(market_scope="both"):
 
 
 def is_news_document(doc):
+    # 브리핑은 "그날 시장에서 이슈가 된 뉴스"를 교차 보도량으로 고른다. 기업이 스스로 낸
+    # 보도자료는 보도 매체가 1곳뿐이라 이슈로 뜨지 않으면서 클러스터링만 흐리므로 제외한다.
+    # 같은 문서는 워치리스트·기업분석 검색에서는 그대로 쓰인다.
+    if str(doc.get("sourceType") or doc.get("source_type") or "").strip() == "press_release":
+        return False
     rel = str(doc.get("path", "")).replace("\\", "/").lower()
     if rel.startswith("research-inbox/rss/"):
         return rel.endswith(".md")
