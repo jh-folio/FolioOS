@@ -5,22 +5,61 @@ export type ChangeEvent = {
   generatedAt?: string;
   materiality?: number;
   reliability?: number;
-  changedItems?: Array<{ id?: string; subject?: string; change?: string; kind?: string; horizon?: string }>;
+  changedItems?: ChangedItem[];
   baselineRef?: { id?: string; committedAt?: string };
 };
 
-const CHANGE_KIND_LABELS: Record<string, string> = {
+type ChangedItem = {
+  id?: string;
+  subject?: string;
+  change?: string;
+  kind?: string;
+  horizon?: string;
+  currentValue?: unknown;
+  previousValue?: unknown;
+};
+
+const CHANGE_VERB_LABELS: Record<string, string> = {
   added: "새로 등장", removed: "사라짐", changed: "내용 변화",
 };
+const UNIT_KIND_LABELS: Record<string, string> = {
+  market_driver: "시장 동인", issue_coverage: "이슈 보도", market_metric: "지표",
+};
+
+function formatNumber(value: unknown): string {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(value ?? "");
+}
+
+/** 항목 종류별로 실제로 담긴 값을 짧게 풀어 쓴다. */
+function changeDetail(item: ChangedItem): string {
+  const current = item.currentValue;
+  if (item.kind === "market_metric") {
+    if (item.previousValue != null && current != null) return `${formatNumber(item.previousValue)} → ${formatNumber(current)}`;
+    return current != null ? formatNumber(current) : "";
+  }
+  if (current && typeof current === "object") {
+    const row = current as { markets?: unknown; market?: unknown; docCount?: unknown; impact?: unknown };
+    const parts: string[] = [];
+    if (Array.isArray(row.markets) && row.markets.length) parts.push(row.markets.join(", "));
+    else if (row.market) parts.push(String(row.market));
+    if (Number(row.docCount) > 0) parts.push(`기사 ${Number(row.docCount)}건`);
+    if (row.impact) parts.push(String(row.impact));
+    return parts.join(" · ");
+  }
+  return "";
+}
 
 /** 무엇이 어떻게 달라졌는지 한 줄로. 눌러서 이동하기 전에 이유를 알 수 있어야 한다. */
 export function changeReasonText(event: ChangeEvent): string {
   const items = event.changedItems || [];
   if (!items.length) return "";
   const first = items[0];
-  const verb = CHANGE_KIND_LABELS[String(first.change || "")] || "변화";
-  const rest = items.length > 1 ? ` 외 ${items.length - 1}건` : "";
-  return `${first.subject || "항목"} ${verb}${rest}`;
+  const verb = CHANGE_VERB_LABELS[String(first.change || "")] || "변화";
+  const kind = UNIT_KIND_LABELS[String(first.kind || "")];
+  const head = kind ? `${kind} ${verb}` : verb;
+  const rest = items.length > 1 ? `외 ${items.length - 1}건` : "";
+  return [head, changeDetail(first), rest].filter(Boolean).join(" · ");
 }
 
 /** 어떤 산출물과 비교했는지. 비교 대상이 없으면 빈 문자열. */
@@ -66,6 +105,7 @@ export function ChangeHistory({ events }: { events: ChangeEvent[] }) {
                 <time>{event.generatedAt ? new Date(event.generatedAt).toLocaleString("ko-KR") : ""}</time>
               </div>
               <strong>{event.changedItems?.[0]?.subject || LABELS[event.status || ""] || "변화 평가"}</strong>
+              {changeReasonText(event) ? <em className="cockpit-change-reason">{changeReasonText(event)}</em> : null}
               <small>중요도 {Math.round(Number(event.materiality || 0) * 100)} · 신뢰도 {Math.round(Number(event.reliability || 0) * 100)}</small>
             </li>
           ))}
