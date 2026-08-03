@@ -11138,7 +11138,7 @@ function qi({ events: e, quiet: t }) {
 			t?.length ? /* @__PURE__ */ (0, x.jsxs)("details", {
 				className: "cockpit-quiet",
 				children: [/* @__PURE__ */ (0, x.jsxs)("summary", { children: [
-					"조용한 평가 ",
+					"그 외 평가 ",
 					t.length,
 					"건 보기"
 				] }), /* @__PURE__ */ (0, x.jsx)("ol", { children: t.map((e) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [
@@ -12277,7 +12277,7 @@ function ha() {
 					/* @__PURE__ */ (0, x.jsxs)("span", {
 						className: "cockpit-summary__chip",
 						"data-tone": "muted",
-						children: ["조용한 평가 ", a.quiet || 0]
+						children: ["그 외 평가 ", a.quiet || 0]
 					}),
 					o.map((e) => /* @__PURE__ */ (0, x.jsxs)("span", {
 						className: "cockpit-summary__chip",

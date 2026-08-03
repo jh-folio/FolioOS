@@ -52,7 +52,8 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
       )}
       {quiet?.length ? (
         <details className="cockpit-quiet">
-          <summary>조용한 평가 {quiet.length}건 보기</summary>
+          {/* 기준선 생성·근거 부족·변화 없음이 함께 들어가므로 "변화 없음"으로 뭉뚱그리지 않는다. */}
+          <summary>그 외 평가 {quiet.length}건 보기</summary>
           <ol>
             {quiet.map((event) => (
               <li key={`${event.artifactKind}-${event.artifactId}-${event.generatedAt}`}>
