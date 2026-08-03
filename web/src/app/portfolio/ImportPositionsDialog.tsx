@@ -14,10 +14,19 @@ function mergePositions(current: PositionDraft[], imports: ImportDraft[]): Posit
     else if (item.action === "replace") next[index] = { ...next[index], ...incoming };
     else {
       const oldQuantity = Number(next[index].quantity) || 0;
-      const oldPrice = Number(next[index].averagePrice) || 0;
+      const rawOldPrice = next[index].averagePrice;
+      // 평균단가 미입력(빈 값)은 "0원에 샀다"가 아니라 "모른다"다. 0으로 가중평균하면
+      // 사용자가 넣은 적 없는 단가가 만들어져 그대로 저장된다.
+      const hasOldPrice = rawOldPrice !== "" && rawOldPrice != null && Number(rawOldPrice) > 0;
+      const oldPrice = hasOldPrice ? Number(rawOldPrice) : 0;
       const newQuantity = oldQuantity + item.quantity;
-      const weighted = item.averagePrice != null && newQuantity > 0 ? ((oldQuantity * oldPrice) + (item.quantity * item.averagePrice)) / newQuantity : oldPrice;
-      next[index] = { ...next[index], quantity: newQuantity, averagePrice: weighted || "" };
+      let averagePrice: number | string = rawOldPrice ?? "";
+      if (item.averagePrice != null && newQuantity > 0) {
+        averagePrice = hasOldPrice
+          ? ((oldQuantity * oldPrice) + (item.quantity * item.averagePrice)) / newQuantity
+          : item.averagePrice;
+      }
+      next[index] = { ...next[index], quantity: newQuantity, averagePrice };
     }
   }
   return next;

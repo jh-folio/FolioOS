@@ -16,7 +16,9 @@ export function HoldingsTable({ positions, onChange }: { positions: PositionDraf
         <thead><tr><th>종목</th><th>수량</th><th>평균단가</th><th>시장</th><th><span className="sr-only">삭제</span></th></tr></thead>
         <tbody>
           {positions.map((row, index) => (
-            <tr key={`${row.ticker}-${index}`}>
+            // 키에 편집 중인 ticker를 넣으면 글자를 칠 때마다 키가 바뀌어 행이 재생성되고
+            // 포커스가 빠진다. 행은 추가/삭제로만 바뀌므로 index를 키로 쓴다.
+            <tr key={index}>
               <td><input aria-label={`${index + 1}번 종목`} value={row.ticker} onChange={(event) => update(index, "ticker", event.currentTarget.value.toUpperCase())} placeholder="NVDA / 005930" /></td>
               <td><input aria-label={`${row.ticker || index + 1} 수량`} value={row.quantity} onChange={(event) => update(index, "quantity", event.currentTarget.value)} inputMode="decimal" /></td>
               <td><input aria-label={`${row.ticker || index + 1} 평균단가`} value={row.averagePrice ?? ""} onChange={(event) => update(index, "averagePrice", event.currentTarget.value)} inputMode="decimal" /></td>

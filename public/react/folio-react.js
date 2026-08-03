@@ -11187,19 +11187,19 @@ function qi() {
 	async function j(e) {
 		e.preventDefault();
 		let t = c.trim();
-		if (!(!i || !t || h)) {
-			g(!0), v(""), u("");
-			try {
-				let e = await o(`/api/agent/consultations/${encodeURIComponent(i.id)}/messages`, {
-					message: t,
-					operationId: Gi()
-				});
-				await k(e.sessionId), await Re(e.job), await k(e.sessionId), await O();
-			} catch (e) {
-				u(t), v(e instanceof Error ? e.message : "상담 답변을 가져오지 못했습니다. 저장된 질문은 다시 시도할 수 있습니다."), i && await k(i.id).catch(() => void 0);
-			} finally {
-				g(!1);
-			}
+		if (!i || !t || h) return;
+		g(!0), v(""), u("");
+		let n = !1;
+		try {
+			let e = await o(`/api/agent/consultations/${encodeURIComponent(i.id)}/messages`, {
+				message: t,
+				operationId: Gi()
+			});
+			n = !0, await k(e.sessionId), await ze(e.job), await k(e.sessionId), await O();
+		} catch (e) {
+			n || u(t), v(e instanceof Error ? e.message : "상담 답변을 가져오지 못했습니다. 저장된 질문은 다시 시도할 수 있습니다."), i && await k(i.id).catch(() => void 0);
+		} finally {
+			g(!1);
 		}
 	}
 	async function M() {
@@ -11241,7 +11241,7 @@ function qi() {
 					retryMessageId: R.id,
 					operationId: Gi()
 				});
-				await Re(e.job), await k(e.sessionId);
+				await ze(e.job), await k(e.sessionId);
 			} catch (e) {
 				v(e instanceof Error ? e.message : "재시도에 실패했습니다.");
 			} finally {
@@ -15009,7 +15009,7 @@ function To({ positions: e, onChange: t }) {
 					onClick: () => t(e.filter((e, t) => t !== i)),
 					children: "삭제"
 				}) })
-			] }, `${r.ticker}-${i}`)) })]
+			] }, i)) })]
 		}), !e.length && /* @__PURE__ */ (0, x.jsx)("p", {
 			className: "cockpit-empty",
 			children: "등록된 보유 종목이 없습니다. 직접 추가하거나 증권사 화면에서 가져오세요."
@@ -15033,11 +15033,11 @@ function Eo(e, t) {
 			...r
 		};
 		else {
-			let r = Number(n[t].quantity) || 0, i = Number(n[t].averagePrice) || 0, a = r + e.quantity, o = e.averagePrice != null && a > 0 ? (r * i + e.quantity * e.averagePrice) / a : i;
-			n[t] = {
+			let r = Number(n[t].quantity) || 0, i = n[t].averagePrice, a = i !== "" && i != null && Number(i) > 0, o = a ? Number(i) : 0, s = r + e.quantity, c = i ?? "";
+			e.averagePrice != null && s > 0 && (c = a ? (r * o + e.quantity * e.averagePrice) / s : e.averagePrice), n[t] = {
 				...n[t],
-				quantity: a,
-				averagePrice: o || ""
+				quantity: s,
+				averagePrice: c
 			};
 		}
 	}

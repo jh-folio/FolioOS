@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deleteJson, getJson, postJson, type JobStatus } from "../../api";
-import { pollAgentJobBounded } from "../agentPolling";
+import { pollAgentJobUntilTerminal } from "../agentPolling";
 import { dismissLegacyConsultationNotice, getActiveConsultationId, setActiveConsultationId, shouldShowLegacyConsultationNotice } from "./storage";
 import type { ConsultationSession } from "./types";
 
@@ -101,14 +101,19 @@ export function ConsultationPanel() {
     const message = input.trim();
     if (!session || !message || busy) return;
     setBusy(true); setError(""); setInput("");
+    // 서버가 user turn을 먼저 저장하므로, 저장에 성공한 뒤 실패하면 질문은 이미 남아 있다.
+    // 이때 작성칸을 되돌리면 사용자가 다시 보내게 되고 새 operationId라 멱등성이 깨져
+    // 같은 질문이 두 번 저장된다. 저장 전 실패에만 되돌린다.
+    let posted = false;
     try {
       const response = await postJson<MessageResponse>(`/api/agent/consultations/${encodeURIComponent(session.id)}/messages`, { message, operationId: operationId() });
+      posted = true;
       await loadSession(response.sessionId);
-      await pollAgentJobBounded(response.job);
+      await pollAgentJobUntilTerminal(response.job);
       await loadSession(response.sessionId);
       await loadList();
     } catch (reason) {
-      setInput(message);
+      if (!posted) setInput(message);
       setError(reason instanceof Error ? reason.message : "상담 답변을 가져오지 못했습니다. 저장된 질문은 다시 시도할 수 있습니다.");
       if (session) await loadSession(session.id).catch(() => undefined);
     } finally { setBusy(false); }
@@ -159,7 +164,7 @@ export function ConsultationPanel() {
     setBusy(true); setError("");
     try {
       const response = await postJson<MessageResponse>(`/api/agent/consultations/${encodeURIComponent(session.id)}/messages`, { retryMessageId: waitingMessage.id, operationId: operationId() });
-      await pollAgentJobBounded(response.job); await loadSession(response.sessionId);
+      await pollAgentJobUntilTerminal(response.job); await loadSession(response.sessionId);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "재시도에 실패했습니다."); }
     finally { setBusy(false); }
   }
