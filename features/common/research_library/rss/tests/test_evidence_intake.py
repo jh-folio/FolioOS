@@ -686,3 +686,15 @@ def test_press_release_feeds_are_tagged_and_excluded_from_briefing_only():
     assert is_news_document({"path": base, "sourceType": "news"}) is True
     # source_type이 없는 기존 문서도 회귀 없이 통과해야 한다
     assert is_news_document({"path": base}) is True
+
+
+def test_rss_list_hides_press_releases_until_the_source_is_chosen():
+    """와이어는 발행량이 많아 기본 목록 앞쪽을 점유한다. 소스를 고를 때만 보여준다."""
+    from features.common.research_library.rss.service import _cache_where
+
+    default_where, _ = _cache_where()
+    assert "press_release" in default_where
+
+    chosen_where, params = _cache_where(source="PR Newswire")
+    assert "press_release" not in chosen_where
+    assert "PR Newswire" in params

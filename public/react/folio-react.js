@@ -16184,25 +16184,34 @@ function hs() {
 						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시작" }), /* @__PURE__ */ (0, x.jsx)("input", {
 							type: "datetime-local",
 							value: u.start,
-							onChange: (e) => d((t) => ({
-								...t,
-								start: e.currentTarget.value
-							}))
+							onChange: (e) => {
+								let t = e.currentTarget.value;
+								d((e) => ({
+									...e,
+									start: t
+								}));
+							}
 						})] }),
 						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "종료" }), /* @__PURE__ */ (0, x.jsx)("input", {
 							type: "datetime-local",
 							value: u.end,
-							onChange: (e) => d((t) => ({
-								...t,
-								end: e.currentTarget.value
-							}))
+							onChange: (e) => {
+								let t = e.currentTarget.value;
+								d((e) => ({
+									...e,
+									end: t
+								}));
+							}
 						})] }),
 						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "소스" }), /* @__PURE__ */ (0, x.jsxs)("select", {
 							value: u.source,
-							onChange: (e) => d((t) => ({
-								...t,
-								source: e.currentTarget.value
-							})),
+							onChange: (e) => {
+								let t = e.currentTarget.value;
+								d((e) => ({
+									...e,
+									source: t
+								}));
+							},
 							children: [/* @__PURE__ */ (0, x.jsx)("option", {
 								value: "",
 								children: "전체 소스"
