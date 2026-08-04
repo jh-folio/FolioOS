@@ -15160,13 +15160,17 @@ main.page {
   text-transform: lowercase;
 }
 
+/* 끝을 각지게 둔다. 둥근 끝은 획처럼 뭉개져 보인다 — 잘린 끝이라야 선분으로 읽힌다.
+   단면 액센트에 둥근 모서리를 쓰지 않는다는 규칙과도 일관된다. */
 .folio-wordmark__bar {
   display: block;
   flex: none;
-  border-radius: 2px;
+  border-radius: 0;
 }
 
-/* chrome(상단바): 짧은 잉크 막대. 크롬은 조용해야 하므로 브랜드색을 쓰지 않는다 */
+/* chrome(상단바): 짧은 잉크 막대. 크롬은 조용해야 하므로 브랜드색을 쓰지 않는다.
+   작은 스케일에서는 여백이 넓으면 두 단어가 따로 놀아 보여 간격을 좁게 잡는다. */
+.folio-wordmark[data-variant="chrome"] { gap: 6px; }
 .folio-wordmark[data-variant="chrome"] .folio-wordmark__word { font-size: 19px; }
 .folio-wordmark[data-variant="chrome"] .folio-wordmark__bar {
   width: 16px;
@@ -15192,6 +15196,7 @@ main.page {
 .home-hero h1 { display: flex; justify-content: center; font-size: 0; }
 
 @media (max-width: 760px) {
+  .folio-wordmark[data-variant="chrome"] { gap: 5px; }
   .folio-wordmark[data-variant="chrome"] .folio-wordmark__word { font-size: 17px; }
   .folio-wordmark[data-variant="chrome"] .folio-wordmark__bar { width: 13px; }
 }
