@@ -3,6 +3,19 @@ from __future__ import annotations
 from features.common.change_intelligence.basis import content_hash, normalize_basis, stable_id
 
 
+def _briefing_artifact_id(report: dict, scope: str) -> str:
+    """Briefings are stored per market, so the id has to carry the market too.
+
+    A bare date collides in the projection's ``(artifact_kind, artifact_id)`` key —
+    the KR commit would overwrite the US change event — and leaves the Change Feed
+    unable to tell which briefing to open.
+    """
+    base = str(report.get("id") or report.get("date") or "").strip()
+    if not base or scope not in {"us", "kr"} or base.endswith(f".{scope}"):
+        return base
+    return f"{base}.{scope}"
+
+
 def build_briefing_basis(report: dict, *, generation_docs: list[dict] | None = None) -> dict:
     report = report or {}
     docs = generation_docs or report.get("sources") or []
@@ -23,15 +36,20 @@ def build_briefing_basis(report: dict, *, generation_docs: list[dict] | None = N
         })
     ref_ids = [row["id"] for row in refs]
     units = []
-    for index, driver in enumerate(report.get("marketDrivers") or [], 1):
-        if not isinstance(driver, dict):
-            continue
+    drivers = [row for row in report.get("marketDrivers") or [] if isinstance(row, dict)]
+    # A driver score is an unbounded sum of document scores, so its absolute value
+    # says nothing on its own and wobbles between two runs of the same day. Compare
+    # rank and share of the day's total weight instead: bounded, and a change in
+    # either actually means the day's driver mix moved.
+    total_score = sum(abs(float(row.get("score") or 0)) for row in drivers)
+    for rank, driver in enumerate(drivers, 1):
         subject = driver.get("driver") or driver.get("title")
-        score = float(driver.get("score") or 0)
+        score = abs(float(driver.get("score") or 0))
+        share = round(score / total_score, 2) if total_score else 0.0
         units.append({
             "id": stable_id("driver", report.get("marketScope"), subject), "kind": "market_driver",
-            "subject": subject, "currentValue": {"score": round(score, 2), "docCount": int(driver.get("docCount") or 0), "markets": driver.get("markets") or []},
-            "direction": "active", "magnitude": min(1.0, abs(score) / 20 if score else 0.2),
+            "subject": subject, "currentValue": {"rank": rank, "share": share, "docCount": int(driver.get("docCount") or 0)},
+            "direction": "active", "magnitude": share or 0.2,
             "horizon": "short_term", "sourceRefIds": ref_ids[:12],
         })
     for issue in (report.get("issueCoverage") or [])[:8]:
@@ -56,9 +74,10 @@ def build_briefing_basis(report: dict, *, generation_docs: list[dict] | None = N
                 "horizon": "short_term", "sourceRefIds": ref_ids[:4],
             })
     counter = [gap.get("message") or gap.get("title") for gap in report.get("dataGaps") or [] if isinstance(gap, dict)]
+    scope = str(report.get("marketScope") or "both").strip().lower() or "both"
     return normalize_basis({
-        "artifactKind": "briefing", "artifactId": report.get("id") or report.get("date"),
-        "lineageId": f"briefing:{report.get('marketScope') or 'both'}", "scope": {"market": report.get("marketScope") or "both"},
+        "artifactKind": "briefing", "artifactId": _briefing_artifact_id(report, scope),
+        "lineageId": f"briefing:{scope}", "scope": {"market": scope},
         "asOf": report.get("generatedAt") or report.get("date"), "changeUnits": units,
         "sourceRefs": refs, "counterSignals": [], "uncertainties": counter, "metrics": metrics,
         "coverage": {"comparison": 1 if units else 0, "market": 1 if metrics else 0},

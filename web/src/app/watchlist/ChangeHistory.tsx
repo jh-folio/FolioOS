@@ -1,6 +1,7 @@
 export type ChangeEvent = {
   artifactKind?: string;
   artifactId?: string;
+  lineageId?: string;
   status?: string;
   generatedAt?: string;
   materiality?: number;
@@ -31,6 +32,25 @@ function formatNumber(value: unknown): string {
   return Number.isFinite(numeric) ? numeric.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(value ?? "");
 }
 
+type DriverValue = { rank?: unknown; share?: unknown };
+
+/** 동인은 그날 전체 비중에서 몇 위였고 얼마를 차지했는지가 읽을 값이다. */
+function driverDetail(item: ChangedItem): string {
+  const current = (item.currentValue || {}) as DriverValue;
+  const previous = (item.previousValue || {}) as DriverValue;
+  const rank = Number(current.rank);
+  const previousRank = Number(previous.rank);
+  const share = Number(current.share);
+  const parts: string[] = [];
+  if (Number.isFinite(rank) && rank > 0) {
+    parts.push(Number.isFinite(previousRank) && previousRank > 0 && previousRank !== rank
+      ? `${previousRank}순위 → ${rank}순위`
+      : `${rank}순위`);
+  }
+  if (Number.isFinite(share) && share > 0) parts.push(`비중 ${Math.round(share * 100)}%`);
+  return parts.join(" · ");
+}
+
 /** 항목 종류별로 실제로 담긴 값을 짧게 풀어 쓴다. */
 function changeDetail(item: ChangedItem): string {
   const current = item.currentValue;
@@ -38,6 +58,8 @@ function changeDetail(item: ChangedItem): string {
     if (item.previousValue != null && current != null) return `${formatNumber(item.previousValue)} → ${formatNumber(current)}`;
     return current != null ? formatNumber(current) : "";
   }
+  // 동인의 markets는 시장이 아니라 "US 전일 정규장" 같은 세션 구간 이름이라 읽을 값이 아니다.
+  if (item.kind === "market_driver") return driverDetail(item);
   if (current && typeof current === "object") {
     const row = current as { markets?: unknown; market?: unknown; docCount?: unknown; impact?: unknown };
     const parts: string[] = [];

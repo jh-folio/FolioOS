@@ -168,3 +168,45 @@ def test_stale_baseline_outside_the_comparable_window_is_rejected():
     company = _basis("company_analysis", "NVDA:2026-08-01", "2026-08-01T00:00:00+00:00", "company:NVDA")
     older = _basis("company_analysis", "NVDA:2026-05-05", "2026-05-05T00:00:00+00:00", "company:NVDA")
     assert _matches(company, older) is True
+
+
+def _briefing(scope, drivers):
+    return {"date": "2026-08-04", "marketScope": scope, "marketDrivers": drivers, "sources": [source(2)]}
+
+
+def test_briefing_artifact_id_carries_the_market():
+    """한 날짜에 US/KR 두 보고서가 저장되므로 id가 같으면 projection에서 서로를 덮어쓴다."""
+    us = build_briefing_basis(_briefing("us", [{"driver": "rates", "score": 12}]))
+    kr = build_briefing_basis(_briefing("kr", [{"driver": "rates", "score": 12}]))
+    assert us["artifactId"] == "2026-08-04.us"
+    assert kr["artifactId"] == "2026-08-04.kr"
+    assert us["artifactId"] != kr["artifactId"]
+
+    both = build_briefing_basis(_briefing("both", [{"driver": "rates", "score": 12}]))
+    assert both["artifactId"] == "2026-08-04"
+    already = build_briefing_basis({**_briefing("us", []), "id": "2026-08-04.us"})
+    assert already["artifactId"] == "2026-08-04.us"
+
+
+def test_driver_magnitude_is_a_bounded_share_not_a_raw_score():
+    """동인 점수는 상한 없는 합계라 절대값으로 중요도를 매기면 항상 최대가 된다."""
+    basis_rows = build_briefing_basis(_briefing("us", [
+        {"driver": "semis", "score": 51525.2, "docCount": 5},
+        {"driver": "earnings", "score": 39551.6, "docCount": 5},
+        {"driver": "oil", "score": 38106.6, "docCount": 5},
+    ]))
+    units = [row for row in basis_rows["changeUnits"] if row["kind"] == "market_driver"]
+    assert [row["currentValue"]["rank"] for row in units] == [1, 2, 3]
+    assert all(0 < row["magnitude"] <= 1 for row in units)
+    assert units[0]["magnitude"] < 0.7, "단일 동인이 중대한 변화 문턱을 혼자 넘으면 안 된다"
+    assert abs(sum(row["currentValue"]["share"] for row in units) - 1.0) < 0.05
+    assert "markets" not in units[0]["currentValue"]
+
+
+def test_same_driver_mix_with_drifting_scores_is_not_a_change():
+    """같은 날 재생성으로 점수만 흔들리면 변화가 아니다."""
+    first = build_briefing_basis(_briefing("us", [{"driver": "semis", "score": 51525.2}, {"driver": "oil", "score": 38106.6}]))
+    second = build_briefing_basis(_briefing("us", [{"driver": "semis", "score": 51410.9}, {"driver": "oil", "score": 38020.1}]))
+    summary = compare_basis(second, first, current_ref={"storageKind": "json_report", "id": "b2", "contentHash": "x"})
+    assert summary["changedItems"] == []
+    assert summary["status"] == "no_material_change"
