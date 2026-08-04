@@ -1042,3 +1042,37 @@ def test_target_feed_score_floors_at_the_archive_threshold():
     assert calculate_relevance_score(rich, target, baseline=1.0) > 1.0
     # US/KR 경로는 feed 유무와 무관하게 동일하다.
     assert calculate_relevance_score(rich) == calculate_relevance_score(rich, {"media": "CNBC"})
+
+
+def test_rss_feed_payload_filters_by_country_and_language():
+    """유럽 6개국이 한 시장으로 묶이므로 국가 필터가 없으면 독일 기사만 볼 수 없다."""
+    from features.common.research_library.rss.service import _cache_where
+
+    where, params = _cache_where(country="DE")
+    assert "country = ?" in where
+    assert "DE" in params
+
+    where, params = _cache_where(language="ja")
+    assert "language = ?" in where
+    assert "ja" in params
+
+    # 소문자/대문자 입력을 저장 형식으로 맞춘다.
+    _, params = _cache_where(country="de", language="JA")
+    assert "DE" in params and "ja" in params
+
+    # 필터를 주지 않으면 조건이 늘어나지 않는다.
+    where_plain, _ = _cache_where()
+    assert "country = ?" not in where_plain
+    assert "language = ?" not in where_plain
+
+
+def test_market_filter_accepts_the_new_markets_and_the_eu_alias():
+    from features.common.research_library.rss.service import _normalize_market_filter
+
+    assert _normalize_market_filter("EUROPE") == "EUROPE"
+    assert _normalize_market_filter("JP") == "JP"
+    # `EU`는 경계 alias일 뿐 저장/조회값은 EUROPE다.
+    assert _normalize_market_filter("EU") == "EUROPE"
+    assert _normalize_market_filter("US") == "US"
+    assert _normalize_market_filter("KR") == "KR"
+    assert _normalize_market_filter("ZZ") == ""

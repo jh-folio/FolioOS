@@ -15076,11 +15076,15 @@ main.page {
   background: var(--surface-control-hover);
 }
 
-/* route hero 액션(모든 화면 우상단 새로고침 등): (0,1,1) 광역 테두리 규칙 되받기 */
+/* route hero 액션(모든 화면 우상단 새로고침 등): (0,1,1) 광역 테두리 규칙 되받기.
+   원래는 어두운 배경 + 밝은 글자(--folio-ink-inverse)였다. 배경만 밝은 fill로 바꾸면
+   밝은 회색 위에 밝은 글자가 남아 대비가 무너지므로 글자색도 함께 뒤집는다
+   (axe serious color-contrast로 실제 검출됨). */
 .react-route-hero-actions button {
   border: none;
   border-radius: var(--r-control);
   background: var(--surface-control);
+  color: var(--folio-ink-soft);
   font-weight: var(--fw-medium);
 }
 .react-route-hero-actions button:hover { background: var(--surface-control-hover); }
@@ -15277,4 +15281,28 @@ main.page {
     transform: none;
   }
   .home-hero { animation: none; }
+}
+
+/* --- RSS 탐색 패널: 필터 표면 통합 (0.5 Task 1.4) ---
+   기간·소스 폼, 별도 검색 폼, 목록 옆 즉시적용 시장 드롭다운으로 셋이던 것을
+   한 그리드로 합쳤다. 컨트롤이 3개에서 7개로 늘어 고정 4열로는 넘치므로
+   auto-fit으로 바꾸고, 검색어만 한 줄을 차지하게 둔다. */
+.react-rss-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.react-rss-filter-grid .react-rss-filter-wide {
+  grid-column: 1 / -1;
+}
+.react-rss-filter-grid .react-rss-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+@media (max-width: 760px) {
+  .react-rss-filter-grid {
+    grid-template-columns: 1fr;
+  }
 }

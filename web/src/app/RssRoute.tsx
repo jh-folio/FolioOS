@@ -22,6 +22,8 @@ type RssPayload = {
   limit?: number;
   has_more?: boolean;
   sources?: string[];
+  countries?: string[];
+  languages?: string[];
 };
 
 type RssFilters = {
@@ -29,6 +31,8 @@ type RssFilters = {
   end: string;
   source: string;
   market: string;
+  country: string;
+  language: string;
 };
 
 type SearchDocument = {
@@ -60,14 +64,24 @@ type AgentJob = {
   result?: Record<string, unknown>;
 };
 
-const EMPTY_FILTERS: RssFilters = { start: "", end: "", source: "", market: "" };
+const EMPTY_FILTERS: RssFilters = { start: "", end: "", source: "", market: "", country: "", language: "" };
 const pageSize = 20;
 const MARKET_OPTIONS = [
   { value: "", label: "전체 시장" },
   { value: "US", label: "미국" },
   { value: "KR", label: "한국" },
+  { value: "EUROPE", label: "유럽" },
+  { value: "JP", label: "일본" },
   { value: "GLOBAL", label: "글로벌" },
 ];
+
+// 유럽은 6개국이 한 시장으로 묶여 있어, 국가 필터가 없으면 독일 기사만 보는 방법이 없다.
+const COUNTRY_LABELS: Record<string, string> = {
+  GB: "영국", DE: "독일", FR: "프랑스", NL: "네덜란드", IT: "이탈리아", ES: "스페인", JP: "일본",
+};
+const LANGUAGE_LABELS: Record<string, string> = {
+  en: "영어", de: "독일어", fr: "프랑스어", nl: "네덜란드어", it: "이탈리아어", es: "스페인어", ja: "일본어", ko: "한국어",
+};
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -86,6 +100,8 @@ function filterLabel(filters: RssFilters) {
     filters.end ? `${filters.end} 이전` : "",
     filters.source ? filters.source : "",
     filters.market ? MARKET_OPTIONS.find((item) => item.value === filters.market)?.label || filters.market : "",
+    filters.country ? COUNTRY_LABELS[filters.country] || filters.country : "",
+    filters.language ? LANGUAGE_LABELS[filters.language] || filters.language : "",
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : "전체 RSS 피드";
 }
@@ -99,6 +115,8 @@ function buildParams(page: number, filters: RssFilters) {
   if (filters.end) params.set("end", filters.end);
   if (filters.source) params.set("source", filters.source);
   if (filters.market) params.set("market", filters.market);
+  if (filters.country) params.set("country", filters.country);
+  if (filters.language) params.set("language", filters.language);
   return params;
 }
 
@@ -170,6 +188,8 @@ export function RssRoute() {
   const total = payload?.total ?? items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const sources = useMemo(() => payload?.sources || [], [payload?.sources]);
+  const countries = useMemo(() => payload?.countries || [], [payload?.countries]);
+  const languages = useMemo(() => payload?.languages || [], [payload?.languages]);
 
   const loadItems = useCallback(async (nextPage = page, nextFilters = filters) => {
     setLoading(true);
@@ -216,11 +236,6 @@ export function RssRoute() {
     await loadItems(1, draftFilters);
   }
 
-  async function applyMarketFilter(nextMarket: string) {
-    setStatus("");
-    await loadItems(1, { ...filters, market: nextMarket });
-  }
-
   async function clearFilters() {
     setStatus("");
     setSearchQuery("");
@@ -228,8 +243,9 @@ export function RssRoute() {
     await loadItems(1, EMPTY_FILTERS);
   }
 
-  async function searchNews(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // 필터 폼 안의 버튼에서도 호출되므로 이벤트 없이도 동작해야 한다.
+  async function searchNews(event?: React.SyntheticEvent) {
+    event?.preventDefault();
     const query = searchQuery.trim();
     if (!query) {
       setError("검색어를 입력해 주세요.");
@@ -306,17 +322,78 @@ export function RssRoute() {
         )}
       />
 
-      <section className="react-rss-control-panel react-rss-filter-panel" aria-label="RSS 필터">
+      {/* 필터 표면이 셋으로 흩어져 있었다: 기간·소스 폼, 별도 검색 폼, 그리고 목록 옆에서
+          즉시 적용되던 시장 드롭다운. 한 패널에 같은 양식으로 모으고 적용 방식도 통일한다.
+          시장·국가·언어가 함께 있어야 유럽 6개국을 갈라 볼 수 있다. */}
+      <section className="react-rss-control-panel react-rss-filter-panel" aria-label="RSS 필터와 검색">
         <div className="react-rss-panel-head">
           <div>
-            <h2>피드 필터</h2>
-            <p>시간 범위와 소스를 선택해 RSS 피드를 필터링합니다. 시간은 UTC+9 기준입니다.</p>
+            <h2>피드 탐색</h2>
+            <p>검색어와 시장·국가·언어·기간·소스를 함께 좁혀 봅니다. 시간은 UTC+9 기준입니다.</p>
           </div>
           <button className="react-rss-period-action" type="button" onClick={clearFilters} disabled={loading}>
             전체 기간
           </button>
         </div>
         <form className="react-rss-filter-grid" onSubmit={applyFilters}>
+          <label className="react-rss-filter-wide">
+            <span>검색어</span>
+            <input
+              type="search"
+              value={searchQuery}
+              placeholder="기업, 티커, 섹터 또는 이슈"
+              onChange={(event) => setSearchQuery(event.currentTarget.value)}
+            />
+          </label>
+          <label>
+            <span>시장</span>
+            <select
+              value={draftFilters.market}
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, market: value })); }}
+            >
+              {MARKET_OPTIONS.map((option) => (
+                <option key={option.value || "all-market"} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>국가</span>
+            <select
+              value={draftFilters.country}
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, country: value })); }}
+            >
+              <option value="">전체 국가</option>
+              {countries.map((code) => (
+                <option key={code} value={code}>{COUNTRY_LABELS[code] || code}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>언어</span>
+            <select
+              value={draftFilters.language}
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, language: value })); }}
+            >
+              <option value="">전체 언어</option>
+              {languages.map((code) => (
+                <option key={code} value={code}>{LANGUAGE_LABELS[code] || code}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>소스</span>
+            <select
+              value={draftFilters.source}
+              // 상태 업데이터는 렌더 시점에 실행되는데 그때 React는 currentTarget을 이미 비운다.
+              // 이벤트 값을 핸들러 안에서 먼저 읽어야 한다.
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, source: value })); }}
+            >
+              <option value="">전체 소스</option>
+              {sources.map((source) => (
+                <option key={source} value={source}>{source}</option>
+              ))}
+            </select>
+          </label>
           <label>
             <span>시작</span>
             <input
@@ -333,44 +410,13 @@ export function RssRoute() {
               onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, end: value })); }}
             />
           </label>
-          <label>
-            <span>소스</span>
-            <select
-              value={draftFilters.source}
-              // 상태 업데이터는 렌더 시점에 실행되는데 그때 React는 currentTarget을 이미 비운다.
-              // 이벤트 값을 핸들러 안에서 먼저 읽어야 한다.
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, source: value })); }}
-            >
-              <option value="">전체 소스</option>
-              {sources.map((source) => (
-                <option key={source} value={source}>{source}</option>
-              ))}
-            </select>
-          </label>
           <div className="react-rss-filter-actions">
-            <button className="react-rss-primary-action" type="submit" disabled={loading}>필터 적용</button>
-            <button className="react-rss-secondary-action" type="button" onClick={clearFilters} disabled={loading}>초기화</button>
+            <button className="btn btn--primary" type="submit" disabled={loading}>필터 적용</button>
+            <button className="btn" type="button" onClick={searchNews} disabled={searching}>
+              {searching ? "검색 중" : "본문 검색"}
+            </button>
+            <button className="btn btn--text" type="button" onClick={clearFilters} disabled={loading}>초기화</button>
           </div>
-        </form>
-      </section>
-
-      <section className="react-rss-control-panel react-rss-search-panel" aria-label="뉴스 검색">
-        <div className="react-rss-panel-head">
-          <div>
-            <h2>뉴스 검색</h2>
-            <p>기업, 티커, 섹터, 시장 이슈 기준으로 RSS와 수동 저장 기사를 검색합니다.</p>
-          </div>
-        </div>
-        <form className="react-rss-search-form" onSubmit={searchNews}>
-          <input
-            type="search"
-            value={searchQuery}
-            placeholder="기업, 티커, 섹터 또는 이슈"
-            onChange={(event) => setSearchQuery(event.currentTarget.value)}
-          />
-          <button className="react-rss-primary-action" type="submit" disabled={searching}>
-            {searching ? "검색 중" : "검색"}
-          </button>
         </form>
       </section>
 
@@ -381,24 +427,6 @@ export function RssRoute() {
 
       {error && <p className="react-dashboard-error">{error}</p>}
       {status && <p className="react-dashboard-warning">{status}</p>}
-
-      <div className="report-feed-outside-controls react-rss-market-controls" aria-label="RSS 표시 옵션">
-        <div className="report-feed-view-row">
-          <span>시장</span>
-          <label className="report-feed-view-pill">
-            <select
-              aria-label="RSS 시장"
-              value={filters.market}
-              onChange={(event) => applyMarketFilter(event.currentTarget.value)}
-              disabled={loading}
-            >
-              {MARKET_OPTIONS.map((option) => (
-                <option key={option.value || "all-market"} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
 
       <section className="react-rss-feed" aria-label="RSS feed items">
         {items.length ? items.map((item, index) => {

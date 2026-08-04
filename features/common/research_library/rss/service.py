@@ -438,10 +438,12 @@ def archive_media(path):
 
 def _normalize_market_filter(value):
     token = str(value or "").strip().upper()
-    return token if token in {"US", "KR", "GLOBAL", "UNKNOWN"} else ""
+    if token == "EU":  # 경계 alias만 받고 저장/조회값은 EUROPE다.
+        token = "EUROPE"
+    return token if token in {"US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"} else ""
 
 
-def _cache_where(start_dt=None, end_dt=None, source="", market=""):
+def _cache_where(start_dt=None, end_dt=None, source="", market="", country="", language=""):
     clauses = ["visible = 1"]
     params = []
     # 보도자료 와이어는 기업 자료라 목록을 훑는 화면의 기본 대상이 아니다. 발행량이 많아
@@ -461,12 +463,22 @@ def _cache_where(start_dt=None, end_dt=None, source="", market=""):
     if market:
         clauses.append("(markets = ? OR markets LIKE ? OR markets LIKE ? OR markets LIKE ?)")
         params.extend([market, f"{market},%", f"%,{market},%", f"%,{market}"])
+    # 유럽은 6개국이 한 시장으로 묶이므로, 국가 필터가 없으면 독일 기사만 보는 방법이
+    # 없다. 언어는 원문을 읽을 수 있는 항목만 추릴 때 쓴다.
+    country = str(country or "").strip().upper()
+    if country:
+        clauses.append("country = ?")
+        params.append(country)
+    language = str(language or "").strip().lower()
+    if language:
+        clauses.append("language = ?")
+        params.append(language)
     return " AND ".join(clauses), params
 
 
-def rss_cache_files(start_dt=None, end_dt=None, source="", market="", limit=None, offset=0):
+def rss_cache_files(start_dt=None, end_dt=None, source="", market="", limit=None, offset=0, country="", language=""):
     refresh_rss_feed_cache()
-    where, params = _cache_where(start_dt, end_dt, source, market)
+    where, params = _cache_where(start_dt, end_dt, source, market, country, language)
     sql = f"SELECT filename FROM {RSS_CACHE_TABLE} WHERE {where} ORDER BY timestamp_sort DESC, filename DESC"
     if limit is not None:
         sql += " LIMIT ? OFFSET ?"
@@ -513,8 +525,10 @@ def rss_feed_payload(qs):
     _, _, start_dt, end_dt = normalize_feed_range(qs)
     source = qs.get("source", [""])[0].strip()
     market = _normalize_market_filter(qs.get("market", [""])[0])
+    country = qs.get("country", [""])[0].strip().upper()
+    language = qs.get("language", [""])[0].strip().lower()
     cache_stats = refresh_rss_feed_cache()
-    where, params = _cache_where(start_dt, end_dt, source, market)
+    where, params = _cache_where(start_dt, end_dt, source, market, country, language)
     with _connect_cache() as conn:
         rows = conn.execute(
             f"""
@@ -540,7 +554,9 @@ def rss_feed_payload(qs):
         "sources": [row["media"] for row in source_rows],
         "source": source,
         "market": market,
-        "markets": ["US", "KR", "GLOBAL", "UNKNOWN"],
+        "country": country,
+        "language": language,
+        "markets": ["US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"],
         "languages": sorted({str(row["language"]) for row in deduped_rows if str(row["language"] or "")}),
         "countries": sorted({str(row["country"]) for row in deduped_rows if str(row["country"] or "")}),
         "has_more": offset + limit < total,
@@ -552,7 +568,10 @@ def rss_merge_payload(qs):
     start_value, end_value, start_dt, end_dt = normalize_feed_range(qs)
     source = qs.get("source", [""])[0].strip()
     market = _normalize_market_filter(qs.get("market", [""])[0])
-    files = rss_cache_files(start_dt, end_dt, source, market)
+    # 내려받는 병합 파일이 화면에 보이는 목록과 같은 범위여야 한다.
+    country = qs.get("country", [""])[0].strip().upper()
+    language = qs.get("language", [""])[0].strip().lower()
+    files = rss_cache_files(start_dt, end_dt, source, market, country=country, language=language)
     if start_dt and end_dt:
         filename = f"archive-{start_dt:%Y%m%d-%H%M}_to_{end_dt:%Y%m%d-%H%M}.md"
         range_label = f"{start_value.replace('T', ' ')} to {end_value.replace('T', ' ')}"
