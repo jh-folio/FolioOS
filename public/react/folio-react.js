@@ -17271,11 +17271,17 @@ function fc(e) {
 			enabled: !!e.briefing?.enabled,
 			time: e.briefing?.time || "08:00",
 			marketScope: e.briefing?.marketScope || "both",
+			briefingType: e.briefing?.briefingType || "default",
 			runPrerequisites: !!e.briefing?.runPrerequisites
 		}
 	};
 }
-function pc() {
+var pc = {
+	default: "기본",
+	market_focused: "시황 중심",
+	concise: "요약"
+};
+function mc() {
 	let e = p(), t = nc(), [n, r] = (0, b.useState)("integrations"), [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(null), [u, d] = (0, b.useState)({}), [f, m] = (0, b.useState)({}), [h, g] = (0, b.useState)(null), [_, v] = (0, b.useState)("openai"), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)(""), [T, E] = (0, b.useState)(!0), [D, O] = (0, b.useState)("cli"), [k, A] = (0, b.useState)("codex"), [j, M] = (0, b.useState)(""), [N, P] = (0, b.useState)({
 		fred: "",
 		bok: "",
@@ -18239,46 +18245,66 @@ function pc() {
 											}),
 											/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "settings-grid compact",
-												children: [/* @__PURE__ */ (0, x.jsxs)("label", {
-													className: "field",
-													children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "브리핑 시각" }), /* @__PURE__ */ (0, x.jsx)("input", {
-														value: u.briefing?.time || "08:00",
-														onChange: (e) => d({
-															...u,
-															briefing: {
-																...u.briefing,
-																time: e.currentTarget.value
-															}
-														}),
-														type: "time"
-													})]
-												}), /* @__PURE__ */ (0, x.jsxs)("label", {
-													className: "field",
-													children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시장 범위" }), /* @__PURE__ */ (0, x.jsxs)("select", {
-														value: u.briefing?.marketScope || "both",
-														onChange: (e) => d({
-															...u,
-															briefing: {
-																...u.briefing,
-																marketScope: e.currentTarget.value
-															}
-														}),
-														children: [
-															/* @__PURE__ */ (0, x.jsx)("option", {
-																value: "both",
-																children: "미국+한국"
+												children: [
+													/* @__PURE__ */ (0, x.jsxs)("label", {
+														className: "field",
+														children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "브리핑 시각" }), /* @__PURE__ */ (0, x.jsx)("input", {
+															value: u.briefing?.time || "08:00",
+															onChange: (e) => d({
+																...u,
+																briefing: {
+																	...u.briefing,
+																	time: e.currentTarget.value
+																}
 															}),
-															/* @__PURE__ */ (0, x.jsx)("option", {
-																value: "us",
-																children: "미국"
+															type: "time"
+														})]
+													}),
+													/* @__PURE__ */ (0, x.jsxs)("label", {
+														className: "field",
+														children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시장 범위" }), /* @__PURE__ */ (0, x.jsxs)("select", {
+															value: u.briefing?.marketScope || "both",
+															onChange: (e) => d({
+																...u,
+																briefing: {
+																	...u.briefing,
+																	marketScope: e.currentTarget.value
+																}
 															}),
-															/* @__PURE__ */ (0, x.jsx)("option", {
-																value: "kr",
-																children: "한국"
-															})
-														]
-													})]
-												})]
+															children: [
+																/* @__PURE__ */ (0, x.jsx)("option", {
+																	value: "both",
+																	children: "미국+한국"
+																}),
+																/* @__PURE__ */ (0, x.jsx)("option", {
+																	value: "us",
+																	children: "미국"
+																}),
+																/* @__PURE__ */ (0, x.jsx)("option", {
+																	value: "kr",
+																	children: "한국"
+																})
+															]
+														})]
+													}),
+													/* @__PURE__ */ (0, x.jsxs)("label", {
+														className: "field",
+														children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "브리핑 유형" }), /* @__PURE__ */ (0, x.jsx)("select", {
+															value: u.briefing?.briefingType || "default",
+															onChange: (e) => d({
+																...u,
+																briefing: {
+																	...u.briefing,
+																	briefingType: e.currentTarget.value
+																}
+															}),
+															children: Object.entries(pc).map(([e, t]) => /* @__PURE__ */ (0, x.jsx)("option", {
+																value: e,
+																children: t
+															}, e))
+														})]
+													})
+												]
 											}),
 											/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "automation-inline-switch",
@@ -18379,7 +18405,7 @@ function pc() {
 }
 //#endregion
 //#region src/app/watchlist/FastSignalList.tsx
-function mc(e) {
+function hc(e) {
 	if (!e) return "시각 미확인";
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? e : t.toLocaleString("ko-KR", {
@@ -18389,13 +18415,13 @@ function mc(e) {
 		minute: "2-digit"
 	});
 }
-var hc = {
+var gc = {
 	unconfirmed: "확인 전",
 	corroborated: "교차 확인",
 	expired: "만료",
 	retracted: "철회"
 };
-function gc({ signals: e, providers: t }) {
+function _c({ signals: e, providers: t }) {
 	let n = t.filter((e) => !["active", "delayed"].includes(String(e.sourceStatus || "")));
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "evidence-rail evidence-rail--lead",
@@ -18433,8 +18459,8 @@ function gc({ signals: e, providers: t }) {
 						className: "evidence-rail__meta",
 						children: [
 							/* @__PURE__ */ (0, x.jsx)("span", { children: e.provider || "unknown" }),
-							/* @__PURE__ */ (0, x.jsx)("span", { children: e.sourceStatus === "delayed" ? "지연 수신" : hc[e.signalStatus || ""] || "확인 전" }),
-							/* @__PURE__ */ (0, x.jsx)("time", { children: mc(e.providerPublishedAt) })
+							/* @__PURE__ */ (0, x.jsx)("span", { children: e.sourceStatus === "delayed" ? "지연 수신" : gc[e.signalStatus || ""] || "확인 전" }),
+							/* @__PURE__ */ (0, x.jsx)("time", { children: hc(e.providerPublishedAt) })
 						]
 					}),
 					e.url ? /* @__PURE__ */ (0, x.jsx)("a", {
@@ -18443,7 +18469,7 @@ function gc({ signals: e, providers: t }) {
 						rel: "noopener noreferrer",
 						children: e.title
 					}) : /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title }),
-					/* @__PURE__ */ (0, x.jsxs)("small", { children: ["수신 ", mc(e.receivedAt)] })
+					/* @__PURE__ */ (0, x.jsxs)("small", { children: ["수신 ", hc(e.receivedAt)] })
 				] }, e.id || `${e.provider}-${e.title}`))
 			}) : /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "section-subtitle",
@@ -18454,7 +18480,7 @@ function gc({ signals: e, providers: t }) {
 }
 //#endregion
 //#region src/app/watchlist/ConsultationEntry.tsx
-function _c({ item: e }) {
+function vc({ item: e }) {
 	return /* @__PURE__ */ (0, x.jsx)("button", {
 		type: "button",
 		className: "filter-btn apply",
@@ -18472,23 +18498,23 @@ function _c({ item: e }) {
 }
 //#endregion
 //#region src/app/WatchlistRoute.tsx
-function vc(e) {
+function yc(e) {
 	let t = /* @__PURE__ */ new Set();
 	return e.map((e) => String(e || "").trim()).filter(Boolean).filter((e) => {
 		let n = e.toLowerCase();
 		return !t.has(n) && (t.add(n), !0);
 	});
 }
-function yc(e) {
+function bc(e) {
 	return e.ticker || e.item || "";
 }
-function bc(e) {
-	return e.companyName || e.name || e.item || yc(e);
+function xc(e) {
+	return e.companyName || e.name || e.item || bc(e);
 }
-function xc(e, t = "") {
+function Sc(e, t = "") {
 	return e?.company?.name || e?.item || t || "상세 보기";
 }
-function Sc(e) {
+function Cc(e) {
 	if (!e) return "상세 정보를 불러오는 중입니다.";
 	let t = e.company || {};
 	return [
@@ -18498,27 +18524,27 @@ function Sc(e) {
 		e.newsCount ? `${e.newsCount}개 뉴스` : ""
 	].filter(Boolean).join(" · ") || "확인된 심볼 정보가 없습니다.";
 }
-function Cc(e = []) {
+function wc(e = []) {
 	return [...e].sort((e, t) => String(t.date || "").localeCompare(String(e.date || "")));
 }
-function wc(e) {
+function Tc(e) {
 	return e.title || e.url || e.path || "자료";
 }
-function Tc(e) {
+function Ec(e) {
 	return [e.source, e.date].filter(Boolean).join(" · ");
 }
-function Ec(e) {
+function Dc(e) {
 	window.location.hash = e ? `#/watchlist/${encodeURIComponent(e)}` : "#/watchlist";
 }
-function Dc() {
+function Oc() {
 	let e = window.location.hash.match(/^#\/?watchlist\/(.+)$/);
 	return e ? decodeURIComponent(e[1]) : "";
 }
-function Oc() {
+function kc() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "watchlist";
 }
-function kc() {
-	let { resolved: e } = p(), [t, n] = (0, b.useState)([]), [r, i] = (0, b.useState)([]), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(() => Dc()), [d, f] = (0, b.useState)(null), [m, h] = (0, b.useState)(!1), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), E = (0, b.useRef)(null), D = (0, b.useCallback)(async (e) => {
+function Ac() {
+	let { resolved: e } = p(), [t, n] = (0, b.useState)([]), [r, i] = (0, b.useState)([]), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(() => Oc()), [d, f] = (0, b.useState)(null), [m, h] = (0, b.useState)(!1), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), E = (0, b.useRef)(null), D = (0, b.useCallback)(async (e) => {
 		if (!e.length) {
 			i([]);
 			return;
@@ -18528,7 +18554,7 @@ function kc() {
 	}, []), O = (0, b.useCallback)(async () => {
 		h(!0), C("");
 		try {
-			let e = await l("/api/watchlist"), t = vc(Array.isArray(e) ? e : []);
+			let e = await l("/api/watchlist"), t = yc(Array.isArray(e) ? e : []);
 			n(t), await D(t), Ee("watchlist", {
 				surface: "watchlist",
 				viewId: "watchlist",
@@ -18545,7 +18571,7 @@ function kc() {
 		O();
 	}, [O]), (0, b.useEffect)(() => {
 		let e = () => {
-			Oc() && u(Dc());
+			kc() && u(Oc());
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), (0, b.useEffect)(() => {
@@ -18609,7 +18635,7 @@ function kc() {
 	async function k(e, t) {
 		y(!0), C("");
 		try {
-			let r = await o("/api/watchlist", { items: e }), i = vc(Array.isArray(r) ? r : []);
+			let r = await o("/api/watchlist", { items: e }), i = yc(Array.isArray(r) ? r : []);
 			n(i), await D(i), t && T(t);
 		} catch (e) {
 			C(e instanceof Error ? e.message : "워치리스트 저장에 실패했습니다.");
@@ -18635,9 +18661,9 @@ function kc() {
 		s(""), n.length !== t.length && await k(n, "워치리스트에 추가했습니다.");
 	}
 	async function M(e) {
-		await k(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), c === e && Ec();
+		await k(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), c === e && Dc();
 	}
-	let N = (0, b.useMemo)(() => Cc(d?.news || []), [d]), P = xc(d, c);
+	let N = (0, b.useMemo)(() => wc(d?.news || []), [d]), P = Sc(d, c);
 	return c ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "react-watchlist-route",
 		"data-watchlist-route": !0,
@@ -18650,7 +18676,7 @@ function kc() {
 					/* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
 						className: "reader-crumb-link",
-						onClick: () => Ec(),
+						onClick: () => Dc(),
 						children: "워치리스트"
 					}),
 					/* @__PURE__ */ (0, x.jsx)("span", {
@@ -18681,17 +18707,17 @@ function kc() {
 							}),
 							/* @__PURE__ */ (0, x.jsx)("p", {
 								className: "section-subtitle",
-								children: Sc(d)
+								children: Cc(d)
 							})
 						] }), /* @__PURE__ */ (0, x.jsxs)("div", {
 							className: "watchlist-detail-actions",
-							children: [/* @__PURE__ */ (0, x.jsx)(_c, { item: c }), /* @__PURE__ */ (0, x.jsx)("button", {
+							children: [/* @__PURE__ */ (0, x.jsx)(vc, { item: c }), /* @__PURE__ */ (0, x.jsx)("button", {
 								className: "icon-btn",
 								type: "button",
 								"aria-label": "닫기",
 								"data-tooltip": "닫기",
 								"data-tooltip-pos": "left",
-								onClick: () => Ec(),
+								onClick: () => Dc(),
 								children: "×"
 							})]
 						})]
@@ -18710,7 +18736,7 @@ function kc() {
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "watchlist-intelligence-rails",
-						children: [/* @__PURE__ */ (0, x.jsx)(gc, {
+						children: [/* @__PURE__ */ (0, x.jsx)(_c, {
 							signals: d?.fastSignals || [],
 							providers: d?.signalProviderHealth || []
 						}), /* @__PURE__ */ (0, x.jsx)(Qn, { events: d?.changeHistory || [] })]
@@ -18727,17 +18753,17 @@ function kc() {
 								children: [
 									/* @__PURE__ */ (0, x.jsx)("div", {
 										className: "meta",
-										children: Tc(e)
+										children: Ec(e)
 									}),
 									/* @__PURE__ */ (0, x.jsx)("h4", { children: e.url ? /* @__PURE__ */ (0, x.jsx)("a", {
 										href: e.url,
 										target: "_blank",
 										rel: "noopener noreferrer",
-										children: wc(e)
-									}) : /* @__PURE__ */ (0, x.jsx)("span", { children: wc(e) }) }),
+										children: Tc(e)
+									}) : /* @__PURE__ */ (0, x.jsx)("span", { children: Tc(e) }) }),
 									e.snippet && /* @__PURE__ */ (0, x.jsx)("p", { children: e.snippet })
 								]
-							}, `${wc(e)}-${t}`))
+							}, `${Tc(e)}-${t}`))
 						}) : /* @__PURE__ */ (0, x.jsx)("p", {
 							className: "section-subtitle",
 							children: "수집된 관련 뉴스가 없습니다."
@@ -18806,16 +18832,16 @@ function kc() {
 			/* @__PURE__ */ (0, x.jsx)("div", {
 				className: "watchlist-grid",
 				children: r.length ? r.map((e) => {
-					let t = e.item || bc(e);
+					let t = e.item || xc(e);
 					return /* @__PURE__ */ (0, x.jsxs)("article", {
 						className: "watchlist-card",
 						"data-watchlist-detail-item": t,
 						tabIndex: 0,
 						role: "button",
 						"aria-label": `${t} 상세 보기`,
-						onClick: () => Ec(t),
+						onClick: () => Dc(t),
 						onKeyDown: (e) => {
-							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), Ec(t));
+							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), Dc(t));
 						},
 						children: [
 							/* @__PURE__ */ (0, x.jsx)("span", {
@@ -18848,8 +18874,8 @@ function kc() {
 								className: "watchlist-card-top",
 								children: [/* @__PURE__ */ (0, x.jsx)("strong", {
 									className: "watchlist-ticker",
-									children: yc(e)
-								}), /* @__PURE__ */ (0, x.jsx)("h3", { children: bc(e) })]
+									children: bc(e)
+								}), /* @__PURE__ */ (0, x.jsx)("h3", { children: xc(e) })]
 							}),
 							/* @__PURE__ */ (0, x.jsxs)("div", {
 								className: "watchlist-card-meta",
@@ -18876,18 +18902,18 @@ function kc() {
 }
 //#endregion
 //#region src/app/statusStore.ts
-var Ac = {
+var jc = {
 	statusText: "",
 	docCount: "",
 	activeJobId: null
 };
-function jc() {
-	return Ac;
-}
 function Mc() {
-	let [e, t] = (0, b.useState)(() => jc());
+	return jc;
+}
+function Nc() {
+	let [e, t] = (0, b.useState)(() => Mc());
 	return (0, b.useEffect)(() => {
-		let e = () => t(jc());
+		let e = () => t(Mc());
 		e();
 		let n = window.setInterval(e, 1e3);
 		return () => window.clearInterval(n);
@@ -18895,7 +18921,7 @@ function Mc() {
 }
 //#endregion
 //#region src/app/AppShell.tsx
-var Nc = [
+var Pc = [
 	{
 		id: "home",
 		title: "홈",
@@ -18925,7 +18951,7 @@ var Nc = [
 		title: "시스템",
 		routes: ["settings"]
 	}
-], Pc = {
+], Fc = {
 	home: /* @__PURE__ */ (0, x.jsxs)("svg", {
 		className: "react-left-nav-svg",
 		viewBox: "0 0 24 24",
@@ -19057,25 +19083,25 @@ var Nc = [
 		"aria-hidden": "true",
 		children: [/* @__PURE__ */ (0, x.jsx)("path", { d: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" }), /* @__PURE__ */ (0, x.jsx)("path", { d: "M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.22 3.43l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.34.4.7.6 1a1.7 1.7 0 0 0 1.1.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.1.4c-.17.14-.31.28-.41.2Z" })]
 	})
-}, Fc = "(max-width: 1024px)";
-function Ic() {
-	return typeof window < "u" && window.matchMedia(Fc).matches;
-}
+}, Ic = "(max-width: 1024px)";
 function Lc() {
+	return typeof window < "u" && window.matchMedia(Ic).matches;
+}
+function Rc() {
 	let e = window.location.hash || Gr(tc());
 	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Gr("home")) : e;
 }
-function Rc() {
-	let [e, t] = (0, b.useState)(() => Lc());
+function zc() {
+	let [e, t] = (0, b.useState)(() => Rc());
 	return (0, b.useEffect)(() => {
-		let e = () => t(Lc());
+		let e = () => t(Rc());
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), {
 		hash: e,
 		routeId: Wr(e)
 	};
 }
-async function zc(e) {
+async function Bc(e) {
 	await new Promise((e) => window.setTimeout(e, 1500));
 	let t = Date.now() + 6e4;
 	for (; Date.now() < t;) {
@@ -19089,11 +19115,11 @@ async function zc(e) {
 	}
 	e("재시작 확인 실패 · 수동 새로고침 필요");
 }
-function Bc() {
-	let { hash: e, routeId: t } = Rc(), n = Kr(t), r = tc(nc().preferences), i = Mc(), [a, o] = (0, b.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, b.useRef)(!1), [c, l] = (0, b.useState)(() => {
+function $() {
+	let { hash: e, routeId: t } = zc(), n = Kr(t), r = tc(nc().preferences), i = Nc(), [a, o] = (0, b.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, b.useRef)(!1), [c, l] = (0, b.useState)(() => {
 		let e = localStorage.getItem("folio.react.agentClosed"), t = e === null || e !== "1";
-		return t && Ic() ? (s.current = !0, !1) : t;
-	}), [u, d] = (0, b.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, b.useState)(() => ({ [t]: Lc() })), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)(!1), v = (0, b.useRef)(null), y = (0, b.useRef)(t), S = (0, b.useRef)(!1), C = (0, b.useRef)({}), w = n.id !== "home", T = w && c ? " is-agent-open" : " is-agent-closed";
+		return t && Lc() ? (s.current = !0, !1) : t;
+	}), [u, d] = (0, b.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, b.useState)(() => ({ [t]: Rc() })), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)(!1), v = (0, b.useRef)(null), y = (0, b.useRef)(t), S = (0, b.useRef)(!1), C = (0, b.useRef)({}), w = n.id !== "home", T = w && c ? " is-agent-open" : " is-agent-closed";
 	(0, b.useEffect)(() => {
 		ke(n.id, {
 			surface: `react_${n.id}`,
@@ -19108,7 +19134,7 @@ function Bc() {
 		}
 		localStorage.setItem("folio.react.agentClosed", c ? "0" : "1");
 	}, [c]), (0, b.useEffect)(() => {
-		let e = window.matchMedia(Fc), t = (e) => {
+		let e = window.matchMedia(Ic), t = (e) => {
 			e.matches && l((e) => e && (s.current = !0, !1));
 		};
 		return e.addEventListener("change", t), () => e.removeEventListener("change", t);
@@ -19152,7 +19178,7 @@ function Bc() {
 					body: "{}"
 				});
 			} catch {}
-			h("서버 재시작 중"), await zc(h), _(!1);
+			h("서버 재시작 중"), await Bc(h), _(!1);
 		}
 	}
 	function D(e) {
@@ -19161,7 +19187,7 @@ function Bc() {
 	}
 	function O(e) {
 		let t = Kr(e);
-		return t.id === "home" ? /* @__PURE__ */ (0, x.jsx)(It, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, x.jsx)(Wa, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, x.jsx)(Br, {}) : t.id === "rss" ? /* @__PURE__ */ (0, x.jsx)(Hs, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, x.jsx)(qo, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, x.jsx)(Vi, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, x.jsx)(Oo, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, x.jsx)(kc, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, x.jsx)(ns, {}) : t.id === "settings" ? /* @__PURE__ */ (0, x.jsx)(pc, {}) : null;
+		return t.id === "home" ? /* @__PURE__ */ (0, x.jsx)(It, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, x.jsx)(Wa, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, x.jsx)(Br, {}) : t.id === "rss" ? /* @__PURE__ */ (0, x.jsx)(Hs, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, x.jsx)(qo, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, x.jsx)(Vi, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, x.jsx)(Oo, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, x.jsx)(Ac, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, x.jsx)(ns, {}) : t.id === "settings" ? /* @__PURE__ */ (0, x.jsx)(mc, {}) : null;
 	}
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: `react-shell${a ? " is-nav-collapsed" : ""}${T}${w ? "" : " is-agent-suppressed"}`,
@@ -19220,7 +19246,7 @@ function Bc() {
 					children: [/* @__PURE__ */ (0, x.jsx)("div", {
 						className: "react-left-nav-title",
 						children: "Navigate"
-					}), Nc.map((e) => /* @__PURE__ */ (0, x.jsxs)("section", {
+					}), Pc.map((e) => /* @__PURE__ */ (0, x.jsxs)("section", {
 						className: "react-left-nav-group",
 						"data-nav-group": e.id,
 						children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, x.jsx)("div", {
@@ -19243,7 +19269,7 @@ function Bc() {
 										children: [/* @__PURE__ */ (0, x.jsx)("span", {
 											className: "react-left-nav-icon",
 											"aria-hidden": "true",
-											children: Pc[a.id]
+											children: Fc[a.id]
 										}), /* @__PURE__ */ (0, x.jsx)("span", {
 											className: "react-left-nav-label",
 											children: a.label
@@ -19284,24 +19310,24 @@ function Bc() {
 }
 //#endregion
 //#region src/app/App.tsx
-function $() {
-	return /* @__PURE__ */ (0, x.jsx)(Bc, {});
+function Vc() {
+	return /* @__PURE__ */ (0, x.jsx)($, {});
 }
 //#endregion
 //#region src/main.tsx
-var Vc = { "market-state": () => /* @__PURE__ */ (0, x.jsx)(pa, {}) };
-function Hc() {
+var Hc = { "market-state": () => /* @__PURE__ */ (0, x.jsx)(pa, {}) };
+function Uc() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = Vc[e.dataset.reactIsland || ""];
+		let t = Hc[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, y.createRoot)(e).render(/* @__PURE__ */ (0, x.jsx)(b.StrictMode, { children: t() })));
 	});
 }
-function Uc() {
-	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, y.createRoot)(e).render(/* @__PURE__ */ (0, x.jsx)(b.StrictMode, { children: /* @__PURE__ */ (0, x.jsx)($, {}) })), !0) : !1;
-}
 function Wc() {
-	Uc(), Hc();
+	let e = document.getElementById("folioReactRoot");
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, y.createRoot)(e).render(/* @__PURE__ */ (0, x.jsx)(b.StrictMode, { children: /* @__PURE__ */ (0, x.jsx)(Vc, {}) })), !0) : !1;
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Wc) : Wc();
+function Gc() {
+	Wc(), Uc();
+}
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Gc) : Gc();
 //#endregion
