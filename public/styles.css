@@ -304,6 +304,70 @@
   --elev-3: var(--elev-overlay);
   --fs-2xs: 0.6875rem;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* === 0.5 축 B — 디자인 시스템 프리미티브 토큰 (Stage D1 / Step 1) ===
+     "토스 문법, Folio 밀도": 테두리 기반 구분에서 배경 대비·여백·타이포 대비 기반 구분으로 옮긴다.
+     이 블록은 정의만 한다. 아직 아무도 참조하지 않으므로 화면은 변하지 않는다.
+     Step 2가 프리미티브(.btn/.surface/.chip/.segment)를 세우고 기존 클래스를 별칭으로 매핑한다.
+
+     기존 토큰과 역할이 겹치는 것은 새 리터럴을 만들지 않고 잇는다.
+     새 리터럴은 현재 대응물이 없는 역할(그룹 면, 컨트롤 fill)에만 둔다. */
+
+  /* 표면 4단: 페이지 < 패널 < 그룹 < 컨트롤 순으로 위계를 만든다.
+     page/panel은 이미 같은 역할의 토큰이 있어 잇기만 한다. */
+  --surface-page: var(--folio-bg);
+  --surface-panel: var(--folio-surface-clean);
+  --surface-group: #f7f8fa;          /* 흰 패널 안의 회색 그룹 면 (테두리 박스 대체) */
+  --surface-control: #eceff2;        /* 버튼·컨트롤 fill — 테두리 버튼을 대체한다 */
+  --surface-control-hover: #e3e7ec;
+
+  /* 모서리 4종 — 현재 21종을 여기로 수렴시킨다.
+     --radius-pill(999px)이 이미 있으므로 값을 복제하지 않고 r-* 계열 이름만 잇는다. */
+  --r-control: 10px;                 /* 버튼, 입력, 작은 컨트롤 */
+  --r-group: 14px;                   /* 패널 안 그룹 면 */
+  --r-panel: 18px;                   /* 최상위 패널 */
+  --r-pill: var(--radius-pill);      /* 칩, 세그먼트 트랙 */
+
+  /* 굵기 3종 — 현재 11종(700/800/600/900/850/750/500/400/650/780/760)을 여기로 수렴시킨다.
+     강조는 굵기가 아니라 크기·색·여백으로 만든다. --weight-heading(800)은 Step 4~13에서 회수한다. */
+  --fw-normal: 400;
+  --fw-medium: 600;
+  --fw-bold: 700;
+
+  /* 타이포 역할 스케일 — 역할당 한 값.
+     기존 --fs-xs~3xl(rem 기반)과 별개 계열이다. Step 4~13이 하드코딩 px를 이쪽으로 회수한다.
+     주의: --fs-body(15px)는 기존 --fs-base(17px)보다 작다. 본문 축소는 Step 4~13의 화면별 결정이다. */
+  --fs-caption: 10px;                /* 차트 축, 워터마크 */
+  --fs-label: 11px;                  /* 배지, eyebrow (eyebrow는 letter-spacing 0.09em) */
+  --fs-meta: 12.5px;                 /* 보조 정보, 시각 */
+  --fs-body-sm: 13.5px;              /* 설명문 */
+  --fs-body: 15px;                   /* 본문, 수치(value는 같은 크기에 --fw-bold + tabular-nums) */
+  --fs-title-sm: 16.5px;             /* 카드 제목 */
+  --fs-title: 20px;                  /* 패널 제목 */
+
+  /* 간격 4/8 리듬 — 현재 간격 토큰이 없어 전부 하드코딩이다. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* 터치 타깃 (0.5_PLAN §3.13) — 모바일에서 실제 요소 박스를 이 값까지 올린다.
+     ::before 히트 영역 확장 방식은 쓰지 않는다(검증이 getBoundingClientRect로 실제 박스를 잰다). */
+  --touch-min: 44px;
+  --touch-gap: 8px;
+
+  /* 시장 색 (0.5_PLAN §3.16) — 하드코딩 금지 계약을 위한 슬롯.
+     현재 시장 구분은 텍스트 배지(US/KR)뿐이고 색이 배정된 적이 없다.
+     실제 색 배정은 Step 4~13의 디자인 결정이므로 지금은 중립값으로 두고,
+     유럽/일본 슬롯도 미리 열어 Stage 1~7이 토큰을 새로 만들지 않게 한다.
+     주의: 기존 팔레트의 버건디/골드/블루/틸은 verdict 의미색이라 그대로 가져다 쓰면 의미가 충돌한다. */
+  --market-us: var(--folio-ink-muted);
+  --market-kr: var(--folio-ink-muted);
+  --market-europe: var(--folio-ink-muted);
+  --market-jp: var(--folio-ink-muted);
 }
 
 /* 다크 표면은 색이 아니라 어둠으로 위계를 만든다.
@@ -368,6 +432,15 @@
      "선택됨"이 자연스럽게 읽힌다. 트랙 대비 3:1(WCAG 1.4.11)을 넘기는 밝기로 고정한다. */
   --folio-segment-active: #666e82;
   --folio-segment-active-ink: #ffffff;
+
+  /* === 0.5 축 B 프리미티브 토큰 — Dark 대응쌍 (Stage D1 / Step 1) ===
+     라이트에서 표면이 밝아지며 위계를 만들듯, 다크에서도 페이지 < 패널 < 그룹 < 컨트롤 순으로
+     밝아지게 둔다. 다크에서 어두워지는 방향으로 뒤집으면 fill 컨트롤이 배경에 묻힌다.
+     page/panel은 --folio-bg/--folio-surface-clean을 잇고 있어 여기서 다시 정의하지 않는다.
+     radius·weight·타이포·간격·touch·market 슬롯은 테마 무관이라 재정의 대상이 아니다. */
+  --surface-group: #191c24;          /* panel(#13151b) 바로 위 */
+  --surface-control: #1f2430;
+  --surface-control-hover: #262c3a;
 }
 
 * { box-sizing: border-box; }
