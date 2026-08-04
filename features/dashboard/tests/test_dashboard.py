@@ -4,7 +4,7 @@ import json
 import time
 
 from features.dashboard.routes import create_dashboard_router
-from features.dashboard.schema import native_symbol
+from features.dashboard.schema import native_symbol, normalize_dashboard_settings
 from features.dashboard.service import build_cockpit_payload, focus_symbols
 
 
@@ -13,6 +13,12 @@ def test_native_symbol_mapping_is_explicit_and_deterministic():
     assert native_symbol("KRX:005930") == "005930.KS"
     assert native_symbol("FOREXCOM:SPXUSD") == "SPY"
     assert native_symbol("javascript:bad") == ""
+
+
+def test_dashboard_market_settings_use_canonical_europe_code():
+    assert normalize_dashboard_settings({"calendarMarket": "EU"})["calendarMarket"] == "EUROPE"
+    assert normalize_dashboard_settings({"calendarMarket": "JP"})["calendarMarket"] == "JP"
+    assert normalize_dashboard_settings({"calendarMarket": "MARS"})["calendarMarket"] == "all"
 
 
 def test_absent_settings_watchlist_and_portfolio_use_safe_defaults(tmp_path):

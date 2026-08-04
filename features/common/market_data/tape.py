@@ -130,7 +130,15 @@ def build_market_tape(
                 change_pct=data.get("changePct"),
                 source=provider,
                 as_of=data.get("asOfDate") or kr.get("date") or "",
-                status=_status_for_date(data.get("asOfDate") or kr.get("date"), target_date=market_windows.get("krCurrentSessionDate") or date),
+                status=_status_for_date(
+                    data.get("asOfDate") or kr.get("date"),
+                    target_date=(
+                        market_windows.get("krCurrentSessionDate")
+                        or market_windows.get("krLatestCompletedSessionDate")
+                        or market_windows.get("krPreviousSessionDate")
+                        or date
+                    ),
+                ),
             ))
         fx = (kr.get("fx") or {}).get("USDKRW") if isinstance(kr.get("fx"), dict) else None
         if fx:
@@ -173,7 +181,12 @@ def build_market_tape(
         "asOf": dt.datetime.now(tz=KST).isoformat(),
         "session": {
             "us": market_windows.get("usRegularSessionDate") or "",
-            "kr": market_windows.get("krCurrentSessionDate") or market_windows.get("krPreviousSessionDate") or "",
+            "kr": (
+                market_windows.get("krCurrentSessionDate")
+                or market_windows.get("krLatestCompletedSessionDate")
+                or market_windows.get("krPreviousSessionDate")
+                or ""
+            ),
         },
         "items": items,
         "warnings": warnings,

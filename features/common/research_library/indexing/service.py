@@ -25,12 +25,14 @@ from features.common.company_lookup import (
 )
 from features.common.dataframe_ops import sort_records
 from features.common.research_library.indexing.research_index import (
+    MANIFEST_METADATA_VERSION,
     hybrid_search,
     load_documents_from_db,
     read_manifest,
     sync_index,
     write_manifest,
 )
+from features.common.research_library.rss.feed_config import feed_metadata_for_query
 
 ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = ROOT / "data"
@@ -184,6 +186,8 @@ def parse_frontmatter(raw):
         "published_at_kst": "publishedAtKst",
         "collected_at_kst": "collectedAtKst",
         "query_source": "querySource",
+        "language": "language",
+        "country": "country",
         "relevance_score": "relevanceScore",
         "search_score": "searchScore",
         "reliability_tier": "reliabilityTier",
@@ -221,6 +225,8 @@ def parse_rssarchive_markdown(raw):
             "sourceType": front_meta.get("sourceType", ""),
             "query": front_meta.get("query", ""),
             "querySource": front_meta.get("querySource", ""),
+            "language": front_meta.get("language", ""),
+            "country": front_meta.get("country", ""),
             "reliabilityTier": front_meta.get("reliabilityTier", ""),
             "markets": front_meta.get("markets") or [],
             "summary": summary,
@@ -343,6 +349,9 @@ def build_document(path):
     url = meta.get("url") or (parse_links(raw)[0] if parse_links(raw) else "")
     date = meta.get("date") or dt.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d")
     source = canonical_news_source(meta.get("source") or infer_source(f"{title} {body}", rel), url, title) or "User Archive"
+    configured_feed = feed_metadata_for_query(meta.get("query", ""))
+    language = str(meta.get("language") or configured_feed.get("language") or "").strip().lower()
+    country = str(meta.get("country") or configured_feed.get("country") or "").strip().upper()
     companies = find_companies(f"{title} {body}")
     sectors = sorted(set(normalize_tag(t) for t in ([c["sector"] for c in companies] + find_terms(f"{title} {body}", SECTOR_TERMS))))
     impact = [normalize_tag(t) for t in find_terms(f"{title} {body}", IMPACT_TERMS)]
@@ -367,6 +376,8 @@ def build_document(path):
         "sourceType": meta.get("sourceType", ""),
         "query": meta.get("query", ""),
         "querySource": meta.get("querySource", ""),
+        "language": language,
+        "country": country,
         "reliabilityTier": meta.get("reliabilityTier", ""),
         "relatedTickers": meta.get("relatedTickers", []) or [],
         "relatedThemes": meta.get("relatedThemes", []) or [],
@@ -429,7 +440,11 @@ def build_index(incremental=True, progress=None):
                 signature = file_signature(path)
             except Exception:
                 continue
-            if incremental and previous_manifest.get("fileSignature") == signature:
+            if (
+                incremental
+                and previous_manifest.get("fileSignature") == signature
+                and int(previous_manifest.get("metadataVersion") or 1) >= MANIFEST_METADATA_VERSION
+            ):
                 if previous_manifest.get("marketRelevant") and previous:
                     docs.append(previous)
                     reused += 1
@@ -444,6 +459,7 @@ def build_index(incremental=True, progress=None):
                 "marketRelevant": bool(doc.get("marketRelevant")),
                 "id": doc.get("id", ""),
                 "modifiedAt": doc.get("modifiedAt", ""),
+                "metadataVersion": MANIFEST_METADATA_VERSION,
             }
             if doc["marketRelevant"]:
                 docs.append(doc)

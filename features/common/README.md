@@ -7,6 +7,8 @@
 | 파일 | 역할 |
 | --- | --- |
 | `taxonomy.py` | 태그 canonical 어휘 단일 정의 |
+| `markets.py` | `US | KR | EUROPE | JP | GLOBAL | UNKNOWN` 시장·브리핑 scope 단일 계약 |
+| `instruments/` | 거래소·suffix·공식 식별자를 보존하는 cross-market instrument identity 계약 |
 | `company_lookup.py` | 기업명/티커 정규화, SEC CIK 조회, 마스터 데이터 |
 | `utils.py` | 텍스트 정규화, JSON 읽기/쓰기, 날짜 유틸 |
 | `dataframe_ops.py` | Polars 기반 필터링, 정렬, 집계 |

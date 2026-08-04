@@ -67,6 +67,16 @@ def test_duplicate_name_is_casefold_unique(
         service.create(duplicate)
 
 
+def test_collection_market_alias_is_saved_as_canonical_europe(
+    service: SmartCollectionService,
+    definition: dict[str, str | list[str]],
+) -> None:
+    request = CreateCollectionRequest.model_validate({**definition, "market": "EU"})
+    assert request.market == "EUROPE"
+    created = service.create(request)
+    assert created["collection"]["market"] == "EUROPE"
+
+
 def test_store_shape_is_strict_json(
     service: SmartCollectionService,
     definition: dict[str, str | list[str]],

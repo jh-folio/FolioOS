@@ -5,10 +5,14 @@ import re
 import time
 from functools import lru_cache
 from features.common.config_bootstrap import resolve_config
+from features.common.markets import MarketCode, normalize_market_code
 from features.common.utils import normalize
 
 # 한국 기사 관행: 종목명 뒤 6자리 종목코드 대괄호 표기(예: 셀트리온[068270]).
 _KR_STOCK_CODE_RE = re.compile(r"\[\d{6}\]")
+_KST = dt.timezone(dt.timedelta(hours=9))
+_KR_REGULAR_OPEN = dt.time(9, 0)
+_KR_REGULAR_CLOSE = dt.time(15, 30)
 
 
 def previous_calendar_date(date):
@@ -23,6 +27,74 @@ def parse_iso_date(value):
         return dt.date.fromisoformat(str(value)[:10])
     except Exception:
         return dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).date()
+
+
+def parse_kst_datetime(value):
+    """Parse an ISO timestamp and normalize it to Korea Standard Time."""
+    if isinstance(value, dt.datetime):
+        parsed = value
+    else:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        try:
+            parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except Exception:
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=_KST)
+    return parsed.astimezone(_KST)
+
+
+def kr_session_phase(briefing_day, is_open_on_date, as_of=None):
+    """Return holiday/pre_open/intraday/closed for a Korean trading date.
+
+    ``as_of=None`` preserves the historical date-only behavior for callers that
+    intentionally inspect a calendar fixture without a generation timestamp.
+    Runtime briefing generation always supplies its KST-aware creation time.
+    """
+    if not is_open_on_date:
+        return "holiday"
+    timestamp = parse_kst_datetime(as_of)
+    if timestamp is None:
+        return "intraday"
+    if briefing_day < timestamp.date():
+        return "closed"
+    if briefing_day > timestamp.date():
+        return "pre_open"
+    current_time = timestamp.timetz().replace(tzinfo=None)
+    if current_time < _KR_REGULAR_OPEN:
+        return "pre_open"
+    if current_time < _KR_REGULAR_CLOSE:
+        return "intraday"
+    return "closed"
+
+
+def align_briefing_market_windows_to_as_of(market_windows, as_of):
+    """Apply a generation timestamp to legacy date-only market windows.
+
+    This is used when reading reports saved before session phases were stored.
+    It returns a copy and never rewrites the canonical report.
+    """
+    windows = dict(market_windows or {})
+    briefing_day = parse_iso_date(windows.get("briefingDate"))
+    scheduled_open = bool(
+        windows.get("krMarketOpenOnDate", windows.get("krCurrentSessionOpen"))
+    )
+    phase = kr_session_phase(briefing_day, scheduled_open, as_of)
+    windows["krMarketOpenOnDate"] = scheduled_open
+    windows["krSessionPhase"] = phase
+    windows["krCurrentSessionActive"] = phase == "intraday"
+    if phase in {"intraday", "closed"}:
+        windows["krCurrentSessionDate"] = briefing_day.isoformat()
+    else:
+        windows["krCurrentSessionDate"] = ""
+    windows["krLatestCompletedSessionDate"] = (
+        briefing_day.isoformat()
+        if phase == "closed"
+        else str(windows.get("krPreviousSessionDate") or "")[:10]
+    )
+    return windows
 
 
 def observed_date(day):
@@ -127,7 +199,9 @@ def connected_exchange_calendar_status(day, market):
     except Exception:
         return None
 
-    normalized_market = str(market or "").strip().upper()
+    normalized_market = normalize_market_code(market).value
+    if normalized_market == MarketCode.UNKNOWN.value:
+        return None
     key = (normalized_market, day.isoformat())
     cached = _EXCHANGE_CALENDAR_CACHE.get(key)
     now = time.monotonic()
@@ -167,7 +241,7 @@ def _normalize_exchange_calendar_status(day, market, raw):
 
 def market_open_status(day, market, exchange_calendar_fetcher=None):
     """Resolve one market date with exchange API priority and static fallback."""
-    normalized_market = str(market or "").strip().upper()
+    normalized_market = normalize_market_code(market).value
     fetcher = exchange_calendar_fetcher or connected_exchange_calendar_status
     try:
         api_status = _normalize_exchange_calendar_status(day, normalized_market, fetcher(day, normalized_market))
@@ -184,13 +258,14 @@ def market_open_status(day, market, exchange_calendar_fetcher=None):
     elif normalized_market == "KR":
         is_open = day not in kr_market_holidays(day.year)
     else:
-        is_open = True
+        is_open = False
+    supported_static_market = normalized_market in {MarketCode.US.value, MarketCode.KR.value}
     return {
         "date": day.isoformat(),
         "market": normalized_market,
         "isOpen": is_open,
-        "provider": "static_calendar",
-        "source": "static",
+        "provider": "static_calendar" if supported_static_market else "unsupported_market",
+        "source": "static" if supported_static_market else "unavailable",
     }
 
 
@@ -257,6 +332,12 @@ def _date_range(start_iso, end_iso):
 # 분석 모드별 세션 역할(primary/secondary/background/off_session_news).
 # doc_analysis_priority()가 자료의 세션 토큰을 이 표로 매핑한다.
 _MODE_SESSION_ROLES = {
+    "weekday_kr_preopen": {
+        "US_PREV_REGULAR": "primary",
+        "KR_PREV_REGULAR": "primary",
+        "TODAY_LATEST_NEWS": "secondary",
+        "GLOBAL_PREV": "background",
+    },
     "weekday_kr_open": {
         "US_PREV_REGULAR": "primary",
         "KR_CURRENT_INTRADAY": "primary",
@@ -264,7 +345,27 @@ _MODE_SESSION_ROLES = {
         "TODAY_LATEST_NEWS": "secondary",
         "GLOBAL_PREV": "background",
     },
+    "weekday_kr_closed": {
+        "US_PREV_REGULAR": "primary",
+        "KR_CURRENT_INTRADAY": "primary",
+        "KR_PREV_REGULAR": "background",
+        "TODAY_LATEST_NEWS": "secondary",
+        "GLOBAL_PREV": "background",
+    },
+    "us_holiday_kr_preopen": {
+        "KR_PREV_REGULAR": "primary",
+        "US_PREV_REGULAR": "secondary",
+        "TODAY_LATEST_NEWS": "secondary",
+        "GLOBAL_PREV": "background",
+    },
     "us_holiday_kr_open": {
+        "KR_CURRENT_INTRADAY": "primary",
+        "US_PREV_REGULAR": "secondary",
+        "KR_PREV_REGULAR": "background",
+        "TODAY_LATEST_NEWS": "secondary",
+        "GLOBAL_PREV": "background",
+    },
+    "us_holiday_kr_closed": {
         "KR_CURRENT_INTRADAY": "primary",
         "US_PREV_REGULAR": "secondary",
         "KR_PREV_REGULAR": "background",
@@ -292,15 +393,19 @@ _MODE_SESSION_ROLES = {
 }
 
 _MODE_PRIORITY_RULE = {
+    "weekday_kr_preopen": "한국장 개장 전: 최근 한국 정규장 마감과 미국 전일 정규장을 주 분석축으로 둡니다. 당일 한국장 가격 반응이나 수급을 만들지 않습니다.",
     "weekday_kr_open": "평일/한국장 개장일: 주 분석축은 ①미국 전일 정규장 ②한국 당일 개장 후/장중 흐름입니다. 한국 전일 정규장은 배경 맥락으로만 쓰고, 시장 흐름 섹션의 중심을 차지하지 않게 합니다.",
+    "weekday_kr_closed": "한국장 마감 후: 당일 한국 정규장 마감 결과와 미국 전일 정규장을 주 분석축으로 둡니다. 장중 수치는 종가와 구분합니다.",
+    "us_holiday_kr_preopen": "미국 휴장일/한국장 개장 전: 최근 한국 정규장 마감을 우선하고, 직전 미국 정규장은 보조로 둡니다. 당일 한국장 가격 반응을 만들지 않습니다.",
     "us_holiday_kr_open": "미국 휴장일/한국 개장일: 한국 당일 장중·정규장을 우선 분석하고, 직전 미국 정규장은 보조로 둡니다. 미국 정규장 결과를 새로 만들지 말고, 미국 휴장 중 선물·환율·뉴스는 다음 미국 정규장 반응 후보로 분리합니다.",
+    "us_holiday_kr_closed": "미국 휴장일/한국장 마감 후: 당일 한국 정규장 마감을 우선하고, 직전 미국 정규장은 보조로 둡니다. 미국 정규장 결과를 새로 만들지 않습니다.",
     "kr_holiday": "한국 휴장일: 한국 당일 장중 시황을 만들지 않습니다. 최근 미국 정규장을 우선 분석하고, 휴장 전 한국 정규장과 휴장 중 한국 관련 뉴스가 다음 한국 거래일에 어떻게 반영될지 다음 거래일 확인 재료로 다룹니다.",
     "weekend": "주말: 정규장 가격 반응이 없으므로 최근 미국·한국 정규장을 간결히 복기하고, 주말 사이 나온 새 뉴스(정책·지정학·기업·중앙은행·원자재·환율·실적·M&A·규제)는 현재 가격 반응이 아니라 다음 거래일 반영 후보로 다룹니다. 장중 시황을 만들지 않습니다.",
     "both_holiday": "양시장 휴장일: 정규장 가격 반응이 없으므로 최근 미국·한국 정규장을 간결히 복기하고, 휴장 중 나온 새 뉴스는 다음 거래일 반영 후보로 다룹니다. 장중 시황을 만들지 않습니다.",
 }
 
 
-def briefing_market_windows(date, exchange_calendar_fetcher=None):
+def briefing_market_windows(date, exchange_calendar_fetcher=None, as_of=None):
     briefing_day = parse_iso_date(date)
     resolved = {}
 
@@ -319,23 +424,36 @@ def briefing_market_windows(date, exchange_calendar_fetcher=None):
     kr_current_open = kr_status["isOpen"]
     us_open = us_status["isOpen"]
     kr_previous = previous_trading_day(briefing_day, "KR", calendar_fetcher) if kr_current_open else latest_trading_day_on_or_before(briefing_day, "KR", calendar_fetcher)
+    kr_phase = kr_session_phase(briefing_day, kr_current_open, as_of)
+    kr_current_session_date = briefing_day.isoformat() if kr_phase in {"intraday", "closed"} else ""
 
     # 브리핑 대상일의 시장 개장 상태로 분석 모드를 정한다.
     if kr_current_open and us_open:
-        analysis_mode = "weekday_kr_open"
+        analysis_mode = {
+            "pre_open": "weekday_kr_preopen",
+            "intraday": "weekday_kr_open",
+            "closed": "weekday_kr_closed",
+        }[kr_phase]
     elif kr_current_open and not us_open:
-        analysis_mode = "us_holiday_kr_open"
+        analysis_mode = {
+            "pre_open": "us_holiday_kr_preopen",
+            "intraday": "us_holiday_kr_open",
+            "closed": "us_holiday_kr_closed",
+        }[kr_phase]
     elif not kr_current_open and us_open:
         analysis_mode = "kr_holiday"
     else:
         analysis_mode = "weekend" if briefing_day.weekday() >= 5 else "both_holiday"
 
-    weekend_or_holiday_news = analysis_mode != "weekday_kr_open"
+    weekend_or_holiday_news = (
+        analysis_mode in {"kr_holiday", "weekend", "both_holiday"}
+        or analysis_mode.startswith("us_holiday_kr_")
+    )
     # 휴장/주말 사이 새 뉴스 구간: 가장 최근 정규장 다음날부터 브리핑 대상일까지.
     last_regular = max(us_previous, kr_previous)
     if analysis_mode == "kr_holiday":
         off_start = kr_previous + dt.timedelta(days=1)
-    elif analysis_mode == "us_holiday_kr_open":
+    elif analysis_mode.startswith("us_holiday_kr_"):
         off_start = us_previous + dt.timedelta(days=1)
     else:
         off_start = last_regular + dt.timedelta(days=1)
@@ -363,18 +481,31 @@ def briefing_market_windows(date, exchange_calendar_fetcher=None):
     if briefing_day.weekday() >= 5:
         closed_notes.append(f"브리핑 대상일 {briefing_day.isoformat()}은 주말입니다.")
 
-    kr_rule = (
-        f"한국장은 직전 한국 거래일인 {kr_previous.isoformat()} 정규장 결과와 {briefing_day.isoformat()} 개장 후/장중 시황 자료를 구분해 해석합니다."
-        if kr_current_open
-        else f"한국장은 가장 최근 한국 거래일인 {kr_previous.isoformat()} 정규장 결과를 중심으로 해석합니다. 당일 한국장이 휴장일이면 장중 반영 여부를 단정하지 않습니다."
-    )
+    if kr_phase == "pre_open":
+        kr_rule = (
+            f"한국장은 가장 최근 마감한 {kr_previous.isoformat()} 정규장 결과를 중심으로 해석합니다. "
+            f"{briefing_day.isoformat()} 정규장은 아직 개장 전이므로 당일 가격 반응을 만들지 않습니다."
+        )
+    elif kr_phase == "intraday":
+        kr_rule = (
+            f"한국장은 직전 한국 거래일인 {kr_previous.isoformat()} 정규장 결과와 "
+            f"{briefing_day.isoformat()} 개장 후/장중 시황 자료를 구분해 해석합니다."
+        )
+    elif kr_phase == "closed":
+        kr_rule = f"한국장은 {briefing_day.isoformat()} 정규장 마감 결과를 중심으로 해석합니다."
+    else:
+        kr_rule = f"한국장은 가장 최근 한국 거래일인 {kr_previous.isoformat()} 정규장 결과를 중심으로 해석합니다. 당일 한국장이 휴장일이면 장중 반영 여부를 단정하지 않습니다."
     return {
         "briefingDate": date,
         "analysisMode": analysis_mode,
         "usRegularSessionDate": us_previous.isoformat(),
         "krPreviousSessionDate": kr_previous.isoformat(),
-        "krCurrentSessionDate": briefing_day.isoformat() if kr_current_open else "",
+        "krCurrentSessionDate": kr_current_session_date,
         "krCurrentSessionOpen": kr_current_open,
+        "krMarketOpenOnDate": kr_current_open,
+        "krCurrentSessionActive": kr_phase == "intraday",
+        "krSessionPhase": kr_phase,
+        "krLatestCompletedSessionDate": briefing_day.isoformat() if kr_phase == "closed" else kr_previous.isoformat(),
         "usMarketOpenOnDate": us_open,
         "calendarProviders": {
             "US": us_status["provider"],
@@ -575,5 +706,7 @@ def doc_market_bucket(doc, windows):
     if date == windows["usRegularSessionDate"]:
         return "전일 글로벌 자료"
     if windows.get("krCurrentSessionDate") and date == windows["krCurrentSessionDate"]:
+        return "당일 최신 자료"
+    if date == windows.get("briefingDate"):
         return "당일 최신 자료"
     return "보조 자료"

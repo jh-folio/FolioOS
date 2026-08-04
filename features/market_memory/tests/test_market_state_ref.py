@@ -73,7 +73,7 @@ def _query(tmp_path: Path, scope: str = "GLOBAL", attempts: tuple[dict, ...] = (
     ("US", (), None, "US"), ("KR", ("미국",), "US", "KR"), ("GLOBAL", ("한국",), "KR", "GLOBAL"),
     ("AUTO", ("usa",), None, "US"), ("AUTO", ("대한민국",), None, "KR"),
     ("AUTO", ("United States", "Korea"), None, "GLOBAL"), ("AUTO", (), "us", "US"),
-    ("AUTO", (), "KR", "KR"), ("AUTO", ("Europe",), "ALL", "GLOBAL"),
+    ("AUTO", (), "KR", "KR"), ("AUTO", ("Europe",), "ALL", "EUROPE"),
     ("AUTO", ("US/KR",), "UNKNOWN", "GLOBAL"),
 ])
 def test_scope_resolves_without_data_dependent_judgment(
@@ -103,6 +103,7 @@ def test_generation_context_captures_all_scope_watermarks_before_generation(tmp_
     )
     assert context["inputWatermarks"] == {
         "GLOBAL": "2026-07-14T11:00:00Z", "US": "2026-07-14T10:00:00Z", "KR": "2026-07-14T11:00:00Z",
+        "EUROPE": None, "JP": None,
     }
 
 
@@ -238,6 +239,8 @@ def test_evidence_watermark_is_canonical_utc_z_for_current_stale_fallback_and_ca
         "GLOBAL": canonical,
         "US": canonical,
         "KR": canonical,
+        "EUROPE": canonical,
+        "JP": canonical,
     }
 
 
@@ -429,8 +432,13 @@ def test_dashboard_freshness_is_derived_from_the_normative_stale_ref(tmp_path: P
     }
 
 
-@pytest.mark.parametrize(("policy", "scope"), [("bad", "AUTO"), ("exclude", "EU")])
+@pytest.mark.parametrize(("policy", "scope"), [("bad", "AUTO"), ("exclude", "MARS")])
 def test_malformed_policy_or_scope_is_rejected(tmp_path: Path, policy: str, scope: str) -> None:
     # Given malformed enums / When projected / Then the boundary rejects instead of guessing.
     with pytest.raises(ValueError):
         project_market_state(MarketStateSelection(policy, scope), _query(tmp_path))
+
+
+def test_eu_boundary_alias_normalizes_to_europe() -> None:
+    assert resolve_market_state_scope("EU") == "EUROPE"
+    assert resolve_market_state_scope("AUTO", collection_market="EU") == "EUROPE"

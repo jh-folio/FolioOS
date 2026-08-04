@@ -134,6 +134,13 @@ def briefing_session_mode(scope, value="", market_windows=None):
         if raw:
             return normalize_kr_session_mode(raw)
         windows = market_windows or {}
+        phase = str(windows.get("krSessionPhase") or "")
+        if phase == "intraday":
+            return "kr_intraday"
+        if phase in {"pre_open", "closed"}:
+            return "kr_close"
+        if phase == "holiday":
+            return "kr_holiday"
         return "kr_intraday" if windows.get("krCurrentSessionDate") else "kr_close"
     return ""
 
@@ -246,16 +253,41 @@ def _plain_excerpt(value, limit=240):
     return re.sub(r"\s+", " ", text).strip()[:limit]
 
 
+def _effective_market_windows(report):
+    """Return read-time session windows for both new and legacy reports."""
+    windows = report.get("marketWindows") or {}
+    if (
+        not windows
+        or not windows.get("briefingDate")
+        or windows.get("krSessionPhase")
+        or not report.get("generatedAt")
+    ):
+        return windows
+    try:
+        from features.common.market_calendar import align_briefing_market_windows_to_as_of
+
+        return align_briefing_market_windows_to_as_of(windows, report.get("generatedAt"))
+    except Exception:
+        return windows
+
+
 def briefing_market_metadata(report, market_scope, section=None):
     source = section if isinstance(section, dict) else {}
     report_date = str(report.get("date") or "").strip()
     scope = normalize_market_scope(market_scope)
     report_scope = normalize_market_scope(report.get("marketScope"))
     briefing_type = normalize_briefing_type(source.get("briefingType") or report.get("briefingType"))
-    market_windows = report.get("marketWindows") or {}
+    stored_market_windows = report.get("marketWindows") or {}
+    market_windows = _effective_market_windows(report)
+    raw_session_mode = source.get("sessionMode") or report.get("sessionMode")
+    # Reports saved before phase-aware windows could persist an intraday mode
+    # merely because the target date was a trading day. Re-resolve those from
+    # the actual generation timestamp.
+    if not stored_market_windows.get("krSessionPhase") and scope == "kr":
+        raw_session_mode = ""
     session_mode = briefing_session_mode(
         scope,
-        source.get("sessionMode") or report.get("sessionMode"),
+        raw_session_mode,
         market_windows,
     )
     session_date = briefing_session_date(
@@ -352,20 +384,22 @@ def briefing_export_units(report):
 
 def briefing_scope_view(report, market_scope=None):
     out = normalize_briefing_contract(report)
+    effective_market_windows = _effective_market_windows(out)
     scope = normalize_market_scope(market_scope or out.get("marketScope"))
     if scope == "both":
         report_date = str(out.get("date") or "")
         modes = {
-            target: briefing_session_mode(target, "", out.get("marketWindows") or {})
+            target: briefing_session_mode(target, "", effective_market_windows)
             for target in ("us", "kr")
         }
         out["markdown"] = normalize_briefing_markdown_titles(
             out.get("markdown", ""),
             report_date,
             "both",
-            market_windows=out.get("marketWindows") or {},
+            market_windows=effective_market_windows,
             session_modes=modes,
         )
+        out["marketWindows"] = effective_market_windows
         out["publicationDate"] = report_date
         out["title"] = briefing_market_title(report_date, "both")
         return out
@@ -382,9 +416,10 @@ def briefing_scope_view(report, market_scope=None):
         scoped.get("markdown", view.get("markdown", "")),
         metadata["reportDate"],
         scope,
-        market_windows=out.get("marketWindows") or {},
+        market_windows=effective_market_windows,
         session_modes={scope: metadata.get("sessionMode", "")},
     )
+    view["marketWindows"] = effective_market_windows
     view["sources"] = scoped.get("sources", view.get("sources", []))
     view["generation"] = scoped.get("generation", view.get("generation", {}))
     view.update({key: metadata[key] for key in (

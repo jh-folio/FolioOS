@@ -43,6 +43,31 @@ def test_market_tape_missing_when_empty():
     assert tape["warnings"]
 
 
+def test_market_tape_uses_latest_completed_kr_session_before_open():
+    tape = build_market_tape(
+        date="2026-08-04",
+        korea_market_data={
+            "ok": True,
+            "provider": "pykrx",
+            "indices": {
+                "KOSPI": {
+                    "label": "KOSPI", "close": 3000,
+                    "changePct": 1.2, "asOfDate": "2026-08-03",
+                },
+            },
+        },
+        market_windows={
+            "krCurrentSessionDate": "",
+            "krLatestCompletedSessionDate": "2026-08-03",
+            "krPreviousSessionDate": "2026-08-03",
+        },
+    )
+
+    kospi = next(item for item in tape["items"] if item["symbol"] == "KOSPI")
+    assert kospi["status"] == "fresh"
+    assert tape["session"]["kr"] == "2026-08-03"
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     passed = 0

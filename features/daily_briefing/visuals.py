@@ -191,11 +191,11 @@ def _session_date(scope_result, fallback_date):
 def _snapshot_session_date(scope_result, fallback_date, market, now=None):
     """Use the latest session that has actually started for today's briefing.
 
-    A Korean briefing can be generated before the 09:00 KST open while its
-    analysis window still names the briefing date as ``krCurrentSessionDate``.
-    Price snapshots must not request that not-yet-started session: doing so
-    produces empty 5-minute bars and can leave the saved chart several days
-    stale. Historical reports keep their explicitly stored session date.
+    Legacy Korean briefing windows can still name the briefing date as
+    ``krCurrentSessionDate`` before the 09:00 KST open. Price snapshots must
+    not request that not-yet-started session: doing so produces empty 5-minute
+    bars and can leave the saved chart several days stale. Historical reports
+    keep their explicitly stored session date.
     """
     requested = _session_date(scope_result, fallback_date)
     current = now or dt.datetime.now(dt.timezone.utc)

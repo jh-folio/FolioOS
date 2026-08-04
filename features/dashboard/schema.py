@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import re
 
+from features.common.markets import MarketCode, PRODUCT_MARKETS, normalize_market_code
+
 VALID_MODES = {"cockpit", "legacy"}
 VALID_CALENDAR_VIEWS = {"week", "month"}
 VALID_CALENDAR_KINDS = {"all", "earnings", "macro", "central_bank", "holiday", "filing", "dividend"}
-VALID_CALENDAR_MARKETS = {"all", "US", "KR"}
+VALID_CALENDAR_MARKETS = {"all", *(market.value for market in PRODUCT_MARKETS)}
 VALID_CHART_RANGES = {"1m", "3m", "6m", "1y", "5y"}
 VALID_CHART_STYLES = {"candle", "line"}
 
@@ -15,7 +17,13 @@ def normalize_dashboard_settings(value: dict | None) -> dict:
     mode = str(value.get("dashboardMode") or "cockpit").strip().lower()
     calendar_view = str(value.get("calendarView") or "week").strip().lower()
     calendar_kind = str(value.get("calendarKind") or "all").strip().lower()
-    calendar_market = str(value.get("calendarMarket") or "all").strip()
+    raw_calendar_market = str(value.get("calendarMarket") or "all").strip()
+    normalized_calendar_market = normalize_market_code(raw_calendar_market)
+    calendar_market = (
+        normalized_calendar_market.value
+        if raw_calendar_market.casefold() != "all" and normalized_calendar_market is not MarketCode.UNKNOWN
+        else "all"
+    )
     chart_range = str(value.get("chartRange") or "3m").strip().lower()
     chart_style = str(value.get("chartStyle") or "line").strip().lower()
     chart_symbol = str(value.get("chartSymbol") or "").strip().upper()[:20]

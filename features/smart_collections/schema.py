@@ -6,6 +6,8 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from features.common.markets import MarketCode, normalize_market_code
+
 
 COLLECTION_ID_PATTERN = re.compile(
     r"sc_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
@@ -33,7 +35,7 @@ def normalized_values(values: list[str], *, upper: bool = False) -> list[str]:
 class CollectionFields(StrictModel):
     name: str = Field(min_length=1, max_length=80)
     query: str = Field(max_length=500)
-    market: Literal["ALL", "US", "KR", "GLOBAL", "UNKNOWN"]
+    market: Literal["ALL", "US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"]
     sources: list[str] = Field(max_length=20)
     tickers: list[str] = Field(max_length=20)
     tags: list[str] = Field(max_length=20)
@@ -44,6 +46,16 @@ class CollectionFields(StrictModel):
         if not isinstance(value, str):
             raise CollectionValidationError("string_required")
         return normalized_text(value)
+
+    @field_validator("market", mode="before")
+    @classmethod
+    def normalize_market(cls, value: str) -> str:
+        if not isinstance(value, str):
+            raise CollectionValidationError("string_required")
+        if normalized_text(value).upper() == "ALL":
+            return "ALL"
+        market = normalize_market_code(value)
+        return market.value if market is not MarketCode.UNKNOWN else "UNKNOWN"
 
     @field_validator("sources", "tags", mode="before")
     @classmethod

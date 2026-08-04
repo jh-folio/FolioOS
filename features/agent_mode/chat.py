@@ -46,6 +46,7 @@ from features.common.canonical_reports import (
     resolve_exact_report_path,
 )
 from features.common.jobs import submit_job
+from features.common.markets import market_keys_for_scope, normalize_saved_market_scope
 from features.common.utils import read_json
 from features.market_memory.attempt_store import AttemptStore
 from features.market_memory.market_state_ref import MarketStateRefQuery
@@ -104,7 +105,7 @@ def resolve_artifact_path(kind: str, report_id: str, market_scope: str = "") -> 
         case unreachable:
             assert_never(unreachable)
     scope = str(market_scope or "").strip().lower()
-    exact_scope = scope if report_kind == ReportKind.BRIEFING and scope in {"us", "kr"} else None
+    exact_scope = scope if report_kind == ReportKind.BRIEFING and scope in {"us", "kr", "europe", "jp"} else None
     try:
         return resolve_exact_report_path(data_root, report_kind, str(report_id or ""), exact_scope)
     except (CanonicalIdentityError, CanonicalNotFoundError):
@@ -152,8 +153,9 @@ def _context_block(context: dict, markdown: str) -> str:
 def build_chat_prompt(message: str, context: dict, options: dict, markdown: str = "") -> str:
     effort = EFFORT_HINTS.get(options.get("effort", "medium"), EFFORT_HINTS["medium"])
     attachments = _attachment_block(options)
-    raw_scope = str(context.get("marketScope") or "").strip().upper()
-    regions = ("US", "KR") if raw_scope == "BOTH" else ((raw_scope,) if raw_scope in {"US", "KR"} else ())
+    raw_scope = str(context.get("marketScope") or "").strip()
+    saved_scope = normalize_saved_market_scope(raw_scope)
+    regions = tuple(code.value for code in market_keys_for_scope(saved_scope, saved=True)) if saved_scope else ()
     market_memory = render_market_state_projection(project_market_state(
         MarketStateSelection("include_current", "AUTO", regions),
         _market_state_query(),

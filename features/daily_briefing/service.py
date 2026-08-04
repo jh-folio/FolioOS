@@ -103,9 +103,9 @@ def news_documents(index):
     return [d for d in index.get("documents", []) if is_news_document(d)]
 
 
-def select_briefing_docs(documents, date, strict=False, today=None):
+def select_briefing_docs(documents, date, strict=False, today=None, as_of=None):
     today = today or kst_date()
-    windows = briefing_market_windows(date)
+    windows = briefing_market_windows(date, as_of=as_of)
     source_dates = set(windows["sourceDates"])
     # Check whether any articles fall within the market trading window
     dated = [d for d in documents if d.get("date") in source_dates]
@@ -601,7 +601,7 @@ def build_llm_context(
         ),
         (
             f"weekday_kr_open 모드: '시장 흐름' 섹션에 반드시 한국 {market_windows.get('krCurrentSessionDate', '')} 개장 후/장중 흐름을 별도 문단으로 작성하세요. 한국 전일({market_windows.get('krPreviousSessionDate', '')}) 정규장은 배경 맥락으로만 쓰고 한국 당일 장중 문단을 대체하지 않습니다. 한국 당일 장중 직접 지수·수급 수치가 자료에 없으면 '확인되지 않는다'고 명시하되, 한국 당일 장중 자료에서 확인되는 뉴스 흐름은 따로 다루세요."
-            if market_windows.get("analysisMode") == "weekday_kr_open"
+            if market_windows.get("krSessionPhase") == "intraday"
             else ""
         ),
         "",
@@ -611,8 +611,12 @@ def build_llm_context(
         f"- 미국장 기준: {market_windows.get('usRegularSessionDate', '')} 정규장 마감 결과와 그 이후 확인된 미국 관련 뉴스",
         (
             f"- 한국장 기준: {market_windows.get('krPreviousSessionDate', '')} 정규장 결과 + {market_windows.get('krCurrentSessionDate', '')} 개장 후/장중 시황"
-            if market_windows.get("krCurrentSessionOpen")
-            else f"- 한국장 기준: {market_windows.get('krPreviousSessionDate', '')} 정규장 결과. 브리핑 대상일이 한국 휴장/주말이면 당일 장중 시황으로 쓰지 마세요."
+            if market_windows.get("krSessionPhase") == "intraday"
+            else (
+                f"- 한국장 기준: {market_windows.get('krCurrentSessionDate', '')} 정규장 마감 결과"
+                if market_windows.get("krSessionPhase") == "closed"
+                else f"- 한국장 기준: {market_windows.get('krPreviousSessionDate', '')} 정규장 마감 결과. 당일 장중 시황으로 쓰지 마세요."
+            )
         ),
         "- 미국장 마감 이후 나온 뉴스는 한국장에 이미 반영됐다고 단정하지 말고, 한국 당일 장중 자료가 있는 경우에만 반영 여부를 언급하세요.",
         "- 한국 당일 장중 자료는 전일 종가 결과와 구분해서 '개장 후/장중 흐름'으로 표현하세요.",

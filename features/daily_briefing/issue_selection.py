@@ -334,16 +334,27 @@ def documents_for_scope(docs, market_scope):
 
 def session_modes_from_windows(market_windows):
     mode = str((market_windows or {}).get("analysisMode") or "")
-    if mode == "weekday_kr_open":
-        return {"us": "us_close", "kr": "kr_intraday"}
-    if mode == "us_holiday_kr_open":
-        return {"us": "us_holiday", "kr": "kr_intraday"}
-    if mode == "kr_holiday":
-        return {"us": "us_close", "kr": "kr_holiday"}
-    if mode == "both_holiday":
-        return {"us": "us_holiday", "kr": "kr_holiday"}
+    kr_phase = str((market_windows or {}).get("krSessionPhase") or "")
+    if kr_phase == "intraday":
+        kr_mode = "kr_intraday"
+    elif kr_phase in {"pre_open", "closed"}:
+        kr_mode = "kr_close"
+    elif kr_phase == "holiday":
+        kr_mode = "kr_holiday"
+    else:
+        kr_mode = ""
     if mode == "weekend":
         return {"us": "us_off_session", "kr": "kr_off_session"}
+    if mode == "both_holiday":
+        return {"us": "us_holiday", "kr": kr_mode or "kr_holiday"}
+    if mode.startswith("us_holiday_kr_"):
+        return {"us": "us_holiday", "kr": kr_mode or "kr_intraday"}
+    if mode == "kr_holiday":
+        return {"us": "us_close", "kr": kr_mode or "kr_holiday"}
+    if kr_mode:
+        return {"us": "us_close", "kr": kr_mode}
+    if mode == "weekday_kr_open":
+        return {"us": "us_close", "kr": "kr_intraday"}
     return {"us": "us_close", "kr": "kr_off_session"}
 
 

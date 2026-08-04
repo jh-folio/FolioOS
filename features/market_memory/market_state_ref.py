@@ -10,9 +10,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal, Mapping, TypeAlias
 
+from features.common.markets import MarketCode, PRODUCT_MARKETS, normalize_market_code, normalize_market_codes
+
 JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
-Scope = Literal["GLOBAL", "US", "KR"]
+Scope = Literal["GLOBAL", "US", "KR", "EUROPE", "JP"]
 Status = Literal["current", "stale", "fallback", "empty"]
 Policy = Literal["exclude", "include_current"]
 MarketStateRef: TypeAlias = dict[str, JsonValue]
@@ -78,11 +80,10 @@ def _token(value: str) -> str:
 
 
 def _scope(value: str, field: str = "scope") -> Scope:
-    scopes: dict[str, Scope] = {"GLOBAL": "GLOBAL", "US": "US", "KR": "KR"}
-    parsed = scopes.get(_token(value).upper())
-    if parsed is None:
+    parsed = normalize_market_code(value)
+    if parsed not in {*PRODUCT_MARKETS, MarketCode.GLOBAL}:
         raise MarketStateContractError(field, value)
-    return parsed
+    return parsed.value  # type: ignore[return-value]
 
 
 def resolve_market_state_scope(
@@ -93,17 +94,19 @@ def resolve_market_state_scope(
         return _scope(requested, "requestedScope")
     us_tokens = {"us", "usa", "united states", "미국"}
     kr_tokens = {"kr", "kor", "south korea", "korea", "대한민국", "한국"}
+    europe_tokens = {"europe", "eu", "uk", "united kingdom", "germany", "france", "netherlands", "italy", "spain", "유럽"}
+    jp_tokens = {"jp", "japan", "日本", "일본"}
     normalized = {_token(region) for region in regions}
-    has_us, has_kr = bool(normalized & us_tokens), bool(normalized & kr_tokens)
-    if has_us and has_kr:
+    matches = [
+        code for code, tokens in (("US", us_tokens), ("KR", kr_tokens), ("EUROPE", europe_tokens), ("JP", jp_tokens))
+        if normalized & tokens
+    ]
+    if len(matches) > 1:
         return "GLOBAL"
-    if has_us:
-        return "US"
-    if has_kr:
-        return "KR"
-    collection = _token(collection_market or "").upper()
-    collection_scopes: dict[str, Scope] = {"US": "US", "KR": "KR"}
-    return collection_scopes.get(collection, "GLOBAL")
+    if matches:
+        return matches[0]  # type: ignore[return-value]
+    collection = normalize_market_code(collection_market)
+    return collection.value if collection in PRODUCT_MARKETS else "GLOBAL"  # type: ignore[return-value]
 
 
 def load_market_state_snapshot(path: Path) -> dict[str, JsonValue] | None:
@@ -143,7 +146,9 @@ def _markets(raw: str) -> set[str]:
         return {"UNKNOWN"}
     value = metadata.get("markets", metadata.get("market"))
     values = value if isinstance(value, list) else [value]
-    markets = {_token(item).upper() for item in values if isinstance(item, str) and item.strip()}
+    markets = {market.value for market in normalize_market_codes(
+        (item for item in values if isinstance(item, str) and item.strip()), include_unknown=True,
+    )}
     return markets or {"UNKNOWN"}
 
 
@@ -176,7 +181,8 @@ def _watermark(path: Path, scope: Scope) -> tuple[str | None, int]:
 
 
 def capture_input_watermarks(path: Path) -> dict[str, JsonValue]:
-    return {scope: _watermark(path, scope)[0] for scope in ("GLOBAL", "US", "KR")}
+    scopes: tuple[Scope, ...] = ("GLOBAL", "US", "KR", "EUROPE", "JP")
+    return {scope: _watermark(path, scope)[0] for scope in scopes}
 
 
 def _base_ref(query: MarketStateRefQuery, source: str, status: Status, reason: str) -> MarketStateRef:

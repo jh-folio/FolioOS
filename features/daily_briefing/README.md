@@ -89,11 +89,15 @@ KR 당일 개장/장중
 
 세션 기준일은 Agent/LLM이 정하지 않고 `features/common/market_calendar.py`가 결정합니다. Toss Open API가 활성화되고 자격증명이 연결된 환경에서는 `/api/v1/market-calendar/{KR|US}`의 해당 날짜 개장 여부와 직전 영업일을 정적 휴장일 표보다 우선합니다. API 미연결, 요청 실패, 날짜 불일치 또는 검증할 수 없는 응답이면 기존 정적 캘린더로 자동 복귀합니다. 판정에 사용한 provider는 `marketWindows.calendarProviders`에 남깁니다.
 
-독자용 시장별 제목은 발행일이 아니라 **시장 세션일 + 상태**를 사용합니다. 예: `US Market Briefing — 2026.08.03 마감`, `Korea Market Briefing — 2026.08.04 장중`. 보고서 생성일은 별도 `publicationDate`와 리더의 `2026.08.04 KST 발행` 보조 정보로 표시합니다. 저장 키와 기본 정렬은 발행일을 유지하고, 아카이브 텍스트·날짜 검색은 `reportDate`와 `sessionDate`를 모두 검색합니다. Agent CLI 출력 계약은 기대 제목을 정확히 검증하며 API LLM·규칙 fallback도 같은 제목 정규화를 거칩니다. 종합 브리핑의 상위 제목은 발행일을 유지하고 내부 미국장·한국장 제목에서 각 세션일을 구분합니다.
+독자용 시장별 제목은 발행일이 아니라 **시장 세션일 + 상태**를 사용합니다. 예: `US Market Briefing — 2026.08.03 마감`. 한국장은 생성 시각(KST)을 함께 판정해 09:00 전에는 `Korea Market Briefing — 2026.08.03 마감`, 09:00~15:30에는 `Korea Market Briefing — 2026.08.04 장중`, 15:30 이후에는 `Korea Market Briefing — 2026.08.04 마감`으로 표시합니다. 보고서 생성일은 별도 `publicationDate`와 리더의 `2026.08.04 KST 발행` 보조 정보로 표시합니다. 저장 키와 기본 정렬은 발행일을 유지하고, 아카이브 텍스트·날짜 검색은 `reportDate`와 `sessionDate`를 모두 검색합니다. Agent CLI 출력 계약은 기대 제목을 정확히 검증하며 API LLM·규칙 fallback도 같은 제목 정규화를 거칩니다. 종합 브리핑의 상위 제목은 발행일을 유지하고 내부 미국장·한국장 제목에서 각 세션일을 구분합니다.
+
+한국장 세션 단계는 `marketWindows.krSessionPhase`의 `pre_open | intraday | closed | holiday`로 저장합니다. 거래소 API가 연결되어 있으면 먼저 해당 날짜의 개장 여부를 확인하고, 개장일에만 KST 정규장 시각을 적용합니다. `pre_open`에서는 `krCurrentSessionDate`를 비워 당일 장중 자료를 만들지 않고 `krLatestCompletedSessionDate`를 제목·Market Tape·차트 기준으로 사용합니다.
 
 | analysisMode | 주요 분석축(primary) | 보조/추가 | 비고 |
 | --- | --- | --- | --- |
+| `weekday_kr_preopen` | 최근 미국 정규장 + 최근 한국 정규장 마감 | D 개장 전 최신 뉴스 | 한국 D 장중 가격·수급을 만들지 않음 |
 | `weekday_kr_open` | 미국 D-1 정규장 + 한국 D 장중 | 한국 D-1 정규장(배경), D 최신 뉴스 | 한국 D-1은 배경 맥락으로만 |
+| `weekday_kr_closed` | 미국 D-1 정규장 + 한국 D 마감 | 한국 D-1 정규장(배경), D 최신 뉴스 | 한국 D 종가를 `마감`으로 표시 |
 | `weekend` / `both_holiday` | 최근 미국 정규장 + 최근 한국 정규장 | 주말/휴장 사이 새 뉴스(off_session_news) | 장중 시황 안 만듦, 뉴스는 다음 거래일 반영 후보 |
 | `kr_holiday` | 최근 미국 정규장 | 휴장 전 한국 정규장(배경), 휴장 중 한국 뉴스 | 한국 당일 장중 시황 안 만듦 |
 | `us_holiday_kr_open` | 한국 D 장중/정규장 | 직전 미국 정규장, 미 휴장 중 선물·환율·뉴스 | 미국 정규장 결과 새로 만들지 않음 |

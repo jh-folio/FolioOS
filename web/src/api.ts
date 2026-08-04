@@ -152,7 +152,16 @@ export type ThesisReviewResult = ThesisReviewJob | {
 export const MARKET_STATE_POLICIES = ["exclude", "include_current"] as const;
 export type MarketStatePolicy = (typeof MARKET_STATE_POLICIES)[number];
 
-export const MARKET_STATE_SCOPES = ["AUTO", "GLOBAL", "US", "KR"] as const;
+export const EVIDENCE_MARKETS = ["US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"] as const;
+export type EvidenceMarket = (typeof EVIDENCE_MARKETS)[number];
+export const PRODUCT_MARKETS = ["US", "KR", "EUROPE", "JP"] as const;
+export type ProductMarket = (typeof PRODUCT_MARKETS)[number];
+export const BRIEFING_REQUEST_SCOPES = ["us", "kr", "europe", "jp", "all"] as const;
+export type BriefingRequestScope = (typeof BRIEFING_REQUEST_SCOPES)[number];
+export const SAVED_MARKET_SCOPES = ["us", "kr", "europe", "jp", "all", "both"] as const;
+export type SavedMarketScope = (typeof SAVED_MARKET_SCOPES)[number];
+
+export const MARKET_STATE_SCOPES = ["AUTO", "GLOBAL", "US", "KR", "EUROPE", "JP"] as const;
 export type MarketStateScope = (typeof MARKET_STATE_SCOPES)[number];
 
 export const EXECUTION_MODES = ["direct", "cli"] as const;
@@ -168,7 +177,7 @@ export type CollectionRef = {
   readonly revision: number;
 };
 
-export const SMART_COLLECTION_MARKETS = ["ALL", "US", "KR", "GLOBAL", "UNKNOWN"] as const;
+export const SMART_COLLECTION_MARKETS = ["ALL", "US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"] as const;
 export type SmartCollectionMarket = (typeof SMART_COLLECTION_MARKETS)[number];
 
 export type SmartCollectionFields = {

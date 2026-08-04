@@ -6,6 +6,8 @@ import urllib.request
 from pathlib import Path
 
 from features.common.config_bootstrap import resolve_config
+from features.common.instruments.registry import infer_market
+from features.common.markets import MarketCode, normalize_market_code
 from features.common.utils import normalize, read_json, write_json
 from features.llm_settings.client import sec_user_agent
 from features.company_analysis.dart_client import dart_api_key, resolve_dart_company
@@ -116,11 +118,13 @@ def normalize_company_entry(row):
         aliases.append(ticker)
     if name and name not in aliases:
         aliases.append(name)
+    explicit_market = str(row.get("market") or "").strip()
+    market = normalize_market_code(explicit_market) if explicit_market else infer_market(ticker, row.get("exchange"))
     return {
         "name": name or ticker,
         "ticker": ticker or name,
         "sector": str(row.get("sector") or row.get("industry") or "Unclassified").strip() or "Unclassified",
-        "market": str(row.get("market") or row.get("exchange") or "").strip(),
+        "market": "" if market is MarketCode.UNKNOWN else market.value,
         "cik": str(row.get("cik") or row.get("cik_str") or "").strip(),
         "aliases": sorted(set(aliases), key=lambda v: (len(v), v.lower())),
     }
@@ -301,9 +305,8 @@ def detected_company_from_name(raw_name, ticker="", exchange=""):
     clean_name = re.sub(rf"\s+{suffix_re}$", "", name, flags=re.I).strip(" .,-")
     display = name if len(name) >= 3 else ticker
     sector = "Unclassified"
-    market = "US" if exchange in {"NYSE", "NASDAQ", "AMEX", "NYSEARCA", "OTC"} else ""
-    if re.fullmatch(r"\d{6}", ticker):
-        market = "KR"
+    inferred_market = infer_market(ticker, exchange)
+    market = "" if inferred_market is MarketCode.UNKNOWN else inferred_market.value
     aliases = [v for v in [name, clean_name, ticker, f"{exchange}:{ticker}" if exchange and ticker else ""] if v]
     return normalize_company_entry({"name": display, "ticker": ticker or display, "sector": sector, "market": market, "aliases": aliases})
 

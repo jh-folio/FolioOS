@@ -29,6 +29,30 @@ def _scope_result(scope):
     }
 
 
+def _build_patches(visuals):
+    return [
+        patch.object(builder, "build_index"),
+        patch.object(builder, "load_index", return_value={"documents": []}),
+        patch.object(builder, "select_briefing_docs", return_value=([], "2026-06-19", {"sourceDates": ["2026-06-19"]})),
+        patch.object(builder, "cached_market_snapshot", return_value={"ok": True}),
+        patch.object(builder, "cached_korea_market_data", return_value={"ok": True}),
+        patch.object(builder, "build_market_tape", return_value={}),
+        patch.object(builder, "preflight_from_context", return_value={}),
+        patch.object(builder, "list_briefing_memories", return_value=[]),
+        patch.object(builder, "load_prev_briefing", return_value=None),
+        patch.object(builder, "_scope_result", side_effect=lambda scope, *args, **kwargs: _scope_result(scope)),
+        patch.object(builder, "derive_link_status", return_value="insufficient_evidence"),
+        patch.object(builder, "leading_company_subjects_from_markdown", return_value=[]),
+        patch.object(builder, "collect_briefing_visuals", return_value=visuals),
+        patch.object(builder, "session_doc_counts", return_value={}),
+        patch.object(builder, "checkpoints_from_markdown", return_value=[]),
+        patch.object(builder, "data_gaps_from_messages", return_value=[]),
+        patch.object(builder, "read_briefing_prompt", return_value="prompt"),
+        patch.object(builder, "apply_quality_loop", side_effect=lambda kind, payload, **kwargs: payload),
+        patch.object(builder, "build_memory_from_briefing", return_value=[]),
+    ]
+
+
 def test_single_market_briefing_tags_generation_scope():
     combined = {
         "marketScope": "both",
@@ -69,28 +93,7 @@ def test_build_briefing_persists_per_market_reports_and_sidecars():
     }
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        patches = [
-            patch.object(builder, "BRIEFINGS_DIR", root),
-            patch.object(builder, "build_index"),
-            patch.object(builder, "load_index", return_value={"documents": []}),
-            patch.object(builder, "select_briefing_docs", return_value=([], "2026-06-19", {"sourceDates": ["2026-06-19"]})),
-            patch.object(builder, "cached_market_snapshot", return_value={"ok": True}),
-            patch.object(builder, "cached_korea_market_data", return_value={"ok": True}),
-            patch.object(builder, "build_market_tape", return_value={}),
-            patch.object(builder, "preflight_from_context", return_value={}),
-            patch.object(builder, "list_briefing_memories", return_value=[]),
-            patch.object(builder, "load_prev_briefing", return_value=None),
-            patch.object(builder, "_scope_result", side_effect=lambda scope, *args, **kwargs: _scope_result(scope)),
-            patch.object(builder, "derive_link_status", return_value="insufficient_evidence"),
-            patch.object(builder, "leading_company_subjects_from_markdown", return_value=[]),
-            patch.object(builder, "collect_briefing_visuals", return_value=visuals),
-            patch.object(builder, "session_doc_counts", return_value={}),
-            patch.object(builder, "checkpoints_from_markdown", return_value=[]),
-            patch.object(builder, "data_gaps_from_messages", return_value=[]),
-            patch.object(builder, "read_briefing_prompt", return_value="prompt"),
-            patch.object(builder, "apply_quality_loop", side_effect=lambda kind, payload, **kwargs: payload),
-            patch.object(builder, "build_memory_from_briefing", return_value=[]),
-        ]
+        patches = [patch.object(builder, "BRIEFINGS_DIR", root), *_build_patches(visuals)]
         for item in patches:
             item.start()
         try:
@@ -118,6 +121,53 @@ def test_build_briefing_persists_per_market_reports_and_sidecars():
         link = json.loads((root / "2026-06-20.link.json").read_text(encoding="utf-8"))
         assert link["markdown"].lstrip().startswith("## 한미 시장 연결 분석")
         assert link["date"] == "2026-06-20"
+
+
+def test_single_market_regeneration_preserves_sibling_and_marks_overlay_stale():
+    date = "2026-06-21"
+    visuals = {
+        "visualRecommendations": [{"id": "us-rec", "snapshotId": "us-heat", "market": "US"}],
+        "visualSnapshots": [{"id": "us-heat", "type": "market_heatmap", "market": "US"}],
+        "sidecar": {
+            "date": date,
+            "snapshots": {
+                "us-heat": {"id": "us-heat", "market": "US", "rows": [{"ticker": "NVDA"}]},
+            },
+        },
+        "warnings": [],
+    }
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        us_path = root / f"{date}.us.json"
+        kr_path = root / f"{date}.kr.json"
+        us_path.write_text(json.dumps({
+            "date": date,
+            "marketScope": "us",
+            "markdown": "old us",
+            "personalOverlay": {"enabled": True, "stale": False},
+        }), encoding="utf-8")
+        kr_path.write_text(json.dumps({
+            "date": date,
+            "marketScope": "kr",
+            "markdown": "old kr sibling",
+        }), encoding="utf-8")
+        sibling_before = kr_path.read_bytes()
+
+        patches = [patch.object(builder, "BRIEFINGS_DIR", root), *_build_patches(visuals)]
+        for item in patches:
+            item.start()
+        try:
+            result = builder.build_briefing(date, persist=True, market_scope="us", llm_override=False)
+        finally:
+            for item in reversed(patches):
+                item.stop()
+
+        saved = json.loads(us_path.read_text(encoding="utf-8"))
+        assert result["marketScope"] == "us"
+        assert saved["markdown"].startswith("# US Market Briefing")
+        assert saved["personalOverlay"]["stale"] is True
+        assert kr_path.read_bytes() == sibling_before
+        assert not (root / f"{date}.kr.visuals.json.gz").exists()
 
 
 def test_projection_follows_the_report_store_not_the_real_data_dir(tmp_path):

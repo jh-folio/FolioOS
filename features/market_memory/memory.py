@@ -9,11 +9,12 @@ from contextlib import nullcontext
 from pathlib import Path
 from typing import assert_never
 
+from features.common.markets import MarketCode
 from features.common.sqlite_receipts import ensure_receipt_table
 from features.common.taxonomy import TAG_ALIASES, INDUSTRY_ALIASES, canonical_tag, canonical_industry
 
 CATEGORY_CHOICES = {"stock_bond", "geopolitics", "emerging"}
-REGION_CHOICES = {"US", "KR", "GLOBAL"}
+REGION_CHOICES = {market.value for market in MarketCode if market is not MarketCode.UNKNOWN}
 IMPORTANCE_CHOICES = {"high", "medium", "low"}
 ENTRY_MODE_CHOICES = {"issue", "brief"}
 STATE_STATUS_CHOICES = {"active", "watch", "resolved", "overridden"}
@@ -1146,13 +1147,14 @@ def parse_json_list(value: str) -> list:
 
 def detect_region(sources: list[dict], text: str) -> str:
     blob = f"{text} {' '.join(str(source.get('source', '')) for source in sources)}"
-    if re.search(r"한국|코스피|코스닥|삼성|하이닉스|한경|매일경제|연합뉴스|KRW|KOSPI", blob, re.I):
-        if re.search(r"\bUS\b|미국|Fed|S&P|Nasdaq|Dow|Reuters|Bloomberg|WSJ|Financial Times", blob, re.I):
-            return "GLOBAL"
-        return "KR"
-    if re.search(r"\bUS\b|미국|Fed|S&P|Nasdaq|Dow|Reuters|Bloomberg|WSJ|Financial Times", blob, re.I):
-        return "US"
-    return "GLOBAL"
+    signals = {
+        MarketCode.KR.value: r"한국|코스피|코스닥|삼성|하이닉스|한경|매일경제|연합뉴스|KRW|KOSPI",
+        MarketCode.US.value: r"\bUS\b|미국|Fed|S&P|Nasdaq|Dow|Reuters|Bloomberg|WSJ|Financial Times",
+        MarketCode.EUROPE.value: r"유럽|영국|독일|프랑스|네덜란드|이탈리아|스페인|ECB|DAX|CAC ?40|AEX|FTSE ?MIB|IBEX|STOXX",
+        MarketCode.JP.value: r"일본|日経|東証|TOPIX|Nikkei|Tokyo Stock Exchange|\bBOJ\b|엔화|JPY",
+    }
+    matched = [market for market, pattern in signals.items() if re.search(pattern, blob, re.I)]
+    return matched[0] if len(matched) == 1 else MarketCode.GLOBAL.value
 
 
 def detect_category(text: str, tags: list[str]) -> str:

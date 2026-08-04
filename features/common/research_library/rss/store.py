@@ -35,6 +35,8 @@ BASE_COLUMNS = {
     "independent_source_groups": "TEXT NOT NULL DEFAULT '[]'",
     "markets": "TEXT NOT NULL DEFAULT '[]'",
     "policy_version": "TEXT NOT NULL DEFAULT ''",
+    "language": "TEXT NOT NULL DEFAULT ''",
+    "country": "TEXT NOT NULL DEFAULT ''",
 }
 
 
@@ -53,6 +55,8 @@ def ensure_evidence_store(conn: sqlite3.Connection):
             collected_at_utc TEXT NOT NULL,
             query TEXT NOT NULL,
             query_source TEXT NOT NULL,
+            language TEXT NOT NULL DEFAULT '',
+            country TEXT NOT NULL DEFAULT '',
             summary TEXT NOT NULL,
             collection_status TEXT NOT NULL,
             relevance_score REAL NOT NULL,
@@ -85,6 +89,7 @@ def ensure_evidence_store(conn: sqlite3.Connection):
             conn.execute(f"ALTER TABLE evidence_items ADD COLUMN {column} {definition}")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_items_normalized_url ON evidence_items(normalized_url)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_items_collector ON evidence_items(collector, source_type)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_items_language_country ON evidence_items(language, country)")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_evidence_items_signals "
         "ON evidence_items(intake_stage, source_status, signal_status, received_at_utc DESC, id DESC)"
@@ -94,7 +99,7 @@ def ensure_evidence_store(conn: sqlite3.Connection):
 
 STORE_COLUMNS = (
     "id", "collector", "source_type", "source", "title", "url", "normalized_url",
-    "published_at_utc", "collected_at_utc", "query", "query_source", "summary",
+    "published_at_utc", "collected_at_utc", "query", "query_source", "language", "country", "summary",
     "collection_status", "relevance_score", "search_score", "related_tickers",
     "related_themes", "event_id", "narrative_ids", "reliability_tier", "markdown_path",
     "intake_stage", "signal_status", "source_status", "event_at_utc",
@@ -117,6 +122,8 @@ def _store_values(item: dict, markdown_path: str) -> tuple:
         "collected_at_utc": _text(item.get("collected_at_utc") or item.get("received_at_utc")),
         "query": _text(item.get("query")),
         "query_source": _text(item.get("query_source")),
+        "language": _text(item.get("language")).lower(),
+        "country": _text(item.get("country")).upper(),
         "summary": _text(item.get("summary")),
         "collection_status": _text(item.get("collection_status")),
         "relevance_score": float(item.get("relevance_score") or 0),

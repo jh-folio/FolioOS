@@ -66,6 +66,8 @@ def rss_item_to_evidence(
         "collected_at_utc": collected_at,
         "query": str(feed.get("url") or ""),
         "query_source": "rss_feed",
+        "language": str(feed.get("language") or "").strip().lower(),
+        "country": str(feed.get("country") or "").strip().upper(),
         "description": str(item.get("description") or "").strip(),
         "summary": summary,
         "full_text": str(item.get("full_text") or "").strip(),

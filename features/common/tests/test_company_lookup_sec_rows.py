@@ -5,7 +5,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from features.common.company_lookup import _sec_company_rows
+from features.common.company_lookup import _sec_company_rows, normalize_company_entry
 
 
 def test_sec_company_rows_skips_bad_values():
@@ -24,10 +24,17 @@ def test_sec_company_rows_accepts_single_row_dict():
     assert rows[0]["title"] == "Apple Inc."
 
 
+def test_company_rows_use_canonical_cross_market_codes():
+    assert normalize_company_entry({"ticker": "7203.T"})["market"] == "JP"
+    assert normalize_company_entry({"ticker": "SAP", "market": "EU"})["market"] == "EUROPE"
+    assert normalize_company_entry({"ticker": "UNKNOWN"})["market"] == ""
+
+
 if __name__ == "__main__":
     tests = [
         test_sec_company_rows_skips_bad_values,
         test_sec_company_rows_accepts_single_row_dict,
+        test_company_rows_use_canonical_cross_market_codes,
     ]
     passed = 0
     for test in tests:

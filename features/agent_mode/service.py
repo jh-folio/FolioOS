@@ -235,6 +235,7 @@ def _write_pack(pack: dict, owner_job_id: str | None) -> Path:
 
 
 def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality_mode="diagnose_only", market_scope="both", briefing_type="default", owner_job_id: str | None = None) -> tuple[dict, Path]:
+    generated_at = now_iso()
     date = date or kst_date()
     quality_mode = normalize_quality_mode(quality_mode)
     market_scope = normalize_market_scope(market_scope)
@@ -245,7 +246,10 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         pass
     today = kst_date()
     index = load_index()
-    docs, source_date, market_windows = select_briefing_docs(news_documents(index), date, strict=bool(strict_date), today=today)
+    docs, source_date, market_windows = select_briefing_docs(
+        news_documents(index), date, strict=bool(strict_date), today=today,
+        as_of=generated_at,
+    )
     for doc in docs:
         doc["marketSessionDate"] = infer_market_session_date(doc, market_windows)
     scoped_docs = documents_for_scope(docs, market_scope)
@@ -325,7 +329,7 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
     session_counts = session_doc_counts(scoped_docs, market_windows)
     draft = {
         "date": date,
-        "generatedAt": now_iso(),
+        "generatedAt": generated_at,
         "title": f"Daily Market Briefing — {date.replace('-', '.')}",
         "summary": f"{source_date}에 수집된 최신 자료를 바탕으로 미국장과 한국장의 시장 반응, 핵심 이슈, 주도 기업을 정리했습니다.",
         "marketScope": market_scope,

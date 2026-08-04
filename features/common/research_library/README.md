@@ -50,7 +50,7 @@ research-inbox/
 RSS 피드 탭의 `RSS 수집/가져오기`는 공개 RSS를 읽어 `research-inbox/rss/`에 Markdown으로 저장합니다.
 내부 수집기는 Folio OS Evidence Intake 경로를 사용하며, RSS는 `collector=rss`인 입력원입니다.
 신규 Markdown은 YAML front matter에 `collector`, `source_type`, `normalized_url`, `collection_status`,
-`query_source`, `reliability_tier`를 저장하고, 기존 list-style RSSArchive Markdown은 계속 읽기 호환합니다.
+`query_source`, `reliability_tier`, `language`, `country`를 저장하고, 기존 list-style RSSArchive Markdown은 계속 읽기 호환합니다.
 
 기본 소스:
 
@@ -73,9 +73,14 @@ CLI 기본 실행에서는 기사 전문을 Markdown에 저장하지 않습니�
 설정 파일:
 
 ```text
-config/rss_feeds.yaml          # RSS/Atom feed 목록, enabled/priority/reliability_tier
+config/rss_feeds.yaml          # RSS/Atom feed 목록, 시장/국가/언어, source type, reliability, freshness probe
 config/evidence_sources.yaml   # 공식자료 adapter 설정
 ```
+
+0.5 유럽/일본 feed는 canonical `default_market`(`EUROPE | JP`)과 고정 국가
+universe(`GB | DE | FR | NL | IT | ES | JP`), 원문 `language`, 실제 최신 item
+시각을 확인한 freshness probe를 함께 기록합니다. 지원하지 않는 enum이나 72시간보다
+이미 오래된 probe는 로더가 거부합니다. 현지어 제목·요약은 번역하지 않습니다.
 
 CLI 예시:
 
@@ -86,6 +91,9 @@ python -m features.common.research_library.rss.rss_archive --collectors rss --sa
 
 공식자료 collector는 fake data를 만들지 않는 adapter stub으로 시작하며, 기존 공식자료 모듈 output을 EvidenceItem으로 연결하는 확장 지점입니다.
 수집된 EvidenceItem metadata는 Markdown과 함께 `data/research-index.sqlite3`의 `evidence_items` 테이블에도 저장됩니다.
+`language`/`country`는 RSS cache와 indexed document/search-hit metadata에도 additive하게 전파됩니다.
+기존 Markdown에 두 필드가 없으면 `query`가 현재 feed URL과 정확히 하나만 일치할 때만 읽기 시점에
+보완하며, source명이나 본문을 보고 추측하거나 파일을 다시 쓰지 않습니다.
 
 ## Fast-origin lead
 

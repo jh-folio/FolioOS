@@ -326,6 +326,7 @@ def build_briefing(
     market_scope="both",
     briefing_type="default",
 ):
+    generated_at = now_iso()
     today = kst_date()
     date = date or today
     market_scope = normalize_market_scope(market_scope)
@@ -338,6 +339,7 @@ def build_briefing(
     index = load_index()
     docs, source_date, market_windows = select_briefing_docs(
         news_documents(index), date, strict=bool(strict_date), today=today,
+        as_of=generated_at,
     )
     for doc in docs:
         doc["marketSessionDate"] = infer_market_session_date(doc, market_windows)
@@ -466,7 +468,6 @@ def build_briefing(
         "byMarket": {scope: results[scope]["generation"] for scope in requested_scopes},
     }
     generation["message"] = llm_status_message(generation)
-    generated_at = now_iso()
     report_summary = f"{source_date} 자료를 시장별 이슈 확산도와 가격 반응으로 선별한 브리핑입니다."
     raw_sections = {
         key: {field: value for field, value in result.items() if field in {

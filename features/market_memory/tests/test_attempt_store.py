@@ -23,6 +23,10 @@ from features.market_memory.attempt_store import (
 NOW = datetime(2026, 7, 17, 3, 0, tzinfo=UTC)
 
 
+def test_attempt_scope_uses_the_central_product_market_values() -> None:
+    assert tuple(scope.value for scope in AttemptScope) == ("GLOBAL", "US", "KR", "EUROPE", "JP")
+
+
 def instant(offset: int = 0) -> datetime:
     return NOW + timedelta(seconds=offset)
 

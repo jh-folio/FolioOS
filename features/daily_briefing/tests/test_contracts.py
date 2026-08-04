@@ -387,6 +387,70 @@ def test_market_titles_use_session_date_while_publication_date_stays_separate():
     assert item["publicationDate"] == "2026-08-04"
 
 
+def test_kr_title_uses_latest_completed_session_before_korea_market_opens():
+    windows = briefing_market_windows(
+        "2026-08-04",
+        exchange_calendar_fetcher=lambda _day, _market: None,
+        as_of="2026-08-03T23:02:40+00:00",  # 2026-08-04 08:02:40 KST
+    )
+
+    assert windows["analysisMode"] == "weekday_kr_preopen"
+    assert windows["krSessionPhase"] == "pre_open"
+    assert windows["krCurrentSessionDate"] == ""
+    assert windows["krLatestCompletedSessionDate"] == "2026-08-03"
+    assert briefing_expected_titles(
+        "2026-08-04", "kr", market_windows=windows,
+    )["kr"] == "Korea Market Briefing — 2026.08.03 마감"
+
+
+def test_kr_title_distinguishes_intraday_and_after_close_on_same_trading_day():
+    intraday = briefing_market_windows(
+        "2026-08-04",
+        exchange_calendar_fetcher=lambda _day, _market: None,
+        as_of="2026-08-04T01:00:00+00:00",  # 10:00 KST
+    )
+    closed = briefing_market_windows(
+        "2026-08-04",
+        exchange_calendar_fetcher=lambda _day, _market: None,
+        as_of="2026-08-04T07:00:00+00:00",  # 16:00 KST
+    )
+
+    assert intraday["krSessionPhase"] == "intraday"
+    assert briefing_expected_titles("2026-08-04", "kr", market_windows=intraday)["kr"] == (
+        "Korea Market Briefing — 2026.08.04 장중"
+    )
+    assert closed["krSessionPhase"] == "closed"
+    assert briefing_expected_titles("2026-08-04", "kr", market_windows=closed)["kr"] == (
+        "Korea Market Briefing — 2026.08.04 마감"
+    )
+
+
+def test_legacy_preopen_report_is_read_as_previous_korea_close_without_rewrite():
+    legacy_windows = briefing_market_windows(
+        "2026-08-04", exchange_calendar_fetcher=lambda _day, _market: None,
+    )
+    for field in (
+        "krMarketOpenOnDate", "krCurrentSessionActive", "krSessionPhase",
+        "krLatestCompletedSessionDate",
+    ):
+        legacy_windows.pop(field, None)
+    report = {
+        "date": "2026-08-04",
+        "generatedAt": "2026-08-03T23:02:40+00:00",
+        "marketScope": "kr",
+        "marketWindows": legacy_windows,
+        "markdown": "# Korea Market Briefing — 2026.08.04\n\nBody",
+    }
+
+    view = briefing_scope_view(report, "kr")
+
+    assert view["title"] == "Korea Market Briefing — 2026.08.03 마감"
+    assert view["sessionDate"] == "2026-08-03"
+    assert view["sessionMode"] == "kr_close"
+    assert view["markdown"].startswith("# Korea Market Briefing — 2026.08.03 마감\n")
+    assert report["marketWindows"]["krCurrentSessionDate"] == "2026-08-04"
+
+
 def test_market_title_normalization_corrects_llm_report_date_heading():
     windows = briefing_market_windows("2026-08-04", exchange_calendar_fetcher=lambda _day, _market: None)
     markdown = "# US Market Briefing — 2026.08.04\n\n## 0. 오늘의 미국장 성격\n본문"

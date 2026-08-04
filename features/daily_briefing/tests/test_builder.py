@@ -94,7 +94,7 @@ def test_kr_scope_is_complete_and_does_not_render_us_report():
     assert set(report["briefings"]) == {"kr"}
     assert "# Korea Market Briefing" in report["markdown"]
     assert "# US Market Briefing" not in report["markdown"]
-    assert report["briefings"]["kr"]["sessionMode"] == "kr_intraday"
+    assert report["briefings"]["kr"]["sessionMode"] == "kr_close"
     assert all(item["market"] == "KR" for item in report["issueCoverage"])
 
 

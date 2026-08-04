@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from features.agent_mode.schema import scrub_secrets
+from features.common.markets import normalize_saved_market_scope
 from features.smart_collections.schema import COLLECTION_ID_PATTERN
 
 SAFE_CONTEXT_FIELDS = {
@@ -77,7 +78,11 @@ def normalize_agent_context(raw: dict | None) -> dict:
         "viewId": out.get("viewId", ""),
         "reportKind": out.get("reportKind", ""),
         "reportId": out.get("reportId", ""),
-        "marketScope": out.get("marketScope", ""),
+        "marketScope": (
+            scope.value
+            if (scope := normalize_saved_market_scope(out.get("marketScope", ""))) is not None
+            else ""
+        ),
         "selectedText": out.get("selectedText", ""),
         "visibleSection": out.get("visibleSection", ""),
         "portfolioLinked": bool(out.get("portfolioLinked")),

@@ -11,6 +11,7 @@ from pathlib import Path
 from features.common.utils import normalize, clean_brief_text, clean_embedded_sections, read_json
 from features.common.market_calendar import infer_doc_markets
 from features.common.dataframe_ops import filter_archive_records
+from features.common.research_library.rss.feed_config import feed_metadata_for_query
 from features.common.research_library.indexing.service import (
     RESEARCH_DB_PATH,
     canonical_news_source,
@@ -91,6 +92,9 @@ def archive_item(path):
     if not description:
         description = normalize(body.replace(f"# {title}", "", 1) if body else "")
     description = clean_brief_text(description, 520)
+    configured_feed = feed_metadata_for_query((meta or {}).get("query", ""))
+    language = str((meta or {}).get("language") or configured_feed.get("language") or "").strip().lower()
+    country = str((meta or {}).get("country") or configured_feed.get("country") or "").strip().upper()
     raw_markets = (meta or {}).get("markets")
     markets = infer_doc_markets({
         "markets": raw_markets if isinstance(raw_markets, list) else [],
@@ -114,6 +118,8 @@ def archive_item(path):
         "sourceType": (meta or {}).get("sourceType", ""),
         "collectionStatus": (meta or {}).get("collectionStatus", ""),
         "reliabilityTier": (meta or {}).get("reliabilityTier", ""),
+        "language": language,
+        "country": country,
         "markets": markets,
         "market": ",".join(markets),
     }
@@ -138,6 +144,8 @@ def ensure_rss_cache(conn):
             source_type TEXT NOT NULL DEFAULT '',
             collection_status TEXT NOT NULL DEFAULT '',
             reliability_tier TEXT NOT NULL DEFAULT '',
+            language TEXT NOT NULL DEFAULT '',
+            country TEXT NOT NULL DEFAULT '',
             markets TEXT NOT NULL DEFAULT '',
             visible INTEGER NOT NULL,
             parsed_at TEXT NOT NULL
@@ -145,18 +153,29 @@ def ensure_rss_cache(conn):
         """
     )
     existing_cols = {row[1] for row in conn.execute(f"PRAGMA table_info({RSS_CACHE_TABLE})").fetchall()}
+    added_identity_columns = False
     for col, ddl in {
         "normalized_url": "TEXT NOT NULL DEFAULT ''",
         "collector": "TEXT NOT NULL DEFAULT ''",
         "source_type": "TEXT NOT NULL DEFAULT ''",
         "collection_status": "TEXT NOT NULL DEFAULT ''",
         "reliability_tier": "TEXT NOT NULL DEFAULT ''",
+        "language": "TEXT NOT NULL DEFAULT ''",
+        "country": "TEXT NOT NULL DEFAULT ''",
         "markets": "TEXT NOT NULL DEFAULT ''",
     }.items():
         if col not in existing_cols:
             conn.execute(f"ALTER TABLE {RSS_CACHE_TABLE} ADD COLUMN {col} {ddl}")
+            if col in {"language", "country"}:
+                added_identity_columns = True
+    if added_identity_columns:
+        # Preserve every old row but force the next ordinary refresh to reparse
+        # unchanged Markdown so exact feed-URL metadata can be filled in.
+        conn.execute(f"UPDATE {RSS_CACHE_TABLE} SET mtime_ns = -1")
     conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_visible_time ON {RSS_CACHE_TABLE}(visible, timestamp_sort DESC)")
     conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_source_time ON {RSS_CACHE_TABLE}(media, timestamp_sort DESC)")
+    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_language_time ON {RSS_CACHE_TABLE}(language, timestamp_sort DESC)")
+    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_country_time ON {RSS_CACHE_TABLE}(country, timestamp_sort DESC)")
 
 
 def _repair_cached_media(conn):
@@ -220,6 +239,8 @@ def _row_to_item(row):
         "sourceType": row["source_type"],
         "collectionStatus": row["collection_status"],
         "reliabilityTier": row["reliability_tier"],
+        "language": row["language"],
+        "country": row["country"],
         "markets": [token for token in str(row["markets"] or "").split(",") if token],
         "market": row["markets"],
     }
@@ -318,14 +339,17 @@ def refresh_rss_feed_cache(progress=None, force=False):
                     "url": "",
                     "description": "",
                     "media": canonical_news_source(media, "", title_from_name) or media or "User Archive",
+                    "language": "",
+                    "country": "",
                 }
                 visible = False
             conn.execute(
                 f"""
                 INSERT INTO {RSS_CACHE_TABLE}
                     (filename, path, size, mtime_ns, title, timestamp, timestamp_sort, url, description, media,
-                     normalized_url, collector, source_type, collection_status, reliability_tier, markets, visible, parsed_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     normalized_url, collector, source_type, collection_status, reliability_tier, language, country,
+                     markets, visible, parsed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(filename) DO UPDATE SET
                     path=excluded.path,
                     size=excluded.size,
@@ -341,6 +365,8 @@ def refresh_rss_feed_cache(progress=None, force=False):
                     source_type=excluded.source_type,
                     collection_status=excluded.collection_status,
                     reliability_tier=excluded.reliability_tier,
+                    language=excluded.language,
+                    country=excluded.country,
                     markets=excluded.markets,
                     visible=excluded.visible,
                     parsed_at=excluded.parsed_at
@@ -361,6 +387,8 @@ def refresh_rss_feed_cache(progress=None, force=False):
                     item.get("sourceType", ""),
                     item.get("collectionStatus", ""),
                     str(item.get("reliabilityTier", "")),
+                    item.get("language", ""),
+                    item.get("country", ""),
                     ",".join(item.get("markets") or []),
                     1 if visible else 0,
                     now,
@@ -491,7 +519,7 @@ def rss_feed_payload(qs):
         rows = conn.execute(
             f"""
             SELECT filename, title, timestamp, timestamp_sort, url, normalized_url, description, media,
-                   collector, source_type, collection_status, reliability_tier, markets
+                   collector, source_type, collection_status, reliability_tier, language, country, markets
             FROM {RSS_CACHE_TABLE}
             WHERE {where}
             ORDER BY timestamp_sort DESC, filename DESC
@@ -513,6 +541,8 @@ def rss_feed_payload(qs):
         "source": source,
         "market": market,
         "markets": ["US", "KR", "GLOBAL", "UNKNOWN"],
+        "languages": sorted({str(row["language"]) for row in deduped_rows if str(row["language"] or "")}),
+        "countries": sorted({str(row["country"]) for row in deduped_rows if str(row["country"] or "")}),
         "has_more": offset + limit < total,
         "cache": cache_stats,
     }

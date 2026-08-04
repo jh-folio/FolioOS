@@ -8,7 +8,10 @@ from __future__ import annotations
 import sys
 import sqlite3
 import tempfile
+import datetime as dt
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[5]
 if str(ROOT) not in sys.path:
@@ -24,11 +27,17 @@ from features.common.research_library.rss.service import (
     ensure_rss_cache,
 )
 from features.common.research_library.rss import rss_archive
+from features.common.research_library.rss import service as rss_service
 from features.common.research_library.rss.collectors import (
     collect_official_items,
     load_simple_yaml,
 )
-from features.common.research_library.rss.feed_config import load_rss_feeds
+from features.common.research_library.rss.feed_config import (
+    FeedConfigError,
+    feed_metadata_for_query,
+    load_rss_feeds,
+    normalize_feed,
+)
 from features.common.research_library.rss.article import collect_article_body
 from features.common.research_library.rss.policy import calculate_relevance_score, looks_paywalled, normalize_url, should_retry_existing_item
 from features.common.research_library.rss.parser import KST, parse_feed, parse_pub_date
@@ -36,6 +45,15 @@ from features.common.research_library.rss.normalizer import rss_item_to_evidence
 from features.common.research_library.rss.store import save_evidence_item
 from features.common.research_library.rss.writer import evidence_markdown, existing_file_needs_enrichment, load_archive_index
 from features.common.market_calendar import infer_doc_markets
+from features.common.research_library.indexing.research_index import (
+    MANIFEST_METADATA_VERSION,
+    hybrid_search,
+    init_db,
+    load_documents_from_db,
+    read_manifest,
+    sync_index,
+    write_manifest,
+)
 
 
 def test_naive_rfc822_pubdate_is_treated_as_kst_not_utc():
@@ -147,6 +165,23 @@ def test_rss_item_to_evidence_feed_default_market_is_fallback_only():
         source="CNBC", feed=feed,
     )
     assert "KR" in kr_item["markets"] and "US" not in kr_item["markets"]
+
+
+def test_rss_item_to_evidence_preserves_feed_language_and_country():
+    published = dt.datetime(2026, 8, 4, 10, 0, tzinfo=dt.timezone.utc)
+    item = rss_item_to_evidence(
+        item={"title": "日経平均が反発", "link": "https://example.com/jp", "published_at_utc": published},
+        source="Google News JP",
+        feed={
+            "url": "https://example.com/jp.xml",
+            "default_market": "JP",
+            "language": "ja",
+            "country": "JP",
+            "reliability_tier": 2,
+        },
+    )
+    assert item["language"] == "ja"
+    assert item["country"] == "JP"
 
 
 def test_rss_archive_skips_stale_dated_feed_items():
@@ -385,7 +420,54 @@ def test_rss_cache_schema_includes_markets_column():
     with sqlite3.connect(":memory:") as conn:
         ensure_rss_cache(conn)
         cols = {row[1] for row in conn.execute(f"PRAGMA table_info({RSS_CACHE_TABLE})").fetchall()}
-    assert "markets" in cols
+    assert {"markets", "language", "country"} <= cols
+
+
+def test_rss_cache_upgrade_preserves_pre_language_schema_rows():
+    """0.5 can add language metadata without requiring a destructive cache reset."""
+    with sqlite3.connect(":memory:") as conn:
+        conn.execute(
+            f"""CREATE TABLE {RSS_CACHE_TABLE} (
+                filename TEXT PRIMARY KEY,
+                path TEXT NOT NULL,
+                size INTEGER NOT NULL,
+                mtime_ns INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                timestamp_sort TEXT NOT NULL,
+                url TEXT NOT NULL,
+                description TEXT NOT NULL,
+                media TEXT NOT NULL,
+                normalized_url TEXT NOT NULL DEFAULT '',
+                collector TEXT NOT NULL DEFAULT '',
+                source_type TEXT NOT NULL DEFAULT '',
+                collection_status TEXT NOT NULL DEFAULT '',
+                reliability_tier TEXT NOT NULL DEFAULT '',
+                markets TEXT NOT NULL DEFAULT '',
+                visible INTEGER NOT NULL,
+                parsed_at TEXT NOT NULL
+            )"""
+        )
+        conn.execute(
+            f"""INSERT INTO {RSS_CACHE_TABLE}
+                (filename, path, size, mtime_ns, title, timestamp, timestamp_sort, url, description, media,
+                 normalized_url, collector, source_type, collection_status, reliability_tier, markets, visible, parsed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "legacy.md", "legacy.md", 1, 1, "Legacy headline", "2026-06-23 09:00:00",
+                "2026-06-23T09:00:00", "https://example.com/legacy", "summary", "Reuters",
+                "https://example.com/legacy", "rss", "news", "summary_only", "2", "US", 1,
+                "2026-06-23T09:00:00",
+            ),
+        )
+
+        ensure_rss_cache(conn)
+        row = conn.execute(
+            f"SELECT filename, title, markets, language, country, mtime_ns, visible FROM {RSS_CACHE_TABLE} WHERE filename = ?",
+            ("legacy.md",),
+        ).fetchone()
+
+    assert row == ("legacy.md", "Legacy headline", "US", "", "", -1, 1)
 
 
 def test_existing_yonhap_cache_row_is_repaired_without_file_change():
@@ -438,6 +520,81 @@ def test_rss_feed_config_loads_default_feeds():
     feeds = load_rss_feeds(ROOT / "config" / "rss_feeds.yaml")
     assert feeds
     assert all(feed["url"] and feed["media"] for feed in feeds)
+
+
+def test_rss_feed_config_has_complete_europe_japan_selection_records():
+    feeds = load_rss_feeds(ROOT / "config" / "rss_feeds.yaml")
+    target = [feed for feed in feeds if feed["default_market"] in {"EUROPE", "JP"}]
+    assert {feed["country"] for feed in target} == {"GB", "DE", "FR", "NL", "IT", "ES", "JP"}
+    assert {feed["language"] for feed in target} >= {"en", "de", "fr", "nl", "it", "es", "ja"}
+    assert all(feed["source_type"] == "news" for feed in target)
+    assert all(feed["reliability_tier"] in {1, 2, 3} for feed in target)
+    assert all(feed["freshness_item_count"] > 0 for feed in target)
+    assert all(feed["freshness_checked_at"] and feed["freshness_latest_at"] for feed in target)
+
+    packaged = load_rss_feeds(ROOT / "defaults" / "config" / "rss_feeds.yaml")
+    packaged_target = [feed for feed in packaged if feed["default_market"] in {"EUROPE", "JP"}]
+    selection = lambda rows: {
+        (
+            feed["url"], feed["default_market"], feed["country"], feed["language"],
+            feed["source_type"], feed["reliability_tier"], feed["freshness_checked_at"],
+            feed["freshness_latest_at"], feed["freshness_item_count"],
+        )
+        for feed in rows
+    }
+    assert selection(packaged_target) == selection(target)
+
+
+def test_rss_feed_config_rejects_invalid_target_metadata():
+    valid = {
+        "media": "Example",
+        "url": "https://example.com/rss",
+        "default_market": "EUROPE",
+        "country": "DE",
+        "language": "de",
+        "freshness_checked_at": "2026-08-04T11:10:00Z",
+        "freshness_latest_at": "2026-08-04T10:40:51Z",
+        "freshness_item_count": 29,
+    }
+    assert normalize_feed(valid)["country"] == "DE"
+
+    invalid_rows = [
+        {**valid, "default_market": "EU"},
+        {**valid, "country": "CH"},
+        {**valid, "language": "pt"},
+        {**valid, "country": "JP"},
+        {**valid, "freshness_item_count": 0},
+        {**valid, "freshness_latest_at": "2026-07-31T10:40:51Z"},
+    ]
+    for row in invalid_rows:
+        try:
+            normalize_feed(row)
+        except FeedConfigError:
+            continue
+        raise AssertionError(f"invalid feed metadata was accepted: {row}")
+
+
+def test_feed_metadata_inference_requires_exact_unambiguous_feed_url(tmp_path: Path):
+    row = """\
+  - media: "Example {suffix}"
+    url: "https://example.com/shared.xml"
+    default_market: "JP"
+    country: "JP"
+    language: "ja"
+    freshness_checked_at: "2026-08-04T11:10:00Z"
+    freshness_latest_at: "2026-08-04T11:05:00Z"
+    freshness_item_count: 1
+"""
+    one = tmp_path / "one.yaml"
+    one.write_text("feeds:\n" + row.format(suffix="one"), encoding="utf-8")
+    assert feed_metadata_for_query("https://example.com/shared.xml", config_path=one) == {
+        "language": "ja", "country": "JP",
+    }
+    assert feed_metadata_for_query("https://example.com/other.xml", config_path=one) == {}
+
+    duplicate = tmp_path / "duplicate.yaml"
+    duplicate.write_text("feeds:\n" + row.format(suffix="one") + row.format(suffix="two"), encoding="utf-8")
+    assert feed_metadata_for_query("https://example.com/shared.xml", config_path=duplicate) == {}
 
 
 def test_rss_sample_parse():
@@ -525,6 +682,8 @@ def test_frontmatter_round_trips_intake_metadata():
             "collected_at_utc": None,
             "query": "AI data center power demand",
             "query_source": "news_query",
+            "language": "ja",
+            "country": "JP",
             "summary": "Power demand rises.",
             "collection_status": "summary_only",
             "error": "",
@@ -542,7 +701,87 @@ def test_frontmatter_round_trips_intake_metadata():
     assert meta["sourceType"] == "news"
     assert meta["query"] == "AI data center power demand"
     assert meta["querySource"] == "news_query"
+    assert meta["language"] == "ja"
+    assert meta["country"] == "JP"
     assert str(meta["reliabilityTier"]) == "2"
+
+
+def test_rss_api_preserves_original_local_language_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    inbox = tmp_path / "rss"
+    inbox.mkdir()
+    db_path = tmp_path / "research-index.sqlite3"
+    title = "日経平均、AI投資を背景に反発"
+    summary = "日本株は半導体関連株を中心に上昇した。"
+    md = evidence_markdown({
+        "id": "rss_jp_exact",
+        "collector": "rss",
+        "source_type": "news",
+        "source": "Google News JP",
+        "title": title,
+        "url": "https://example.com/jp-exact",
+        "normalized_url": "https://example.com/jp-exact",
+        "published_at_utc": None,
+        "collected_at_utc": None,
+        "query": "https://example.com/jp.xml",
+        "query_source": "rss_feed",
+        "language": "ja",
+        "country": "JP",
+        "summary": summary,
+        "collection_status": "summary_only",
+        "relevance_score": 4,
+        "related_tickers": [],
+        "related_themes": [],
+        "markets": ["JP"],
+        "narrative_ids": [],
+        "reliability_tier": 2,
+    })
+    (inbox / "2026-08-04 20-00-00 - Google News JP - jp.md").write_text(md, encoding="utf-8")
+    monkeypatch.setattr(rss_service, "RSS_INBOX_DIR", inbox)
+    monkeypatch.setattr(rss_service, "RESEARCH_DB_PATH", db_path)
+    monkeypatch.setattr(rss_service, "_RSS_CACHE_LAST_REFRESH", 0.0)
+    monkeypatch.setattr(rss_service, "_RSS_CACHE_MEDIA_REPAIRED", False)
+
+    payload = rss_service.rss_feed_payload({"limit": ["20"], "offset": ["0"]})
+    assert payload["items"][0]["title"] == title
+    assert payload["items"][0]["description"] == summary
+    assert payload["items"][0]["language"] == "ja"
+    assert payload["items"][0]["country"] == "JP"
+    assert payload["languages"] == ["ja"]
+    assert payload["countries"] == ["JP"]
+    _, merged = rss_service.rss_merge_payload({})
+    assert title in merged and summary in merged
+    assert 'language: "ja"' in merged
+    assert 'country: "JP"' in merged
+
+
+def test_old_markdown_infers_exact_feed_identity_without_rewrite(tmp_path: Path):
+    jp_feed = next(
+        feed for feed in load_rss_feeds(ROOT / "config" / "rss_feeds.yaml")
+        if feed["default_market"] == "JP" and feed["language"] == "ja"
+    )
+    md = evidence_markdown({
+        "id": "rss_jp_pre_language",
+        "collector": "rss",
+        "source_type": "news",
+        "source": "Google News JP",
+        "title": "日経平均の市況",
+        "url": "https://example.com/jp-old",
+        "normalized_url": "https://example.com/jp-old",
+        "query": jp_feed["url"],
+        "query_source": "rss_feed",
+        "summary": "日本株の動向。",
+        "collection_status": "summary_only",
+        "markets": ["JP"],
+        "reliability_tier": 2,
+    })
+    path = tmp_path / "2026-08-04 20-00-00 - Google News JP - old.md"
+    path.write_text(md, encoding="utf-8")
+    before = path.read_bytes()
+
+    item = archive_item(path)
+
+    assert (item["language"], item["country"]) == ("ja", "JP")
+    assert path.read_bytes() == before
 
 
 def test_atom_sample_parse():
@@ -582,6 +821,8 @@ def test_evidence_store_upserts_item():
         "collected_at_utc": None,
         "query": "feed",
         "query_source": "rss_feed",
+        "language": "fr",
+        "country": "FR",
         "summary": "AI infrastructure earnings improved.",
         "collection_status": "summary_only",
         "relevance_score": 3,
@@ -596,6 +837,63 @@ def test_evidence_store_upserts_item():
         db_path = Path(tmp) / "evidence.sqlite3"
         save_evidence_item(db_path, item, "research-inbox/rss/x.md")
         assert db_path.exists()
+        conn = sqlite3.connect(db_path)
+        try:
+            stored = conn.execute(
+                "SELECT language, country FROM evidence_items WHERE id = ?", (item["id"],)
+            ).fetchone()
+        finally:
+            conn.close()
+        assert stored == ("fr", "FR")
+
+
+def test_index_document_and_chunk_results_preserve_language_country(tmp_path: Path):
+    db_path = tmp_path / "research-index.sqlite3"
+    doc = {
+        "id": "jp_doc",
+        "path": "research-inbox/rss/jp.md",
+        "title": "Nikkei AI investment",
+        "source": "Example",
+        "date": "2026-08-04",
+        "type": "article",
+        "url": "https://example.com/jp",
+        "marketRelevance": 4,
+        "summary": "Nikkei investment summary",
+        "content": "Nikkei AI investment expands across Japanese semiconductor companies.",
+        "contentHash": "hash-jp",
+        "language": "ja",
+        "country": "JP",
+        "markets": ["JP"],
+    }
+    sync_index(db_path, {"generatedAt": "2026-08-04T11:10:00Z", "documents": [doc]})
+    stored = load_documents_from_db(db_path)[0]
+    assert (stored["language"], stored["country"]) == ("ja", "JP")
+    hits = hybrid_search(db_path, "Nikkei investment", limit=5)
+    assert hits and hits[0]["metadata"]["language"] == "ja"
+    assert hits[0]["metadata"]["country"] == "JP"
+
+
+def test_file_manifest_adds_metadata_version_without_losing_legacy_rows(tmp_path: Path):
+    db_path = tmp_path / "legacy-index.sqlite3"
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(
+            "CREATE TABLE file_manifest (path TEXT PRIMARY KEY, file_signature TEXT NOT NULL, "
+            "market_relevant INTEGER NOT NULL, doc_id TEXT NOT NULL, modified_at TEXT NOT NULL)"
+        )
+        conn.execute(
+            "INSERT INTO file_manifest VALUES (?, ?, ?, ?, ?)",
+            ("research-inbox/rss/old.md", "1:1", 1, "old", "2026-08-04T00:00:00Z"),
+        )
+        init_db(conn)
+    finally:
+        conn.close()
+
+    legacy = read_manifest(db_path)
+    assert legacy["research-inbox/rss/old.md"]["metadataVersion"] == 1
+    legacy["research-inbox/rss/old.md"]["metadataVersion"] = MANIFEST_METADATA_VERSION
+    write_manifest(db_path, legacy)
+    assert read_manifest(db_path)["research-inbox/rss/old.md"]["metadataVersion"] == MANIFEST_METADATA_VERSION
 
 
 if __name__ == "__main__":

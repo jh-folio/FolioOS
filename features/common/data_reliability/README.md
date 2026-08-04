@@ -14,6 +14,7 @@ Data Source Reliability는 보고서와 Thesis Delta가 어떤 자료를 더 신
 - `kr_data_import.py`: `research-inbox/market-data/*.csv` 수동 보강 파일 탐색과 dataGap 생성
 - `cache.py`, `fetch_runtime.py`: semantic cache, timeout, circuit breaker, stale-while-revalidate
 - `macro_fetch.py`: FRED/BOK bounded parallel fetch compatibility facade
+- `international_market_capability_matrix.md`: 0.5 유럽 핵심 6개국·일본의 공식자료, 시장 피드, 캘린더, 대표지수, 접근·라이선스 판정
 
 ## 원칙
 

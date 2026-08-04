@@ -147,6 +147,49 @@ def test_partial_agent_writeback_preserves_sibling_scope_and_overlay():
             service.MARKET_MEMORY_DB_PATH = original_memory
 
 
+def test_partial_kr_agent_writeback_preserves_us_sibling():
+    with TemporaryDirectory() as tmp:
+        original_dir = service.BRIEFINGS_DIR
+        original_memory = service.MARKET_MEMORY_DB_PATH
+        service.BRIEFINGS_DIR = Path(tmp) / "briefings"
+        service.MARKET_MEMORY_DB_PATH = Path(tmp) / "market-memory.sqlite3"
+        try:
+            us_path = service.BRIEFINGS_DIR / "2099-12-27.us.json"
+            kr_path = service.BRIEFINGS_DIR / "2099-12-27.kr.json"
+            write_json(us_path, {"date": "2099-12-27", "marketScope": "us", "markdown": "old us sibling"})
+            write_json(kr_path, {
+                "date": "2099-12-27",
+                "marketScope": "kr",
+                "markdown": "old kr",
+                "personalOverlay": {"enabled": True, "stale": False},
+            })
+            sibling_before = us_path.read_bytes()
+            pack = {
+                "taskType": "briefing",
+                "artifactId": "2099-12-27",
+                "draftArtifact": {
+                    "date": "2099-12-27",
+                    "marketScope": "kr",
+                    "stats": {"documents": 1},
+                    "marketSnapshot": {"ok": True},
+                    "koreaMarketData": {"ok": True},
+                },
+                "sources": [],
+                "marketTape": {},
+                "internal": {"qualityMode": "diagnose_only", "qualityPreflight": {}},
+            }
+            with patch.object(service, "build_memory_from_briefing", return_value=[]) as build_memory:
+                service.write_briefing_from_markdown(pack, _valid_briefing_markdown("kr"))
+            saved = read_json(kr_path, {})
+            assert build_memory.call_count == 0
+            assert saved["markdown"].startswith("# Korea Market Briefing")
+            assert saved["personalOverlay"]["stale"] is True
+            assert us_path.read_bytes() == sibling_before
+        finally:
+            service.BRIEFINGS_DIR = original_dir
+            service.MARKET_MEMORY_DB_PATH = original_memory
+
+
 def test_invalid_agent_briefing_is_rejected_before_store_write():
     with TemporaryDirectory() as tmp:
         original_dir = service.BRIEFINGS_DIR

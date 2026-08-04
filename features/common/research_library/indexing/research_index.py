@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 EMBED_DIM = 384
+MANIFEST_METADATA_VERSION = 2
 TOKEN_RE = re.compile(r"[A-Za-z0-9가-힣]{2,}")
 
 
@@ -146,10 +147,14 @@ def init_db(conn: sqlite3.Connection) -> None:
             file_signature TEXT NOT NULL DEFAULT '',
             market_relevant INTEGER NOT NULL DEFAULT 0,
             doc_id TEXT NOT NULL DEFAULT '',
-            modified_at TEXT NOT NULL DEFAULT ''
+            modified_at TEXT NOT NULL DEFAULT '',
+            metadata_version INTEGER NOT NULL DEFAULT 1
         )
         """
     )
+    manifest_columns = {str(row[1]) for row in conn.execute("PRAGMA table_info(file_manifest)")}
+    if "metadata_version" not in manifest_columns:
+        conn.execute("ALTER TABLE file_manifest ADD COLUMN metadata_version INTEGER NOT NULL DEFAULT 1")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_documents_date ON documents(date DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON chunks(doc_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_file_manifest_path ON file_manifest(path)")
@@ -201,6 +206,8 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                 "normalizedUrl": doc.get("normalizedUrl", ""),
                 "query": doc.get("query", ""),
                 "querySource": doc.get("querySource", ""),
+                "language": doc.get("language", ""),
+                "country": doc.get("country", ""),
                 "reliabilityTier": doc.get("reliabilityTier", ""),
                 "relatedTickers": doc.get("relatedTickers", []) or [],
                 "relatedThemes": doc.get("relatedThemes", []) or [],
@@ -329,7 +336,7 @@ def read_manifest(db_path: str | Path) -> dict:
     conn = connect(path)
     init_db(conn)
     rows = conn.execute(
-        "SELECT path, file_signature, market_relevant, doc_id, modified_at FROM file_manifest"
+        "SELECT path, file_signature, market_relevant, doc_id, modified_at, metadata_version FROM file_manifest"
     ).fetchall()
     return {
         str(row["path"]): {
@@ -337,6 +344,7 @@ def read_manifest(db_path: str | Path) -> dict:
             "marketRelevant": bool(row["market_relevant"]),
             "id": str(row["doc_id"]),
             "modifiedAt": str(row["modified_at"]),
+            "metadataVersion": int(row["metadata_version"] or 1),
         }
         for row in rows
     }
@@ -350,8 +358,8 @@ def write_manifest(db_path: str | Path, manifest_dict: dict) -> None:
         conn.execute("DELETE FROM file_manifest")
         if manifest_dict:
             conn.executemany(
-                "INSERT INTO file_manifest (path, file_signature, market_relevant, doc_id, modified_at)"
-                " VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO file_manifest (path, file_signature, market_relevant, doc_id, modified_at, metadata_version)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
                 [
                     (
                         str(p),
@@ -359,6 +367,7 @@ def write_manifest(db_path: str | Path, manifest_dict: dict) -> None:
                         1 if entry.get("marketRelevant") else 0,
                         str(entry.get("id", "")),
                         str(entry.get("modifiedAt", "")),
+                        int(entry.get("metadataVersion") or MANIFEST_METADATA_VERSION),
                     )
                     for p, entry in manifest_dict.items()
                 ],
@@ -408,6 +417,8 @@ def load_documents_from_db(db_path: str | Path) -> list[dict]:
             "normalizedUrl": meta.get("normalizedUrl", ""),
             "query": meta.get("query", ""),
             "querySource": meta.get("querySource", ""),
+            "language": meta.get("language", ""),
+            "country": meta.get("country", ""),
             "reliabilityTier": meta.get("reliabilityTier", ""),
             "relatedTickers": meta.get("relatedTickers", []) or [],
             "relatedThemes": meta.get("relatedThemes", []) or [],

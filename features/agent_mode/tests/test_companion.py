@@ -35,6 +35,12 @@ def test_normalize_agent_context_keeps_safe_fields_only():
     }
 
 
+def test_normalize_agent_context_preserves_legacy_both_and_canonicalizes_eu():
+    assert normalize_agent_context({"marketScope": "both"})["marketScope"] == "both"
+    assert normalize_agent_context({"marketScope": "EU"})["marketScope"] == "europe"
+    assert normalize_agent_context({"marketScope": "MARS"})["marketScope"] == ""
+
+
 def test_normalize_agent_context_accepts_only_collection_identity():
     ctx = normalize_agent_context({
         "surface": "deep_research",

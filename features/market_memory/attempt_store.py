@@ -13,11 +13,15 @@ from uuid import uuid4
 
 from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, ValidationError, model_validator
 
+from features.common.markets import MarketCode
+
 
 class AttemptScope(StrEnum):
-    GLOBAL = "GLOBAL"
-    US = "US"
-    KR = "KR"
+    GLOBAL = MarketCode.GLOBAL.value
+    US = MarketCode.US.value
+    KR = MarketCode.KR.value
+    EUROPE = MarketCode.EUROPE.value
+    JP = MarketCode.JP.value
 
 
 class AttemptMode(StrEnum):
