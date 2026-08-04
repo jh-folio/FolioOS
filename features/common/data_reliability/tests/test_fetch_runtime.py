@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import threading
 import time
 
 from features.common.data_reliability.fetch_runtime import FetchPolicy, ProviderFetchRuntime
@@ -32,11 +33,31 @@ def test_last_known_good_survives_fetch_failure(tmp_path):
 
 
 def test_macro_providers_are_fetched_in_bounded_parallel(tmp_path):
+    """Both providers must be in flight at the same time.
+
+    Asserting on wall-clock made this flaky: two 0.08s sleeps leave only 0.01s
+    between the parallel and sequential outcomes, so a loaded CI runner failed a
+    correct implementation. Observe overlap directly instead — a sequential
+    runtime can never reach two concurrent callers.
+    """
+    lock = threading.Lock()
+    inflight = 0
+    peak = 0
+
     def slow(provider):
-        time.sleep(0.08)
+        nonlocal inflight, peak
+        with lock:
+            inflight += 1
+            peak = max(peak, inflight)
+        try:
+            # Long enough that a sequential implementation cannot interleave by
+            # luck; wall-clock is never asserted on, so runner load is harmless.
+            time.sleep(0.05)
+        finally:
+            with lock:
+                inflight -= 1
         return {"ok": True, "series": {provider: {"latest": 1}}}
 
-    started = time.perf_counter()
     result = fetch_macro_data_cached(
         cache_root=tmp_path,
         fred_series=["A"],
@@ -44,9 +65,8 @@ def test_macro_providers_are_fetched_in_bounded_parallel(tmp_path):
         fred_fetcher=lambda: slow("fred"),
         bok_fetcher=lambda: slow("bok"),
     )
-    elapsed = time.perf_counter() - started
     assert result["ok"] is True
-    assert elapsed < 0.15
+    assert peak == 2, "macro providers were fetched sequentially"
     for provider in ("fred", "bok"):
         assert {"asOf", "fetchedAt", "status", "provider", "fallbackReason"} <= result[provider].keys()
 
