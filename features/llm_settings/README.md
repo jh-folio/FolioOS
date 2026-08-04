@@ -74,7 +74,7 @@ fallback 모델 목록:
 ```text
 Codex CLI: GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, GPT-5.5, GPT-5.4, GPT-5.4-mini
 OpenAI API: GPT-5.5, GPT-5.4, GPT-5.4-mini
-Claude: Claude Fable 5, Claude Sonnet 5, Claude Opus 4.8, Claude Sonnet 4.6, Claude Haiku 4.5
+Claude: Claude Fable 5, Claude Sonnet 5, Claude Opus 5, Claude Haiku 4.5
 Gemini: Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash-Lite
 ```
 

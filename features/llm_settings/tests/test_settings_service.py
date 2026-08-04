@@ -33,7 +33,7 @@ def test_public_settings_exposes_provider_model_choices():
         "gpt-5.5", "gpt-5.4", "gpt-5.4-mini",
     ]
     assert [item["value"] for item in providers["claude"]["modelChoices"]] == [
-        "claude-fable-5", "claude-sonnet-5", "claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5",
+        "claude-fable-5", "claude-sonnet-5", "claude-opus-5", "claude-haiku-4-5",
     ]
     assert result["agent"] == {"enabled": True, "mode": "cli"}
 

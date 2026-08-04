@@ -7,6 +7,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from features.llm_settings.model_catalog import normalize_model_id
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 
 OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
@@ -105,7 +107,10 @@ def openai_config():
         "anthropicApiKey": os.environ.get("ANTHROPIC_API_KEY", "").strip(),
         "model": os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL).strip() or DEFAULT_OPENAI_MODEL,
         "geminiModel": os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL).strip() or DEFAULT_GEMINI_MODEL,
-        "anthropicModel": os.environ.get("ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL).strip() or DEFAULT_ANTHROPIC_MODEL,
+        "anthropicModel": normalize_model_id(
+            "claude",
+            os.environ.get("ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL).strip() or DEFAULT_ANTHROPIC_MODEL,
+        ),
         "enabled": enabled,
     }
 

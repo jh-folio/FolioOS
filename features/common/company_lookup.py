@@ -100,6 +100,7 @@ COMPANIES = [
     {"name": "Hyundai Motor", "aliases": ["현대차", "005380"], "ticker": "005380", "sector": "Automobiles", "market": "KR"},
     {"name": "Kia", "aliases": ["기아", "000270"], "ticker": "000270", "sector": "Automobiles", "market": "KR"},
     {"name": "LG Energy Solution", "aliases": ["LG에너지솔루션", "373220", "LG엔솔"], "ticker": "373220", "sector": "Battery", "market": "KR"},
+    {"name": "NAVER", "aliases": ["네이버", "035420", "Naver"], "ticker": "035420", "sector": "Internet", "market": "KR"},
 ]
 
 

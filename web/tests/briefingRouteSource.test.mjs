@@ -56,14 +56,16 @@ test("Briefing route owns reader actions and native note persistence", async () 
   assert.match(source, /\/api\/briefings\/\$\{encodeURIComponent\(date\)\}\/personal-overlay/);
   assert.match(source, /noteType: "market_memo"/);
   assert.match(source, /noteIdentity=\{briefingNoteIdentity/);
-  assert.match(source, /noteLinkedTitle=\{readerContent\.title\}/);
+  assert.match(source, /noteLinkedTitle=\{readerTitle\}/);
   assert.match(source, /noteOverlay=\{parsePersonalOverlayPayload\(briefing\.personalOverlay, briefing\.canonicalRevision\)\}/);
   assert.match(shellSource, /FolioNotePanel/);
   assert.match(noteSource, /\/api\/investment-notes/);
   assert.match(source, /ReaderActionGroup title="AI"/);
   assert.match(source, /ReaderActionGroup title="노트"/);
   assert.match(source, /ReaderActionGroup title="내보내기"/);
-  assert.match(source, /message: `\$\{readerContent\.title\}/);
+  assert.match(source, /message: `\$\{readerTitle\}/);
+  assert.match(source, /KST 발행/);
+  assert.match(source, /meta=\{`\$\{formatArchiveDate\(publicationDate\)\} KST 발행`\}/);
   assert.match(source, /autoSubmit: true/);
   assert.doesNotMatch(source, />\s*목록\s*</);
 });

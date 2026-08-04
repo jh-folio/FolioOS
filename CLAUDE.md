@@ -325,6 +325,7 @@ features/company_analysis/financial_quality_prompt.md
 - Lightweight Charts의 `layout.attributionLogo`와 사용자 화면의 TradingView 링크·copyright, `THIRD_PARTY_NOTICES.md`를 제거하지 않는다.
 - `GET /api/briefings/{date}/visuals/current`는 저장 snapshot의 종목 universe만 최신 일봉으로 재조회하는 read-only 경로다. current payload를 보고서 JSON이나 `.visuals.json`에 merge/write하지 않는다. yfinance 일봉은 실시간 체결가가 아니므로 `snapshot/delayed/stale/unavailable`과 장 상태를 명시한다.
 - 한국시간 기준 날짜 `D` 브리핑은 미국장 `D-1` 마감과 한국장 `D-1` 결과 및 `D` 개장/장중을 구분해야 한다.
+- 시장별 독자용 제목은 세션일과 상태를 함께 쓴다(`US ... D-1 마감`, `Korea ... D 장중|마감`). 발행일은 별도 `publicationDate`/`KST 발행` 메타데이터로 표시하고 저장 키·기본 정렬 기준으로 유지한다. Agent/API/규칙 생성과 아카이브가 같은 계약을 사용해야 한다.
 - 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. `pykrx` 기반 KRX 수치를 우선하고 실패하면 yfinance/기사 기반 fallback을 사용하되, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.
 - LLM 실패 시 규칙 기반 브리핑이 필요하다. 참고자료 섹션은 유지한다.
 - `select_briefing_docs()`의 fallback 경로에서 `market_windows`는 브리핑 날짜 기준 원본을 유지한다. 문서 날짜로 재계산하면 공휴일/주말에 `krPreviousSessionDate`가 틀린 날짜를 가리키는 버그가 발생한다.
@@ -486,7 +487,10 @@ features/company_analysis/financial_quality_prompt.md
 - 로직은 `features/common/change_intelligence/`에 둔다. 보고서/스냅샷 commit 시 artifact별 adapter(briefing/company/topic/market_memory)가 native 구조화 입력으로 `ChangeBasis`를 만들고 공통 comparator가 `changeSummary`를 생성한다. markdown은 comparator 입력이 아니다.
 - status enum: `baseline_created | major_change | developing_signal | conflicting_uncertain | no_material_change | insufficient_basis`. `major_change`는 높은 materiality와 tier-1 근거 1개 또는 독립 tier-2 근거 2개 이상이 필요하며 unconfirmed lead만으로는 만들 수 없다.
 - 권위 저장소: Briefing/Company/Topic은 보고서 JSON의 `changeSummary`, Market Memory는 `market_state_snapshots.payload_json`. `market-memory.sqlite3::change_event_index`는 양쪽에서 재구축 가능한 projection이며 projection 실패는 commit을 롤백하지 않는다.
-- 변화 판정은 생성 작업의 입력을 재사용하며 추가 LLM/Agent 호출을 만들지 않는다. RSS/index job에는 change hook이 없다.
+- `change_event_index`의 PK는 `(artifact_kind, artifact_id)`다. 브리핑은 시장별로 저장되므로 `artifactId`에 시장을 붙인다(`2026-08-04.us`). 날짜만 쓰면 KR 커밋이 US 변화 이벤트를 덮어쓰고 Change Feed가 어느 브리핑을 열어야 할지 알 수 없다.
+- 변화 단위의 `magnitude`는 [0,1] 범위의 상대 크기여야 한다. 브리핑 동인 점수처럼 상한 없는 합계를 절대값으로 쓰면 모든 재생성이 `major_change`가 된다. 동인은 그날 전체 점수 대비 비중과 순위로 비교한다.
+- 변화 판정은 두 층이다. 규칙 비교기가 순위·비중·지표 이동과 증거 게이트를 결정하고, 의미 비교(`semantic.py`)가 브리핑 LLM 생성 잡 안에서 시장당 1회 대표 기사 제목을 대조해 `semanticVerdict` enum으로 내용 변화를 분류한다. `new_information/reversal`+증거 등급만 코드 게이트로 `major_change` 승격, `coverage_shift_only/no_new_information`은 강등, LLM 없으면 `not_evaluated`로 major 미확정. 변화 판정용 별도 Agent job은 만들지 않고 RSS/index job에는 change hook이 없다.
+- 변화 단위의 대표 기사 제목은 `contextDocs`(hash 비교 밖)에 둔다. currentValue에 넣으면 제목 회전만으로 매일 모든 단위가 changed가 된다. 브리핑 저장 시 동인 `topDocs`(상위 3건 제목/출처/URL)와 이슈 대표 `title`을 보존한다.
 - 수동 저장(`POST /api/analysis-reports`)이나 proposal 승인 편집은 새 change event를 만들지 않는다.
 
 ### 시장 캘린더 (Market Calendar)
@@ -494,7 +498,7 @@ features/company_analysis/financial_quality_prompt.md
 - 로직은 `features/market_calendar/`에 둔다. `features/common/market_calendar.py`(거래일 helper)와는 별개 모듈이다.
 - event kind는 `macro | central_bank | holiday | earnings | filing | dividend` 6종만 허용하고 `market-memory.sqlite3::market_calendar_events`에 upsert한다.
 - `confirmed | estimated | tentative | actual`을 source tier로 결정한다. 회사 IR/공식 일정이 우선이고 yfinance/Nasdaq 등 제3자 예정치는 `estimated`로만 표시한다.
-- NYSE/KRX 휴장일과 FOMC는 공식 발표 연간 일정을 adapter에 전사해 등재한다(confirmed + 공식 sourceUrl, 새 연도 공시 시 표만 갱신). 미국 지표 발표일은 `FRED_API_KEY`가 있을 때만 수집하고 없으면 `fred_key_required`를 남긴다. 실적/배당은 포트폴리오+워치리스트 티커 대상 yfinance estimated이며, 워치리스트 표시명은 SEC company_tickers 기반 `sec_ticker_for_name()`으로 해석한다.
+- NYSE/KRX 휴장일과 FOMC는 공식 발표 연간 일정을 adapter에 전사해 등재한다(confirmed + 공식 sourceUrl, 새 연도 공시 시 표만 갱신). 브리핑 세션 기준일은 코드가 결정하며, Toss Open API 거래소 캘린더가 연결되어 유효한 응답을 주면 해당 응답을 정적 휴장일 표보다 우선하고 미연결·실패·응답 불일치 시 정적 표로 fallback한다. 미국 지표 발표일은 `FRED_API_KEY`가 있을 때만 수집하고 없으면 `fred_key_required`를 남긴다. 실적/배당은 포트폴리오+워치리스트 티커 대상 yfinance estimated이며, 워치리스트 표시명은 SEC company_tickers 기반 `sec_ticker_for_name()`으로 해석한다.
 - raw page/PDF를 장기 보존하지 않고 normalized event와 source URL만 저장한다. refresh는 automation job이며 Agent를 호출하지 않는다.
 
 ### Research Cockpit 대시보드
@@ -502,6 +506,7 @@ features/company_analysis/financial_quality_prompt.md
 - 로직은 `features/dashboard/`에 둔다. 기본 `dashboardMode=cockpit`이며 Legacy 모드로 실제 전환할 수 있다.
 - 기존 `data/market-widget-settings.json`은 삭제·수정하지 않고 read-only fallback으로만 읽는다. 새 설정은 `data/dashboard-settings.json`에 저장한다.
 - 초기 cockpit payload에는 외부 network 호출·chart series·iframe이 없고 차트/일정 상세는 lazy fetch한다. 네이티브 차트는 `GET /api/market/chart`와 기존 Lightweight Charts 전역을 재사용한다.
+- `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
 - 기존 `/api/dashboard` 응답은 기존 consumer 호환을 위해 유지한다.
 
 ### Agent 상담 (Consultation)

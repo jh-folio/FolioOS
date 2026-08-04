@@ -78,6 +78,60 @@ def test_download_toss_candle_rows_maps_ohlcv_and_filters_to_date_window(monkeyp
     }]
 
 
+def test_fetch_toss_kr_market_calendar_normalizes_open_session(monkeypatch):
+    monkeypatch.setenv("FOLIO_ENABLE_TOSS_OPEN_API", "1")
+    monkeypatch.setenv("TOSS_OPEN_API_CLIENT_ID", "client-id")
+    monkeypatch.setenv("TOSS_OPEN_API_CLIENT_SECRET", "client-secret")
+    toss_open_api._TOKEN_CACHE.clear()
+
+    def fake_transport(method, url, *, headers=None, data=None, timeout=10):
+        if url.endswith("/oauth2/token"):
+            return {"access_token": "token-1", "expires_in": 3600}
+        assert "/api/v1/market-calendar/KR?date=2026-08-04" in url
+        return {"result": {
+            "today": {
+                "date": "2026-08-04",
+                "integrated": {"regularMarket": {"startTime": "09:00:00", "endTime": "15:30:00"}},
+            },
+            "previousBusinessDay": {"date": "2026-08-03"},
+            "nextBusinessDay": {"date": "2026-08-05"},
+        }}
+
+    status = toss_open_api.fetch_toss_market_calendar("KR", date="2026-08-04", transport=fake_transport)
+
+    assert status["isOpen"] is True
+    assert status["previousBusinessDay"] == "2026-08-03"
+    assert status["provider"] == "toss_open_api"
+
+
+def test_fetch_toss_us_market_calendar_normalizes_holiday(monkeypatch):
+    monkeypatch.setenv("FOLIO_ENABLE_TOSS_OPEN_API", "1")
+    monkeypatch.setenv("TOSS_OPEN_API_CLIENT_ID", "client-id")
+    monkeypatch.setenv("TOSS_OPEN_API_CLIENT_SECRET", "client-secret")
+    toss_open_api._TOKEN_CACHE.clear()
+
+    def fake_transport(method, url, *, headers=None, data=None, timeout=10):
+        if url.endswith("/oauth2/token"):
+            return {"access_token": "token-1", "expires_in": 3600}
+        return {"result": {
+            "today": {
+                "date": "2026-07-03",
+                "dayMarket": None,
+                "preMarket": None,
+                "regularMarket": None,
+                "afterMarket": None,
+            },
+            "previousBusinessDay": {"date": "2026-07-02"},
+            "nextBusinessDay": {"date": "2026-07-06"},
+        }}
+
+    status = toss_open_api.fetch_toss_market_calendar("US", date="2026-07-03", transport=fake_transport)
+
+    assert status["isOpen"] is False
+    assert status["previousBusinessDay"] == "2026-07-02"
+    assert status["nextBusinessDay"] == "2026-07-06"
+
+
 def test_toss_credentials_are_disabled_without_release_flag(monkeypatch):
     monkeypatch.setenv("FOLIO_ENABLE_TOSS_OPEN_API", "0")
     monkeypatch.setenv("TOSS_OPEN_API_CLIENT_ID", "client-id")

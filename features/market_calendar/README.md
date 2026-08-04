@@ -14,3 +14,5 @@
 화면(대시보드 캘린더 패널)은 주간 스트립/월간 그리드/날짜 드릴다운과 종류·시장·보유/관심 필터를 제공하고, 실적은 미 동부시간 기준 장전/장후/발표일 태그로 표시합니다. 보기/필터 상태는 `data/dashboard-settings.json`에 저장됩니다.
 
 API: `GET /api/market-calendar`, `POST /api/market-calendar/refresh`.
+
+브리핑의 거래 세션 기준일 판정은 저장된 이벤트 목록과 별도로 `features/common/market_calendar.py`가 담당합니다. 연결된 Toss Open API 거래소 캘린더 응답을 정적 NYSE/KRX 휴장일 표보다 우선하며, API를 사용할 수 없거나 응답 날짜·형식 검증에 실패하면 정적 표로 fallback합니다.

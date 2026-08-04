@@ -477,13 +477,20 @@ def test_market_memory_update_task_runs_memory_then_snapshot():
 
 
 def test_briefing_agent_prompt_embeds_full_output_contract():
-    contract = briefing_output_contract("both")
+    contract = briefing_output_contract(
+        "both",
+        expected_titles={
+            "us": "US Market Briefing — 2026.08.03 마감",
+            "kr": "Korea Market Briefing — 2026.08.04 장중",
+        },
+    )
     prompt = bridge._agent_prompt(Path("pack.json"), {"outputContract": contract})
     assert "0. 오늘의 미국장 성격" in prompt
     assert "6. 다음 한국장 체크포인트" in prompt
     assert "10000" in prompt
     assert "축약" in prompt
-    assert "# US Market Briefing — YYYY.MM.DD" in prompt
+    assert "# US Market Briefing — 2026.08.03 마감" in prompt
+    assert "# Korea Market Briefing — 2026.08.04 장중" in prompt
     assert "기업명" in prompt
 
 
@@ -518,6 +525,22 @@ def test_briefing_contract_rejects_preamble_between_title_and_section_zero():
     )
     violations = briefing_contract_violations(markdown, contract)
     assert any("제목 다음 프리앰블 금지" in item for item in violations)
+
+
+def test_briefing_contract_rejects_title_that_uses_publication_date_instead_of_session_date():
+    contract = briefing_output_contract(
+        "us",
+        expected_titles={"us": "US Market Briefing — 2026.08.03 마감"},
+    )
+    markdown = _valid_briefing_output().split("# Korea Market Briefing", 1)[0].strip()
+    markdown = markdown.replace(
+        "# US Market Briefing — 2099.12.31",
+        "# US Market Briefing — 2026.08.04 마감",
+    )
+
+    violations = briefing_contract_violations(markdown, contract)
+
+    assert any("US Market Briefing — 2026.08.03 마감" in item for item in violations)
 
 
 def test_run_agent_task_retries_invalid_briefing_once_before_writeback():

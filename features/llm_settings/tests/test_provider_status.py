@@ -11,7 +11,7 @@ def _config(**overrides):
         "anthropicApiKey": "claude-secret",
         "model": "gpt-5.5",
         "geminiModel": "gemini-2.5-flash",
-        "anthropicModel": "claude-sonnet-4-6",
+        "anthropicModel": "claude-sonnet-5",
     }
     config.update(overrides)
     return config

@@ -15,10 +15,12 @@ from features.daily_briefing.issue_selection import (
     session_modes_from_windows,
 )
 from features.daily_briefing.schema import (
+    briefing_expected_titles,
     briefing_file_name,
     briefing_link_file_name,
     briefing_scope_view,
     briefing_type_instruction,
+    normalize_briefing_markdown_titles,
     normalize_briefing_type,
     normalize_market_scope,
     visual_sidecar_file_name,
@@ -276,6 +278,40 @@ def clean_brief_text(text, limit=420):
     return cut.rstrip(".,;:") + "..."
 
 
+_READER_PIPELINE_META_PATTERNS = tuple(re.compile(pattern, re.I) for pattern in (
+    r"(?:로컬|입력|수집된)\s*(?:자료|컨텍스트)",
+    r"(?:본문|원문)\s*(?:수집|확보).*(?:실패|못했|되지\s*않|불가)",
+    r"제목(?:과|·|/)\s*(?:공개\s*)?요약만",
+    r"다음\s*(?:거래일|미국장|한국장).*?(?:주가|가격).*?반응.*?(?:알\s*수\s*없|확인되지|미지수)",
+    r"(?:주가|가격).*?반응.*?(?:알\s*수\s*없|확인되지|미지수)",
+    r"(?:bodyAvailability|off_session_news|marketTape|issueCoverage)",
+))
+
+
+def reader_facing_briefing_markdown(markdown):
+    """Remove research-pipeline commentary from reader-facing prose.
+
+    Evidence availability still controls selection and claim strength. This
+    cleanup only prevents internal collection state from becoming the story.
+    """
+    cleaned_lines = []
+    for raw_line in str(markdown or "").splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            cleaned_lines.append("")
+            continue
+        sentences = re.split(r"(?<=[.!?])\s+", stripped)
+        kept = [
+            sentence for sentence in sentences
+            if sentence and not any(pattern.search(sentence) for pattern in _READER_PIPELINE_META_PATTERNS)
+        ]
+        if kept:
+            prefix = raw_line[:len(raw_line) - len(raw_line.lstrip())]
+            cleaned_lines.append(prefix + " ".join(kept))
+    result = "\n".join(cleaned_lines)
+    return re.sub(r"\n{3,}", "\n\n", result).strip()
+
+
 def _doc_key(doc):
     return doc.get("url") or doc.get("path")
 
@@ -431,6 +467,12 @@ def build_llm_context(
     market_drivers = [driver for driver in market_drivers if driver.get("docs")]
     issue_coverage = list(issue_coverage or [])
     session_modes = session_modes or session_modes_from_windows(market_windows)
+    expected_titles = briefing_expected_titles(
+        date,
+        market_scope,
+        market_windows=market_windows,
+        session_modes=session_modes,
+    )
 
     # 자료를 tier별로 선별한다.
     #   driver: 핵심 시장 동인 상위 자료 → 길게 제공
@@ -530,6 +572,10 @@ def build_llm_context(
         f"브리핑 유형(briefingType): {briefing_type}",
         f"미국장 세션 모드: {session_modes.get('us', '')}",
         f"한국장 세션 모드: {session_modes.get('kr', '')}",
+        *[
+            f"{scope.upper()} 최종 제목(정확히 사용): # {title}"
+            for scope, title in expected_titles.items()
+        ],
         "",
         "## 브리핑 분석 모드",
         f"analysisMode: {market_windows.get('analysisMode', '')}",
@@ -547,6 +593,11 @@ def build_llm_context(
             "주말/휴장 모드에서는 2번 '시장을 움직인 핵심 변수'와 3~4번 '시장을 주도한 기업' 섹션을 off_session_news(주말/휴장 사이 새 뉴스) 중심으로 구성하세요. 최근 정규장 자료는 1번 시장 흐름에서 간결히 복기하는 배경으로 쓰고, 핵심 변수/기업 섹션에서 새 뉴스의 다음 거래일 반영 가능성과 확인 조건을 우선 다루세요."
             if market_windows.get("weekendOrHolidayNewsMode")
             else ""
+        ),
+        (
+            "중요: 위 주말/휴장·세션 구분은 분석 오류를 막기 위한 내부 지침입니다. 최종 본문에는 장이 열리지 않았다는 설명, 가격 반응으로 해석할 수 없다는 면책 문장, off_session_news 같은 운영 용어를 쓰지 마세요. 뉴스의 경제적 전달 경로를 바로 분석하고 필요한 조건만 체크포인트에 적으세요."
+            if market_windows.get("weekendOrHolidayNewsMode")
+            else "세션 관련 내부 라벨과 운영 지침은 최종 본문에 노출하지 마세요."
         ),
         (
             f"weekday_kr_open 모드: '시장 흐름' 섹션에 반드시 한국 {market_windows.get('krCurrentSessionDate', '')} 개장 후/장중 흐름을 별도 문단으로 작성하세요. 한국 전일({market_windows.get('krPreviousSessionDate', '')}) 정규장은 배경 맥락으로만 쓰고 한국 당일 장중 문단을 대체하지 않습니다. 한국 당일 장중 직접 지수·수급 수치가 자료에 없으면 '확인되지 않는다'고 명시하되, 한국 당일 장중 자료에서 확인되는 뉴스 흐름은 따로 다루세요."
@@ -607,7 +658,7 @@ def build_llm_context(
             if market_scope == "kr"
             else "US Market Briefing과 Korea Market Briefing을 각각 완결형으로 작성하세요. 두 시장을 합치거나 별도의 한미 시장 연결 요약 섹션을 추가하지 말고, 연결 근거는 각 시장 본문 안에서만 짧게 설명하세요."
         ),
-        "최종 Markdown은 시장별 제목(`# US Market Briefing — YYYY.MM.DD`, `# Korea Market Briefing — YYYY.MM.DD`) 다음에 바로 `## 0. 오늘의 ... 성격`으로 시작하세요. 제목과 0번 섹션 사이에 브리핑 대상, 시장 범위, 세션 모드, 자료 선별 방식, 날짜 해석 설명, blockquote를 넣지 마세요.",
+        "최종 Markdown은 위 `최종 제목(정확히 사용)`에 지정된 시장별 제목을 그대로 쓰고, 다음 줄은 바로 `## 0. 오늘의 ... 성격`으로 시작하세요. 제목의 날짜는 시장 세션일이며 `마감`/`장중` 상태를 생략하지 마세요. 제목과 0번 섹션 사이에 브리핑 대상, 시장 범위, 세션 모드, 자료 선별 방식, 날짜 해석 설명, blockquote를 넣지 마세요.",
         f"- 브리핑 유형 지침: {briefing_type_instruction(briefing_type)}",
         "각 주요 섹션은 '한 줄 결론 + 가운뎃점 3~4개 + 기존 줄글 해설' 순서로 쓰고, 요약이 줄글을 대체하지 않게 하세요.",
         "장중 모드는 종가처럼 단정하지 말고 '현재까지/장중 기준'으로, 휴장·off-session 모드는 다음 거래일 반영 후보로 표현하세요.",
@@ -790,7 +841,7 @@ def generate_llm_briefing(date, source_date, docs, groups, market_drivers=None, 
         preflight=quality_preflight,
         context={"extraRoutes": [
             "브리핑 입력은 articles/rss만 사용한다. filings/reports는 브리핑 근거로 쓰지 않는다.",
-            "한국장 종가·수급이 없으면 KRX/CSV/yfinance provider 한계를 Source & Data Notes에 남긴다.",
+            "한국장 종가·수급이 없으면 추정하지 않고 구조화된 data gap에만 남긴다. provider·수집 실패·입력 자료 한계는 독자용 Markdown에 쓰지 않는다.",
         ]},
     )
     context = "\n\n".join([context, target_block])
@@ -821,7 +872,14 @@ def generate_llm_briefing(date, source_date, docs, groups, market_drivers=None, 
             text, response_id, usage = request_openai(cfg, prompt, context, web_search=web_search, include_usage=True)
         if not text:
             return None, "empty_response"
-        text = strip_llm_citation_markers(text)
+        text = reader_facing_briefing_markdown(strip_llm_citation_markers(text))
+        text = normalize_briefing_markdown_titles(
+            text,
+            date,
+            market_scope,
+            market_windows=market_windows,
+            session_modes=session_modes,
+        )
         return {
             "markdown": text,
             "provider": cfg["provider"],
@@ -990,8 +1048,8 @@ def _rule_driver_blocks(market_drivers, top_groups, market_windows=None):
             if weekend_mode:
                 blocks.append(
                     f"### {idx}. {name}\n\n"
-                    f"{digest} 이 흐름은 주말/휴장 사이 새로 들어온 재료로, 아직 정규장 가격 반응이 확인된 것은 아닙니다. "
-                    f"{sources} 등에서 반복 확인되며, {_driver_path_words(drv)} 경로로 다음 거래일 {markets}의 가격·수급에 반영되는지 확인해야 합니다."
+                    f"{digest} {sources} 등에서 반복 확인된 이 변화는 {_driver_path_words(drv)} 경로로 "
+                    f"{markets}의 이익 기대와 투자자 포지셔닝에 영향을 줄 수 있습니다."
                 )
             else:
                 blocks.append(
@@ -1011,8 +1069,8 @@ def _rule_driver_blocks(market_drivers, top_groups, market_windows=None):
             if weekend_mode:
                 blocks.append(
                     f"### {idx}. {group_title(group)}\n\n"
-                    f"{group_digest(group)} 주말/휴장 사이 나온 이 재료는 {path_word} 경로로 다음 거래일 투자자 기대를 조정할 수 있습니다. "
-                    f"정규장 반응은 아직 확인되지 않았으므로 {subject} 관련 후속 공시와 거래대금, 동종 기업의 상대강도를 확인해야 합니다."
+                    f"{group_digest(group)} 이 재료는 {path_word} 경로로 {subject}의 이익 기대와 업종 내 상대 평가를 바꿀 수 있습니다. "
+                    f"후속 공시와 실적 업데이트가 이 경로를 뒷받침하는지가 핵심입니다."
                 )
             else:
                 blocks.append(
@@ -1048,7 +1106,16 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
     market_drivers = [driver for driver in market_drivers if driver.get("docs")]
     session_modes = session_modes or session_modes_from_windows(market_windows)
     market_label = "미국장" if market_scope == "us" else "한국장" if market_scope == "kr" else "시장"
-    report_title = "US Market Briefing" if market_scope == "us" else "Korea Market Briefing" if market_scope == "kr" else "Daily Market Briefing"
+    report_title = (
+        briefing_expected_titles(
+            date,
+            market_scope,
+            market_windows=market_windows,
+            session_modes=session_modes,
+        ).get(market_scope)
+        if market_scope in {"us", "kr"}
+        else f"Daily Market Briefing — {date.replace('-', '.')}"
+    )
     weekend_mode = bool(market_windows.get("weekendOrHolidayNewsMode"))
     leaders = choose_leaders(groups)
     top_groups = groups[:4]
@@ -1063,7 +1130,7 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
             + (f"\n\n{stale_note.replace('## 시장 스냅샷 날짜 주의 (중요)', '**시장 스냅샷 날짜 주의(중요):**')}" if stale_note else "")
         )
     else:
-        snapshot_block = "입력 자료와 스냅샷에서 미국·한국 주요 지수의 직접 등락률은 확인되지 않습니다. 수치를 추정하지 않고, 기사에서 확인되는 가격 반응과 업종·수급 흐름을 중심으로 해석합니다."
+        snapshot_block = "지수 수치보다 기사에서 드러난 업종·수급 흐름을 중심으로 봅니다."
     korea_block = korea_market_data_to_markdown(korea_market_data) if market_scope in {"kr", "both"} else "미국장 단독 범위에서는 한국장 수치를 본문 시황으로 사용하지 않습니다."
     if market_scope == "kr":
         snapshot_block = "한국장 단독 범위에서는 미국 시장 스냅샷을 한국장 반영 여부의 보조 근거로만 사용합니다."
@@ -1099,33 +1166,32 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
         leader_groups.append(matched or (top_groups[0] if top_groups else {"docs": [], "company": leader, "sector": leader}))
 
     market_character_sentence = (
-        f"오늘 수집된 자료({source_date}, {len(docs)}건)에서는 주말/휴장 사이 새로 나온 {market_subjects} 재료가 다음 거래일 확인할 핵심 축으로 나타났습니다. 최근 정규장 흐름은 배경으로만 간결히 복기하고, 아래에서는 새 뉴스가 어느 시장과 업종에 반영될 수 있는지 구분해 살펴봅니다."
+        f"최근 시장 흐름과 새로 확인된 자료({source_date}, {len(docs)}건)를 함께 보면 {market_subjects}가 핵심 축으로 나타났습니다. 아래에서는 이 변화가 기업 실적과 업종 기대에 전달되는 경로를 살펴봅니다."
         if weekend_mode
         else f"오늘 수집된 자료({source_date}, {len(docs)}건)에서는 {market_subjects} 흐름이 가장 두드러졌습니다. 미국장과 한국장의 연결성은 자료만으로 단정하기 어려워, 아래에서 각 동인이 어느 시장에 반영됐는지 구분해 살펴봅니다."
     )
     flow_insight = (
-        f"**시장 흐름 인사이트:** 주말/휴장 브리핑에서는 직전 정규장 지수 방향보다, 새로 나온 {key_vars} 재료가 다음 거래일 가격과 수급에 실제로 반영되는지가 더 중요한 관찰 포인트입니다."
+        f"**시장 흐름 인사이트:** 지수의 직전 움직임보다 {key_vars}가 기업 이익, 금리·환율과 업종 선호에 미치는 경로가 더 중요한 관찰 포인트입니다."
         if weekend_mode
         else f"**시장 흐름 인사이트:** 지수 방향 자체보다, 오늘 자료에서 {key_vars} 변수가 실제 가격과 수급에 어떻게 반영됐는지가 더 중요한 관찰 포인트입니다."
     )
     driver_insight = (
-        f"**핵심 변수 인사이트:** 이번 주말/휴장 뉴스에서 가장 먼저 확인할 변수는 {key_vars}입니다. 현재 반응을 단정하기보다 다음 거래일 거래대금, 선물, 환율, 동종 기업 상대강도로 반영 여부를 확인해야 합니다."
+        f"**핵심 변수 인사이트:** 가장 먼저 볼 변수는 {key_vars}입니다. 기업 실적 전망, 선물, 환율과 동종 기업 상대강도가 같은 방향을 가리키는지가 중요합니다."
         if weekend_mode
         else f"**핵심 변수 인사이트:** 오늘 시장이 가장 민감하게 반응한 변수는 {key_vars}입니다. 뉴스량이 많았던 분야보다, 가격 반응과 수급이 함께 확인되는 변수를 우선 추적해야 합니다."
     )
     company_reaction_note = (
-        "주말/휴장 사이 나온 이 뉴스는 아직 정규장 가격 반응이 확인되지 않았습니다. 다음 거래일에는 관련 기업의 거래대금, 동종 기업의 상대강도, 후속 공시/실적 업데이트로 반영 여부를 확인해야 합니다."
+        "이 뉴스가 기업가치에 미치는 영향은 매출·비용·자본지출 경로와 후속 공시·실적 업데이트를 함께 봐야 판단할 수 있습니다."
         if weekend_mode
         else "관련 뉴스가 실적 기대, 밸류체인 파급력, 업종 내 상대강도 중 어디로 연결되는지 확인해야 합니다. 영향이 한 시장에만 머물렀다면 수급·정책·실적 중 어느 요인이 더 컸는지 구분해야 합니다."
     )
     conclusion_character = (
-        f"주말/휴장 사이 새 뉴스에서는 {market_subjects} 재료가 다음 거래일 확인할 핵심 축이었습니다."
+        f"최근 흐름과 새 자료에서는 {market_subjects}가 시장을 설명하는 핵심 축이었습니다."
         if weekend_mode
         else f"오늘 자료에서는 {market_subjects} 흐름이 시장을 설명하는 핵심 축이었습니다."
     )
 
-    session_mode = session_modes.get(market_scope, "") if market_scope in {"us", "kr"} else ""
-    return f"""# {report_title} — {date.replace('-', '.')}
+    markdown = f"""# {report_title}
 
 ## 0. 오늘의 {market_label} 성격
 
@@ -1144,7 +1210,6 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
 · 지수·시장 폭 또는 수급
 · 금리·환율·변동성
 · 주도·소외 업종
-· 세션 기준: {session_mode or market_windows.get('analysisMode', '')}
 
 ### 한국장 시장 수치
 
@@ -1155,8 +1220,6 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
 ### 글로벌 시장 가격 스냅샷
 
 {snapshot_block}
-
-{market_windows.get('rule', '')} {' '.join(market_windows.get('closedNotes', []))} 미국장 마감 이후의 뉴스가 한국장에 이미 반영됐다고 단정하지 말고, 당일 한국장 장중 기사와 수급 자료가 있을 때만 반영 여부를 언급합니다.
 
 {flow_insight}
 
@@ -1243,6 +1306,7 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
 - 한국장·미국장 수치가 입력 자료나 marketTape에서 확인되지 않는 경우에는 수치를 추정하지 않고 한계로 남겼습니다.
 - 참고자료의 발행일과 실제 시장 기준일이 다를 수 있어, 본문에서는 입력 컨텍스트의 시장기준일을 우선했습니다.
 """
+    return reader_facing_briefing_markdown(markdown)
 
 
 def extract_prev_checklist(markdown):

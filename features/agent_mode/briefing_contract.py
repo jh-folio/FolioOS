@@ -36,7 +36,12 @@ KR_REQUIRED_SECTIONS = (
 )
 
 
-def briefing_output_contract(market_scope: str = "both", briefing_type: str = "default") -> dict:
+def briefing_output_contract(
+    market_scope: str = "both",
+    briefing_type: str = "default",
+    *,
+    expected_titles: dict | None = None,
+) -> dict:
     scope = str(market_scope or "both").strip().lower()
     if scope not in {"us", "kr", "both"}:
         scope = "both"
@@ -59,7 +64,8 @@ def briefing_output_contract(market_scope: str = "both", briefing_type: str = "d
             TITLE_REQUIREMENTS[key]
             for key in (("us", "kr") if scope == "both" else (scope,))
         ],
-        "titleDatePattern": "YYYY.MM.DD",
+        "expectedTitles": dict(expected_titles or {}),
+        "titleDatePattern": "YYYY.MM.DD 마감|장중",
         "requireImmediateSectionZeroAfterTitle": True,
         "requireLeadingCompanyNames": True,
         "requiredSections": sections,
@@ -88,9 +94,15 @@ def _market_keys_from_contract(contract: dict) -> list[str]:
     return keys or ["us", "kr"]
 
 
-def _title_line_match(value: str, title: str):
+def _title_line_match(value: str, title: str, expected_title: str = ""):
+    if expected_title:
+        return re.search(
+            rf"^#\s+{re.escape(expected_title)}\s*$",
+            value,
+            re.MULTILINE,
+        )
     return re.search(
-        rf"^#\s+{re.escape(title)}\s+[—-]\s+\d{{4}}\.\d{{2}}\.\d{{2}}\s*$",
+        rf"^#\s+{re.escape(title)}\s+[—-]\s+\d{{4}}\.\d{{2}}\.\d{{2}}(?:\s+(?:마감|장중))?\s*$",
         value,
         re.MULTILINE,
     )
@@ -140,9 +152,13 @@ def briefing_contract_violations(markdown: str, contract: dict) -> list[str]:
 
     for key in _market_keys_from_contract(contract):
         title = TITLE_REQUIREMENTS[key]
-        match = _title_line_match(value, title)
+        expected_title = str((contract.get("expectedTitles") or {}).get(key) or "").strip()
+        match = _title_line_match(value, title, expected_title)
         if not match:
-            violations.append(f"시장별 제목 날짜 누락: '# {title} — YYYY.MM.DD' 형식 필요")
+            if expected_title:
+                violations.append(f"시장별 제목 불일치: '# {expected_title}' 필요")
+            else:
+                violations.append(f"시장별 제목 날짜 누락: '# {title} — YYYY.MM.DD 마감|장중' 형식 필요")
             continue
         if contract.get("requireImmediateSectionZeroAfterTitle", True):
             next_line = _next_non_empty_line(value, match.end())

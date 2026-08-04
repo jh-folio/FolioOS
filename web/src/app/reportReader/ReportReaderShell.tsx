@@ -21,6 +21,7 @@ type ReportReaderShellProps = {
 export function ReportReaderShell({
   eyebrow,
   title,
+  meta,
   breadcrumb,
   actionSlot,
   noteSlot,
@@ -125,6 +126,7 @@ export function ReportReaderShell({
             <section className="report-hero react-report-hero">
               {eyebrow && <p className="report-kicker">{eyebrow}</p>}
               <h1 id={titleId}>{title}</h1>
+              {meta && <p className="report-hero-meta">{meta}</p>}
             </section>
             <div className="headline react-report-card">{children}</div>
           </div>

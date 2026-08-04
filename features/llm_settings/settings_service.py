@@ -21,7 +21,7 @@ from features.llm_settings.client import (
 )
 from features.notion_export.service import public_notion_settings
 from features.llm_settings.provider_status import PROVIDER_INFO
-from features.llm_settings.model_catalog import API_MODEL_FALLBACKS, choices_from_catalog, discover_api_models
+from features.llm_settings.model_catalog import API_MODEL_FALLBACKS, choices_from_catalog, discover_api_models, normalize_model_id
 from features.common.research_library.signals.provider_settings import load_provider_settings, save_provider_settings
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -177,12 +177,12 @@ def save_settings(body):
     gemini_data = providers.get("gemini", {}) or {}
     claude_data = providers.get("claude", {}) or {}
 
-    for key, model_key, env_key in [
-        (openai_data, "model", "OPENAI_MODEL"),
-        (gemini_data, "model", "GEMINI_MODEL"),
-        (claude_data, "model", "ANTHROPIC_MODEL"),
+    for key, model_key, env_key, model_provider in [
+        (openai_data, "model", "OPENAI_MODEL", "openai"),
+        (gemini_data, "model", "GEMINI_MODEL", "gemini"),
+        (claude_data, "model", "ANTHROPIC_MODEL", "claude"),
     ]:
-        model = str(key.get(model_key, "") or "").strip()
+        model = normalize_model_id(model_provider, key.get(model_key, ""))
         if model:
             updates[env_key] = model
 

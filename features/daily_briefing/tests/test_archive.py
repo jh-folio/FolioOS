@@ -97,6 +97,24 @@ def test_query_composes_filters_search_sort_and_pagination():
         assert both["total"] == 4
 
 
+def test_archive_date_filter_matches_either_session_or_publication_date_without_gap_false_positive():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        path = root / "2026-08-04.us.json"
+        path.write_text(json.dumps({
+            "date": "2026-08-04",
+            "marketScope": "us",
+            "sessionDate": "2026-08-01",
+            "sessionMode": "us_close",
+            "markdown": "# US Market Briefing — 2026.08.01 마감\n\nBody",
+        }, ensure_ascii=False), encoding="utf-8")
+        index = BriefingArchiveIndex(root, ttl_seconds=0)
+
+        assert index.query(date_from="2026-08-01", date_to="2026-08-01")["total"] == 1
+        assert index.query(date_from="2026-08-04", date_to="2026-08-04")["total"] == 1
+        assert index.query(date_from="2026-08-02", date_to="2026-08-02")["total"] == 0
+
+
 def test_corrupt_json_warns_and_sidecars_are_ignored():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)

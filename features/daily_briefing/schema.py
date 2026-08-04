@@ -38,6 +38,16 @@ VISUAL_TYPES = frozenset({"price_series", "market_heatmap", "index_chart"})
 VISUAL_FAMILIES = frozenset({"trend", "composition"})
 MARKET_TAGS = {"us": "미국장", "kr": "한국장", "both": "종합"}
 BRIEFING_TYPE_TAGS = {"default": "기본", "market_focused": "시황중심", "concise": "요약"}
+SESSION_STATUS_LABELS = {
+    "us_close": "마감",
+    "us_intraday": "장중",
+    "us_holiday": "마감",
+    "us_off_session": "마감",
+    "kr_close": "마감",
+    "kr_intraday": "장중",
+    "kr_holiday": "마감",
+    "kr_off_session": "마감",
+}
 
 
 def _scoped_file_stem(date, market_scope=None):
@@ -110,6 +120,92 @@ def normalize_kr_session_mode(value):
     return _normalize_enum(value, KR_SESSION_MODES, "kr_off_session")
 
 
+def _dotted_date(value):
+    text = str(value or "").strip()[:10]
+    return text.replace("-", ".") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text) else text
+
+
+def briefing_session_mode(scope, value="", market_windows=None):
+    normalized_scope = normalize_market_scope(scope)
+    raw = str(value or "").strip().lower()
+    if normalized_scope == "us":
+        return normalize_us_session_mode(raw or "us_close")
+    if normalized_scope == "kr":
+        if raw:
+            return normalize_kr_session_mode(raw)
+        windows = market_windows or {}
+        return "kr_intraday" if windows.get("krCurrentSessionDate") else "kr_close"
+    return ""
+
+
+def briefing_session_date(report_date, scope, *, session_date="", session_mode="", market_windows=None):
+    explicit = str(session_date or "").strip()[:10]
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", explicit):
+        return explicit
+    windows = market_windows or {}
+    normalized_scope = normalize_market_scope(scope)
+    if normalized_scope == "us":
+        return str(windows.get("usRegularSessionDate") or report_date or "")[:10]
+    if normalized_scope == "kr":
+        mode = briefing_session_mode("kr", session_mode, windows)
+        if mode in {"kr_intraday", "kr_close"} and windows.get("krCurrentSessionDate"):
+            return str(windows.get("krCurrentSessionDate"))[:10]
+        return str(windows.get("krPreviousSessionDate") or report_date or "")[:10]
+    return str(report_date or "")[:10]
+
+
+def briefing_market_title(report_date, scope, *, session_date="", session_mode="", market_windows=None):
+    normalized_scope = normalize_market_scope(scope)
+    if normalized_scope == "both":
+        return f"Daily Market Briefing — {_dotted_date(report_date)}"
+    mode = briefing_session_mode(normalized_scope, session_mode, market_windows)
+    resolved_date = briefing_session_date(
+        report_date,
+        normalized_scope,
+        session_date=session_date,
+        session_mode=mode,
+        market_windows=market_windows,
+    )
+    label = "US Market Briefing" if normalized_scope == "us" else "Korea Market Briefing"
+    status = SESSION_STATUS_LABELS.get(mode, "마감")
+    return f"{label} — {_dotted_date(resolved_date)} {status}".strip()
+
+
+def briefing_expected_titles(report_date, market_scope, *, market_windows=None, session_modes=None):
+    scope = normalize_market_scope(market_scope)
+    modes = session_modes or {}
+    targets = ("us", "kr") if scope == "both" else (scope,)
+    return {
+        target: briefing_market_title(
+            report_date,
+            target,
+            session_mode=modes.get(target, ""),
+            market_windows=market_windows,
+        )
+        for target in targets
+    }
+
+
+def normalize_briefing_markdown_titles(
+    markdown, report_date, market_scope, *, market_windows=None, session_modes=None,
+):
+    text = str(markdown or "")
+    for scope, title in briefing_expected_titles(
+        report_date,
+        market_scope,
+        market_windows=market_windows,
+        session_modes=session_modes,
+    ).items():
+        heading = "US Market Briefing" if scope == "us" else "Korea Market Briefing"
+        text = re.sub(
+            rf"(?m)^#\s+{re.escape(heading)}(?:\s+[—-]\s+[^\r\n]+)?\s*$",
+            f"# {title}",
+            text,
+            count=1,
+        )
+    return text
+
+
 def normalize_link_status(value):
     return _normalize_enum(value, LINK_STATUSES, "insufficient_evidence")
 
@@ -156,11 +252,26 @@ def briefing_market_metadata(report, market_scope, section=None):
     scope = normalize_market_scope(market_scope)
     report_scope = normalize_market_scope(report.get("marketScope"))
     briefing_type = normalize_briefing_type(source.get("briefingType") or report.get("briefingType"))
-    default_title = {
-        "us": f"US Market Briefing — {report_date}",
-        "kr": f"KR Market Briefing — {report_date}",
-        "both": report.get("title") or f"시장 브리핑 — {report_date}",
-    }[scope]
+    market_windows = report.get("marketWindows") or {}
+    session_mode = briefing_session_mode(
+        scope,
+        source.get("sessionMode") or report.get("sessionMode"),
+        market_windows,
+    )
+    session_date = briefing_session_date(
+        report_date,
+        scope,
+        session_date=source.get("sessionDate") or source.get("marketSessionDate") or report.get("sessionDate") or report.get("marketSessionDate"),
+        session_mode=session_mode,
+        market_windows=market_windows,
+    )
+    default_title = briefing_market_title(
+        report_date,
+        scope,
+        session_date=session_date,
+        session_mode=session_mode,
+        market_windows=market_windows,
+    )
     summary = source.get("summary") or report.get("summary") or _plain_excerpt(
         source.get("markdown") or report.get("markdown")
     )
@@ -175,8 +286,10 @@ def briefing_market_metadata(report, market_scope, section=None):
         "marketScope": scope,
         "briefingType": briefing_type,
         "generatedAt": source.get("generatedAt") or report.get("generatedAt") or "",
-        "sessionDate": source.get("sessionDate") or source.get("marketSessionDate") or "",
-        "title": str(source.get("title") or default_title),
+        "sessionDate": session_date,
+        "sessionMode": session_mode,
+        "publicationDate": report_date,
+        "title": default_title if scope in {"us", "kr"} else str(source.get("title") or default_title),
         "summary": _plain_excerpt(summary),
         "tags": [MARKET_TAGS[scope], BRIEFING_TYPE_TAGS[briefing_type]],
         "combinedGeneration": combined_generation,
@@ -201,7 +314,7 @@ def enrich_briefing_sections(
         section = deepcopy(raw)
         metadata = briefing_market_metadata(report, scope, section)
         section.update({key: metadata[key] for key in (
-            "marketScope", "briefingType", "generatedAt", "sessionDate", "title", "summary", "tags",
+            "marketScope", "briefingType", "generatedAt", "sessionDate", "sessionMode", "publicationDate", "title", "summary", "tags",
         )})
         enriched[scope] = section
     return enriched
@@ -240,16 +353,43 @@ def briefing_export_units(report):
 def briefing_scope_view(report, market_scope=None):
     out = normalize_briefing_contract(report)
     scope = normalize_market_scope(market_scope or out.get("marketScope"))
-    if scope == "both" or not out.get("briefings"):
+    if scope == "both":
+        report_date = str(out.get("date") or "")
+        modes = {
+            target: briefing_session_mode(target, "", out.get("marketWindows") or {})
+            for target in ("us", "kr")
+        }
+        out["markdown"] = normalize_briefing_markdown_titles(
+            out.get("markdown", ""),
+            report_date,
+            "both",
+            market_windows=out.get("marketWindows") or {},
+            session_modes=modes,
+        )
+        out["publicationDate"] = report_date
+        out["title"] = briefing_market_title(report_date, "both")
+        return out
+    report_scope = normalize_market_scope(out.get("marketScope"))
+    if not out.get("briefings") and report_scope in {"us", "kr"} and scope != report_scope:
         return out
     scoped = out.get("briefings", {}).get(scope)
     if not isinstance(scoped, dict):
-        return out
+        scoped = out
     view = deepcopy(out)
     view["marketScope"] = scope
-    view["markdown"] = scoped.get("markdown", view.get("markdown", ""))
+    metadata = briefing_market_metadata(out, scope, scoped)
+    view["markdown"] = normalize_briefing_markdown_titles(
+        scoped.get("markdown", view.get("markdown", "")),
+        metadata["reportDate"],
+        scope,
+        market_windows=out.get("marketWindows") or {},
+        session_modes={scope: metadata.get("sessionMode", "")},
+    )
     view["sources"] = scoped.get("sources", view.get("sources", []))
     view["generation"] = scoped.get("generation", view.get("generation", {}))
+    view.update({key: metadata[key] for key in (
+        "sessionDate", "sessionMode", "publicationDate", "title", "summary", "tags",
+    )})
     return view
 
 

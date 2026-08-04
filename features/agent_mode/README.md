@@ -110,7 +110,7 @@ Bridge는 shell 문자열을 실행하지 않고 adapter별 고정 argument list
 
 브리핑 context pack을 준비할 때 생성 당시 가격 series와 히트맵 사이드카 payload도 고정합니다. Agent가 Markdown 작성을 마친 뒤 writeback하면 같은 snapshot을 보고서와 `{date}.visuals.json`에 저장하므로 작성 시간 동안 시장 데이터가 바뀌어도 과거 보기가 흔들리지 않습니다.
 
-CLI 브리핑은 API 브리핑과 동일한 시장별 프롬프트(`features/daily_briefing/prompt_us.md`, `features/daily_briefing/prompt_kr.md`), 선별 context, evidence, quality preflight를 사용합니다. `outputContract`는 선택 시장별 `0~6 + 오늘의 결론 + Source & Data Notes`, 한 줄 결론, 가운뎃점 요약, 최소 분량을 요구합니다. 첫 CLI 결과가 이 계약을 충족하지 못하면 같은 context pack으로 한 번 자동 재작성하며, 두 번째 결과도 미달하면 writeback을 호출하지 않아 기존 저장 브리핑과 시각 snapshot을 덮어쓰지 않습니다.
+CLI 브리핑은 API 브리핑과 동일한 시장별 프롬프트(`features/daily_briefing/prompt_us.md`, `features/daily_briefing/prompt_kr.md`), 선별 context, evidence, quality preflight를 사용합니다. `outputContract`는 선택 시장별 `0~6 + 오늘의 결론 + Source & Data Notes`, 한 줄 결론, 가운뎃점 요약, 최소 분량과 코드가 계산한 정확한 `세션일 + 마감/장중` 제목을 요구합니다. 첫 CLI 결과가 이 계약을 충족하지 못하면 같은 context pack으로 한 번 자동 재작성하며, 두 번째 결과도 미달하면 writeback을 호출하지 않아 기존 저장 브리핑과 시각 snapshot을 덮어쓰지 않습니다.
 
 CLI writeback은 최종 Markdown의 주도 기업 ①·② 제목을 다시 해석해 사전 후보 회사 차트를 제거하고 해당 ticker의 생성 당시 차트로 교체합니다. 기업명을 해석할 수 없거나 가격 수집에 실패하면 다른 기업 차트를 순번만 맞춰 붙이지 않고 해당 차트를 생략하며 warning을 남깁니다. 지수와 히트맵 snapshot은 이 과정에서 다시 수집하거나 변경하지 않습니다.
 

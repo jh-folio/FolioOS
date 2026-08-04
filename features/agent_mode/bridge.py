@@ -298,13 +298,22 @@ def _agent_prompt(pack_path: Path, pack: dict) -> str:
         "Do not modify files, run the Folio OS writeback command, or expose credentials.",
     ]
     required = contract.get("requiredSections") or []
+    expected_titles = [
+        str(value).strip() for value in (contract.get("expectedTitles") or {}).values()
+        if str(value).strip()
+    ]
+    title_instruction = (
+        "Market title H1 lines must exactly match: " + " / ".join(f"'# {title}'" for title in expected_titles) + "."
+        if expected_titles
+        else "Each market title must be an H1 with a session date and status, like '# US Market Briefing — YYYY.MM.DD 마감' or '# Korea Market Briefing — YYYY.MM.DD 장중'."
+    )
     if required:
         lines.extend([
             "Do not summarize, shorten, merge, or omit required report sections (필수 섹션을 축약하지 마세요).",
             f"Minimum report length: {int(contract.get('minimumCharacters') or 0)} characters.",
             f"Minimum '**한 줄 결론:**' count: {int(contract.get('minimumOneLineConclusions') or 0)}.",
             f"Minimum middle-dot summary line count: {int(contract.get('minimumMiddleDotBullets') or 0)}.",
-            "Each market title must be an H1 with a date, exactly like '# US Market Briefing — YYYY.MM.DD' and/or '# Korea Market Briefing — YYYY.MM.DD'.",
+            title_instruction,
             "After each market title, start immediately with the matching '## 0. 오늘의 ... 성격' section. Do not add market-scope notes, source-date explanations, blockquotes, or any preamble.",
             "Leading company headings must include the concrete company name after an em dash, e.g. '## 3. 미국장을 주도한 기업 ① — NVIDIA'. Never leave '[기업명]' or omit the company name.",
             "Required Markdown heading fragments, in contract order:",
@@ -488,6 +497,15 @@ def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "
 def _briefing_correction_prompt(base_prompt: str, violations: list[str], contract: dict) -> str:
     required = "\n".join(f"- {section}" for section in contract.get("requiredSections") or [])
     problems = "\n".join(f"- {violation}" for violation in violations)
+    expected_titles = [
+        str(value).strip() for value in (contract.get("expectedTitles") or {}).values()
+        if str(value).strip()
+    ]
+    title_reminder = (
+        "- Market title H1 lines must exactly match: " + " / ".join(f"'# {title}'" for title in expected_titles) + "."
+        if expected_titles
+        else "- Market titles must include the session date and status: '# US Market Briefing — YYYY.MM.DD 마감' and/or '# Korea Market Briefing — YYYY.MM.DD 장중'."
+    )
     return "\n".join([
         base_prompt,
         "",
@@ -496,7 +514,7 @@ def _briefing_correction_prompt(base_prompt: str, violations: list[str], contrac
         "Contract violations:",
         problems,
         "Hard format reminders:",
-        "- Market titles must be '# US Market Briefing — YYYY.MM.DD' and/or '# Korea Market Briefing — YYYY.MM.DD'.",
+        title_reminder,
         "- The line after each market title must be the matching '## 0. 오늘의 ... 성격' heading; no preamble or blockquote.",
         "- Section 3 and 4 leading-company headings must include a concrete company name after '—'.",
         "Required heading fragments:",
