@@ -104,10 +104,30 @@ def _raw_item(title: str, description: str, link: str, pub_date, publisher: str 
     }
 
 
+def _is_tag(element, tag: str) -> bool:
+    return element.tag == tag or element.tag.endswith("}" + tag)
+
+
+def find_rss_items(root) -> list:
+    """Collect ``<item>`` elements across RSS 0.9x/2.0 and RSS 1.0 (RDF).
+
+    RSS 2.0 nests items inside an unnamespaced ``<channel>``. RSS 1.0 puts both
+    ``channel`` and ``item`` in the ``purl.org/rss/1.0`` namespace and makes the
+    items **siblings** of the channel rather than its children — so looking only
+    for unnamespaced ``channel/item`` silently returns nothing. That matters
+    beyond a stray feed: RSS 1.0 is still common among Japanese publishers
+    (Nikkei Asia, Asahi), so the Japan expansion depends on reading it.
+    """
+    items = [child for child in root if _is_tag(child, "item")]
+    for child in root:
+        if _is_tag(child, "channel"):
+            items.extend(grandchild for grandchild in child if _is_tag(grandchild, "item"))
+    return items
+
+
 def parse_rss(xml_bytes: bytes) -> list[dict]:
     root = ET.fromstring(xml_bytes)
-    channel = root.find("channel")
-    entries = channel.findall("item") if channel is not None else []
+    entries = find_rss_items(root)
     results = []
     for item in entries:
         raw = _raw_item(
