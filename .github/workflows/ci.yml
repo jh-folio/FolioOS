@@ -85,7 +85,10 @@ jobs:
         run: python scripts/package_release.py --dry-run
 
       - name: Run Python tests
-        run: python -m pytest features tests -q
+        # web/tests holds Python contract tests too. Listing only `features tests`
+        # let the 0.4.4 version bump leave web/tests/test_navigation_contract.py
+        # asserting 0.4.3 without anything going red.
+        run: python -m pytest -q
 
       - name: Install web dependencies
         run: npm ci

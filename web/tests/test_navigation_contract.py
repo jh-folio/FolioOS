@@ -119,21 +119,27 @@ def test_public_routes_are_exposed() -> None:
     assert 'href="#folio-main-content"' in shell
 
 
-def test_machine_version_authority_matches_043_release() -> None:
+def test_machine_version_authority_agrees_across_files() -> None:
+    """VERSION을 권위로 삼는다.
+
+    이전에는 버전 문자열을 하드코딩해서, 0.4.4 승격 때 이 파일만 0.4.3에 남아
+    조용히 깨졌다(CI가 `features tests`만 돌려 드러나지 않았다).
+    """
     version = _source("VERSION").strip()
     package = json.loads(_source("web/package.json"))
-    assert version == "0.4.3"
+    assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
     assert package["version"] == version
 
 
-def test_documented_043_scope_matches_english_and_korean() -> None:
+def test_documented_scope_matches_english_and_korean() -> None:
     for relative in REQUIRED_DOCS:
         assert (ROOT / relative).is_file(), relative
 
+    version = _source("VERSION").strip()
     english = _source("README.md")
     korean = _source("README.ko.md")
-    assert "What You Can Do In 0.4.3" in english
-    assert "0.4.3에서 할 수 있는 일" in korean
+    assert f"What You Can Do In {version}" in english
+    assert f"{version}에서 할 수 있는 일" in korean
     for text in (english, korean):
         assert "Deep Research" in text
         assert "Smart Collection" in text
