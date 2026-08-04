@@ -15482,7 +15482,7 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 		bottom: 0,
 		left: 0,
 		redactTop: 0
-	}), [l, u] = (0, b.useState)("local"), [d, f] = (0, b.useState)(!1), [p, m] = (0, b.useState)(null), [h, g] = (0, b.useState)([]), [_, v] = (0, b.useState)(!1), [y, S] = (0, b.useState)(""), C = (0, b.useRef)(null);
+	}), [l, u] = (0, b.useState)("local"), [d, f] = (0, b.useState)(!1), [p, m] = (0, b.useState)(null), [h, g] = (0, b.useState)([]), [_, v] = (0, b.useState)(!1), [y, S] = (0, b.useState)(""), C = (0, b.useRef)(null), w = (0, b.useRef)(null);
 	(0, b.useEffect)(() => {
 		if (!r) {
 			o("");
@@ -15502,7 +15502,7 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 			c && (c.drawImage(e, t, n, r, i, 0, 0, a.width, a.height), s.redactTop > 0 && (c.fillStyle = "#111", c.fillRect(0, 0, a.width, a.height * s.redactTop / 100)));
 		}, e.src = a;
 	}, [a, s]);
-	async function w() {
+	async function T() {
 		let e = C.current;
 		if (e) {
 			if (l === "vision" && !d) {
@@ -15525,7 +15525,7 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 			}
 		}
 	}
-	function T(e, t, n) {
+	function E(e, t, n) {
 		g((r) => r.map((r, i) => i === e ? {
 			...r,
 			[t]: t === "quantity" || t === "averagePrice" ? n === "" ? null : Number(n) : n
@@ -15556,10 +15556,27 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 					className: "section-subtitle",
 					children: "계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본과 OCR 원문은 저장하지 않습니다."
 				}),
-				/* @__PURE__ */ (0, x.jsx)("input", {
-					type: "file",
-					accept: "image/png,image/jpeg,image/webp",
-					onChange: (e) => i(e.currentTarget.files?.[0] || null)
+				/* @__PURE__ */ (0, x.jsxs)("div", {
+					className: "portfolio-import-file",
+					children: [
+						/* @__PURE__ */ (0, x.jsx)("input", {
+							ref: w,
+							type: "file",
+							accept: "image/png,image/jpeg,image/webp",
+							hidden: !0,
+							onChange: (e) => i(e.currentTarget.files?.[0] || null)
+						}),
+						/* @__PURE__ */ (0, x.jsx)("button", {
+							type: "button",
+							className: "filter-btn",
+							onClick: () => w.current?.click(),
+							children: r ? "다른 사진 선택" : "사진 선택"
+						}),
+						/* @__PURE__ */ (0, x.jsx)("span", {
+							className: "portfolio-import-file__name",
+							children: r ? r.name : "PNG · JPEG · WebP"
+						})
+					]
 				}),
 				a && /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
 					/* @__PURE__ */ (0, x.jsx)("div", {
@@ -15623,7 +15640,7 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 						className: "filter-btn apply",
 						type: "button",
 						disabled: _,
-						onClick: w,
+						onClick: T,
 						children: _ ? "인식 중" : "저장하지 않고 미리보기"
 					})
 				] }),
@@ -15649,15 +15666,15 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 						] }) }), /* @__PURE__ */ (0, x.jsx)("tbody", { children: h.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("tr", { children: [
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("input", {
 								value: e.ticker,
-								onChange: (e) => T(t, "ticker", e.currentTarget.value.toUpperCase())
+								onChange: (e) => E(t, "ticker", e.currentTarget.value.toUpperCase())
 							}) }),
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("input", {
 								value: e.quantity ?? "",
-								onChange: (e) => T(t, "quantity", e.currentTarget.value)
+								onChange: (e) => E(t, "quantity", e.currentTarget.value)
 							}) }),
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("input", {
 								value: e.averagePrice ?? "",
-								onChange: (e) => T(t, "averagePrice", e.currentTarget.value)
+								onChange: (e) => E(t, "averagePrice", e.currentTarget.value)
 							}) }),
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
 								className: `certainty-badge certainty-badge--${e.status === "confirmed" ? "confirmed" : "tentative"}`,
@@ -15665,7 +15682,7 @@ function Xo({ current: e, onApply: t, onClose: n }) {
 							}) }),
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsxs)("select", {
 								value: e.action,
-								onChange: (e) => T(t, "action", e.currentTarget.value),
+								onChange: (e) => E(t, "action", e.currentTarget.value),
 								children: [
 									/* @__PURE__ */ (0, x.jsx)("option", {
 										value: "skip",

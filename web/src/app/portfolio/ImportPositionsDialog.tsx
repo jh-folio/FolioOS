@@ -43,6 +43,7 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!file) { setSourceUrl(""); return; }
@@ -99,7 +100,21 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
       <section className="portfolio-import-dialog" role="dialog" aria-modal="true" aria-labelledby="portfolio-import-title">
         <div className="cockpit-panel__head"><div><span>LOCAL-FIRST IMPORT</span><h2 id="portfolio-import-title">증권사 화면에서 가져오기</h2></div><button type="button" className="filter-btn clear" onClick={onClose}>닫기</button></div>
         <p className="section-subtitle">계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본과 OCR 원문은 저장하지 않습니다.</p>
-        <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setFile(event.currentTarget.files?.[0] || null)} />
+        {/* 네이티브 파일 입력은 OS 기본 버튼으로 그려져 이 다이얼로그의 다른 버튼과 따로 논다.
+            Agent 작성창과 같은 방식으로 입력을 숨기고 앱 버튼이 대신 열게 한다. */}
+        <div className="portfolio-import-file">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            hidden
+            onChange={(event) => setFile(event.currentTarget.files?.[0] || null)}
+          />
+          <button type="button" className="filter-btn" onClick={() => fileInputRef.current?.click()}>
+            {file ? "다른 사진 선택" : "사진 선택"}
+          </button>
+          <span className="portfolio-import-file__name">{file ? file.name : "PNG · JPEG · WebP"}</span>
+        </div>
         {sourceUrl && <>
           <div className="portfolio-crop-controls">
             {(["top", "right", "bottom", "left", "redactTop"] as const).map((key) => <label key={key}><span>{key === "redactTop" ? "상단 가리기" : `crop ${key}`} {crop[key]}%</span><input type="range" min="0" max={key === "redactTop" ? "50" : "45"} value={crop[key]} onChange={(event) => setCrop({ ...crop, [key]: Number(event.currentTarget.value) })} /></label>)}
