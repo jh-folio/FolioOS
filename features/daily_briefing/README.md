@@ -29,6 +29,9 @@ LLM 입력과 표시 참고자료에는 같은 evidence lane·cluster dedupe·�
 
 브리핑 생성 시 `visualRecommendations`와 `visualSnapshots`를 함께 만듭니다. 선택 지수와 주도 기업은 무료·무키 경로로 생성 세션의 5분봉과 최대 1년 일봉을 저장하며 반드시 `marketSessionDate` 이후 행을 제거합니다. 1D는 5분봉, 1M·3M·YTD·1Y는 저장된 일봉에서 화면이 파생합니다. provider, 실제 `asOf`, freshness, coverage, timezone, currency를 저장하고 기준일보다 데이터가 오래됐거나 일부 종목이 누락되면 상태와 경고를 표시합니다. 시각자료 수집 실패는 Canonical markdown 생성을 막지 않습니다.
 
+당일 한국장 브리핑을 09:00 KST 전에 생성하면 분석 창의 `krCurrentSessionDate`는 당일을 유지하더라도 차트 snapshot은 아직 시작하지 않은 세션을 요청하지 않고 직전 한국 거래일을 사용합니다. 개장 후에는 당일 5분봉을 사용합니다.
+일봉 provider 반영이 늦고 같은 세션의 5분봉이 있으면 해당 5분봉의 OHLCV를 집계해 마지막 일봉을 보완합니다. 이 파생 행은 provider에 `intraday_aggregate`를 명시합니다.
+
 가격 series는 보고서 JSON에 inline 저장합니다. 히트맵 상세 rows는 compact gzip `data/briefings/{date}.visuals.json.gz` 사이드카에 저장하고 보고서는 `sidecarRef`만 가집니다. 기존 `.visuals.json`은 읽기 호환합니다. 일부 시장만 재생성하면 반대편 시장의 snapshot과 사이드카 rows를 보존합니다. 따라서 과거 브리핑은 provider를 다시 호출하지 않고 생성 당시 데이터를 재현할 수 있습니다.
 
 | 위치 | 분석 질문 | 차트 계약 | 핵심 필드 |
@@ -84,6 +87,10 @@ KR 당일 개장/장중
 
 `briefing_market_windows(date)`는 브리핑 대상일의 시장 개장 상태로 `analysisMode`를 정하고, 분석축 우선순위(`primarySessions`/`secondarySessions`/`sessionRoles`), 주말·휴장 새 뉴스 구간(`offSessionNewsWindow`, `weekendOrHolidayNewsMode`), 사람이 읽는 `sessionPriorityRule`을 함께 반환합니다. "가장 최근 마감한 시장"만 기계적으로 요약하지 않고, 모드에 맞는 주 분석축을 먼저 정합니다.
 
+세션 기준일은 Agent/LLM이 정하지 않고 `features/common/market_calendar.py`가 결정합니다. Toss Open API가 활성화되고 자격증명이 연결된 환경에서는 `/api/v1/market-calendar/{KR|US}`의 해당 날짜 개장 여부와 직전 영업일을 정적 휴장일 표보다 우선합니다. API 미연결, 요청 실패, 날짜 불일치 또는 검증할 수 없는 응답이면 기존 정적 캘린더로 자동 복귀합니다. 판정에 사용한 provider는 `marketWindows.calendarProviders`에 남깁니다.
+
+독자용 시장별 제목은 발행일이 아니라 **시장 세션일 + 상태**를 사용합니다. 예: `US Market Briefing — 2026.08.03 마감`, `Korea Market Briefing — 2026.08.04 장중`. 보고서 생성일은 별도 `publicationDate`와 리더의 `2026.08.04 KST 발행` 보조 정보로 표시합니다. 저장 키와 기본 정렬은 발행일을 유지하고, 아카이브 텍스트·날짜 검색은 `reportDate`와 `sessionDate`를 모두 검색합니다. Agent CLI 출력 계약은 기대 제목을 정확히 검증하며 API LLM·규칙 fallback도 같은 제목 정규화를 거칩니다. 종합 브리핑의 상위 제목은 발행일을 유지하고 내부 미국장·한국장 제목에서 각 세션일을 구분합니다.
+
 | analysisMode | 주요 분석축(primary) | 보조/추가 | 비고 |
 | --- | --- | --- | --- |
 | `weekday_kr_open` | 미국 D-1 정규장 + 한국 D 장중 | 한국 D-1 정규장(배경), D 최신 뉴스 | 한국 D-1은 배경 맥락으로만 |
@@ -113,6 +120,10 @@ KR 당일 개장/장중
 `build_llm_context`는 미국 정규장 마감 시황 기사에 더해, **`weekday_kr_open` 모드에서 한국 D 개장/장중(`KR 당일 개장/장중`) 자료를 고정 슬롯으로 컨텍스트에 시드**합니다(driver/group 경쟁에서 밀려 한국 당일 분석축이 비는 것을 방지). 참고자료(`refTier`)에도 한국 D 장중 자료에 `kr_current_flow` 등급을 줘 상단 일부에 배치합니다. `후보 이슈 묶음`도 `briefing_doc_score` 기준으로 정렬해 KR D-1 정규장 자료가 계속 상단을 차지하지 않게 합니다.
 
 `weekend` / `both_holiday` 모드에서는 `off_session_news` 자료를 핵심 변수와 주도 기업·섹터 후보에서 우선합니다. 직전 미국/한국 정규장 자료는 `시장 흐름` 섹션의 짧은 배경 복기에 쓰고, `시장을 움직인 핵심 변수`와 `시장을 주도한 기업` 섹션은 주말/휴장 사이 새로 나온 정책·지정학·기업 이벤트·실적/가이던스·M&A·규제·원자재/환율 뉴스를 다음 거래일 반영 후보로 다룹니다. 가격 반응은 단정하지 않고 다음 거래일 거래대금, 수급, 선물, 환율, 동종 기업 상대강도로 확인합니다.
+
+이 세션 구분은 분석 안전장치이며 독자용 문구가 아닙니다. 최종 본문에는 “장이 열리지 않았다”, “현재 가격 반응으로 해석할 수 없다”, `off_session_news` 같은 운영 설명을 노출하지 않습니다. 뉴스의 경제적 전달 경로를 바로 분석하고, 필요한 검증 조건만 다음 장 체크포인트에 자연스럽게 배치합니다.
+
+자료 가용성도 같은 원칙을 따릅니다. 유료 매체의 본문 수집 실패, 제목·공개 요약만 확보했다는 상태, 로컬/입력 자료에서 확인되지 않았다는 제작 과정은 Canonical Markdown에 노출하지 않습니다. 근거가 부족한 세부 주장은 생략하고 구조화된 `dataGaps`에만 남기며, 본문의 불확실성은 실적·정책·사업 조건의 구체적인 반대 시나리오로 표현합니다.
 
 한국장 시장 수치는 `features/common/market_data/providers.py`의 provider 체인에서 가져옵니다. 0.2 기본 체인은 `PyKrxKoreaMarketProvider` → `YFinanceKoreaMarketProvider` 순서입니다. `PyKrxKoreaMarketProvider`는 `pykrx`를 통해 KOSPI/KOSDAQ/KOSPI200, 거래대금, 투자자별 수급, 주요 업종 등락률을 조회하고, 실패하거나 미설치 상태면 `YFinanceKoreaMarketProvider`가 KOSPI/KOSDAQ 등 지수 종가·등락률을 가능한 범위에서 보완합니다. 원·달러 환율은 `USDKRW=X` fallback으로 붙입니다. Toss Open API provider와 `/exchange-rate` 보조 경로는 0.2 사용자 표면에서 제외되며 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증에서만 실행됩니다. provider가 실패하면 “입력 자료에서 한국장 종가 등락률은 확인되지 않는다”고 명시하고 수치를 추정하지 않습니다.
 
@@ -153,6 +164,7 @@ support           # 나머지 보조 자료
 Step 6 Data Foundation Lite 이후 저장 JSON에는 공통 구조화 필드 `checkpoints`, `dataGaps`, `marketTape`도 포함됩니다. 이 필드는 대시보드/품질 평가가 markdown 파싱 없이 읽기 위한 별도 필드이며, 기본 브리핑 markdown은 변경하지 않습니다.
 Step 7 Research Quality 이후 저장 JSON에는 규칙 기반 `quality` 필드도 포함됩니다. 기존 저장 브리핑은 조회 시 `quality`가 없으면 자동 평가해 백필합니다. 평가는 sourceLedger가 없는 브리핑의 한계를 warning으로 남기며, markdown 본문은 변경하지 않습니다.
 Step 11 Quality Generation 이후 생성 API는 `qualityMode`(`diagnose_only` 기본, `llm_section_improve`, `strict`)를 받을 수 있습니다. 생성 전에는 브리핑용 품질 목표(articles/rss 우선, 미국장/한국장 기준일, marketTape, 반론, 체크포인트, Source & Data Notes)와 evidence coverage preflight를 LLM 컨텍스트에 주입합니다. `llm_section_improve`는 품질 평가에서 약한 섹션만 기존 근거 범위 안에서 LLM으로 최대 1회 재작성하고, `strict`는 A-/85점 기준의 엄격 검토 경고를 추가합니다. `qualityGeneration`에는 preflight, weakSections, token/evidence telemetry, 보강 전후 점수를 저장합니다.
+0.4.x Change Intelligence 연동으로 저장 JSON의 `marketDrivers`에는 동인별 `topDocs`(상위 3건 제목/출처/URL/날짜)와 상한 자르기 전 실제 문서 수 `docCount`가, `issueCoverage`에는 대표 `title`과 `topDocs`가 남습니다. 이 값이 변화 비교의 의미 분류(직전/현재 대표 기사 대조)와 대시보드 변화 상세의 입력 재료입니다. 본문 원문은 저장하지 않습니다. 브리핑 reader 상단에는 저장된 `changeSummary`만 읽는 "이 브리핑에서 달라진 것" 스트립이 표시됩니다(백엔드 추가 호출 없음).
 
 ## 프롬프트
 

@@ -18,12 +18,12 @@ def _changed(current: dict, previous: dict | None) -> list[dict]:
     for uid, row in current_units.items():
         before = previous_units.get(uid)
         if before is None:
-            rows.append({"id": uid, "kind": row.get("kind"), "subject": row.get("subject"), "change": "added", "previousValue": None, "currentValue": row.get("currentValue"), "horizon": row.get("horizon"), "magnitude": row.get("magnitude")})
+            rows.append({"id": uid, "kind": row.get("kind"), "subject": row.get("subject"), "change": "added", "previousValue": None, "currentValue": row.get("currentValue"), "horizon": row.get("horizon"), "magnitude": row.get("magnitude"), "contextDocs": row.get("contextDocs") or [], "previousContextDocs": []})
         elif content_hash(before.get("currentValue")) != content_hash(row.get("currentValue")):
-            rows.append({"id": uid, "kind": row.get("kind"), "subject": row.get("subject"), "change": "changed", "previousValue": before.get("currentValue"), "currentValue": row.get("currentValue"), "horizon": row.get("horizon"), "magnitude": row.get("magnitude")})
+            rows.append({"id": uid, "kind": row.get("kind"), "subject": row.get("subject"), "change": "changed", "previousValue": before.get("currentValue"), "currentValue": row.get("currentValue"), "horizon": row.get("horizon"), "magnitude": row.get("magnitude"), "contextDocs": row.get("contextDocs") or [], "previousContextDocs": before.get("contextDocs") or []})
     for uid, row in previous_units.items():
         if uid not in current_units:
-            rows.append({"id": uid, "kind": row.get("kind"), "subject": row.get("subject"), "change": "removed", "previousValue": row.get("currentValue"), "currentValue": None, "horizon": row.get("horizon"), "magnitude": row.get("magnitude")})
+            rows.append({"id": uid, "kind": row.get("kind"), "subject": row.get("subject"), "change": "removed", "previousValue": row.get("currentValue"), "currentValue": None, "horizon": row.get("horizon"), "magnitude": row.get("magnitude"), "contextDocs": [], "previousContextDocs": row.get("contextDocs") or []})
     return rows[:24]
 
 

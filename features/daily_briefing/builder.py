@@ -30,18 +30,21 @@ from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.daily_briefing.issue_selection import (
     build_issue_coverage,
     derive_link_status,
+    doc_ref as issue_doc_ref,
     documents_for_scope,
     public_issue_coverage,
     session_modes_from_windows,
 )
 from features.daily_briefing.link_analysis import build_link_analysis
 from features.daily_briefing.schema import (
+    briefing_expected_titles,
     briefing_file_name,
     briefing_link_file_name,
     briefing_scope_view,
     enrich_briefing_sections,
     merge_briefing_report,
     normalize_briefing_contract,
+    normalize_briefing_markdown_titles,
     normalize_briefing_type,
     normalize_market_scope,
     visual_sidecar_gzip_file_name,
@@ -226,6 +229,13 @@ def _scope_result(
             "mode": "rules", "status": llm_status, "provider": selected_llm_config().get("provider", ""),
             "model": "", "sourceCount": len(sources),
         }
+    markdown = normalize_briefing_markdown_titles(
+        markdown,
+        date,
+        scope,
+        market_windows=market_windows,
+        session_modes=session_modes,
+    )
     generation["message"] = llm_status_message(generation)
     return {
         "marketScope": scope,
@@ -387,6 +397,7 @@ def build_briefing(
         all_groups.extend(results[scope]["groups"])
         issue_coverage.extend(results[scope]["issueCoverage"])
         for driver in results[scope]["marketDrivers"]:
+            driver_docs = driver.get("docs", [])
             scope_drivers.append({
                 "scope": scope,
                 "driver": driver.get("driver", ""),
@@ -395,7 +406,10 @@ def build_briefing(
                 "sources": driver.get("sources", []),
                 "impactTags": driver.get("impactTags", []),
                 "sectors": driver.get("sectors", []),
-                "docCount": len(driver.get("docs", [])),
+                "docCount": int(driver.get("docTotal") or len(driver_docs)),
+                # 의미 비교와 변화 상세의 입력 재료. 이게 없으면 이 동인이
+                # "무슨 내용이었는지"를 나중에 되짚을 방법이 없다.
+                "topDocs": [issue_doc_ref(doc) for doc in driver_docs[:3]],
             })
 
     try:

@@ -11,6 +11,7 @@ from features.common.change_intelligence.baseline import select_report_baseline
 from features.common.change_intelligence.basis import content_hash, normalize_basis
 from features.common.change_intelligence.comparator import compare_basis
 from features.common.change_intelligence.projection import invalidation_token, project_report
+from features.common.change_intelligence.semantic import apply_semantic_verdicts, evaluate_semantic_changes
 
 ADAPTERS = {
     "briefing": build_briefing_basis,
@@ -42,6 +43,16 @@ def decorate_candidate(artifact_kind: str, candidate: dict, *, data_dir: Path, n
         "id": basis.get("artifactId"), "revision": None, "contentHash": content_hash(basis),
     }
     summary = compare_basis(basis, previous, current_ref=current_ref, baseline_ref=baseline_ref)
+    if artifact_kind == "briefing":
+        # 의미 비교는 브리핑 생성이라는 명시적 사용자 action의 연장에서만 실행한다.
+        # 규칙 모드 생성은 LLM을 호출하지 않고 not_evaluated 게이트만 적용한다.
+        generation_mode = str((decorated.get("generation") or {}).get("mode") or "")
+        evaluation = (
+            evaluate_semantic_changes(summary)
+            if generation_mode == "llm"
+            else {"status": "not_evaluated", "verdicts": {}, "reason": "generation_rules_mode"}
+        )
+        summary = apply_semantic_verdicts(summary, evaluation)
     decorated["changeBasis"] = basis
     decorated["changeSummary"] = summary
     decorated["changeIntelligence"] = {

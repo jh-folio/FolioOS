@@ -377,6 +377,9 @@ def derive_market_drivers(docs, market_windows, limit=4):
                 # 주말/휴장 브리핑의 핵심 변수는 정규장 복기보다 휴장 중 새 재료를
                 # 우선한다. 가격 반응은 다음 거래일 확인 대상으로 남긴다.
                 g["score"] += 35 + min(len(off_docs), 4) * 8
+        # docs는 표시용 상위 5건으로 자르지만, 실제 몇 건이 이 동인에 속했는지는
+        # docTotal로 보존한다 (모든 동인이 "기사 5건"으로 보이는 문제 방지).
+        g["docTotal"] = len(g["docs"])
         g["docs"] = sorted(
             g["docs"], key=lambda d: d.get("briefingDocScore", 0), reverse=True
         )[:5]

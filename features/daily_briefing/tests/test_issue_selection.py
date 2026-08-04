@@ -211,3 +211,22 @@ def _run_all():
 
 if __name__ == "__main__":
     sys.exit(0 if _run_all() else 1)
+
+
+def test_public_issue_coverage_keeps_title_and_top_docs():
+    from features.daily_briefing.issue_selection import public_issue_coverage
+
+    issues = [{
+        "issueId": "abc123", "market": "US", "publisherCount": 3, "issueScore": 40.0,
+        "representativeDocs": [
+            {"title": "Fed signals rate path", "source": "Reuters", "url": "https://x/1", "path": "p1", "date": "2026-08-03", "content": "body"},
+            {"title": "Markets react to Fed", "source": "CNBC", "url": "https://x/2", "path": "p2", "date": "2026-08-03", "content": "body"},
+        ],
+        "docs": [{"title": "dup"}],
+    }]
+    rows = public_issue_coverage(issues)
+    assert rows[0]["title"] == "Fed signals rate path"
+    assert [doc["source"] for doc in rows[0]["topDocs"]] == ["Reuters", "CNBC"]
+    # 본문은 저장하지 않는다.
+    assert all("content" not in doc for doc in rows[0]["topDocs"])
+    assert "docs" not in rows[0] and "representativeDocs" not in rows[0]

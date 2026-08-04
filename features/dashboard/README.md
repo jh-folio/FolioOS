@@ -8,4 +8,16 @@ cockpit payload의 변화 이벤트는 `major_change | developing_signal | confl
 
 `POST /api/dashboard/settings`는 기존 저장값과 merge 후 정규화합니다(부분 갱신이 다른 키를 초기화하지 않음). 저장 키: `dashboardMode`, `calendarView`, `calendarKind`, `calendarMarket`, `calendarWatchlistOnly`, `chartRange`, `chartSymbol`.
 
-API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`. 기존 `GET /api/dashboard`는 그대로 유지합니다.
+API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`, `GET /api/dashboard/story-share?market=us|kr`. 기존 `GET /api/dashboard`는 그대로 유지합니다.
+
+## 오늘의 이야기 비중 (story_share.py)
+
+"무엇이 달라졌나" 패널 상단의 얇은 누적 막대와 범례입니다. 그날 수집된 articles/rss 시장 관련 문서 전체를 `infer_drivers()`로 묶어 상위 4개 + "그 외 이야기"의 언급 비중을 계산하고, 직전 거래일과의 %p 델타(`▲ +13%p`)를 붙입니다. 규칙 계산 전용이며 LLM을 호출하지 않습니다.
+
+- 브리핑과 독립: 브리핑을 생성하지 않아도 계산되고, 브리핑용 상한 잘린 선별본이 아니라 그날 문서 전체(`select_briefing_docs(strict=True)`)를 씁니다. strict를 쓰는 이유는 두 날짜를 같은 잣대로 비교하기 위해서입니다(비-strict는 pool을 오늘까지 확장해 직전 거래일 계산을 오염시킴).
+- 비중 이동은 보도량 변화일 뿐 내용 변화가 아니라는 경고 문장을 UI에 고정합니다. 내용 판정은 Change Intelligence의 의미 비교가 담당합니다.
+- 응답은 (date, market) 키로 10분 캐시하고 RSS 수집 완료 시 `invalidate_story_share_cache()`로 비웁니다.
+
+## 내용의 변화 카드
+
+변화 피드는 `semanticVerdict` 칩(새 정보/방향 전환/흐름 진전/보도량 이동/변화 없음/내용 미평가)이 붙은 카드로 렌더링합니다. 카드 본문의 `펼치기`는 항목별 직전/현재 대조(순위·비중, 대표 기사 제목 양쪽)를 인라인으로 보여주고, `Agent에게 묻기`는 카드가 아는 사실(전/후 값·분류·근거 제목·기준 id)을 질문으로 만들어 우측 Agent dock을 엽니다(`openReactAgentDock`, 자동 제출 없음). 상세 데이터는 change 이벤트 payload(`changedItems[].contextDocs/previousContextDocs/semanticNote`)에 이미 실려 있어 별도 상세 API가 없습니다.

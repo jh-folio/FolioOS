@@ -82,6 +82,9 @@ def normalize_change_unit(value: dict, index: int) -> dict:
         "magnitude": magnitude,
         "horizon": horizon,
         "sourceRefIds": [clean(ref, 100) for ref in refs if clean(ref, 100)][:12],
+        # 의미 비교·변화 상세용 대표 자료 제목. currentValue 밖에 두는 이유:
+        # 제목은 매일 회전하므로 hash 비교에 넣으면 모든 단위가 매일 "changed"가 된다.
+        "contextDocs": [clean(doc, 160) for doc in row.get("contextDocs") or [] if clean(doc, 160)][:3],
     }
 
 

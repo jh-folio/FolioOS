@@ -10,7 +10,7 @@ export type ChangeEvent = {
   baselineRef?: { id?: string; committedAt?: string };
 };
 
-type ChangedItem = {
+export type ChangedItem = {
   id?: string;
   subject?: string;
   change?: string;
@@ -18,6 +18,11 @@ type ChangedItem = {
   horizon?: string;
   currentValue?: unknown;
   previousValue?: unknown;
+  contextDocs?: string[];
+  previousContextDocs?: string[];
+  semanticVerdict?: string;
+  semanticNote?: string;
+  semanticCitedTitles?: string[];
 };
 
 const CHANGE_VERB_LABELS: Record<string, string> = {
@@ -33,6 +38,33 @@ function formatNumber(value: unknown): string {
 }
 
 type DriverValue = { rank?: unknown; share?: unknown };
+
+/** {rank, share}를 "3순위 · 비중 18%" 한 조각으로. 전/후 대조표가 양쪽에 쓴다. */
+export function driverValueText(value: unknown): string {
+  const row = (value || {}) as DriverValue;
+  const rank = Number(row.rank);
+  const share = Number(row.share);
+  const parts: string[] = [];
+  if (Number.isFinite(rank) && rank > 0) parts.push(`${rank}순위`);
+  if (Number.isFinite(share) && share > 0) parts.push(`비중 ${Math.round(share * 100)}%`);
+  return parts.join(" · ");
+}
+
+/** 항목 종류에 맞춰 한쪽(직전/현재) 값을 읽을 수 있는 문장으로. */
+export function changedValueText(item: ChangedItem, value: unknown): string {
+  if (value == null) return "";
+  if (item.kind === "market_metric") return formatNumber(value);
+  if (typeof value !== "object") return formatNumber(value);
+  const driver = driverValueText(value);
+  if (driver) return driver;
+  const row = value as { market?: unknown; impact?: unknown; docCount?: unknown };
+  const parts: string[] = [];
+  if (row.market) parts.push(String(row.market));
+  if (row.impact) parts.push(String(row.impact));
+  // 구형(rank/share 이전) 동인 값은 기사 수라도 보여준다.
+  if (!parts.length && Number(row.docCount) > 0) parts.push(`기사 ${Number(row.docCount)}건`);
+  return parts.join(" · ");
+}
 
 /** 동인은 그날 전체 비중에서 몇 위였고 얼마를 차지했는지가 읽을 값이다. */
 function driverDetail(item: ChangedItem): string {

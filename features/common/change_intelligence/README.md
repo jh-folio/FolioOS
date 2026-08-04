@@ -1,6 +1,13 @@
 # Change Intelligence
 
-Change Intelligence는 새 보고서·시장 상태가 생성되어 commit되기 직전에 같은 작업이 이미 검토한 구조화 자료를 이전 committed artifact와 비교합니다. 별도 Agent/LLM 호출이나 Markdown diff를 사용하지 않습니다.
+Change Intelligence는 새 보고서·시장 상태가 생성되어 commit되기 직전에 같은 작업이 이미 검토한 구조화 자료를 이전 committed artifact와 비교합니다. Markdown diff를 사용하지 않고, 변화 판정을 위해 별도 Agent job을 만들지 않습니다.
+
+판정은 두 층으로 나뉩니다.
+
+1. **규칙 비교기 (`comparator.py`)** — 어떤 단위가 생기고/사라지고/움직였는지, materiality와 증거 corroboration을 결정적으로 계산합니다. 브리핑 동인은 상한 없는 점수 합이 아니라 그날 전체 대비 순위·비중으로 비교합니다.
+2. **의미 비교 (`semantic.py`)** — 순위·비중 이동은 보도량 구성의 함수라 내용 변화를 말하지 못합니다. 브리핑 LLM 생성 잡 안에서 시장당 1회, 변화 단위별 직전/현재 대표 기사 제목(`contextDocs`, hash 비교 밖)을 비교해 `semanticVerdict` enum(`new_information | trend_development | reversal | coverage_shift_only | no_new_information`)으로 분류합니다. 코드가 enum·인용 제목·길이를 검증합니다.
+
+상태 게이트는 코드가 확정합니다: `new_information/reversal` + 증거 등급(tier-1 하나 또는 독립 tier-2 둘)만 `major_change`로 승격하고, `coverage_shift_only/no_new_information`은 물량 기반 major를 강등합니다. LLM이 없으면 `not_evaluated`로 표시하고 지표 급변 단독 케이스를 제외하면 major를 확정하지 않습니다(`uncertainties: semantic_not_evaluated`). 규칙 모드 생성은 LLM을 호출하지 않습니다.
 
 ## Authority
 

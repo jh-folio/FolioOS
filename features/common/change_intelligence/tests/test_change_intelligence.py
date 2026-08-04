@@ -210,3 +210,42 @@ def test_same_driver_mix_with_drifting_scores_is_not_a_change():
     summary = compare_basis(second, first, current_ref={"storageKind": "json_report", "id": "b2", "contentHash": "x"})
     assert summary["changedItems"] == []
     assert summary["status"] == "no_material_change"
+
+
+def test_driver_units_link_their_own_docs_and_context_titles():
+    """모든 동인이 같은 상위 12건을 가리키면 "이 변화의 근거"가 성립하지 않는다."""
+    sources = [
+        {**source(2), "id": "s-ai", "title": "Nvidia demand surges", "url": "https://x/ai"},
+        {**source(2), "id": "s-oil", "title": "Oil spikes on supply risk", "url": "https://x/oil"},
+    ]
+    report = _briefing("us", [
+        {"driver": "semis", "score": 10, "topDocs": [{"title": "Nvidia demand surges", "url": "https://x/ai"}]},
+        {"driver": "oil", "score": 5, "topDocs": [{"title": "Oil spikes on supply risk", "url": "https://x/oil"}]},
+    ])
+    report["sources"] = sources
+    basis_rows = build_briefing_basis(report)
+    units = {row["subject"]: row for row in basis_rows["changeUnits"] if row["kind"] == "market_driver"}
+    assert units["semis"]["sourceRefIds"] == ["s-ai"]
+    assert units["oil"]["sourceRefIds"] == ["s-oil"]
+    assert units["semis"]["contextDocs"] == ["Nvidia demand surges"]
+
+
+def test_context_titles_do_not_trigger_hash_changes():
+    """대표 자료 제목은 매일 회전한다. currentValue 밖에 있어야 비교가 조용하다."""
+    first = build_briefing_basis(_briefing("us", [{"driver": "semis", "score": 10, "topDocs": [{"title": "Day one headline"}]}]))
+    second = build_briefing_basis(_briefing("us", [{"driver": "semis", "score": 10, "topDocs": [{"title": "Day two headline"}]}]))
+    summary = compare_basis(second, first, current_ref={"storageKind": "json_report", "id": "b2", "contentHash": "x"})
+    assert summary["changedItems"] == []
+
+
+def test_changed_rows_carry_both_sides_context():
+    first = build_briefing_basis(_briefing("us", [{"driver": "semis", "score": 10, "topDocs": [{"title": "Old story"}]}]))
+    second = build_briefing_basis(_briefing("us", [
+        {"driver": "semis", "score": 10, "topDocs": [{"title": "New story"}]},
+        {"driver": "oil", "score": 10, "topDocs": [{"title": "Oil emerges"}]},
+    ]))
+    summary = compare_basis(second, first, current_ref={"storageKind": "json_report", "id": "b2", "contentHash": "x"})
+    changed = {row["subject"]: row for row in summary["changedItems"]}
+    assert changed["semis"]["contextDocs"] == ["New story"]
+    assert changed["semis"]["previousContextDocs"] == ["Old story"]
+    assert changed["oil"]["change"] == "added"

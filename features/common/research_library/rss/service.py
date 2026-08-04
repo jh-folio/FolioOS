@@ -599,6 +599,12 @@ def _import_rssarchive_locked(run_collection=True, progress=None):
     if progress:
         progress(f"RSS 피드 캐시 갱신 완료: 변경 {cache.get('updated', 0)}개, 삭제 {cache.get('deleted', 0)}개. 인덱스를 갱신합니다.", progress=68)
     index = build_index(incremental=True, progress=progress)
+    try:
+        from features.dashboard.story_share import invalidate_story_share_cache
+
+        invalidate_story_share_cache()
+    except Exception:
+        pass
     return {
         "output": "\n".join(output),
         "added": added,

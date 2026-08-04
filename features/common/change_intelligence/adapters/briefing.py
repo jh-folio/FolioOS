@@ -35,6 +35,23 @@ def build_briefing_basis(report: dict, *, generation_docs: list[dict] | None = N
             "contentHash": doc.get("contentHash") or content_hash({"title": doc.get("title"), "summary": doc.get("summary"), "url": doc.get("url")}),
         })
     ref_ids = [row["id"] for row in refs]
+
+    def _own_ref_ids(rows: list[dict], fallback: list[str]) -> list[str]:
+        """topDocs와 url/path/제목이 일치하는 ref만 그 단위의 근거로 잇는다.
+
+        모든 단위가 같은 상위 N건을 가리키면 "이 변화의 근거"가 성립하지 않는다.
+        일치하는 ref가 없을 때만 전체 상위 목록으로 대신한다.
+        """
+        matched = []
+        for doc in rows or []:
+            if not isinstance(doc, dict):
+                continue
+            for ref in refs:
+                keys = {value for value in (doc.get("url"), doc.get("path"), doc.get("title")) if value}
+                if keys & {ref.get("url"), ref.get("path"), ref.get("title")} and ref["id"] not in matched:
+                    matched.append(ref["id"])
+        return matched or fallback
+
     units = []
     drivers = [row for row in report.get("marketDrivers") or [] if isinstance(row, dict)]
     # A driver score is an unbounded sum of document scores, so its absolute value
@@ -46,19 +63,25 @@ def build_briefing_basis(report: dict, *, generation_docs: list[dict] | None = N
         subject = driver.get("driver") or driver.get("title")
         score = abs(float(driver.get("score") or 0))
         share = round(score / total_score, 2) if total_score else 0.0
+        top_docs = [row for row in driver.get("topDocs") or [] if isinstance(row, dict)]
         units.append({
             "id": stable_id("driver", report.get("marketScope"), subject), "kind": "market_driver",
             "subject": subject, "currentValue": {"rank": rank, "share": share, "docCount": int(driver.get("docCount") or 0)},
             "direction": "active", "magnitude": share or 0.2,
-            "horizon": "short_term", "sourceRefIds": ref_ids[:12],
+            "horizon": "short_term", "sourceRefIds": _own_ref_ids(top_docs, ref_ids[:12]),
+            # 의미 비교(전/후 내용 대조)의 입력. 제목만 담고 본문은 담지 않는다.
+            "contextDocs": [str(row.get("title") or "") for row in top_docs if row.get("title")],
         })
     for issue in (report.get("issueCoverage") or [])[:8]:
         if isinstance(issue, dict):
+            issue_docs = [row for row in issue.get("topDocs") or [] if isinstance(row, dict)]
             units.append({
                 "id": stable_id("issue", issue.get("market"), issue.get("issueId") or issue.get("title")),
                 "kind": "issue_coverage", "subject": issue.get("title") or issue.get("issueId"),
                 "currentValue": {"market": issue.get("market"), "impact": issue.get("marketImpactStatus")},
-                "direction": "observed", "magnitude": 0.35, "horizon": "short_term", "sourceRefIds": ref_ids[:8],
+                "direction": "observed", "magnitude": 0.35, "horizon": "short_term",
+                "sourceRefIds": _own_ref_ids(issue_docs, ref_ids[:8]),
+                "contextDocs": [str(row.get("title") or "") for row in issue_docs if row.get("title")],
             })
     metrics = []
     for item in (report.get("marketTape") or {}).get("items") or []:

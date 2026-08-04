@@ -1,9 +1,31 @@
-import { ARTIFACT_KIND_LABELS, baselineText, changeReasonText, type ChangeEvent } from "../watchlist/ChangeHistory";
+import { useState } from "react";
+import { openReactAgentDock } from "../agentContext";
+import {
+  ARTIFACT_KIND_LABELS,
+  baselineText,
+  changedValueText,
+  changeReasonText,
+  type ChangedItem,
+  type ChangeEvent,
+} from "../watchlist/ChangeHistory";
+import { StoryShare, type StoryMarket } from "./StoryShare";
 
 export const CHANGE_STATUS_LABELS: Record<string, string> = {
   major_change: "중대한 변화", developing_signal: "발전 중", conflicting_uncertain: "충돌·불확실",
   no_material_change: "중대한 변화 없음", baseline_created: "기준선 생성", insufficient_basis: "근거 부족",
 };
+
+/** 의미 분류 칩. tone은 CSS의 카드 좌측 색과 칩 배경을 함께 정한다. */
+export const SEMANTIC_VERDICT_LABELS: Record<string, { label: string; tone: string }> = {
+  new_information: { label: "새 정보", tone: "burgundy" },
+  reversal: { label: "방향 전환", tone: "gold" },
+  trend_development: { label: "흐름 진전", tone: "blue" },
+  coverage_shift_only: { label: "보도량 이동", tone: "muted" },
+  no_new_information: { label: "변화 없음", tone: "muted" },
+  not_evaluated: { label: "내용 미평가", tone: "muted" },
+};
+
+const VERDICT_PRIORITY = ["new_information", "reversal", "trend_development", "coverage_shift_only", "no_new_information", "not_evaluated"];
 
 export function changeEventRoute(event: ChangeEvent): string {
   const kind = String(event.artifactKind || "");
@@ -25,29 +47,144 @@ export function changeEventRoute(event: ChangeEvent): string {
   return "#/dashboard";
 }
 
+/** 기준 브리핑(비교 대상)을 여는 경로. 기준이 없으면 빈 문자열. */
+export function baselineRoute(event: ChangeEvent): string {
+  if (String(event.artifactKind || "") !== "briefing") return "";
+  const id = String(event.baselineRef?.id || "");
+  const date = id.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
+  const scope = id.endsWith(".us") ? "us" : id.endsWith(".kr") ? "kr" : /^briefing:(us|kr)$/.exec(String(event.lineageId || ""))?.[1] || "both";
+  return `#/briefing/${date}/${scope}`;
+}
+
+/** 카드 대표 항목: 의미 verdict가 강한 순 → 없으면 첫 변화 항목. */
+export function primaryChangedItem(event: ChangeEvent): ChangedItem | undefined {
+  const items = event.changedItems || [];
+  for (const verdict of VERDICT_PRIORITY) {
+    const match = items.find((item) => item.semanticVerdict === verdict);
+    if (match) return match;
+  }
+  return items[0];
+}
+
+/** Agent 도크로 넘길 질문. 카드가 아는 사실만 담고 해석은 Agent에 맡긴다. */
+export function agentQuestionForEvent(event: ChangeEvent): string {
+  const item = primaryChangedItem(event);
+  const artifact = ARTIFACT_KIND_LABELS[event.artifactKind || ""] || "보고서";
+  const subject = item?.subject || "변화 항목";
+  const lines = [`${artifact} 변화에 대해 물어볼게. 주제: ${subject}`];
+  const before = item ? changedValueText(item, item.previousValue) : "";
+  const after = item ? changedValueText(item, item.currentValue) : "";
+  if (before || after) lines.push(`변화: ${before || "기준 없음"} → ${after || "현재 없음"}`);
+  const verdict = SEMANTIC_VERDICT_LABELS[String(item?.semanticVerdict || "")];
+  if (verdict) lines.push(`의미 분류: ${verdict.label}`);
+  if (item?.semanticNote) lines.push(`분류 근거: ${item.semanticNote}`);
+  const titles = [...(item?.previousContextDocs || []).map((title) => `직전: ${title}`), ...(item?.contextDocs || []).map((title) => `현재: ${title}`)];
+  if (titles.length) lines.push(`대표 기사:\n${titles.map((title) => `- ${title}`).join("\n")}`);
+  if (event.baselineRef?.id) lines.push(`비교 기준: ${event.baselineRef.id}`);
+  lines.push("이 변화가 실제로 얼마나 중요한지, 투자 관점에서 무엇을 확인해야 하는지 설명해줘.");
+  return lines.join("\n");
+}
+
 function artifactLabel(event: ChangeEvent): string {
   return ARTIFACT_KIND_LABELS[event.artifactKind || ""] || event.artifactKind || "보고서";
 }
 
+function eventKey(event: ChangeEvent): string {
+  return `${event.artifactKind}-${event.artifactId}-${event.generatedAt}`;
+}
+
+function ChangeItemContrast({ item }: { item: ChangedItem }) {
+  const before = changedValueText(item, item.previousValue);
+  const after = changedValueText(item, item.currentValue);
+  const beforeTitles = item.previousContextDocs || [];
+  const afterTitles = item.contextDocs || [];
+  const verdict = SEMANTIC_VERDICT_LABELS[String(item.semanticVerdict || "")];
+  return (
+    <li className="change-contrast">
+      <div className="change-contrast__subject">
+        <strong>{item.subject || "항목"}</strong>
+        {verdict ? <span className="change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
+      </div>
+      {item.semanticNote ? <p className="change-contrast__note">{item.semanticNote}</p> : null}
+      <div className="change-contrast__cols">
+        <div>
+          <span className="change-contrast__col-label">직전</span>
+          {before ? <p>{before}</p> : <p className="change-contrast__empty">{item.change === "added" ? "없던 항목" : "값 없음"}</p>}
+          {beforeTitles.length ? <ul>{beforeTitles.map((title) => <li key={title}>{title}</li>)}</ul> : null}
+        </div>
+        <div>
+          <span className="change-contrast__col-label">현재</span>
+          {after ? <p>{after}</p> : <p className="change-contrast__empty">{item.change === "removed" ? "사라진 항목" : "값 없음"}</p>}
+          {afterTitles.length ? <ul>{afterTitles.map((title) => <li key={title}>{title}</li>)}</ul> : null}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function ChangeCard({ event }: { event: ChangeEvent }) {
+  const [expanded, setExpanded] = useState(false);
+  const item = primaryChangedItem(event);
+  const verdict = SEMANTIC_VERDICT_LABELS[String(item?.semanticVerdict || "")];
+  const items = event.changedItems || [];
+  const reason = item?.semanticNote || changeReasonText(event);
+  const targetRoute = changeEventRoute(event);
+  const baseline = baselineRoute(event);
+  return (
+    <li data-status={event.status} data-tone={verdict?.tone || ""}>
+      <div className="cockpit-change-card">
+        <div className="cockpit-change-card__meta">
+          <span className="status-chip">{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span>
+          {verdict ? <span className="change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
+          <time>{event.generatedAt ? new Date(event.generatedAt).toLocaleString("ko-KR") : ""}</time>
+        </div>
+        <strong>{item?.subject || artifactLabel(event)}</strong>
+        {reason ? <em className="cockpit-change-reason">{reason}</em> : null}
+        <small>{artifactLabel(event)}
+          {baselineText(event) ? <> · {baselineText(event)}</> : null}
+          {Number(event.materiality || 0) > 0 ? <> · 중요도 {Math.round(Number(event.materiality) * 100)}</> : null}
+          {Number(event.reliability || 0) > 0 ? <> · 신뢰도 {Math.round(Number(event.reliability) * 100)}</> : null}
+        </small>
+        <div className="cockpit-change-card__actions">
+          <button type="button" className="filter-btn" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+            {expanded ? "접기" : `펼치기${items.length > 1 ? ` (${items.length}건)` : ""}`}
+          </button>
+          <button type="button" className="filter-btn" onClick={() => { window.location.hash = targetRoute; }}>보고서 열기</button>
+          {baseline ? <button type="button" className="filter-btn" onClick={() => { window.location.hash = baseline; }}>기준 열기</button> : null}
+          <button type="button" className="filter-btn change-ask-agent" onClick={() => openReactAgentDock({ message: agentQuestionForEvent(event) })}>Agent에게 묻기</button>
+        </div>
+        {expanded ? (
+          <ol className="change-contrast-list">
+            {items.map((row) => <ChangeItemContrast item={row} key={row.id || row.subject} />)}
+          </ol>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: ChangeEvent[] }) {
+  const [storyMarket, setStoryMarket] = useState<StoryMarket>("us");
   return (
     <section className="cockpit-panel cockpit-change-feed" aria-labelledby="cockpit-change-title">
-      <div className="cockpit-panel__head"><div><span>CHANGE INTELLIGENCE</span><h2 id="cockpit-change-title">무엇이 달라졌나</h2></div><b>{events.length}건</b></div>
-      {events.length ? <ol>
-        {events.map((event) => (
-          <li data-status={event.status} key={`${event.artifactKind}-${event.artifactId}-${event.generatedAt}`}>
-            <button type="button" className="cockpit-change-open" onClick={() => { window.location.hash = changeEventRoute(event); }}>
-              <div><span className="status-chip">{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span><time>{event.generatedAt ? new Date(event.generatedAt).toLocaleString("ko-KR") : ""}</time></div>
-              <strong>{event.changedItems?.[0]?.subject || artifactLabel(event)}</strong>
-              {changeReasonText(event) ? <em className="cockpit-change-reason">{changeReasonText(event)}</em> : null}
-              <small>{artifactLabel(event)}
-                {baselineText(event) ? <> · {baselineText(event)}</> : null}
-                {Number(event.materiality || 0) > 0 ? <> · 중요도 {Math.round(Number(event.materiality) * 100)}</> : null}
-                {Number(event.reliability || 0) > 0 ? <> · 신뢰도 {Math.round(Number(event.reliability) * 100)}</> : null}
-              </small>
+      <div className="cockpit-panel__head">
+        <div><span>CHANGE INTELLIGENCE</span><h2 id="cockpit-change-title">무엇이 달라졌나</h2></div>
+        <div className="story-share__toggle" role="group" aria-label="이야기 비중 시장">
+          {(["us", "kr"] as const).map((option) => (
+            <button key={option} type="button" className={`sym-chip${storyMarket === option ? " sym-chip--active" : ""}`} aria-pressed={storyMarket === option} onClick={() => setStoryMarket(option)}>
+              {option.toUpperCase()}
             </button>
-          </li>
-        ))}
+          ))}
+        </div>
+      </div>
+      <StoryShare market={storyMarket} />
+      <div className="cockpit-change-feed__subhead">
+        <span>내용의 변화</span>
+        <b>{events.length}건</b>
+      </div>
+      {events.length ? <ol>
+        {events.map((event) => <ChangeCard event={event} key={eventKey(event)} />)}
       </ol> : (
         <p className="cockpit-empty">
           아직 확인된 중요한 변화가 없습니다. 새 브리핑·기업 분석·딥 리서치를 만들면 직전 보고서와 비교한 결과가 여기에 표시됩니다.
@@ -59,7 +196,7 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
           <summary>그 외 평가 {quiet.length}건 보기</summary>
           <ol>
             {quiet.map((event) => (
-              <li key={`${event.artifactKind}-${event.artifactId}-${event.generatedAt}`}>
+              <li key={eventKey(event)}>
                 <span>{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span>
                 <em>{artifactLabel(event)}{event.artifactId ? ` · ${String(event.artifactId).slice(0, 24)}` : ""}</em>
                 <time>{event.generatedAt ? new Date(event.generatedAt).toLocaleDateString("ko-KR") : ""}</time>

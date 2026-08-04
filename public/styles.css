@@ -14552,3 +14552,73 @@ main.page {
     grid-template-columns: 1fr;
   }
 }
+
+/* --- Story share: 오늘의 이야기 비중 (무엇이 달라졌나 패널 상단) --- */
+.story-share { margin-bottom: 4px; }
+.story-share__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.story-share__title { font-size: 13px; font-weight: 700; color: var(--folio-ink-soft); }
+.story-share__meta { font-size: 12px; color: var(--folio-ink-subtle); }
+.story-share__toggle { display: flex; gap: 4px; align-self: center; }
+.story-share__bar { display: flex; height: 8px; border-radius: 999px; overflow: hidden; gap: 2px; margin-top: 10px; }
+.story-share__bar span { display: block; height: 100%; }
+.story-share__bar span[data-tone="blue"], .story-share__dot[data-tone="blue"] { background: var(--folio-blue); }
+.story-share__bar span[data-tone="teal"], .story-share__dot[data-tone="teal"] { background: var(--folio-teal); }
+.story-share__bar span[data-tone="gold"], .story-share__dot[data-tone="gold"] { background: var(--folio-gold); }
+.story-share__bar span[data-tone="purple"], .story-share__dot[data-tone="purple"] { background: var(--folio-purple); }
+.story-share__bar span[data-tone="other"], .story-share__dot[data-tone="other"] { background: var(--folio-border-strong); }
+.story-share__legend { list-style: none; margin: 12px 0 0; padding: 0; }
+.story-share__legend li { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--folio-surface-muted); font-size: 13px; }
+.story-share__legend li[data-other="true"] { color: var(--folio-ink-subtle); }
+.story-share__legend li[data-other="true"] .story-share__label { font-weight: 400; }
+.story-share__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; align-self: center; }
+.story-share__label { font-weight: 600; color: var(--folio-ink); }
+.story-share__legend li[data-other="true"] .story-share__label { color: inherit; }
+.story-share__count { font-size: 12px; color: var(--folio-ink-subtle); }
+.story-share__share { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; }
+.story-share__delta { width: 72px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--folio-ink-subtle); }
+.story-share__delta[data-tone="up"] { color: var(--folio-burgundy); }
+.story-share__delta[data-tone="down"] { color: var(--folio-blue); }
+.story-share__note { margin: 8px 0 0; font-size: 11.5px; color: var(--folio-ink-subtle); }
+.cockpit-change-feed__subhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--folio-border); }
+.cockpit-change-feed__subhead span { font-size: 13px; font-weight: 700; color: var(--folio-ink-soft); }
+.cockpit-change-feed__subhead b { padding: 2px 10px; border-radius: 999px; background: var(--folio-surface-muted); color: var(--folio-ink-muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* --- 내용의 변화: verdict 칩·인라인 전/후 대조 카드 --- */
+.cockpit-change-card { display: grid; gap: 8px; }
+.cockpit-change-card__meta { display: flex; align-items: center; gap: 8px; }
+.cockpit-change-card__meta time { margin-left: auto; color: var(--folio-ink-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
+.change-verdict-chip { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.change-verdict-chip[data-tone="burgundy"] { background: var(--folio-red-soft); color: var(--folio-burgundy); }
+.change-verdict-chip[data-tone="gold"] { background: var(--folio-gold-soft); color: var(--folio-gold); }
+.change-verdict-chip[data-tone="blue"] { background: var(--folio-blue-soft); color: var(--folio-blue); }
+.change-verdict-chip[data-tone="muted"] { background: var(--folio-surface-muted); color: var(--folio-ink-subtle); }
+.cockpit-change-feed li[data-tone="burgundy"] { border-left: 3px solid var(--folio-burgundy); padding-left: 15px; }
+.cockpit-change-feed li[data-tone="gold"] { border-left: 3px solid var(--folio-gold); padding-left: 15px; }
+.cockpit-change-feed li[data-tone="blue"] { border-left: 3px solid var(--folio-blue); padding-left: 15px; }
+.cockpit-change-card__actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.change-ask-agent { color: var(--agent-accent, var(--folio-teal)); border-color: currentColor; }
+.change-contrast-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 12px; }
+.change-contrast { border: 1px solid var(--folio-border); border-radius: var(--folio-radius); padding: 12px 14px; background: var(--folio-bg-soft); }
+.change-contrast__subject { display: flex; align-items: center; gap: 8px; }
+.change-contrast__note { margin: 6px 0 0; font-size: 13px; color: var(--folio-ink-muted); line-height: 1.55; }
+.change-contrast__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
+.change-contrast__col-label { display: block; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--folio-ink-subtle); text-transform: uppercase; }
+.change-contrast__cols p { margin: 4px 0 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.change-contrast__cols p.change-contrast__empty { color: var(--folio-ink-subtle); font-weight: 400; }
+.change-contrast__cols ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.change-contrast__cols ul li { font-size: 12.5px; color: var(--folio-ink-muted); line-height: 1.45; padding-left: 10px; position: relative; }
+.change-contrast__cols ul li::before { content: "·"; position: absolute; left: 0; color: var(--folio-ink-subtle); }
+
+/* --- 브리핑 상단 "이 브리핑에서 달라진 것" 스트립 --- */
+.briefing-change-strip { border: 1px solid var(--folio-border); border-left: 3px solid var(--folio-burgundy); border-radius: var(--folio-radius); background: var(--folio-surface-clean); padding: 14px 16px; margin: 0 0 18px; }
+.briefing-change-strip[data-status="developing_signal"] { border-left-color: var(--folio-blue); }
+.briefing-change-strip[data-status="conflicting_uncertain"] { border-left-color: var(--folio-gold); }
+.briefing-change-strip[data-status="no_material_change"] { border-left-color: var(--folio-border-strong); }
+.briefing-change-strip__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.briefing-change-strip__head strong { font-size: 13.5px; color: var(--folio-ink); }
+.briefing-change-strip__head em { font-style: normal; margin-left: auto; font-size: 12px; color: var(--folio-ink-subtle); font-variant-numeric: tabular-nums; }
+.briefing-change-strip ul { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.briefing-change-strip li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.briefing-change-strip__subject { font-weight: 600; color: var(--folio-ink); }
+.briefing-change-strip__note { color: var(--folio-ink-muted); line-height: 1.5; flex: 1 1 100%; }
+.briefing-change-strip__fallback { margin: 8px 0 0; font-size: 12.5px; color: var(--folio-ink-subtle); }
