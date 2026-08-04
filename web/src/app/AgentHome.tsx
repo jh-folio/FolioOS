@@ -3,6 +3,7 @@ import { AgentThread } from "./agentWorkspace/AgentThread";
 import { recentKey, reportRoute } from "./agentWorkspace/presenters";
 import { useAgentWorkspace } from "./agentWorkspace/useAgentWorkspace";
 import { AgentWorkLog } from "./AgentWorkLog";
+import { FolioWordmark } from "./FolioWordmark";
 import { InvestmentContextCard } from "./InvestmentContextCard";
 
 export function AgentHome() {
@@ -14,7 +15,7 @@ export function AgentHome() {
         <div className="agent-home-left">
           <header className="home-hero agent-home-hero">
             <p className="eyebrow">Local Investment Research Workspace</p>
-            <h1>Folio OS</h1>
+            <h1><FolioWordmark variant="hero" /></h1>
           </header>
 
           <AgentComposer workspace={workspace} />

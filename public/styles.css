@@ -15111,3 +15111,87 @@ main.page {
   box-shadow: var(--elev-1);
 }
 .watchlist-card-delete, .watchlist-card .watchlist-card-delete { border: none; background: var(--surface-control); }
+
+/* ============================================================
+   0.5 축 B — 브랜드: 밝은 상단바 크롬 + folio ─ os 워드마크
+   네이비 슬래브를 폐지한다. 정보량이 가장 적은 영역이 화면에서 가장 무거운
+   색 덩어리였고, 표면 위계(페이지<패널<컨트롤) 밖에 있어 다른 시스템에서 온
+   부품처럼 읽혔으며, primary 버튼과 같은 색이라 "어두운 것=액션" 신호를 희석했다.
+   네이비는 잉크·primary·리더 다크 히어로에 남는다.
+   ============================================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.react-shell-topbar {
+  background: var(--surface-page);
+  color: var(--folio-ink);
+  border-bottom: 1px solid var(--folio-border);
+}
+
+.react-shell-topbar .react-shell-brand { color: var(--folio-ink); }
+
+/* eyebrow는 밝은 배경용 진한 골드로. Light 토큰이 이미 대비를 맞춰 둔 값이다. */
+.react-shell-brand small { color: var(--folio-gold); }
+
+.react-shell-status span { color: var(--folio-ink-subtle); }
+
+/* --- 워드마크: 같은 굵기의 소문자 두 단어 + 사이의 가로 막대 --- */
+.folio-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folio-wordmark__word {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: lowercase;
+}
+
+.folio-wordmark__bar {
+  display: block;
+  flex: none;
+  border-radius: 2px;
+}
+
+/* chrome(상단바): 짧은 잉크 막대. 크롬은 조용해야 하므로 브랜드색을 쓰지 않는다 */
+.folio-wordmark[data-variant="chrome"] .folio-wordmark__word { font-size: 19px; }
+.folio-wordmark[data-variant="chrome"] .folio-wordmark__bar {
+  width: 16px;
+  height: 2.5px;
+  background: currentColor;
+}
+
+/* hero(홈): 같은 형태를 스케일에 맞춰 늘리고, 여기서만 골드를 쓴다.
+   홈 히어로는 브랜드 순간이고 골드 eyebrow는 Folio 정체성이다(§5.3). */
+.folio-wordmark[data-variant="hero"] {
+  gap: clamp(10px, 1.6vw, 14px);
+}
+.folio-wordmark[data-variant="hero"] .folio-wordmark__word {
+  font-size: clamp(3.4rem, 7vw, 5.4rem);
+}
+.folio-wordmark[data-variant="hero"] .folio-wordmark__bar {
+  width: clamp(44px, 8vw, 72px);
+  height: clamp(3px, 0.5vw, 4px);
+  background: var(--folio-gold);
+}
+
+/* h1이 이미 크기를 정하므로 워드마크가 상속받지 않게 끊는다 */
+.home-hero h1 { display: flex; justify-content: center; font-size: 0; }
+
+@media (max-width: 760px) {
+  .folio-wordmark[data-variant="chrome"] .folio-wordmark__word { font-size: 17px; }
+  .folio-wordmark[data-variant="chrome"] .folio-wordmark__bar { width: 13px; }
+}

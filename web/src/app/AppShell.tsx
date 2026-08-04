@@ -16,6 +16,7 @@ import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } f
 import { useShellStatus } from "./statusStore";
 import { activateReactAgentContextScope } from "./agentContext";
 import { ConsultationPanel } from "./agentWorkspace/ConsultationPanel";
+import { FolioWordmark } from "./FolioWordmark";
 
 const NAV_GROUPS: Array<{ id: string; title: string; routes: RouteId[] }> = [
   { id: "home", title: "홈", routes: ["home", "dashboard"] },
@@ -324,7 +325,7 @@ export function AppShell() {
           }}
           aria-label="홈으로 이동"
         >
-          <span>Folio OS</span>
+          <FolioWordmark />
           <small>Investment Workspace</small>
         </button>
         <div className="react-shell-status" aria-live="polite">
