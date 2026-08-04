@@ -94,6 +94,13 @@ function eventKey(event: ChangeEvent): string {
   return `${event.artifactKind}-${event.artifactId}-${event.generatedAt}`;
 }
 
+/** 구형 이벤트의 이슈 항목은 제목 없이 해시 id만 남아 있어 읽을 것이 없다. */
+export function isReadableItem(item: ChangedItem): boolean {
+  if (item.semanticVerdict || item.semanticNote) return true;
+  if ((item.contextDocs || []).length || (item.previousContextDocs || []).length) return true;
+  return !/^[0-9a-f]{12,}$/i.test(String(item.subject || ""));
+}
+
 function ChangeItemContrast({ item }: { item: ChangedItem }) {
   const before = changedValueText(item, item.previousValue);
   const after = changedValueText(item, item.currentValue);
@@ -127,7 +134,9 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
   const [expanded, setExpanded] = useState(false);
   const item = primaryChangedItem(event);
   const verdict = SEMANTIC_VERDICT_LABELS[String(item?.semanticVerdict || "")];
-  const items = event.changedItems || [];
+  const allItems = event.changedItems || [];
+  const items = allItems.filter(isReadableItem);
+  const hiddenCount = allItems.length - items.length;
   const reason = item?.semanticNote || changeReasonText(event);
   const targetRoute = changeEventRoute(event);
   const baseline = baselineRoute(event);
@@ -157,6 +166,7 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
         {expanded ? (
           <ol className="change-contrast-list">
             {items.map((row) => <ChangeItemContrast item={row} key={row.id || row.subject} />)}
+            {hiddenCount > 0 ? <li className="change-contrast-list__hidden">제목이 남지 않은 이전 형식 항목 {hiddenCount}건은 생략했습니다.</li> : null}
           </ol>
         ) : null}
       </div>
