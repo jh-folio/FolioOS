@@ -8,9 +8,17 @@ import sqlite3
 from pathlib import Path
 
 
+from features.common.text.tokenize import (
+    TOKEN_RE as _shared_token_re,
+    has_cjk,
+    token_set as _shared_token_set,
+)
+
 EMBED_DIM = 384
 MANIFEST_METADATA_VERSION = 2
-TOKEN_RE = re.compile(r"[A-Za-z0-9가-힣]{2,}")
+# 토큰화는 features/common/text/tokenize.py가 소유한다. 일본어는 CJK 클래스를
+# 따로 두고, 유럽어는 라틴 악센트만 폴딩한다(한글/가나는 훼손하지 않는다).
+TOKEN_RE = _shared_token_re
 
 
 def normalize_space(text: str) -> str:
@@ -18,7 +26,7 @@ def normalize_space(text: str) -> str:
 
 
 def token_set(text: str) -> set[str]:
-    return {token.lower() for token in TOKEN_RE.findall(str(text or ""))}
+    return _shared_token_set(text)
 
 
 def char_ngrams(text: str, min_n: int = 2, max_n: int = 4) -> list[str]:
@@ -89,6 +97,14 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+def _delete_cjk_rows(conn: sqlite3.Connection, doc_id: str) -> None:
+    """Keep the CJK auxiliary index in step with chunks_fts deletions."""
+    try:
+        conn.execute("DELETE FROM chunks_cjk WHERE doc_id = ?", (doc_id,))
+    except sqlite3.OperationalError:
+        pass
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -136,6 +152,22 @@ def init_db(conn: sqlite3.Connection) -> None:
             """
             CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts
             USING fts5(chunk_id UNINDEXED, doc_id UNINDEXED, title, source, text)
+            """
+        )
+    except sqlite3.OperationalError:
+        pass
+    # CJK 보조 인덱스. `unicode61`은 띄어쓰기가 없는 일본어를 절 단위 한 토큰으로
+    # 잡아 `半導体` 같은 부분어를 못 찾는다(실측 0/5). trigram 토크나이저는 이를
+    # 해결하지만 **3자 미만 질의를 전혀 매칭하지 못해** 한국어 2자 금융어(환율·유가·
+    # 금리)와 `AI`가 통째로 죽는다. 그래서 기존 인덱스를 그대로 두고 이 테이블을
+    # 따로 둔 뒤, 질의에 가나·한자가 있을 때만 LIKE 경로로 후보를 보탠다.
+    # trigram의 실제 가치는 MATCH가 아니라 LIKE 최적화이며, 그 경로는 1~2자까지 잡는다.
+    # 색인 대상은 CJK를 포함한 chunk뿐이라 한국어/라틴 코퍼스에는 비용이 없다.
+    try:
+        conn.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS chunks_cjk
+            USING fts5(chunk_id UNINDEXED, doc_id UNINDEXED, text, tokenize='trigram')
             """
         )
     except sqlite3.OperationalError:
@@ -249,6 +281,7 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                 conn.execute("DELETE FROM chunks WHERE doc_id = ?", (stale_id,))
                 try:
                     conn.execute("DELETE FROM chunks_fts WHERE doc_id = ?", (stale_id,))
+                    _delete_cjk_rows(conn, stale_id)
                 except sqlite3.OperationalError:
                     pass
             conn.execute("DELETE FROM documents WHERE path = ? AND doc_id <> ?", (str(doc.get("path", "")), doc_id))
@@ -292,6 +325,7 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
             conn.execute("DELETE FROM chunks WHERE doc_id = ?", (doc_id,))
             try:
                 conn.execute("DELETE FROM chunks_fts WHERE doc_id = ?", (doc_id,))
+                _delete_cjk_rows(conn, doc_id)
             except sqlite3.OperationalError:
                 pass
             content = str(doc.get("content") or doc.get("summary") or "")
@@ -308,6 +342,14 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                     )
                 except sqlite3.OperationalError:
                     pass
+                if has_cjk(chunk) or has_cjk(str(doc.get("title", ""))):
+                    try:
+                        conn.execute(
+                            "INSERT INTO chunks_cjk (chunk_id, doc_id, text) VALUES (?, ?, ?)",
+                            (chunk_id, doc_id, f"{doc.get('title', '')} {chunk}"),
+                        )
+                    except sqlite3.OperationalError:
+                        pass
                 chunk_count += 1
         if current_ids:
             placeholders = ",".join("?" for _ in current_ids)
@@ -322,9 +364,12 @@ def sync_index(db_path: str | Path, index: dict) -> dict:
                 conn.execute("DELETE FROM chunks WHERE doc_id = ?", (stale_id,))
                 try:
                     conn.execute("DELETE FROM chunks_fts WHERE doc_id = ?", (stale_id,))
+                    _delete_cjk_rows(conn, stale_id)
                 except sqlite3.OperationalError:
                     pass
             conn.execute(f"DELETE FROM documents WHERE doc_id NOT IN ({placeholders})", tuple(current_ids))
+    # 인덱싱 job이 끝나도 핸들이 남으면 Windows에서 DB 파일이 잠긴 채로 유지된다.
+    conn.close()
     return {"documents": len(docs), "chunks": chunk_count, "dbPath": str(Path(db_path))}
 
 
@@ -483,100 +528,125 @@ def hybrid_search(
     if not path.exists():
         return []
     conn = connect(path)
-    init_db(conn)
-    query_vec = embed_text(q)
+    try:
+        init_db(conn)
+        query_vec = embed_text(q)
 
-    # Stage 1: FTS5 — collect candidate chunk_ids with their BM25 rank
-    fts_query = sanitize_fts_query(q)
-    fts_rank: dict[str, int] = {}  # chunk_id -> 0-based rank (lower = better)
-    if fts_query:
-        try:
-            scope_filter, scope_params = _scope_sql(scope_prefixes)
-            allowed_filter = ""
-            allowed_params: tuple[str, ...] = ()
-            if allowed_doc_ids is not None:
-                allowed_placeholders = ",".join("?" for _ in allowed_doc_ids)
-                allowed_filter = f"AND d.doc_id IN ({allowed_placeholders})"
-                allowed_params = tuple(sorted(allowed_doc_ids))
-            rows = conn.execute(
-                f"""
-                SELECT chunks_fts.chunk_id
-                FROM chunks_fts
-                JOIN chunks c ON c.chunk_id = chunks_fts.chunk_id
-                JOIN documents d ON d.doc_id = c.doc_id
-                WHERE chunks_fts MATCH ? {scope_filter} {allowed_filter}
-                ORDER BY bm25(chunks_fts)
-                LIMIT ?
-                """,
-                (fts_query, *scope_params, *allowed_params, min(120, fts_pool)),
-            ).fetchall()
-            for rank, row in enumerate(rows):
-                fts_rank[str(row["chunk_id"])] = rank
-        except sqlite3.OperationalError:
-            pass
-
-    if not fts_rank:
-        return []
-
-    # Stage 2: Fetch only the FTS candidate chunks and compute embedding similarity
-    scope_filter, scope_params = _scope_sql(scope_prefixes)
-    placeholders = ",".join("?" for _ in fts_rank)
-    chunk_rows = conn.execute(
-        f"""
-        SELECT c.chunk_id, c.doc_id, c.chunk_index, c.text, c.embedding_json,
-               d.path, d.title, d.source, d.date, d.type, d.url,
-               d.market_relevance, d.metadata_json
-        FROM chunks c
-        JOIN documents d ON d.doc_id = c.doc_id
-        WHERE c.chunk_id IN ({placeholders}) {scope_filter}
-        """,
-        tuple(fts_rank.keys()) + tuple(scope_params),
-    ).fetchall()
-
-    if not chunk_rows:
-        return []
-
-    # Compute cosine similarity for each candidate, collect for vector ranking
-    vec_scored: list[tuple[float, str, object]] = []
-    for row in chunk_rows:
-        vec_score = cosine(query_vec, parse_embedding(str(row["embedding_json"] or "")))
-        vec_scored.append((vec_score, str(row["chunk_id"]), row))
-    vec_scored.sort(key=lambda x: x[0], reverse=True)
-    vec_rank: dict[str, int] = {cid: i for i, (_, cid, _) in enumerate(vec_scored)}
-
-    # RRF merge + token-overlap tie-breaker; deduplicate to one result per doc
-    K = 60
-    q_tokens = token_set(q)
-    doc_best: dict[str, dict] = {}
-
-    for vec_score, chunk_id, row in vec_scored:
-        doc_id = str(row["doc_id"])
-        rrf = 1.0 / (K + fts_rank.get(chunk_id, fts_pool)) + 1.0 / (K + vec_rank.get(chunk_id, len(vec_scored)))
-        text = str(row["text"] or "")
-        title = str(row["title"] or "")
-        overlap = len(q_tokens & token_set(f"{title} {text}")) / max(1, len(q_tokens))
-        score = rrf + 0.002 * overlap  # overlap is a tiebreaker only
-
-        if doc_id not in doc_best or score > doc_best[doc_id]["score"]:
+        # Stage 1: FTS5 — collect candidate chunk_ids with their BM25 rank
+        fts_query = sanitize_fts_query(q)
+        fts_rank: dict[str, int] = {}  # chunk_id -> 0-based rank (lower = better)
+        if fts_query:
             try:
-                metadata = json.loads(str(row["metadata_json"] or "{}"))
-            except Exception:
-                metadata = {}
-            doc_best[doc_id] = {
-                "id": doc_id,
-                "chunkId": chunk_id,
-                "chunkIndex": int(row["chunk_index"]),
-                "path": str(row["path"]),
-                "title": title,
-                "source": str(row["source"]),
-                "date": str(row["date"]),
-                "type": str(row["type"]),
-                "url": str(row["url"]),
-                "score": score,
-                "snippet": text[:700],
-                "metadata": metadata,
-            }
+                scope_filter, scope_params = _scope_sql(scope_prefixes)
+                allowed_filter = ""
+                allowed_params: tuple[str, ...] = ()
+                if allowed_doc_ids is not None:
+                    allowed_placeholders = ",".join("?" for _ in allowed_doc_ids)
+                    allowed_filter = f"AND d.doc_id IN ({allowed_placeholders})"
+                    allowed_params = tuple(sorted(allowed_doc_ids))
+                rows = conn.execute(
+                    f"""
+                    SELECT chunks_fts.chunk_id
+                    FROM chunks_fts
+                    JOIN chunks c ON c.chunk_id = chunks_fts.chunk_id
+                    JOIN documents d ON d.doc_id = c.doc_id
+                    WHERE chunks_fts MATCH ? {scope_filter} {allowed_filter}
+                    ORDER BY bm25(chunks_fts)
+                    LIMIT ?
+                    """,
+                    (fts_query, *scope_params, *allowed_params, min(120, fts_pool)),
+                ).fetchall()
+                for rank, row in enumerate(rows):
+                    fts_rank[str(row["chunk_id"])] = rank
+            except sqlite3.OperationalError:
+                pass
 
-    results = sorted(doc_best.values(), key=lambda x: x["score"], reverse=True)
-    return results[:limit]
+        # CJK 질의는 위 unicode61 경로가 부분어를 놓친다(`半導体` 실측 0건). trigram
+        # 인덱스에 LIKE로 물어 후보를 보탠다. 라틴·한글 질의는 이 경로를 타지 않는데,
+        # LIKE는 단어 경계를 모르기 때문이다 — `AI`가 `capital`·`chain`에 걸려
+        # 오탐이 늘어난다(실측 2건 기대에 6건). 기존 결과가 바뀌지 않는 이유이기도 하다.
+        if has_cjk(q):
+            for term in sorted({t for t in TOKEN_RE.findall(q) if has_cjk(t)} or {q}, key=len, reverse=True)[:4]:
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT chunk_id FROM chunks_cjk
+                        WHERE text LIKE ? ESCAPE '\\'
+                        LIMIT ?
+                        """,
+                        (f"%{term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')}%", min(120, fts_pool)),
+                    ).fetchall()
+                except sqlite3.OperationalError:
+                    break
+                for row in rows:
+                    # 이미 FTS가 찾은 chunk는 그 순위를 유지하고, 새 후보만 뒤에 붙인다.
+                    fts_rank.setdefault(str(row["chunk_id"]), len(fts_rank))
 
+        if not fts_rank:
+            return []
+
+        # Stage 2: Fetch only the FTS candidate chunks and compute embedding similarity
+        scope_filter, scope_params = _scope_sql(scope_prefixes)
+        placeholders = ",".join("?" for _ in fts_rank)
+        chunk_rows = conn.execute(
+            f"""
+            SELECT c.chunk_id, c.doc_id, c.chunk_index, c.text, c.embedding_json,
+                   d.path, d.title, d.source, d.date, d.type, d.url,
+                   d.market_relevance, d.metadata_json
+            FROM chunks c
+            JOIN documents d ON d.doc_id = c.doc_id
+            WHERE c.chunk_id IN ({placeholders}) {scope_filter}
+            """,
+            tuple(fts_rank.keys()) + tuple(scope_params),
+        ).fetchall()
+
+        if not chunk_rows:
+            return []
+
+        # Compute cosine similarity for each candidate, collect for vector ranking
+        vec_scored: list[tuple[float, str, object]] = []
+        for row in chunk_rows:
+            vec_score = cosine(query_vec, parse_embedding(str(row["embedding_json"] or "")))
+            vec_scored.append((vec_score, str(row["chunk_id"]), row))
+        vec_scored.sort(key=lambda x: x[0], reverse=True)
+        vec_rank: dict[str, int] = {cid: i for i, (_, cid, _) in enumerate(vec_scored)}
+
+        # RRF merge + token-overlap tie-breaker; deduplicate to one result per doc
+        K = 60
+        q_tokens = token_set(q)
+        doc_best: dict[str, dict] = {}
+
+        for vec_score, chunk_id, row in vec_scored:
+            doc_id = str(row["doc_id"])
+            rrf = 1.0 / (K + fts_rank.get(chunk_id, fts_pool)) + 1.0 / (K + vec_rank.get(chunk_id, len(vec_scored)))
+            text = str(row["text"] or "")
+            title = str(row["title"] or "")
+            overlap = len(q_tokens & token_set(f"{title} {text}")) / max(1, len(q_tokens))
+            score = rrf + 0.002 * overlap  # overlap is a tiebreaker only
+
+            if doc_id not in doc_best or score > doc_best[doc_id]["score"]:
+                try:
+                    metadata = json.loads(str(row["metadata_json"] or "{}"))
+                except Exception:
+                    metadata = {}
+                doc_best[doc_id] = {
+                    "id": doc_id,
+                    "chunkId": chunk_id,
+                    "chunkIndex": int(row["chunk_index"]),
+                    "path": str(row["path"]),
+                    "title": title,
+                    "source": str(row["source"]),
+                    "date": str(row["date"]),
+                    "type": str(row["type"]),
+                    "url": str(row["url"]),
+                    "score": score,
+                    "snippet": text[:700],
+                    "metadata": metadata,
+                }
+
+        results = sorted(doc_best.values(), key=lambda x: x["score"], reverse=True)
+        return results[:limit]
+    finally:
+        # 서버가 검색마다 이 함수를 호출한다. 닫지 않으면 SQLite 핸들이 쌓이고,
+        # Windows에서는 인덱스 파일이 잠긴 채로 남는다.
+        conn.close()

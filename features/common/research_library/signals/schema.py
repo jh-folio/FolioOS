@@ -7,6 +7,8 @@ import hashlib
 import re
 from typing import Any
 
+from features.common.text.tokenize import tokens as shared_tokens
+
 SIGNAL_STATUSES = {"unconfirmed", "corroborated", "expired", "retracted"}
 SOURCE_STATUSES = {"active", "delayed", "stale", "unhealthy", "disabled", "unauthorized"}
 APPROVED_PROVIDERS = {"kr_existing"}
@@ -53,8 +55,9 @@ def normalized_provider(value: Any) -> str:
 
 
 def _headline_key(title: str) -> str:
-    tokens = re.findall(r"[0-9A-Za-z가-힣]{2,}", title.lower())
-    return " ".join(tokens[:16])
+    # 공통 토큰화를 쓴다. 이전 정규식은 일본어에서 토큰을 만들지 못해 서로 다른
+    # 기사가 같은 빈 키를 갖고 중복으로 병합됐다(20건 -> 고유키 6개).
+    return " ".join(shared_tokens(title.lower())[:16])
 
 
 def signal_cluster_id(*, normalized_url: str, title: str, tickers: list[str], published_at: Any) -> str:

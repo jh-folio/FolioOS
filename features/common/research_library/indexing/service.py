@@ -24,6 +24,7 @@ from features.common.company_lookup import (
     term_in_text,
 )
 from features.common.dataframe_ops import sort_records
+from features.common.text.tokenize import word_count as shared_word_count
 from features.common.research_library.indexing.research_index import (
     MANIFEST_METADATA_VERSION,
     hybrid_search,
@@ -395,7 +396,7 @@ def build_document(path):
         "marketRelevance": score,
         "marketRelevant": relevant,
         "summary": meta.get("summary") or summarize(body, 3),
-        "wordCount": len(re.findall(r"[A-Za-z0-9가-힣]+", body)),
+        "wordCount": shared_word_count(body),
         "content": body,
         "pages": pages,
     }

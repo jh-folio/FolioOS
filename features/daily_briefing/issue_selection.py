@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from features.common.text.tokenize import tokens as shared_tokens
 import hashlib
 import re
 from collections import Counter, defaultdict
@@ -130,7 +131,7 @@ def _event_date(doc):
 
 def _tokens(text):
     return {
-        token for token in re.findall(r"[a-z0-9가-힣]{2,}", normalize(text).lower())
+        token for token in shared_tokens(normalize(text).lower())
         if token not in {"the", "and", "after", "with", "from", "대한", "관련", "전망", "시장"}
     }
 
