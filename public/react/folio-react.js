@@ -11278,9 +11278,9 @@ function ia({ driver: e }) {
 			] }), /* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
 				className: "agent-action agent-ask-btn",
-				"data-agent-prompt": e.askAgentPrompt,
 				"data-tooltip": "Agent에게 묻기",
 				"aria-label": "Agent에게 묻기",
+				onClick: () => Ae({ message: e.askAgentPrompt }),
 				children: /* @__PURE__ */ (0, x.jsx)("span", {
 					className: "agent-logo-slot",
 					"aria-hidden": "true"

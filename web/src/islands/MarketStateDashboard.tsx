@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getJson } from "../api";
+import { openReactAgentDock } from "../app/agentContext";
 import { legacyBridge as bridge } from "../app/legacyBridge";
 import { marketStateContextProjection, readMarketStateRef, type MarketStateRef, type MarketStateStatus } from "../app/marketStateContext";
 
@@ -192,14 +193,15 @@ function DriverCard({ driver }: { driver: Driver }) {
           확신도 {confidence}
           {driver.confidencePct ? ` · ${driver.confidencePct}%` : ""}
         </small>
-        {/* The existing document-level [data-agent-prompt] handler in app.js opens the dock;
+        {/* Opens the dock directly. The [data-agent-prompt] document handler this
+            once relied on no longer exists, which left the button inert.
             .agent-logo-slot is filled by the shared applyAgentBranding bridge. */}
         <button
           type="button"
           className="agent-action agent-ask-btn"
-          data-agent-prompt={driver.askAgentPrompt}
           data-tooltip="Agent에게 묻기"
           aria-label="Agent에게 묻기"
+          onClick={() => openReactAgentDock({ message: driver.askAgentPrompt })}
         >
           <span className="agent-logo-slot" aria-hidden="true" />
         </button>
