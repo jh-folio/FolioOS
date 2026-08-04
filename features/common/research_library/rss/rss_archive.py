@@ -220,13 +220,13 @@ def main():
             if not feed_item_allowed(feed, item):
                 rejected += 1
                 continue
-            score = calculate_relevance_score(item)
+            score = calculate_relevance_score(item, feed, baseline=args.min_relevance_score)
             item["relevance_score"] = score
             if not item_within_recency_window(item, collected_at_utc=collected_at_utc):
                 rejected += 1
                 _record_rejection(rejected_samples, item.get("title"), item.get("link"), feed.get("media"), score)
                 continue
-            if not should_archive_item(item["title"], item["description"], item["link"]) or score < args.min_relevance_score:
+            if not should_archive_item(item["title"], item["description"], item["link"], feed) or score < args.min_relevance_score:
                 rejected += 1
                 _record_rejection(rejected_samples, item.get("title"), item.get("link"), feed.get("media"), score)
                 continue

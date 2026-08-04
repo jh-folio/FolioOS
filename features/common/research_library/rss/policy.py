@@ -132,7 +132,17 @@ def should_retry_existing_item(existing_status: str, *, retry_failed: bool = Fal
     return False
 
 
-def calculate_relevance_score(item: dict) -> float:
+def calculate_relevance_score(item: dict, feed: dict | None = None, *, baseline: float = 1.0) -> float:
+    """Score an item's market relevance from its text.
+
+    The term lists are Korean and English, so a German or Japanese item scores
+    near zero regardless of what it is about. For feeds that declare their own
+    country and language — curated business sections whose config already
+    required a freshness probe — the feed's editorial scope is the relevance
+    signal, so the score floors at ``baseline`` instead of failing the archive
+    threshold. Items that also match terms still score above the floor, so
+    ranking between them is preserved.
+    """
     text = " ".join(str(item.get(key) or "") for key in ("title", "description", "summary", "url", "link")).lower()
     score = 0.0
     score += sum(2 for term in STRONG_MARKET_TERMS if term.lower() in text)
@@ -142,6 +152,8 @@ def calculate_relevance_score(item: dict) -> float:
     score -= sum(2 for term in NOISE_TERMS if term.lower() in text)
     if str(item.get("source_type") or "").startswith("official"):
         score += 3
+    if isinstance(feed, dict) and str(feed.get("country") or "").strip() and str(feed.get("language") or "").strip():
+        score = max(score, baseline)
     return score
 
 

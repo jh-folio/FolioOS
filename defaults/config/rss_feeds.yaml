@@ -197,50 +197,111 @@ feeds:
     freshness_checked_at: "2026-08-04T11:10:00Z"
     freshness_latest_at: "2026-08-04T10:34:45Z"
     freshness_item_count: 49
-  - media: "Google News DE"
-    url: "https://news.google.com/rss/search?q=%28DAX%20OR%20deutsche%20Wirtschaft%29%20when%3A2d&hl=de&gl=DE&ceid=DE%3Ade"
+  # 0.5 유럽/일본 뉴스. 각국 대표 경제지의 직접 피드를 쓴다. Google News 검색 경유는
+  # aggregator 정책상 본문을 가져올 수 없어(제목·요약만) 이슈 선정과 관련성 점수화가
+  # 얕아지므로 1차 소스에서 내렸다. 직접 피드가 죽으면 커버리지 공백을 명시하고,
+  # 필요하면 그때 Google News를 fallback으로 되살린다(매트릭스에 근거 기록).
+  # 아래 freshness는 HTTP 상태가 아니라 실제 최신 item 시각을 검증한 기록이다.
+  - media: "Handelsblatt"
+    url: "https://www.handelsblatt.com/contentexport/feed/schlagzeilen"
     category: "europe_de"
     source_type: "news"
     enabled: true
-    priority: 4
-    allow_full_text: false
+    priority: 5
+    allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
     country: "DE"
     language: "de"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T10:40:51Z"
-    freshness_item_count: 29
-  - media: "Google News FR"
-    url: "https://news.google.com/rss/search?q=%28CAC%2040%20OR%20%C3%A9conomie%20fran%C3%A7aise%29%20when%3A2d&hl=fr&gl=FR&ceid=FR%3Afr"
-    category: "europe_fr"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:46:53Z"
+    freshness_item_count: 50
+  - media: "manager magazin"
+    url: "https://www.manager-magazin.de/news/index.rss"
+    category: "europe_de"
     source_type: "news"
     enabled: true
     priority: 4
-    allow_full_text: false
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    country: "DE"
+    language: "de"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:30:00Z"
+    freshness_item_count: 30
+  - media: "BFM Business"
+    url: "https://www.bfmtv.com/rss/economie/"
+    category: "europe_fr"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
     country: "FR"
     language: "fr"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T10:44:21Z"
-    freshness_item_count: 63
-  - media: "Google News NL"
-    url: "https://news.google.com/rss/search?q=%28AEX%20OR%20Nederlandse%20economie%29%20when%3A2d&hl=nl&gl=NL&ceid=NL%3Anl"
-    category: "europe_nl"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:51:45Z"
+    freshness_item_count: 30
+  - media: "La Tribune"
+    url: "https://www.latribune.fr/feed.xml"
+    category: "europe_fr"
     source_type: "news"
     enabled: true
     priority: 4
-    allow_full_text: false
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    country: "FR"
+    language: "fr"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:00:01Z"
+    freshness_item_count: 20
+  - media: "Het Financieele Dagblad"
+    url: "https://fd.nl/?rss"
+    category: "europe_nl"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
     country: "NL"
     language: "nl"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T09:12:49Z"
-    freshness_item_count: 40
-  - media: "Google News IT"
-    url: "https://news.google.com/rss/search?q=%28FTSE%20MIB%20OR%20economia%20italiana%29%20when%3A2d&hl=it&gl=IT&ceid=IT%3Ait"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:00:55Z"
+    freshness_item_count: 37
+  - media: "NU.nl Economie"
+    url: "https://www.nu.nl/rss/Economie"
+    category: "europe_nl"
+    source_type: "news"
+    enabled: true
+    priority: 4
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    country: "NL"
+    language: "nl"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T10:12:45Z"
+    freshness_item_count: 30
+  - media: "la Repubblica Economia"
+    url: "https://www.repubblica.it/rss/economia/rss2.0.xml"
+    category: "europe_it"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    country: "IT"
+    language: "it"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:40:26Z"
+    freshness_item_count: 25
+  - media: "ANSA Economia"
+    url: "https://www.ansa.it/sito/notizie/economia/economia_rss.xml"
     category: "europe_it"
     source_type: "news"
     enabled: true
@@ -250,25 +311,67 @@ feeds:
     default_market: "EUROPE"
     country: "IT"
     language: "it"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T08:10:00Z"
-    freshness_item_count: 21
-  - media: "Google News ES"
-    url: "https://news.google.com/rss/search?q=%28IBEX%2035%20OR%20econom%C3%ADa%20espa%C3%B1ola%29%20when%3A2d&hl=es&gl=ES&ceid=ES%3Aes"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:43:06Z"
+    freshness_item_count: 57
+  - media: "Expansion"
+    url: "https://e00-expansion.uecdn.es/rss/mercados.xml"
     category: "europe_es"
     source_type: "news"
     enabled: true
-    priority: 4
-    allow_full_text: false
+    priority: 5
+    allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
     country: "ES"
     language: "es"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T10:12:43Z"
-    freshness_item_count: 47
-  - media: "Google News JP"
-    url: "https://news.google.com/rss/search?q=%28%E6%97%A5%E7%B5%8C%E5%B9%B3%E5%9D%87%20OR%20%E6%97%A5%E6%9C%AC%E7%B5%8C%E6%B8%88%29%20when%3A2d&hl=ja&gl=JP&ceid=JP%3Aja"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T11:46:26Z"
+    freshness_item_count: 50
+  - media: "Euronews Business"
+    url: "https://www.euronews.com/rss?level=theme&name=business"
+    category: "europe_en"
+    source_type: "news"
+    enabled: true
+    priority: 4
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    country: "GB"
+    language: "en"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T09:33:17Z"
+    freshness_item_count: 50
+  - media: "NHK Business"
+    url: "https://www.nhk.or.jp/rss/news/cat5.xml"
+    category: "japan_ja"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "JP"
+    country: "JP"
+    language: "ja"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T12:01:21Z"
+    freshness_item_count: 80
+  - media: "Diamond Online"
+    url: "https://diamond.jp/list/feed/rss/dol"
+    category: "japan_ja"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "JP"
+    country: "JP"
+    language: "ja"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T09:41:00Z"
+    freshness_item_count: 25
+  - media: "Toyo Keizai"
+    url: "https://toyokeizai.net/list/feed/rss"
     category: "japan_ja"
     source_type: "news"
     enabled: true
@@ -278,12 +381,26 @@ feeds:
     default_market: "JP"
     country: "JP"
     language: "ja"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T11:05:00Z"
-    freshness_item_count: 100
-  - media: "Google News JP English"
-    url: "https://news.google.com/rss/search?q=%28Nikkei%20225%20OR%20Japan%20economy%29%20when%3A2d&hl=en&gl=JP&ceid=JP%3Aen"
-    category: "japan_en"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T10:00:00Z"
+    freshness_item_count: 20
+  - media: "Kyodo News"
+    url: "https://www.kyodo.co.jp/feed/"
+    category: "japan_ja"
+    source_type: "news"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "JP"
+    country: "JP"
+    language: "ja"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T08:00:00Z"
+    freshness_item_count: 10
+  - media: "Asahi Shimbun Business"
+    url: "https://www.asahi.com/rss/asahi/business.rdf"
+    category: "japan_ja"
     source_type: "news"
     enabled: true
     priority: 3
@@ -291,10 +408,10 @@ feeds:
     reliability_tier: 2
     default_market: "JP"
     country: "JP"
-    language: "en"
-    freshness_checked_at: "2026-08-04T11:10:00Z"
-    freshness_latest_at: "2026-08-04T09:37:33Z"
-    freshness_item_count: 50
+    language: "ja"
+    freshness_checked_at: "2026-08-04T12:03:02Z"
+    freshness_latest_at: "2026-08-04T10:30:00Z"
+    freshness_item_count: 30
   - media: "한국경제"
     url: "https://www.hankyung.com/feed/finance"
     category: "kr_markets"

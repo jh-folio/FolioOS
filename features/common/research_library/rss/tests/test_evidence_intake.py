@@ -996,3 +996,49 @@ def test_rss_list_hides_press_releases_until_the_source_is_chosen():
     chosen_where, params = _cache_where(source="PR Newswire")
     assert "press_release" not in chosen_where
     assert "PR Newswire" in params
+
+
+def test_target_feeds_skip_the_korean_english_keyword_gate():
+    """Europe/Japan feeds declare country+language, so the keyword gate steps aside.
+
+    Measured against live feeds, the Korean/English term lists passed 4% of
+    Japanese items and 95% of French ones — the French number came from ``ai``
+    colliding inside ``vrai``/``aider``, not from relevance. Keeping the gate
+    would silently drop most real foreign market news.
+    """
+    from features.common.research_library.rss.relevance import should_archive_item
+
+    target = {"media": "Handelsblatt", "default_market": "EUROPE", "country": "DE", "language": "de"}
+    assert should_archive_item("SAP hebt Prognose nach starkem Cloud-Wachstum an", "", "https://handelsblatt.com/a", target)
+    assert should_archive_item("日経平均、半導体株高で反発", "", "https://nhk.or.jp/a", {**target, "country": "JP", "language": "ja"})
+
+    # 구조 필터는 target feed에서도 그대로 적용된다.
+    assert not should_archive_item("About XYZ ETF", "", "https://handelsblatt.com/a", target)
+    assert not should_archive_item("[포토] 행사 사진", "", "https://handelsblatt.com/a", target)
+
+
+def test_non_target_feeds_keep_the_keyword_gate():
+    """US/KR feeds carry no country/language, so their existing behaviour is untouched."""
+    from features.common.research_library.rss.relevance import should_archive_item
+
+    us_feed = {"media": "CNBC", "default_market": "US"}
+    assert should_archive_item("삼성전자 영업이익 10조 돌파", "", "https://example.com/a", us_feed)
+    assert not should_archive_item("맛집 랩스터 홈다이닝 할인 세일", "", "https://example.com/a", us_feed)
+    # feed 인자 없이 호출하던 기존 경로도 그대로 동작한다.
+    assert should_archive_item("삼성전자 영업이익 10조 돌파", "", "https://example.com/a")
+
+
+def test_target_feed_score_floors_at_the_archive_threshold():
+    """Foreign-language text scores near zero on Korean/English terms; the feed floors it."""
+    from features.common.research_library.rss.policy import calculate_relevance_score
+
+    item = {"title": "SAP hebt Prognose nach starkem Cloud-Wachstum an", "description": ""}
+    target = {"country": "DE", "language": "de"}
+    assert calculate_relevance_score(item) < 1.0
+    assert calculate_relevance_score(item, target, baseline=1.0) == 1.0
+
+    # 용어가 실제로 맞는 항목은 바닥값보다 높게 남아 순위가 보존된다.
+    rich = {"title": "Nvidia revenue guidance and earnings", "description": ""}
+    assert calculate_relevance_score(rich, target, baseline=1.0) > 1.0
+    # US/KR 경로는 feed 유무와 무관하게 동일하다.
+    assert calculate_relevance_score(rich) == calculate_relevance_score(rich, {"media": "CNBC"})
