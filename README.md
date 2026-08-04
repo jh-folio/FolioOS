@@ -4,18 +4,20 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.4.3 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.4.4 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.4.3
+## What You Can Do In 0.4.4
 
 - Chat with the Folio OS AI Agent from the Home screen.
-- Use the Research Cockpit Dashboard for report-generated changes, native symbol/index charts, market calendar events, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous widget board available.
+- Use the Research Cockpit Dashboard to see which stories led the market today, what actually changed in your latest reports, native symbol/index charts, market calendar events, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous widget board available.
+- Read a story-share bar built from the day's collected news, with each story's share and the move against the previous trading day. Share moves reflect coverage volume, not a change in what the story says.
+- Open a change card to see what moved: the verdict (new information, reversal, developing trend, coverage shift), a short reason, and the before/after side by side.
 - Maintain a local company, sector, and theme Watchlist with separate fast-origin leads and confirmed report change history.
-- See fast market signals — headline and link only — from FinancialJuice, an authorized Investing.com RSS feed, Benzinga RSS, and existing Korean RSS sources. Article bodies are not stored, and unverified headlines never count toward report sources or a major-change call.
+- See fast market signals — headline and link only — from Benzinga RSS and existing Korean RSS sources. Article bodies are not stored, and unverified headlines never count toward report sources or a major-change call.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
@@ -32,11 +34,11 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Not included in the 0.4.3 user surface:
+Not included in the 0.4.4 user surface:
 
 - Installer/tray-app polish.
 
-Fast-origin news is an early lead, not verified evidence. FinancialJuice's free stream may be delayed by about 10 minutes. Investing.com and Benzinga collectors require a provider-authorized RSS URL; Folio OS does not scrape pages or bypass paywalls. External Vision import is off by default and requires consent for every cropped image request. Images, raw OCR text, and OCR bounding boxes are not retained by the import workflow.
+Fast-origin news is an early lead, not verified evidence. The Benzinga collector requires a provider-authorized RSS URL; Folio OS does not scrape pages or bypass paywalls. External Vision import is off by default and requires consent for every cropped image request. Images, raw OCR text, and OCR bounding boxes are not retained by the import workflow.
 
 ---
 
@@ -109,7 +111,11 @@ The Agent work log below shows only the latest status as a single line; expand i
 
 ### Dashboard
 
-Dashboard brings current-market widgets, recent reports, checkpoints, and a limited portfolio view into one review screen. Market widgets use TradingView and retain their source attribution.
+Dashboard opens with today's story share: a single bar showing how the day's collected news splits across stories, with each story's article count, share, and the move against the previous trading day. A share move means the coverage volume moved, not that the story itself changed — the screen says so.
+
+Below it, "What changed" lists the changes confirmed when your latest reports were generated. Each card carries a verdict — new information, reversal, developing trend, or coverage shift — a one-line reason, and an expandable before/after comparison with the articles behind it. You can open the report, open the baseline it was compared against, or ask the Agent about it.
+
+The rest of the screen holds native symbol and index charts, the market calendar, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous TradingView widget board available; those widgets retain their source attribution.
 
 ### Watchlist
 

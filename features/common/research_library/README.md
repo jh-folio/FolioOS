@@ -89,7 +89,7 @@ python -m features.common.research_library.rss.rss_archive --collectors rss --sa
 
 ## Fast-origin lead
 
-FinancialJuice 공식 Stream API, 사용 권한이 있는 Investing.com Webmaster RSS, Benzinga 공식 public RSS, 기존 연합인포맥스·연합뉴스·매일경제 RSS의 제목·링크·발행/수신 시각만 `intake_stage=lead`로 저장할 수 있습니다. lead는 빠른 알림용이며 확인 전에는 evidence count와 Canonical source ledger에서 제외됩니다. FinancialJuice 무료 연결은 10분 지연을 숨기지 않습니다. provider가 stale/unhealthy/disabled/unauthorized이면 headline을 노출하지 않습니다.
+Benzinga 공식 public RSS와 기존 연합인포맥스·연합뉴스 RSS의 제목·링크·발행/수신 시각만 `intake_stage=lead`로 저장할 수 있습니다. lead는 빠른 알림용이며 확인 전에는 evidence count와 Canonical source ledger에서 제외됩니다. provider가 stale/unhealthy/disabled/unauthorized이면 headline을 노출하지 않습니다.
 
 기사 본문·HTML·이미지·raw response·인증 URL/token은 signal 저장소와 run log에 남기지 않습니다. 수집만으로 Agent나 Change Intelligence가 실행되지 않습니다. 상세 계약은 [signals/README.md](signals/README.md)를 봅니다.
 

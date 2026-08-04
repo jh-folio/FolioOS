@@ -27,18 +27,18 @@ bounding boxes.
 
 ## Fast-origin news services
 
-FinancialJuice, Investing.com, and Benzinga are optional external news sources,
-not bundled libraries. Their names and links identify the origin of user-enabled
-feeds. Provider terms, availability, and delay policies continue to apply.
+Benzinga and the existing Korean RSS sources are optional external news
+sources, not bundled libraries. Their names and links identify the origin of
+user-enabled feeds. Provider terms, availability, and delay policies continue to
+apply.
 
-- FinancialJuice free stream data may be delayed by approximately 10 minutes.
-- Investing.com collection is disabled until the user supplies a feed URL they
-  are authorized to use.
 - Benzinga collection uses a configured official/authorized RSS URL; Folio OS
   does not scrape the website or use a paid article bypass.
+- Korean fast-origin leads are promoted from RSS items Folio OS already
+  collected; no additional network call or credential is involved.
 
-All three enter Folio OS as metadata-only, unconfirmed leads. They do not count
-as report evidence until corroborated through an eligible evidence path.
+They enter Folio OS as metadata-only, unconfirmed leads. They do not count as
+report evidence until corroborated through an eligible evidence path.
 
 ## Optional OpenAI Vision import
 
