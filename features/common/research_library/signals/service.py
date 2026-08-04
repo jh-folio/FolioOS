@@ -9,6 +9,7 @@ from pathlib import Path
 
 from features.common.research_library.rss.store import ensure_evidence_store, save_evidence_item
 from features.common.research_library.signals.schema import (
+    APPROVED_PROVIDERS,
     PUBLIC_SOURCE_STATUSES,
     FastOriginSignal,
     latency_telemetry,
@@ -136,6 +137,12 @@ def query_signals(
         return {"items": [], "nextCursor": None, "count": 0}
     clauses = ["intake_stage='lead'"]
     params: list = []
+    # 승인 목록에서 내린 provider(FinancialJuice, Benzinga 등)의 과거 lead가 DB에 남아
+    # 있다. 코드에서 어댑터를 지워도 이 행들은 계속 조회돼 화면에 뜬다. 지금 수집하지
+    # 않는 출처는 보여주지 않는다 — 사용자는 갱신되는 신호로 오해한다.
+    approved = sorted(APPROVED_PROVIDERS)
+    clauses.append(f"source IN ({','.join('?' for _ in approved)})")
+    params.extend(approved)
     if not include_unhealthy:
         clauses.append("source_status IN ('active','delayed')")
     if ticker:
@@ -196,5 +203,7 @@ def record_provider_health(data_dir: Path, provider: str, payload: dict) -> dict
 
 def provider_health(data_dir: Path) -> dict:
     state = read_json(provider_health_path(data_dir), {})
-    return state if isinstance(state, dict) else {}
+    rows = state if isinstance(state, dict) else {}
+    # 승인 목록에서 내린 provider의 health 기록은 화면에 띄우지 않는다.
+    return {key: value for key, value in rows.items() if key in APPROVED_PROVIDERS}
 

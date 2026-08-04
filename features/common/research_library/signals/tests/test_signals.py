@@ -154,3 +154,32 @@ def test_provider_health_error_code_never_echoes_secret_or_url():
     assert "example.test" not in code
 
 
+def test_retired_provider_leads_stay_out_of_query_results(tmp_path):
+    """승인 목록에서 내린 provider의 과거 lead는 DB에 남아 있어도 조회되면 안 된다.
+
+    실제 사용자 DB에 FinancialJuice lead 228건이 남아 워치리스트에 계속 떴다.
+    어댑터를 지우는 것만으로는 이미 저장된 행이 사라지지 않는다.
+    """
+    db = tmp_path / "research-index.sqlite3"
+    upsert_signal(db, normalize_signal(row()))
+    # 수집 당시에는 유효했던 provider 행을 흉내낸다(지금은 normalize_signal이 거부한다).
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE evidence_items SET source='financialjuice' WHERE intake_stage='lead'")
+        conn.commit()
+
+    page = query_signals(db, limit=50)
+    assert page["count"] == 0, "내려간 provider의 lead가 조회됐습니다"
+
+
+def test_provider_health_hides_retired_providers(tmp_path):
+    from features.common.research_library.signals.service import provider_health, provider_health_path
+    from features.common.utils import write_json
+
+    write_json(provider_health_path(tmp_path), {
+        "kr_existing": {"provider": "kr_existing", "sourceStatus": "active"},
+        "financialjuice": {"provider": "financialjuice", "sourceStatus": "disabled"},
+        "benzinga": {"provider": "benzinga", "sourceStatus": "disabled"},
+    })
+    rows = provider_health(tmp_path)
+    assert set(rows) == {"kr_existing"}
+
