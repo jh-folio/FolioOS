@@ -413,13 +413,16 @@ def _normalize_market_filter(value):
     return token if token in {"US", "KR", "GLOBAL", "UNKNOWN"} else ""
 
 
+# 보도자료 와이어(PR Newswire, GlobeNewswire)는 RSS 피드 화면에 노출하지 않는다.
+# 기업이 직접 낸 1차 자료라 매체 교차 확인이 없고 발행량이 많아, 목록을 훑는 화면에서는
+# 뉴스를 밀어낸다. 수집·인덱싱은 그대로 두어 워치리스트 종목 뉴스와 기업분석 보조자료로
+# 계속 쓰인다. 목록과 출처 드롭다운이 같은 조건을 쓰도록 상수로 공유한다.
+_HIDE_PRESS_RELEASE_SQL = "(source_type IS NULL OR source_type != 'press_release')"
+
+
 def _cache_where(start_dt=None, end_dt=None, source="", market=""):
-    clauses = ["visible = 1"]
+    clauses = ["visible = 1", _HIDE_PRESS_RELEASE_SQL]
     params = []
-    # 보도자료 와이어는 기업 자료라 목록을 훑는 화면의 기본 대상이 아니다. 발행량이 많아
-    # 그대로 두면 최신순 앞쪽을 차지해 뉴스를 밀어낸다. 소스를 직접 고르면 그때 보여준다.
-    if not str(source).strip():
-        clauses.append("(source_type IS NULL OR source_type != 'press_release')")
     if start_dt:
         clauses.append("timestamp_sort >= ?")
         params.append(start_dt.isoformat())
@@ -473,7 +476,8 @@ def rss_available_sources(files):
     refresh_rss_feed_cache()
     with _connect_cache() as conn:
         rows = conn.execute(
-            f"SELECT DISTINCT media FROM {RSS_CACHE_TABLE} WHERE visible = 1 AND media != '' ORDER BY media"
+            f"SELECT DISTINCT media FROM {RSS_CACHE_TABLE} "
+            f"WHERE visible = 1 AND media != '' AND {_HIDE_PRESS_RELEASE_SQL} ORDER BY media"
         ).fetchall()
     return [row["media"] for row in rows]
 
@@ -499,7 +503,8 @@ def rss_feed_payload(qs):
             params,
         ).fetchall()
         source_rows = conn.execute(
-            f"SELECT DISTINCT media FROM {RSS_CACHE_TABLE} WHERE visible = 1 AND media != '' ORDER BY media"
+            f"SELECT DISTINCT media FROM {RSS_CACHE_TABLE} "
+            f"WHERE visible = 1 AND media != '' AND {_HIDE_PRESS_RELEASE_SQL} ORDER BY media"
         ).fetchall()
     deduped_rows = _dedupe_rss_rows(rows)
     total = len(deduped_rows)
