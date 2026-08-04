@@ -359,6 +359,12 @@
   --touch-min: 44px;
   --touch-gap: 8px;
 
+  /* 세그먼트 알약 — 토스 패턴은 회색 트랙 + 흰 알약이다.
+     기존 --folio-segment-active(어두운 알약)와 방향이 달라 별도 토큰을 둔다.
+     다크 대응쌍은 기존 다크 세그먼트가 검증한 밝은 회색(#666e82, 트랙 대비 3:1)을 재사용한다. */
+  --segment-thumb: #ffffff;
+  --segment-thumb-ink: var(--folio-ink);
+
   /* 시장 색 (0.5_PLAN §3.16) — 하드코딩 금지 계약을 위한 슬롯.
      현재 시장 구분은 텍스트 배지(US/KR)뿐이고 색이 배정된 적이 없다.
      실제 색 배정은 Step 4~13의 디자인 결정이므로 지금은 중립값으로 두고,
@@ -441,6 +447,8 @@
   --surface-group: #191c24;          /* panel(#13151b) 바로 위 */
   --surface-control: #1f2430;
   --surface-control-hover: #262c3a;
+  --segment-thumb: #666e82;          /* 다크 세그먼트가 검증한 값 — 트랙 대비 3:1 */
+  --segment-thumb-ink: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -14695,3 +14703,241 @@ main.page {
 .briefing-change-strip__note { color: var(--folio-ink-muted); line-height: 1.5; flex: 1 1 100%; }
 .briefing-change-strip__fallback { margin: 8px 0 0; font-size: 12.5px; color: var(--folio-ink-subtle); }
 .change-contrast-list__hidden { font-size: 12px; color: var(--folio-ink-subtle); padding: 2px 0; }
+
+/* ============================================================
+   0.5 축 B — 프리미티브 (Stage D1 / Step 2)
+   "토스 문법, Folio 밀도": 무테 + 회색 fill 컨트롤 + 회색 트랙/흰 알약 세그먼트.
+   반드시 파일 말미에 둔다 — 앞쪽 레거시 규칙이 같은 특이성으로 이기는 사고가
+   실재했다(.cockpit-change-feed li > div). 새 화면은 이 4종만 쓴다.
+   ============================================================ */
+
+/* --- .btn: 변형 3(primary/fill/text) × 크기 2(md/sm). 테두리 버튼 없음 --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--r-control);
+  min-height: 36px;
+  padding: 0 14px;
+  background: var(--surface-control);
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.btn:hover { background: var(--surface-control-hover); transform: translateY(-1px); }
+.btn--primary { background: var(--folio-surface-dark); color: var(--folio-ink-inverse); }
+.btn--primary:hover { background: var(--folio-surface-dark-2); }
+.btn--text { background: transparent; color: var(--folio-ink-muted); }
+.btn--text:hover { background: var(--folio-tint-weak); color: var(--folio-ink); }
+.btn--sm { min-height: 32px; padding: 0 13px; font-size: var(--fs-meta); }
+.btn--icon { width: 32px; min-height: 32px; padding: 0; border-radius: var(--r-pill); }
+.btn:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
+
+/* --- .surface: 패널 > 그룹 > 인셋. 깊이가 내려갈수록 가벼워진다 --- */
+.surface {
+  background: var(--surface-panel);
+  border: none;
+  border-radius: var(--r-panel);
+  padding: var(--sp-5) var(--sp-6);
+  box-shadow: var(--elev-1);
+}
+.surface--group {
+  background: var(--surface-group);
+  border-radius: var(--r-group);
+  padding: var(--sp-4);
+  box-shadow: none;
+}
+.surface--inset {
+  background: var(--surface-control);
+  border-radius: var(--r-control);
+  padding: var(--sp-3);
+  box-shadow: none;
+}
+
+/* --- .chip: 비대화형 상태 표시. 크기 고정, 의미색은 data-tone --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--r-pill);
+  padding: 3px 9px;
+  background: var(--surface-control);
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.chip[data-tone="burgundy"] { background: var(--folio-red-soft); color: var(--folio-burgundy); }
+.chip[data-tone="gold"] { background: var(--folio-gold-soft); color: var(--folio-gold); }
+.chip[data-tone="blue"] { background: var(--folio-blue-soft); color: var(--folio-blue); }
+.chip[data-tone="teal"] { background: var(--folio-teal-soft); color: var(--folio-teal); }
+
+/* --- .segment: 상호배타 선택. 회색 트랙 + 알약. N개 항목에서 동작(0.5 시장 확장 대비) --- */
+.segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--surface-control);
+  overflow-x: auto;
+}
+.segment button {
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 5px 14px;
+  background: transparent;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.segment button[aria-pressed="true"], .segment button.active {
+  background: var(--segment-thumb);
+  color: var(--segment-thumb-ink);
+  box-shadow: var(--elev-1);
+}
+.segment button:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: -2px; }
+
+/* 터치 타깃 (0.5_PLAN §3.13): 모바일은 실제 박스를 44px로. 데스크톱은 36/32 유지.
+   인접 8px 간격은 컨테이너 gap이 담당한다 — margin을 추가하면 flex gap과 이중이 된다.
+   gap<8px인 컨테이너는 Step 3에서 개별 수정한다. */
+@media (pointer: coarse), (max-width: 768px) {
+  .btn, .btn--sm, .segment button { min-height: var(--touch-min); }
+  .btn--icon { width: var(--touch-min); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .segment button { transition: none; }
+  .btn:hover { transform: none; }
+}
+
+/* ============================================================
+   0.5 축 B — 레거시 별칭 매핑 (Stage D1 / Step 2)
+   기존 클래스를 프리미티브 값으로 잇는다. 클래스 삭제는 Stage D2(Step 14).
+   여기까지 되돌리면(이 블록 삭제) 시각적으로 완전히 원상복귀된다.
+
+   Step 2 범위에서 제외한 것(화면 수렴 단계에서 처리):
+   - .card             패널이 아니라 flex 헬퍼였다(17개 파일). 계획 §7.2 흡수 목록 오류.
+   - brief-market-segment  ::before 알약 애니메이션이 3열 grid에 묶여 있어 CSS만으로
+                       N개 항목 전환이 안 된다. Codex가 시장 추가 시 .segment 마크업으로 교체.
+   - 하위 카드 11종     (market-driver-card 등) grid/flex 복합 레이아웃이라 화면별로
+                       .surface--group 위계를 결정해야 한다.
+   - .agent-ask-btn / .icon-btn  로고·아이콘 전용 버튼은 화면 단계에서 .btn--icon으로.
+   ============================================================ */
+
+/* --- 버튼 계보 → .btn 값. 테두리 폐지, radius 8→10, 38→36px, 15→13.5px --- */
+.tabs button, .filter-btn, .action-link, .toggle, .load-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: var(--r-control);
+  min-height: 36px;
+  padding: 0 14px;
+  background: var(--surface-control);
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+}
+.tabs button:hover, .filter-btn:hover, .action-link:hover, .toggle:hover, .load-more:hover {
+  background: var(--surface-control-hover);
+  color: var(--folio-ink);
+  border-color: transparent;
+}
+/* 변형 정리: 기존 특이성 (0,2,0) 규칙들이 색을 다시 칠하므로 같은 특이성으로 되받는다 */
+.filter-btn.clear, .filter-btn.download { background: var(--surface-control); color: var(--folio-ink-soft); }
+.filter-btn.clear:hover, .filter-btn.download:hover { background: var(--surface-control-hover); color: var(--folio-ink); }
+/* primary(어두운 fill)는 유지: .filter-btn.apply / .load-more / .tabs button.active — 기존 규칙 그대로 */
+.tabs button.active, .filter-btn.apply, .load-more { background: var(--folio-surface-dark); color: var(--folio-ink-inverse); }
+
+/* agent-action은 sm 크기 */
+.agent-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--r-control);
+  min-height: 32px;
+  padding: 0 13px;
+  background: var(--surface-control);
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+}
+.agent-action:hover { background: var(--surface-control-hover); color: var(--folio-ink); }
+
+/* 인터랙티브 필터 알약(cal-filter/sym-chip): 무테 fill로. 활성 어두운 fill은 기존 규칙 유지 */
+.cal-filter, .sym-chip { border: none; background: var(--surface-control); }
+.cal-filter:hover, .sym-chip:hover { background: var(--surface-control-hover); }
+
+/* --- 칩 계보 → .chip 기하(3px 9px / 11px / 600). 의미색 규칙은 그대로 둔다 --- */
+.status-chip, .cockpit-summary__chip, .change-verdict-chip, .briefing-archive-chip,
+.mkt-chip, .certainty-badge, .cli-status-chip, .market-direction-chip, .agent-attach-chip {
+  border: none;
+  border-radius: var(--r-pill);
+  padding: 3px 9px;
+  font-size: var(--fs-label);
+  font-weight: var(--fw-medium);
+}
+
+/* --- 세그먼트형 토글 그룹 → .segment 트랙/알약 --- */
+.dashboard-mode-switch, .story-share__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--surface-control);
+}
+.dashboard-mode-switch button, .story-share__toggle button {
+  border: none;
+  border-radius: var(--r-pill);
+  min-height: 0;
+  padding: 5px 14px;
+  background: transparent;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.dashboard-mode-switch button[aria-pressed="true"], .story-share__toggle button[aria-pressed="true"] {
+  background: var(--segment-thumb);
+  color: var(--segment-thumb-ink);
+  border-color: transparent;
+  box-shadow: var(--elev-1);
+}
+
+/* --- 최상위 패널 → .surface. 무테 + r-panel + elev-1. input-panel 그라데이션 제거(전 화면 유일) --- */
+.cockpit-panel {
+  border: none;
+  border-radius: var(--r-panel);
+  box-shadow: var(--elev-1);
+}
+.input-panel {
+  border: none;
+  border-radius: var(--r-panel);
+  background: var(--surface-panel);
+  box-shadow: var(--elev-1);
+}
+.brief-gen-panel {
+  border: none;
+  border-radius: var(--r-panel);
+  box-shadow: var(--elev-1);
+}
+
+/* 터치 타깃: 별칭 계열도 모바일에서 실제 박스 44px (0.5_PLAN §3.13) */
+@media (pointer: coarse), (max-width: 768px) {
+  .tabs button, .filter-btn, .action-link, .toggle, .load-more,
+  .agent-action, .cal-filter, .sym-chip,
+  .dashboard-mode-switch button, .story-share__toggle button { min-height: var(--touch-min); }
+}
