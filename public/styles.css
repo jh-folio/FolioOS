@@ -14592,10 +14592,10 @@ main.page {
 .change-verdict-chip[data-tone="blue"] { background: var(--folio-blue-soft); color: var(--folio-blue); }
 .change-verdict-chip[data-tone="muted"] { background: var(--folio-surface-muted); color: var(--folio-ink-subtle); }
 /* 상태 색은 li::before 그라데이션 바가 이미 담당한다 — 이중 테두리를 만들지 않는다. */
-.cockpit-change-card__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.cockpit-change-card__actions .filter-btn { flex: 0 0 auto; }
+/* 액션은 시장 내러티브 카드 footer와 같은 .agent-action pill + 로고 아이콘 버튼을 재사용한다. */
+.cockpit-change-card__actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px; }
+.cockpit-change-card__actions .agent-ask-btn { margin-left: auto; }
 .change-contrast-list, .cockpit-change-card__actions { min-width: 0; }
-.change-ask-agent { color: var(--agent-accent, var(--folio-teal)); border-color: currentColor; }
 .change-contrast-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 12px; }
 .change-contrast { border: 1px solid var(--folio-border); border-radius: var(--folio-radius); padding: 12px 14px; background: var(--folio-bg-soft); }
 .change-contrast__subject { display: flex; align-items: center; gap: 8px; }

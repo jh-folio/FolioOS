@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { openReactAgentDock } from "../agentContext";
+import { legacyBridge } from "../legacyBridge";
 import {
   ARTIFACT_KIND_LABELS,
   baselineText,
@@ -132,6 +133,8 @@ function ChangeItemContrast({ item }: { item: ChangedItem }) {
 
 function ChangeCard({ event }: { event: ChangeEvent }) {
   const [expanded, setExpanded] = useState(false);
+  // 동적으로 mount되는 로고 슬롯은 bridge를 다시 불러야 채워진다 (시장 내러티브와 같은 방식).
+  useEffect(() => { legacyBridge().applyAgentBranding?.(); }, []);
   const item = primaryChangedItem(event);
   const verdict = SEMANTIC_VERDICT_LABELS[String(item?.semanticVerdict || "")];
   const allItems = event.changedItems || [];
@@ -156,12 +159,22 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
           {Number(event.reliability || 0) > 0 ? <> · 신뢰도 {Math.round(Number(event.reliability) * 100)}</> : null}
         </small>
         <div className="cockpit-change-card__actions">
-          <button type="button" className="filter-btn" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+          <button type="button" className="agent-action" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
             {expanded ? "접기" : `펼치기${items.length > 1 ? ` (${items.length}건)` : ""}`}
           </button>
-          <button type="button" className="filter-btn" onClick={() => { window.location.hash = targetRoute; }}>보고서 열기</button>
-          {baseline ? <button type="button" className="filter-btn" onClick={() => { window.location.hash = baseline; }}>기준 열기</button> : null}
-          <button type="button" className="filter-btn change-ask-agent" onClick={() => openReactAgentDock({ message: agentQuestionForEvent(event) })}>Agent에게 묻기</button>
+          <button type="button" className="agent-action" onClick={() => { window.location.hash = targetRoute; }}>보고서 열기</button>
+          {baseline ? <button type="button" className="agent-action" onClick={() => { window.location.hash = baseline; }}>기준 열기</button> : null}
+          {/* 시장 내러티브 카드와 같은 로고 아이콘 버튼. 슬롯은 applyAgentBranding bridge가 채운다. */}
+          <button
+            type="button"
+            className="agent-action agent-ask-btn"
+            data-tooltip="Agent에게 묻기"
+            data-tooltip-pos="left"
+            aria-label="Agent에게 묻기"
+            onClick={() => openReactAgentDock({ message: agentQuestionForEvent(event) })}
+          >
+            <span className="agent-logo-slot" aria-hidden="true" />
+          </button>
         </div>
         {expanded ? (
           <ol className="change-contrast-list">

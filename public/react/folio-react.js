@@ -8938,7 +8938,11 @@ function pr({ item: e }) {
 	});
 }
 function mr({ event: e }) {
-	let [t, n] = (0, b.useState)(!1), r = cr(e), i = ir[String(r?.semanticVerdict || "")], a = e.changedItems || [], o = a.filter(fr), s = a.length - o.length, c = r?.semanticNote || Jn(e), l = or(e), u = sr(e);
+	let [t, n] = (0, b.useState)(!1);
+	(0, b.useEffect)(() => {
+		Lt().applyAgentBranding?.();
+	}, []);
+	let r = cr(e), i = ir[String(r?.semanticVerdict || "")], a = e.changedItems || [], o = a.filter(fr), s = a.length - o.length, c = r?.semanticNote || Jn(e), l = or(e), u = sr(e);
 	return /* @__PURE__ */ (0, x.jsx)("li", {
 		"data-status": e.status,
 		"data-tone": i?.tone || "",
@@ -8976,14 +8980,14 @@ function mr({ event: e }) {
 					children: [
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "filter-btn",
+							className: "agent-action",
 							"aria-expanded": t,
 							onClick: () => n((e) => !e),
 							children: t ? "접기" : `펼치기${o.length > 1 ? ` (${o.length}건)` : ""}`
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "filter-btn",
+							className: "agent-action",
 							onClick: () => {
 								window.location.hash = l;
 							},
@@ -8991,7 +8995,7 @@ function mr({ event: e }) {
 						}),
 						u ? /* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "filter-btn",
+							className: "agent-action",
 							onClick: () => {
 								window.location.hash = u;
 							},
@@ -8999,9 +9003,15 @@ function mr({ event: e }) {
 						}) : null,
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "filter-btn change-ask-agent",
+							className: "agent-action agent-ask-btn",
+							"data-tooltip": "Agent에게 묻기",
+							"data-tooltip-pos": "left",
+							"aria-label": "Agent에게 묻기",
 							onClick: () => Ae({ message: lr(e) }),
-							children: "Agent에게 묻기"
+							children: /* @__PURE__ */ (0, x.jsx)("span", {
+								className: "agent-logo-slot",
+								"aria-hidden": "true"
+							})
 						})
 					]
 				}),
