@@ -224,6 +224,39 @@ def previous_trading_day(day, market, exchange_calendar_fetcher=None):
     return day - dt.timedelta(days=1)
 
 
+def next_trading_day(day, market, exchange_calendar_fetcher=None):
+    cursor = day + dt.timedelta(days=1)
+    for _ in range(14):
+        if is_market_open(cursor, market, exchange_calendar_fetcher):
+            return cursor
+        cursor += dt.timedelta(days=1)
+    return day + dt.timedelta(days=1)
+
+
+def publication_date_for_session(session_date: str, market_scope: str) -> str:
+    """사용자가 고른 시장 세션일을 저장·생성 기준인 발행일로 옮긴다.
+
+    한 브리핑 안에서 두 시장의 세션일은 하루 어긋난다. 발행일 D에서 미국장은
+    D-1 정규장을 복기하고 한국장은 D 장을 다룬다. 따라서 같은 세션일이라도
+    어느 시장을 생성하느냐에 따라 발행일이 달라진다.
+
+        미국장 세션 S  -> 발행일 = S 다음 거래일
+        한국장 세션 S  -> 발행일 = S
+        종합          -> 미국장 기준(한국장은 그 다음 세션이 함께 담긴다)
+
+    저장 키와 아카이브 정렬은 계속 발행일이다. 이 함수는 입력 해석만 바꾼다.
+    """
+    text = str(session_date or "").strip()[:10]
+    try:
+        day = dt.date.fromisoformat(text)
+    except ValueError:
+        return text
+    scope = str(market_scope or "both").strip().lower()
+    if scope == "kr":
+        return day.isoformat()
+    return next_trading_day(day, "US").isoformat()
+
+
 def latest_trading_day_on_or_before(day, market, exchange_calendar_fetcher=None):
     status = market_open_status(day, market, exchange_calendar_fetcher)
     if status["isOpen"]:

@@ -522,24 +522,34 @@ def api_create_briefing(body: dict | None = Body(default=None)):
     if automation_settings.get("briefing", {}).get("runPrerequisites"):
         prerequisites = run_briefing_prerequisites()
     generation_mode = request_generation_mode(body)
+    market_scope = body.get("marketScope", "both")
+    # 화면의 날짜 선택은 "시장 기준일"(그 시장의 세션일)이다. 저장 키와 아카이브
+    # 정렬은 계속 발행일이므로 여기서 한 번 옮긴다. 한 브리핑 안에서 미국장은
+    # 전일 정규장을, 한국장은 당일 장을 다루므로 변환은 시장마다 다르다.
+    from features.common.market_calendar import publication_date_for_session
+
+    requested_date = str(body.get("date") or "").strip()
+    publication_date = (
+        publication_date_for_session(requested_date, market_scope) if requested_date else kst_date()
+    )
     if generation_mode == "llm_cli":
         job = submit_agent_task("briefing", {
-            "date": body.get("date") or kst_date(),
+            "date": publication_date,
             "strict_date": body.get("strictDate", False),
             "quality_mode": body.get("qualityMode", "diagnose_only"),
-            "market_scope": body.get("marketScope", "both"),
+            "market_scope": market_scope,
             "briefing_type": body.get("briefingType", "default"),
         }, adapter=body.get("agentAdapter", ""))
         if prerequisites and isinstance(job, dict):
             job["prerequisites"] = prerequisites
         return job
     result = build_briefing(
-        body.get("date") or kst_date(),
+        publication_date,
         strict_date=body.get("strictDate", False),
         web_search_override=bool_override(body.get("webSearch")),
         llm_override=llm_override_for_mode(generation_mode),
         quality_mode=body.get("qualityMode", "diagnose_only"),
-        market_scope=body.get("marketScope", "both"),
+        market_scope=market_scope,
         briefing_type=body.get("briefingType", "default"),
     )
     if prerequisites and isinstance(result, dict):

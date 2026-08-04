@@ -327,6 +327,7 @@ features/company_analysis/financial_quality_prompt.md
 - `GET /api/briefings/{date}/visuals/current`는 저장 snapshot의 종목 universe만 최신 일봉으로 재조회하는 read-only 경로다. current payload를 보고서 JSON이나 `.visuals.json`에 merge/write하지 않는다. yfinance 일봉은 실시간 체결가가 아니므로 `snapshot/delayed/stale/unavailable`과 장 상태를 명시한다.
 - 한국시간 기준 날짜 `D` 브리핑은 미국장 `D-1` 마감과 한국장 `D-1` 결과 및 `D` 개장/장중을 구분해야 한다.
 - 시장별 독자용 제목은 세션일과 상태를 함께 쓴다(`US ... D-1 마감`, `Korea ... D 장중|마감`). 발행일은 별도 `publicationDate`/`KST 발행` 메타데이터로 표시하고 저장 키·기본 정렬 기준으로 유지한다. Agent/API/규칙 생성과 아카이브가 같은 계약을 사용해야 한다.
+- **화면의 날짜 선택은 발행일이 아니라 그 시장의 세션 기준일이다.** 한 브리핑 안에서 미국장은 발행일 D의 D-1 정규장을, 한국장은 D 장을 다루므로 변환은 시장마다 다르다: 미국장·종합은 `세션일 다음 거래일`, 한국장은 `세션일 그대로`. 변환은 `publication_date_for_session()` 하나가 담당하고 `POST /api/briefings`에서 한 번만 적용한다. 저장 키·아카이브 정렬·기존 보고서는 계속 발행일 기준이라 호환이 깨지지 않는다.
 - 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. `pykrx` 기반 KRX 수치를 우선하고 실패하면 yfinance/기사 기반 fallback을 사용하되, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.
 - LLM 실패 시 규칙 기반 브리핑이 필요하다. 참고자료 섹션은 유지한다.
 - `select_briefing_docs()`의 fallback 경로에서 `market_windows`는 브리핑 날짜 기준 원본을 유지한다. 문서 날짜로 재계산하면 공휴일/주말에 `krPreviousSessionDate`가 틀린 날짜를 가리키는 버그가 발생한다.

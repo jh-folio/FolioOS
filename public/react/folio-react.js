@@ -9587,14 +9587,15 @@ function Br() {
 									type: "date",
 									value: w,
 									onChange: (e) => T(e.currentTarget.value),
-									"aria-label": "생성할 브리핑 날짜"
+									"aria-label": `${_r[v]} 기준일`,
+									title: `${_r[v]} 세션 기준일`
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn clear",
 									type: "button",
 									onClick: () => W(w),
 									disabled: u || !w,
-									children: "이 날짜로 생성"
+									children: "이 기준일로 생성"
 								})
 							]
 						})
