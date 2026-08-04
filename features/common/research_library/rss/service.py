@@ -420,6 +420,44 @@ def _normalize_market_filter(value):
 _HIDE_PRESS_RELEASE_SQL = "(source_type IS NULL OR source_type != 'press_release')"
 
 
+def _configured_source_names() -> set[str]:
+    """현재 `config/rss_feeds.yaml`에서 수집 중인 매체 이름.
+
+    aggregating 피드는 `only_publishers`로 원 발행처 이름을 다시 태그하므로
+    (Yahoo Finance -> Reuters) 그 이름도 함께 허용한다.
+    """
+    from features.common.config_bootstrap import resolve_config
+    from features.common.research_library.rss.feed_config import load_rss_feeds
+
+    names: set[str] = set()
+    for feed in load_rss_feeds(resolve_config("rss_feeds.yaml")):
+        publishers = [str(row).strip() for row in feed.get("only_publishers") or [] if str(row).strip()]
+        if publishers:
+            names.update(publishers)
+        else:
+            media = str(feed.get("media") or "").strip()
+            if media:
+                names.add(media)
+    return names
+
+
+def _selectable_sources(rows) -> list[str]:
+    """드롭다운에 남길 출처.
+
+    수집 경로가 사라진 매체(피드를 지웠거나 이름이 바뀐 경우)는 고를 수 있어도
+    새 항목이 늘지 않아 사용자를 오도한다. 과거 항목은 목록에 그대로 보이되
+    필터 대상에서만 뺀다. 설정을 읽지 못하면 기존 동작대로 전부 노출한다.
+    """
+    names = [str(row["media"]).strip() for row in rows if str(row["media"] or "").strip()]
+    try:
+        configured = _configured_source_names()
+    except Exception:
+        return names
+    if not configured:
+        return names
+    return [name for name in names if name in configured]
+
+
 def _cache_where(start_dt=None, end_dt=None, source="", market=""):
     clauses = ["visible = 1", _HIDE_PRESS_RELEASE_SQL]
     params = []
@@ -479,7 +517,7 @@ def rss_available_sources(files):
             f"SELECT DISTINCT media FROM {RSS_CACHE_TABLE} "
             f"WHERE visible = 1 AND media != '' AND {_HIDE_PRESS_RELEASE_SQL} ORDER BY media"
         ).fetchall()
-    return [row["media"] for row in rows]
+    return _selectable_sources(rows)
 
 
 def rss_feed_payload(qs):
@@ -514,7 +552,7 @@ def rss_feed_payload(qs):
         "offset": offset,
         "limit": limit,
         "total": total,
-        "sources": [row["media"] for row in source_rows],
+        "sources": _selectable_sources(source_rows),
         "source": source,
         "market": market,
         "markets": ["US", "KR", "GLOBAL", "UNKNOWN"],
