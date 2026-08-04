@@ -16651,142 +16651,139 @@ function Vs() {
 			/* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "react-rss-control-panel react-rss-filter-panel",
 				"aria-label": "RSS 필터와 검색",
-				children: [/* @__PURE__ */ (0, x.jsxs)("div", {
-					className: "react-rss-panel-head",
-					children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("h2", { children: "피드 탐색" }), /* @__PURE__ */ (0, x.jsx)("p", { children: "검색어와 시장·국가·언어·기간·소스를 함께 좁혀 봅니다. 시간은 UTC+9 기준입니다." })] }), /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "react-rss-period-action",
-						type: "button",
-						onClick: F,
-						disabled: m,
-						children: "전체 기간"
-					})]
-				}), /* @__PURE__ */ (0, x.jsxs)("form", {
-					className: "react-rss-filter-grid",
-					onSubmit: P,
-					children: [
-						/* @__PURE__ */ (0, x.jsxs)("label", {
-							className: "react-rss-filter-wide",
-							children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "검색어" }), /* @__PURE__ */ (0, x.jsx)("input", {
-								type: "search",
-								value: f,
-								placeholder: "기업, 티커, 섹터 또는 이슈",
-								onChange: (e) => p(e.currentTarget.value)
-							})]
-						}),
-						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시장" }), /* @__PURE__ */ (0, x.jsx)("select", {
-							value: u.market,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									market: t
-								}));
-							},
-							children: As.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
-								value: e.value,
-								children: e.label
-							}, e.value || "all-market"))
-						})] }),
-						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "국가" }), /* @__PURE__ */ (0, x.jsxs)("select", {
-							value: u.country,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									country: t
-								}));
-							},
-							children: [/* @__PURE__ */ (0, x.jsx)("option", {
-								value: "",
-								children: "전체 국가"
-							}), A.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
-								value: e,
-								children: js[e] || e
-							}, e))]
-						})] }),
-						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "언어" }), /* @__PURE__ */ (0, x.jsxs)("select", {
-							value: u.language,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									language: t
-								}));
-							},
-							children: [/* @__PURE__ */ (0, x.jsx)("option", {
-								value: "",
-								children: "전체 언어"
-							}), j.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
-								value: e,
-								children: Ms[e] || e
-							}, e))]
-						})] }),
-						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "소스" }), /* @__PURE__ */ (0, x.jsxs)("select", {
-							value: u.source,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									source: t
-								}));
-							},
-							children: [/* @__PURE__ */ (0, x.jsx)("option", {
-								value: "",
-								children: "전체 소스"
-							}), k.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
-								value: e,
-								children: e
-							}, e))]
-						})] }),
-						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시작" }), /* @__PURE__ */ (0, x.jsx)("input", {
-							type: "datetime-local",
-							value: u.start,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									start: t
-								}));
+				children: [
+					/* @__PURE__ */ (0, x.jsx)("div", {
+						className: "react-rss-panel-head",
+						children: /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("h2", { children: "피드 탐색" }), /* @__PURE__ */ (0, x.jsx)("p", { children: "시장·국가·언어·기간·소스로 좁히거나, 본문까지 검색합니다. 시간은 UTC+9 기준입니다." })] })
+					}),
+					/* @__PURE__ */ (0, x.jsxs)("div", {
+						className: "react-rss-searchbar",
+						children: [/* @__PURE__ */ (0, x.jsx)("input", {
+							type: "search",
+							"aria-label": "본문 검색어",
+							value: f,
+							placeholder: "기업, 티커, 섹터 또는 이슈",
+							onChange: (e) => p(e.currentTarget.value),
+							onKeyDown: (e) => {
+								e.key === "Enter" && (e.preventDefault(), I());
 							}
-						})] }),
-						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "종료" }), /* @__PURE__ */ (0, x.jsx)("input", {
-							type: "datetime-local",
-							value: u.end,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									end: t
-								}));
-							}
-						})] }),
-						/* @__PURE__ */ (0, x.jsxs)("div", {
-							className: "react-rss-filter-actions",
-							children: [
-								/* @__PURE__ */ (0, x.jsx)("button", {
+						}), /* @__PURE__ */ (0, x.jsx)("button", {
+							className: "btn",
+							type: "button",
+							onClick: () => I(),
+							disabled: v,
+							children: v ? "검색 중" : "본문 검색"
+						})]
+					}),
+					/* @__PURE__ */ (0, x.jsxs)("form", {
+						className: "react-rss-filter-grid",
+						onSubmit: P,
+						children: [
+							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시장" }), /* @__PURE__ */ (0, x.jsx)("select", {
+								value: u.market,
+								onChange: (e) => {
+									let t = e.currentTarget.value;
+									d((e) => ({
+										...e,
+										market: t
+									}));
+								},
+								children: As.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+									value: e.value,
+									children: e.label
+								}, e.value || "all-market"))
+							})] }),
+							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "국가" }), /* @__PURE__ */ (0, x.jsxs)("select", {
+								value: u.country,
+								onChange: (e) => {
+									let t = e.currentTarget.value;
+									d((e) => ({
+										...e,
+										country: t
+									}));
+								},
+								children: [/* @__PURE__ */ (0, x.jsx)("option", {
+									value: "",
+									children: "전체 국가"
+								}), A.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+									value: e,
+									children: js[e] || e
+								}, e))]
+							})] }),
+							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "언어" }), /* @__PURE__ */ (0, x.jsxs)("select", {
+								value: u.language,
+								onChange: (e) => {
+									let t = e.currentTarget.value;
+									d((e) => ({
+										...e,
+										language: t
+									}));
+								},
+								children: [/* @__PURE__ */ (0, x.jsx)("option", {
+									value: "",
+									children: "전체 언어"
+								}), j.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+									value: e,
+									children: Ms[e] || e
+								}, e))]
+							})] }),
+							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "소스" }), /* @__PURE__ */ (0, x.jsxs)("select", {
+								value: u.source,
+								onChange: (e) => {
+									let t = e.currentTarget.value;
+									d((e) => ({
+										...e,
+										source: t
+									}));
+								},
+								children: [/* @__PURE__ */ (0, x.jsx)("option", {
+									value: "",
+									children: "전체 소스"
+								}), k.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+									value: e,
+									children: e
+								}, e))]
+							})] }),
+							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시작" }), /* @__PURE__ */ (0, x.jsx)("input", {
+								type: "datetime-local",
+								value: u.start,
+								onChange: (e) => {
+									let t = e.currentTarget.value;
+									d((e) => ({
+										...e,
+										start: t
+									}));
+								}
+							})] }),
+							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "종료" }), /* @__PURE__ */ (0, x.jsx)("input", {
+								type: "datetime-local",
+								value: u.end,
+								onChange: (e) => {
+									let t = e.currentTarget.value;
+									d((e) => ({
+										...e,
+										end: t
+									}));
+								}
+							})] }),
+							/* @__PURE__ */ (0, x.jsxs)("div", {
+								className: "react-rss-filter-actions",
+								children: [/* @__PURE__ */ (0, x.jsx)("button", {
 									className: "btn btn--primary",
 									type: "submit",
 									disabled: m,
 									children: "필터 적용"
-								}),
-								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "btn",
-									type: "button",
-									onClick: I,
-									disabled: v,
-									children: v ? "검색 중" : "본문 검색"
-								}),
-								/* @__PURE__ */ (0, x.jsx)("button", {
+								}), /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "btn btn--text",
 									type: "button",
 									onClick: F,
 									disabled: m,
 									children: "초기화"
-								})
-							]
-						})
-					]
-				})]
+								})]
+							})
+						]
+					})
+				]
 			}),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "react-rss-summary",

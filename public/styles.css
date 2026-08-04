@@ -15284,25 +15284,50 @@ main.page {
 }
 
 /* --- RSS 탐색 패널: 필터 표면 통합 (0.5 Task 1.4) ---
-   기간·소스 폼, 별도 검색 폼, 목록 옆 즉시적용 시장 드롭다운으로 셋이던 것을
-   한 그리드로 합쳤다. 컨트롤이 3개에서 7개로 늘어 고정 4열로는 넘치므로
-   auto-fit으로 바꾸고, 검색어만 한 줄을 차지하게 둔다. */
-.react-rss-filter-grid {
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-}
-.react-rss-filter-grid .react-rss-filter-wide {
-  grid-column: 1 / -1;
-}
-.react-rss-filter-grid .react-rss-filter-actions {
-  grid-column: 1 / -1;
+   기간·소스 폼, 별도 검색 폼, 목록 옆 즉시적용 시장 드롭다운으로 셋이던 것을 한 패널로
+   합쳤다. 검색은 본문까지 훑어 다른 결과를 만들고 필터는 지금 목록을 좁히므로,
+   같은 패널 안에서도 줄을 나눠 둔다. */
+.react-rss-searchbar {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--sp-2);
   align-items: center;
+  margin-bottom: var(--sp-4);
+}
+.react-rss-searchbar input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.react-rss-searchbar .btn { flex: none; }
+
+/* 컨트롤이 3개에서 6개로 늘어 고정 4열로는 넘친다. 폭에 맞춰 열 수가 접히게 둔다. */
+.react-rss-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
 }
 
-@media (max-width: 760px) {
-  .react-rss-filter-grid {
-    grid-template-columns: 1fr;
-  }
+/* 좁아져도 버튼은 가로로 흐르게 한다. 기존 900px 미디어쿼리가 이 영역을 세로 컬럼으로
+   세워 버튼 3개가 전체 폭으로 쌓였다(도크를 열면 데스크톱에서도 발동한다). */
+.react-rss-filter-grid .react-rss-filter-actions,
+.react-rss-control-panel .react-rss-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+
+/* 액션 버튼은 프리미티브 높이를 따른다. 46px 고정 규칙은 통합 전 폼 기준이었다. */
+.react-rss-filter-actions .btn,
+.react-rss-searchbar .btn {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: var(--fs-body-sm);
+}
+
+@media (max-width: 640px) {
+  .react-rss-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .react-rss-searchbar { flex-wrap: wrap; }
+  .react-rss-searchbar input { flex: 1 1 100%; }
 }

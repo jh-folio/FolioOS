@@ -325,26 +325,32 @@ export function RssRoute() {
       {/* 필터 표면이 셋으로 흩어져 있었다: 기간·소스 폼, 별도 검색 폼, 그리고 목록 옆에서
           즉시 적용되던 시장 드롭다운. 한 패널에 같은 양식으로 모으고 적용 방식도 통일한다.
           시장·국가·언어가 함께 있어야 유럽 6개국을 갈라 볼 수 있다. */}
+      {/* 필터 표면이 셋으로 흩어져 있었다: 기간·소스 폼, 별도 검색 폼, 목록 옆에서 즉시
+          적용되던 시장 드롭다운. 한 패널로 모으되 두 동작은 구분해 둔다 — 검색은 본문까지
+          훑어 다른 결과 목록을 만들고, 필터는 지금 보는 피드를 좁힌다. */}
       <section className="react-rss-control-panel react-rss-filter-panel" aria-label="RSS 필터와 검색">
         <div className="react-rss-panel-head">
           <div>
             <h2>피드 탐색</h2>
-            <p>검색어와 시장·국가·언어·기간·소스를 함께 좁혀 봅니다. 시간은 UTC+9 기준입니다.</p>
+            <p>시장·국가·언어·기간·소스로 좁히거나, 본문까지 검색합니다. 시간은 UTC+9 기준입니다.</p>
           </div>
-          <button className="react-rss-period-action" type="button" onClick={clearFilters} disabled={loading}>
-            전체 기간
+        </div>
+
+        <div className="react-rss-searchbar">
+          <input
+            type="search"
+            aria-label="본문 검색어"
+            value={searchQuery}
+            placeholder="기업, 티커, 섹터 또는 이슈"
+            onChange={(event) => setSearchQuery(event.currentTarget.value)}
+            onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); searchNews(); } }}
+          />
+          <button className="btn" type="button" onClick={() => searchNews()} disabled={searching}>
+            {searching ? "검색 중" : "본문 검색"}
           </button>
         </div>
+
         <form className="react-rss-filter-grid" onSubmit={applyFilters}>
-          <label className="react-rss-filter-wide">
-            <span>검색어</span>
-            <input
-              type="search"
-              value={searchQuery}
-              placeholder="기업, 티커, 섹터 또는 이슈"
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-            />
-          </label>
           <label>
             <span>시장</span>
             <select
@@ -412,9 +418,7 @@ export function RssRoute() {
           </label>
           <div className="react-rss-filter-actions">
             <button className="btn btn--primary" type="submit" disabled={loading}>필터 적용</button>
-            <button className="btn" type="button" onClick={searchNews} disabled={searching}>
-              {searching ? "검색 중" : "본문 검색"}
-            </button>
+            {/* 이전 `전체 기간` 버튼은 초기화와 같은 clearFilters를 호출하는 중복이라 없앴다. */}
             <button className="btn btn--text" type="button" onClick={clearFilters} disabled={loading}>초기화</button>
           </div>
         </form>
