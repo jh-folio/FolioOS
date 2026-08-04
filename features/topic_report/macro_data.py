@@ -6,6 +6,9 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
+
+from features.common.data_reliability.macro_fetch import fetch_macro_data_cached
 
 FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 BOK_BASE = "https://ecos.bok.or.kr/api/StatisticSearch"
@@ -244,13 +247,14 @@ def fetch_macro_data(
     fred_key: str,
     bok_key: str,
 ) -> dict:
-    fred = fetch_fred_data(fred_series, fred_key) if fred_series and fred_key else {"ok": False, "reason": "skipped", "series": {}}
-    bok = fetch_bok_data(bok_series, bok_key) if bok_series and bok_key else {"ok": False, "reason": "skipped", "series": {}}
-    return {
-        "ok": fred.get("ok") or bok.get("ok"),
-        "fred": fred,
-        "bok": bok,
-    }
+    cache_root = Path(__file__).resolve().parents[2] / "data" / "provider-cache" / "macro"
+    return fetch_macro_data_cached(
+        cache_root=cache_root,
+        fred_series=fred_series,
+        bok_series=bok_series,
+        fred_fetcher=(lambda: fetch_fred_data(fred_series, fred_key)) if fred_series and fred_key else None,
+        bok_fetcher=(lambda: fetch_bok_data(bok_series, bok_key)) if bok_series and bok_key else None,
+    )
 
 
 # ---------------------------------------------------------------------------

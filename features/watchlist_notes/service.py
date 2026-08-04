@@ -20,6 +20,9 @@ from features.investment_notes.checkpoints import project_checkpoint_notes
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
 NOTES_DIR = DATA_DIR / "notes"
+# 카드 건수를 세기 위해 훑는 검색 결과 상한. 미리보기 개수(limit_per_item)와 분리해야
+# 모든 카드가 미리보기 개수로 고정되지 않는다.
+WATCHLIST_MATCH_SCAN_LIMIT = 200
 
 TRADINGVIEW_QUERY_SYMBOLS = {
     "GEV": "NYSE:GEV",
@@ -79,8 +82,9 @@ def add_note(note):
     return row
 
 
-def get_watchlist():
-    return read_json(DATA_DIR / "watchlist.json", [])
+def get_watchlist(data_dir: Path | None = None):
+    base = Path(data_dir) if data_dir is not None else DATA_DIR
+    return read_json(base / "watchlist.json", [])
 
 
 def _watchlist_ticker(value) -> str:
@@ -322,6 +326,33 @@ def tradingview_symbol_for_company(company: dict) -> str:
     return f"NASDAQ:{ticker}"
 
 
+def sec_ticker_for_name(name: str) -> str:
+    """Resolve a company display name to its SEC ticker via the cached company_tickers.json.
+
+    Match rule is exact title or word-boundary prefix ("howmet aerospace" -> "Howmet Aerospace Inc.").
+    Returns "" when the cache is missing or no unambiguous match exists.
+    """
+    query = re.sub(r"[^a-z0-9 ]", " ", str(name or "").lower())
+    query = re.sub(r"\s+", " ", query).strip()
+    if len(query) < 4:
+        return ""
+    try:
+        from features.common.company_lookup import SEC_TICKER_CACHE_PATH, _sec_company_rows
+        from features.common.utils import read_json
+
+        cached = read_json(SEC_TICKER_CACHE_PATH, None)
+        payload = cached.get("data") if isinstance(cached, dict) and isinstance(cached.get("data"), dict) else cached
+        rows = list(_sec_company_rows(payload)) if payload else []
+    except Exception:
+        return ""
+    for row in rows:
+        title = re.sub(r"[^a-z0-9 ]", " ", str(row.get("title") or "").lower())
+        title = re.sub(r"\s+", " ", title).strip()
+        if title == query or title.startswith(query + " "):
+            return str(row.get("ticker") or "").strip().upper()
+    return ""
+
+
 def tradingview_symbol_for_query(query: str) -> str:
     text = normalize(query).strip()
     if not text:
@@ -393,6 +424,25 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
                 tag_counts[tag] += 1
     tags = [tag for tag, _count in tag_counts.most_common(8)]
     news = [_public_news_doc(hit) for hit in hits]
+    ticker = str(company.get("ticker") or "").strip().upper()
+    fast_signals = []
+    change_history = []
+    signal_provider_health = []
+    try:
+        from features.common.research_library.signals.service import default_db_path, provider_health, query_signals
+
+        if ticker:
+            fast_signals = query_signals(default_db_path(DATA_DIR), ticker=ticker, limit=20).get("items", [])
+        signal_provider_health = list(provider_health(DATA_DIR).values())
+    except Exception:
+        warnings.append("fast_signal_context_unavailable")
+    try:
+        from features.common.change_intelligence.projection import list_change_events
+
+        if ticker:
+            change_history = list_change_events(DATA_DIR / "market-memory.sqlite3", ticker=ticker, limit=20)
+    except Exception:
+        warnings.append("change_history_unavailable")
     return {
         "item": query,
         "company": company,
@@ -401,6 +451,9 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
         "newsCount": len(news),
         "latestDate": news[0].get("date", "") if news else "",
         "warnings": warnings,
+        "fastSignals": fast_signals,
+        "signalProviderHealth": signal_provider_health,
+        "changeHistory": change_history,
     }
 
 
@@ -415,12 +468,17 @@ def watchlist_overview(limit_per_item: int = 5):
     combined = []
     for item in items:
         # Fix 5: 후보를 넉넉히 뽑은 뒤 companies 필드에 해당 기업이 실제 등장하는 문서만 사용
-        candidates = search_documents(idx, query=item, limit=limit_per_item * 4, scope="news")
-        hits = [h for h in candidates if any(_item_matches_company(item, c) for c in h.get("companies", []))]
-        if not hits:
-            hits = candidates[:limit_per_item]  # 인덱스에 없는 종목은 원래 결과 그대로
+        # 카드에 보여줄 건수는 실제 관련 문서 수라, 미리보기용 상위 N개와 따로 센다.
+        # 예전에는 잘라낸 hits의 길이를 그대로 써서 모든 카드가 limit_per_item(5)으로 고정됐다.
+        candidates = search_documents(idx, query=item, limit=WATCHLIST_MATCH_SCAN_LIMIT, scope="news")
+        matched = [h for h in candidates if any(_item_matches_company(item, c) for c in h.get("companies", []))]
+        if matched:
+            match_count = len(matched)
+            hits = matched[:limit_per_item]
         else:
-            hits = hits[:limit_per_item]
+            # 인덱스에 회사 정보가 없는 종목은 검색 결과를 그대로 쓰되 건수도 같은 기준으로 센다.
+            match_count = len(candidates)
+            hits = candidates[:limit_per_item]
         resolved_company = resolve_watchlist_company(item, hits)
         resolved_company = dict(resolved_company or {})
         resolved_symbol = tradingview_symbol_for_company(resolved_company) or tradingview_symbol_for_query(
@@ -482,7 +540,7 @@ def watchlist_overview(limit_per_item: int = 5):
             "ticker": resolved_company.get("ticker", ""),
             "companyName": resolved_company.get("name") or item,
             "tradingViewSymbol": resolved_symbol,
-            "count": len(hits),
+            "count": match_count,
             "latestDate": hits[0].get("date", "") if hits else "",
             "sources": sources[:4],
             "tags": tags,

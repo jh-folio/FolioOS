@@ -4,22 +4,26 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.3.0 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.4.3 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.3.0
+## What You Can Do In 0.4.3
 
 - Chat with the Folio OS AI Agent from the Home screen.
-- Review market, report, checkpoint, and portfolio context from the Dashboard.
-- Maintain a local company, sector, and theme Watchlist with related news.
+- Use the Research Cockpit Dashboard for report-generated changes, native symbol/index charts, market calendar events, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous widget board available.
+- Maintain a local company, sector, and theme Watchlist with separate fast-origin leads and confirmed report change history.
+- See fast market signals — headline and link only — from FinancialJuice, an authorized Investing.com RSS feed, Benzinga RSS, and existing Korean RSS sources. Article bodies are not stored, and unverified headlines never count toward report sources or a major-change call.
 - Collect and search public RSS/news feeds.
 - Generate US/KR daily market briefings.
 - Read a simplified medium-term Market Memory view.
 - Generate company analysis reports from local evidence and official data where available.
-- Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, and your own thinking kept as separate layers.
+- Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, Smart Collection scope, and your own thinking kept as separate layers.
+- Review rule-based change summaries produced together with each new Briefing, Company Analysis, Topic Report, and Market Memory update — without an extra Agent call.
+- Manage your Portfolio holdings (a save made elsewhere is flagged before it gets overwritten), import positions from a cropped broker screenshot with locally installed Tesseract by default, and review every row yourself before saving.
+- Continue a Watchlist or Portfolio consultation across reloads. Consultation text is kept on your computer, separate from report sources, and only becomes an investment note when you explicitly choose “노트로 정리” (save as note).
 - Keep your own notes beside a report and check how old they are, what argues against them, and what you said you would follow up on — no AI required.
 - See the tickers you track quietly linked into related research screens, without exposing quantities, prices, weights, or note bodies.
 - Read a work log that shows what the AI did without storing what it wrote, and approve or reject any change it proposes to a saved report.
@@ -28,10 +32,11 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Not included in the 0.3.0 user surface:
+Not included in the 0.4.3 user surface:
 
-- Advanced portfolio management and standalone note-management workflows.
 - Installer/tray-app polish.
+
+Fast-origin news is an early lead, not verified evidence. FinancialJuice's free stream may be delayed by about 10 minutes. Investing.com and Benzinga collectors require a provider-authorized RSS URL; Folio OS does not scrape pages or bypass paywalls. External Vision import is off by default and requires consent for every cropped image request. Images, raw OCR text, and OCR bounding boxes are not retained by the import workflow.
 
 ---
 
@@ -112,7 +117,7 @@ Track companies, sectors, and themes in a local Watchlist, then inspect the rela
 
 ### Briefing
 
-Create and read daily market briefings. Briefings use news/RSS-style inputs and stored market snapshots where available. If AI is configured, Folio OS can use it for richer writing; otherwise it falls back to rule-based generation.
+Create and read daily market briefings. Briefings use news/RSS-style inputs and stored market snapshots where available. If AI is configured, Folio OS can use it for richer writing; otherwise the briefing is written with built-in rules.
 
 ### RSS Feed
 
@@ -132,7 +137,7 @@ Generate company analysis reports from official data and local research material
 
 Ask an investment question and Folio OS shows you the research plan and the material it can actually use before anything runs. You approve, then it generates.
 
-You can add your own context — holdings you care about, a period to check — under the optional analysis conditions. That text is carried as **your hypothesis and is never counted as evidence**. You can also narrow the search with a saved collection of material; those are search rules stored in `data/smart-collections.json`, not evidence themselves. The detail view shows how many items currently match and what changed since last time. Opening or refreshing it never starts the AI on its own.
+You can add your own context — holdings you care about, a period to check — under the optional analysis conditions. That text is carried as **your own thinking and is never counted as a source**. You can also narrow the search with a saved collection of material; those are search rules stored in `data/smart-collections.json`, not evidence themselves. The detail view shows how many items currently match and what changed since last time. Opening or refreshing it never starts the AI on its own.
 
 Reports are saved under `data/topic-reports/` with the plan you approved, the sources used, the gaps that remain, a quality assessment, and the market state at the time. Inside a report, external sources and your own thinking are always shown as separate layers.
 
@@ -188,7 +193,7 @@ Do not expose Folio OS directly to the public internet. Keep the default host as
 
 When Notion export with chart images is configured with `IMGBB_API_KEY`, chart images may be uploaded to a third-party image host.
 
-When AI/LLM features are enabled, selected report context or summarized evidence may be sent to the configured provider or CLI tool. Disable AI features if you want rule-based local fallback only.
+When AI/LLM features are enabled, selected report context or summarized evidence may be sent to the configured provider or CLI tool. Disable AI features if you want rule-based local behavior only.
 
 Legacy `.env` secrets are removed only after a successful credential-store migration. Never share `.env` or paste real API keys into documentation, issues, or chat logs.
 
@@ -232,4 +237,4 @@ If AI features do not work, check that:
 - The selected LLM CLI is installed and authenticated, or API keys are configured.
 - Model choices have been refreshed if you recently changed provider settings.
 
-Folio OS should still run with local/rule-based fallback behavior when LLM features are unavailable.
+Folio OS should still run with local rule-based behavior when LLM features are unavailable.

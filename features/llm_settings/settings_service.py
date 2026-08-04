@@ -1,4 +1,5 @@
-"""Application settings — read public view and save env-backed configuration."""
+"""Application settings — read public view and save credential-backed configuration."""
+import os
 from pathlib import Path
 
 from features.llm_settings.client import (
@@ -8,6 +9,7 @@ from features.llm_settings.client import (
     fred_api_key,
     bok_api_key,
     mask_secret,
+    load_dotenv,
     openai_config,
     toss_open_api_base_url,
     toss_open_api_client_id,
@@ -19,11 +21,13 @@ from features.llm_settings.client import (
 )
 from features.notion_export.service import public_notion_settings
 from features.llm_settings.provider_status import PROVIDER_INFO
-from features.llm_settings.model_catalog import API_MODEL_FALLBACKS, choices_from_catalog, discover_api_models
+from features.llm_settings.model_catalog import API_MODEL_FALLBACKS, choices_from_catalog, discover_api_models, normalize_model_id
+from features.common.research_library.signals.provider_settings import load_provider_settings, save_provider_settings
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FEATURES_DIR = ROOT / "features"
 MARKET_MEMORY_PROMPT_PATH = FEATURES_DIR / "market_memory" / "prompt.md"
+DATA_DIR = ROOT / "data"
 
 API_MODEL_CHOICES = API_MODEL_FALLBACKS
 
@@ -36,10 +40,12 @@ def read_market_memory_prompt():
 
 
 def public_settings(*, refresh: bool = False):
+    load_dotenv()
     cfg = openai_config()
     openai_catalog = discover_api_models("openai", api_key=cfg["apiKey"], refresh=refresh)
     gemini_catalog = discover_api_models("gemini", api_key=cfg["geminiApiKey"], refresh=refresh)
     claude_catalog = discover_api_models("claude", api_key=cfg["anthropicApiKey"], refresh=refresh)
+    signal_settings = load_provider_settings(DATA_DIR)
     payload = {
         "agent": {
             "enabled": ai_agent_enabled(),
@@ -78,6 +84,15 @@ def public_settings(*, refresh: bool = False):
             "envPath": str(ROOT / ".env"),
         },
         "notion": public_notion_settings(),
+        "fastOrigin": {
+            "benzinga": {
+                "enabled": signal_settings.get("benzinga", {}).get("enabled", False),
+                "hasApiKey": bool(os.environ.get("BENZINGA_API_KEY", "").strip()),
+                "apiKeyMasked": mask_secret(os.environ.get("BENZINGA_API_KEY", "")),
+                "hasAuthorizedFeed": bool(os.environ.get("BENZINGA_RSS_URL", "").strip()),
+                "feedUrlMasked": mask_secret(os.environ.get("BENZINGA_RSS_URL", "")),
+            },
+        },
     }
     if toss_open_api_enabled():
         toss_client_id = toss_open_api_client_id()
@@ -97,6 +112,7 @@ def public_settings(*, refresh: bool = False):
 
 
 def save_settings(body):
+    load_dotenv()
     data = body if isinstance(body, dict) else {}
     llm = data.get("llm", {})
     agent = data.get("agent", {}) if isinstance(data.get("agent", {}), dict) else {}
@@ -130,6 +146,17 @@ def save_settings(body):
     if bok_key:
         updates["BOK_API_KEY"] = bok_key
 
+    fast_origin = data.get("fastOrigin", {}) if isinstance(data.get("fastOrigin", {}), dict) else {}
+    benzinga = fast_origin.get("benzinga", {}) if isinstance(fast_origin.get("benzinga", {}), dict) else {}
+    benzinga_key = str(benzinga.get("apiKey", "") or "").strip()
+    if benzinga_key:
+        updates["BENZINGA_API_KEY"] = benzinga_key
+    benzinga_url = str(benzinga.get("authorizedFeedUrl", "") or "").strip()
+    if benzinga_url:
+        updates["BENZINGA_RSS_URL"] = benzinga_url
+    if fast_origin:
+        save_provider_settings(DATA_DIR, fast_origin)
+
     if toss_open_api_enabled():
         toss = data.get("toss", {}) if isinstance(data.get("toss", {}), dict) else {}
         toss_key = str(toss.get("apiKey", "") or "").strip()
@@ -150,12 +177,12 @@ def save_settings(body):
     gemini_data = providers.get("gemini", {}) or {}
     claude_data = providers.get("claude", {}) or {}
 
-    for key, model_key, env_key in [
-        (openai_data, "model", "OPENAI_MODEL"),
-        (gemini_data, "model", "GEMINI_MODEL"),
-        (claude_data, "model", "ANTHROPIC_MODEL"),
+    for key, model_key, env_key, model_provider in [
+        (openai_data, "model", "OPENAI_MODEL", "openai"),
+        (gemini_data, "model", "GEMINI_MODEL", "gemini"),
+        (claude_data, "model", "ANTHROPIC_MODEL", "claude"),
     ]:
-        model = str(key.get(model_key, "") or "").strip()
+        model = normalize_model_id(model_provider, key.get(model_key, ""))
         if model:
             updates[env_key] = model
 

@@ -322,7 +322,7 @@ export function RssRoute() {
             <input
               type="datetime-local"
               value={draftFilters.start}
-              onChange={(event) => setDraftFilters((current) => ({ ...current, start: event.currentTarget.value }))}
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, start: value })); }}
             />
           </label>
           <label>
@@ -330,14 +330,16 @@ export function RssRoute() {
             <input
               type="datetime-local"
               value={draftFilters.end}
-              onChange={(event) => setDraftFilters((current) => ({ ...current, end: event.currentTarget.value }))}
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, end: value })); }}
             />
           </label>
           <label>
             <span>소스</span>
             <select
               value={draftFilters.source}
-              onChange={(event) => setDraftFilters((current) => ({ ...current, source: event.currentTarget.value }))}
+              // 상태 업데이터는 렌더 시점에 실행되는데 그때 React는 currentTarget을 이미 비운다.
+              // 이벤트 값을 핸들러 안에서 먼저 읽어야 한다.
+              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, source: value })); }}
             >
               <option value="">전체 소스</option>
               {sources.map((source) => (

@@ -188,6 +188,29 @@ def _session_date(scope_result, fallback_date):
     return str((scope_result or {}).get("marketSessionDate") or fallback_date or "")[:10]
 
 
+def _snapshot_session_date(scope_result, fallback_date, market, now=None):
+    """Use the latest session that has actually started for today's briefing.
+
+    A Korean briefing can be generated before the 09:00 KST open while its
+    analysis window still names the briefing date as ``krCurrentSessionDate``.
+    Price snapshots must not request that not-yet-started session: doing so
+    produces empty 5-minute bars and can leave the saved chart several days
+    stale. Historical reports keep their explicitly stored session date.
+    """
+    requested = _session_date(scope_result, fallback_date)
+    current = now or dt.datetime.now(dt.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=dt.timezone.utc)
+    try:
+        briefing_timezone = ZoneInfo("Asia/Seoul")
+    except ZoneInfoNotFoundError:
+        briefing_timezone = dt.timezone(dt.timedelta(hours=9), name="KST")
+    if str(fallback_date or "")[:10] != current.astimezone(briefing_timezone).date().isoformat():
+        return requested
+    latest = _market_clock(market, current)["latestSessionDate"]
+    return min(requested, latest) if requested and latest else requested or latest
+
+
 def _date_window(session_date, lookback_days=45):
     target = dt.date.fromisoformat(session_date)
     return (target - dt.timedelta(days=lookback_days)).isoformat(), (target + dt.timedelta(days=1)).isoformat()
@@ -297,6 +320,7 @@ def collect_briefing_visuals(
     heatmap_fetchers=None,
     leader_subjects=None,
     include_market_visuals=True,
+    now=None,
 ):
     """Collect renderer-neutral snapshots and a heatmap sidecar payload."""
     if price_history_fetcher is not None:
@@ -351,7 +375,9 @@ def collect_briefing_visuals(
 
     for market_key in scopes:
         result = (scope_results or {}).get(market_key) or {}
-        session_date = _session_date(result, date)
+        session_date = _snapshot_session_date(
+            result, date, MARKET_META[market_key]["market"], now=now,
+        )
         try:
             dt.date.fromisoformat(session_date)
         except ValueError:

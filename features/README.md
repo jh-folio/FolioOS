@@ -12,7 +12,9 @@
 | `topic_report/` | 딥 리서치 탭 | 0.3.0 질문-first 계획 승인, Smart Collection 재사용, 근거 추적 보고서(내부 Topic Report v2 호환) |
 | `smart_collections/` | 딥 리서치 내부 워크스페이스 | 결정적 저장 필터, 상태/reason, 제한된 snapshot 변화와 recovery |
 | `portfolio/` | 포트폴리오 탭 | 보유 포지션, 목표 프리셋, 리서치용 백테스트 |
+| `dashboard/` | 대시보드 탭 | Change Feed·네이티브 차트·시장 일정·투자 맥락 Research Cockpit와 legacy rollback |
 | `market_memory/` | 시장 내러티브 탭 | 중기 내러티브, regime 추세, story family 관리 |
+| `market_calendar/` | 대시보드 내부 | 경제지표·중앙은행·휴장·실적·공시·배당 일정과 certainty badge |
 | `watchlist_notes/` | 워치리스트 탭 | 관심 종목/키워드, 상세 모달의 기업 정보·차트·수집 뉴스 |
 | `investment_notes/` | Native Investment Notes | Obsidian 없이 운용되는 Folio 로컬 투자 노트(hypothesis) 저장·인덱스 |
 | `investment_review/` | 대시보드 탭 | 내러티브, thesis, 포트폴리오, 체크포인트를 묶은 투자 리뷰 홈 |
@@ -32,6 +34,8 @@
 | 폴더 | 설명 |
 | --- | --- |
 | `common/research_library/` | `research-inbox` 폴더 계약, RSS 수집, 증분 인덱싱, 하이브리드 검색 |
+| `common/research_library/signals/` | fast-origin metadata-only lead, provider health, TTL/cursor query |
+| `common/change_intelligence/` | artifact-native 구조화 비교, JSON/snapshot authority, 재구축 가능한 변화 projection |
 | `common/research_schema/` | checkpoint, evidence, sourceLedger, dataGap 공통 스키마 |
 | `common/market_data/` | 시장 스냅샷, 한국장 provider, Market Tape Lite |
 | `common/research_quality/` | 저장 보고서/Delta/regime의 규칙 기반 품질 평가 |
@@ -59,4 +63,4 @@
 - 사용자 데이터가 들어가는 `data/`, `research-inbox/`, `config/`는 기능 문서에서 경로를 명확히 적되, 임의 삭제나 초기화를 안내하지 않습니다.
 - Python import 경로와 문서 경로는 underscore 이름을 기준으로 합니다. 하이픈 이름의 중복 폴더를 만들지 않습니다.
 
-0.3.0 기본 사용자 화면은 Home, 대시보드, 워치리스트, 브리핑, RSS 피드, 시장 내러티브, 기업 분석, 딥 리서치, 설정입니다. 전체 공개 화면은 Light/Dark/System 테마와 반응형 탐색을 지원합니다. 보고서 가설 검토, Smart Collection 상세, Investment Context의 자동 표시는 규칙 기반 읽기 전용이며 Agent는 사용자의 명시적 버튼 실행에서만 시작합니다.
+0.4.3 기본 사용자 화면은 Home, 대시보드, 워치리스트, 포트폴리오, 브리핑, RSS 피드, 시장 내러티브, 기업 분석, 딥 리서치, 설정입니다. 전체 공개 화면은 Light/Dark/System 테마와 반응형 탐색을 지원합니다. fast-origin lead는 근거가 아니며, 보고서 변화·개인 투자 맥락·상담은 각각 분리된 계층으로 유지합니다.

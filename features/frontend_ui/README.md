@@ -22,9 +22,11 @@ Pixel Office와 Agent Home은 `web/src/app/agentWorkspace/`의 같은 브라우�
 
 `#/briefing`은 React 저장 브리핑 route다. 목록 화면은 공통 `RouteHero`와 브리핑 생성 설정 패널, 저장 브리핑 검색 패널을 사용한다. 검색 패널은 `/api/briefings/index`의 `q`, `marketScope`, `briefingType`, `dateFrom`, `dateTo` 파라미터를 직접 사용한다. `#/briefing/{date}/{us|kr|both}` detail hash에서는 `/api/briefings/{date}?includePersonal=true&marketScope=...`를 호출해 `ReportReaderShell` 안에서 Canonical markdown을 표시한다. 브리핑 detail action rail은 AI/노트/내보내기 그룹으로 분류하고, Personal Overlay 생성, Agent 문의, Notion/Obsidian export를 직접 처리한다. note slot은 Native Notes API(`/api/investment-notes`)에 `market_memo`를 저장하고 linked notes를 조회한다. 리더 본문(`ReportBody`)은 별도 파서를 두지 않고 `FolioBridge`의 `renderMarkdown()`·`splitReportTitle()`·`briefingSourcePanelHtml()`·`renderBriefingVisuals()`를 재사용해 표·링크·리스트·가격 차트·히트맵·소스패널 parity를 확보한다.
 
+브리핑 리더와 아카이브 카드의 시장별 제목은 `시장 세션일 + 마감/장중`을 표시하고, 리더 hero에는 `YYYY.MM.DD KST 발행`을 별도 보조 정보로 표시한다. URL·삭제 대상·기본 정렬은 발행일(`reportDate`) 기준을 유지한다.
+
 `#/rss`는 React RSS route다. `/api/rss/items`로 20개 단위 feed를 읽고, 시작/종료/소스 필터와 페이지네이션을 관리한다. `POST /api/rssarchive/import` job polling으로 RSS 수집을 실행하고, `/api/rss/merge`를 통해 현재 필터 범위의 Markdown 병합 파일을 다운로드한다.
 
-`#/market-memory`는 React Market Memory route다. `MarketStateDashboard` component가 `/api/memory/state-dashboard?limit=5`의 “현재 중기 시장 상황 + 핵심 드라이버” 구조를 표시한다. route 헤더의 `시장 메모리 업데이트` 버튼은 `/api/memory/llm` 누적 job을 먼저 실행하고 `/api/memory/state-snapshot`으로 현재 화면용 스냅샷을 이어 생성한다. 생성 방식은 설정 탭의 AI Agent 정책을 따른다.
+`#/market-memory`는 React Market Memory route다. `MarketStateDashboard` component가 `/api/memory/state-dashboard?limit=5`의 “현재 중기 시장 상황 + 핵심 드라이버” 구조를 표시한다. route 헤더의 `시장 메모리 업데이트` 버튼은 `/api/memory/update`로 중기 내러티브 누적과 현재 화면용 스냅샷 생성을 하나의 서버 작업으로 실행한다. CLI 작업은 화면이 열려 있는 동안 고정 타임아웃 없이 완료까지 자동 추적하고, 화면 재진입 시 저장된 job id로 같은 작업에 재연결한다. 새 외부 자료는 스냅샷 생성 후 24시간 유예 뒤 `업데이트 필요`, 스냅샷 생성 후 72시간을 초과하면 `최신성 만료`로 표시한다. 생성 방식은 설정 탭의 AI Agent 정책을 따른다.
 
 `#/analysis`는 React Company Analysis route다. `/api/analysis-reports`로 저장 피드를 읽고, `/api/analyze?q=...&analysisStyle=beginner|advanced`로 기업 분석을 생성하며, Agent job 응답이면 `/api/jobs/{id}`를 polling한 뒤 저장 보고서를 다시 연다. 저장 카드 클릭은 `#/analysis/{reportId}` detail hash로 공통 `ReportReaderShell` 기반 reader를 열고, route 안에서 삭제와 목록 복귀를 처리한다. 저장 보고서의 `analysisCharts`는 reader 안에서 기업 분석 시각화 카드로 렌더한다.
 

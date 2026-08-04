@@ -14,6 +14,7 @@ from features.common.canonical_identity import ReportKind
 from features.common.canonical_report_state import load_report
 from features.common.canonical_report_types import WriteKind
 from features.common.canonical_reports import commit_sync, prepare
+from features.common.change_intelligence.service import decorate_candidate, project_committed_report
 from features.common.dataframe_ops import top_records
 from features.common.market_data.providers import fetch_korea_market_data
 from features.common.market_data.snapshot import fetch_market_snapshot
@@ -29,18 +30,21 @@ from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.daily_briefing.issue_selection import (
     build_issue_coverage,
     derive_link_status,
+    doc_ref as issue_doc_ref,
     documents_for_scope,
     public_issue_coverage,
     session_modes_from_windows,
 )
 from features.daily_briefing.link_analysis import build_link_analysis
 from features.daily_briefing.schema import (
+    briefing_expected_titles,
     briefing_file_name,
     briefing_link_file_name,
     briefing_scope_view,
     enrich_briefing_sections,
     merge_briefing_report,
     normalize_briefing_contract,
+    normalize_briefing_markdown_titles,
     normalize_briefing_type,
     normalize_market_scope,
     visual_sidecar_gzip_file_name,
@@ -225,6 +229,13 @@ def _scope_result(
             "mode": "rules", "status": llm_status, "provider": selected_llm_config().get("provider", ""),
             "model": "", "sourceCount": len(sources),
         }
+    markdown = normalize_briefing_markdown_titles(
+        markdown,
+        date,
+        scope,
+        market_windows=market_windows,
+        session_modes=session_modes,
+    )
     generation["message"] = llm_status_message(generation)
     return {
         "marketScope": scope,
@@ -386,6 +397,7 @@ def build_briefing(
         all_groups.extend(results[scope]["groups"])
         issue_coverage.extend(results[scope]["issueCoverage"])
         for driver in results[scope]["marketDrivers"]:
+            driver_docs = driver.get("docs", [])
             scope_drivers.append({
                 "scope": scope,
                 "driver": driver.get("driver", ""),
@@ -394,7 +406,10 @@ def build_briefing(
                 "sources": driver.get("sources", []),
                 "impactTags": driver.get("impactTags", []),
                 "sectors": driver.get("sectors", []),
-                "docCount": len(driver.get("docs", [])),
+                "docCount": int(driver.get("docTotal") or len(driver_docs)),
+                # 의미 비교와 변화 상세의 입력 재료. 이게 없으면 이 동인이
+                # "무슨 내용이었는지"를 나중에 되짚을 방법이 없다.
+                "topDocs": [issue_doc_ref(doc) for doc in driver_docs[:3]],
             })
 
     try:
@@ -518,6 +533,10 @@ def build_briefing(
                 existing = read_json(BRIEFINGS_DIR / briefing_file_name(date), None)
                 existing = briefing_scope_view(existing, scope) if isinstance(existing, dict) else None
             scoped_briefing = _merge_with_existing(scoped_briefing, existing, scope)
+            scoped_briefing = decorate_candidate(
+                "briefing", scoped_briefing, data_dir=DATA_DIR,
+                native_context={"generationDocs": docs}, generation_provenance=True,
+            )
             try:
                 sidecar = _sidecar_for_market(visual_result.get("sidecar") or {}, scope)
                 if sidecar.get("snapshots"):
@@ -535,10 +554,16 @@ def build_briefing(
                 candidate=scoped_briefing,
             )
             commit_sync(prepared)
+            projection = project_committed_report(MARKET_MEMORY_DB_PATH, report_path)
             committed = load_report(report_path)
             if committed is None:
                 raise RuntimeError("canonical briefing commit did not persist the report")
             saved_reports[scope] = committed
+            saved_reports[scope]["changeIntelligence"] = {
+                **(saved_reports[scope].get("changeIntelligence") or {}),
+                "projectionStatus": projection.get("status"),
+                "invalidationToken": projection.get("invalidationToken") or (saved_reports[scope].get("changeIntelligence") or {}).get("invalidationToken"),
+            }
         if market_scope == "both" and link_analysis:
             write_json(
                 BRIEFINGS_DIR / briefing_link_file_name(date),

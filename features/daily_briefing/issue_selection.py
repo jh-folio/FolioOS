@@ -435,6 +435,17 @@ def diversify_ranked_documents(docs, limit=24, per_publisher=4, minimum_publishe
     return selected, warnings
 
 
+def doc_ref(doc):
+    """저장/비교용 가벼운 문서 참조. 본문은 담지 않는다."""
+    return {
+        "title": doc.get("title") or "",
+        "source": doc.get("source") or "",
+        "url": doc.get("url") or "",
+        "path": doc.get("path") or "",
+        "date": doc.get("date") or "",
+    }
+
+
 def public_issue_coverage(issues):
     """Remove article payloads before persisting issue diagnostics."""
     fields = (
@@ -444,7 +455,16 @@ def public_issue_coverage(issues):
         "crossRegionStatus", "marketImpactStatus", "marketImpactScore", "issueScore", "warnings",
         "internationalSalience",
     )
-    return [{field: issue.get(field) for field in fields} for issue in issues or []]
+    rows = []
+    for issue in issues or []:
+        row = {field: issue.get(field) for field in fields}
+        # 대표 제목·상위 자료가 없으면 저장된 이슈가 해시 id로만 남아
+        # 변화 비교/화면 어디에서도 무슨 이슈인지 알 수 없다.
+        representatives = issue.get("representativeDocs") or []
+        row["title"] = str((representatives[0] or {}).get("title") or "") if representatives else ""
+        row["topDocs"] = [doc_ref(doc) for doc in representatives[:3]]
+        rows.append(row)
+    return rows
 
 
 def pairwise_cluster_metrics(items, predicted_cluster_by_id):

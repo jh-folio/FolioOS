@@ -56,6 +56,7 @@ from features.daily_briefing.issue_selection import (
     session_modes_from_windows,
 )
 from features.daily_briefing.schema import (
+    briefing_expected_titles,
     briefing_file_name,
     briefing_scope_view,
     enrich_briefing_sections,
@@ -373,7 +374,16 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         title=draft["title"],
         prompt=read_briefing_prompt(market_scope),
         context=context,
-        output_contract=briefing_output_contract(market_scope, briefing_type),
+        output_contract=briefing_output_contract(
+            market_scope,
+            briefing_type,
+            expected_titles=briefing_expected_titles(
+                date,
+                market_scope,
+                market_windows=market_windows,
+                session_modes=session_modes,
+            ),
+        ),
         write_back_contract={"method": "write_markdown", "target": str(BRIEFINGS_DIR / f"{date}.json")},
         save_target=str(BRIEFINGS_DIR / f"{date}.json"),
         draft_artifact=draft,

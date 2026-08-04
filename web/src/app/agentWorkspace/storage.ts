@@ -1,6 +1,8 @@
 import type { AgentMessage } from "./types";
 
 export const AGENT_HOME_THREAD_STORAGE_KEY = "folio.agentHome.thread.v1";
+export const ACTIVE_CONSULTATION_STORAGE_KEY = "folio.consultation.active.v1";
+export const LEGACY_CONSULTATION_NOTICE_KEY = "folio.consultation.legacyNotice.v1";
 
 export const WELCOME_MESSAGE: AgentMessage = {
   id: "welcome",
@@ -91,6 +93,26 @@ export function subscribeAgentThread(listener: ThreadListener) {
   return () => {
     listeners.delete(listener);
   };
+}
+
+export function getActiveConsultationId() {
+  if (typeof window === "undefined") return "";
+  return window.localStorage.getItem(ACTIVE_CONSULTATION_STORAGE_KEY) || "";
+}
+
+export function setActiveConsultationId(sessionId: string) {
+  if (typeof window === "undefined") return;
+  if (sessionId) window.localStorage.setItem(ACTIVE_CONSULTATION_STORAGE_KEY, sessionId);
+  else window.localStorage.removeItem(ACTIVE_CONSULTATION_STORAGE_KEY);
+}
+
+export function shouldShowLegacyConsultationNotice() {
+  if (typeof window === "undefined") return false;
+  return Boolean(window.localStorage.getItem(AGENT_HOME_THREAD_STORAGE_KEY)) && !window.localStorage.getItem(LEGACY_CONSULTATION_NOTICE_KEY);
+}
+
+export function dismissLegacyConsultationNotice() {
+  if (typeof window !== "undefined") window.localStorage.setItem(LEGACY_CONSULTATION_NOTICE_KEY, "dismissed");
 }
 
 if (typeof window !== "undefined") {

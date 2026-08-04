@@ -19,7 +19,7 @@ def test_save_settings_persists_provider_and_models():
     assert next(item for item in result["adapters"] if item["id"] == "codex")["model"] == "gpt-6.1"
     write_values.assert_called_once_with({
         "AGENT_CLI_PROVIDER": "codex",
-        "FOLIO_AGENT_CLAUDE_MODEL": "claude-sonnet-4-6",
+        "FOLIO_AGENT_CLAUDE_MODEL": "claude-sonnet-5",
         "FOLIO_AGENT_CODEX_MODEL": "gpt-6.1",
     })
 

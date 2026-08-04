@@ -17,6 +17,7 @@ research-inbox/에 자료 저장
 | --- | --- |
 | `ingestion/` | `research-inbox` 폴더 계약과 PDF 추출 보조 코드 |
 | `rss/` | 공개 RSS 수집, RSSArchive Markdown 저장, RSS 피드 캐시/API payload |
+| `signals/` | fast-origin 출처의 metadata-only lead 수집, provider health, TTL/cursor query |
 | `indexing/` | 파일 스캔, PDF 본문 추출, 태깅, `research-index.sqlite3` 동기화 |
 | `search/` | RSS/기사 검색, 워치리스트 관련 뉴스 검색, hybrid search 호출 |
 
@@ -86,6 +87,12 @@ python -m features.common.research_library.rss.rss_archive --collectors rss --sa
 공식자료 collector는 fake data를 만들지 않는 adapter stub으로 시작하며, 기존 공식자료 모듈 output을 EvidenceItem으로 연결하는 확장 지점입니다.
 수집된 EvidenceItem metadata는 Markdown과 함께 `data/research-index.sqlite3`의 `evidence_items` 테이블에도 저장됩니다.
 
+## Fast-origin lead
+
+FinancialJuice 공식 Stream API, 사용 권한이 있는 Investing.com Webmaster RSS, Benzinga 공식 public RSS, 기존 연합인포맥스·연합뉴스·매일경제 RSS의 제목·링크·발행/수신 시각만 `intake_stage=lead`로 저장할 수 있습니다. lead는 빠른 알림용이며 확인 전에는 evidence count와 Canonical source ledger에서 제외됩니다. FinancialJuice 무료 연결은 10분 지연을 숨기지 않습니다. provider가 stale/unhealthy/disabled/unauthorized이면 headline을 노출하지 않습니다.
+
+기사 본문·HTML·이미지·raw response·인증 URL/token은 signal 저장소와 run log에 남기지 않습니다. 수집만으로 Agent나 Change Intelligence가 실행되지 않습니다. 상세 계약은 [signals/README.md](signals/README.md)를 봅니다.
+
 RSS 피드 화면은 Markdown 파일 전체를 매번 읽지 않고 `data/research-index.sqlite3`의 `rss_feed_items` 캐시에서 `LIMIT/OFFSET`으로 읽습니다. 캐시는 파일 크기와 `mtime_ns` 기준으로 증분 갱신하며 기본 TTL은 `RSS_CACHE_REFRESH_TTL_SECONDS=30`초입니다.
 각 RSS 항목은 `markets` 태그를 함께 저장합니다. 값은 `US`, `KR`, `GLOBAL`, `UNKNOWN`이며, `US,KR,GLOBAL`처럼 복수 태그가 가능합니다. RSS 목록과 병합 다운로드는 `market=US|KR|GLOBAL|UNKNOWN` 필터를 지원합니다.
 
@@ -130,6 +137,8 @@ GET  /api/index/documents
 POST /api/rssarchive/import
 GET  /api/rss/items
 GET  /api/rss/merge
+GET  /api/signals
+GET  /api/signals/providers
 GET  /api/search?query=NVDA&limit=30
 ```
 
@@ -149,6 +158,7 @@ GET  /api/search?query=NVDA&limit=30
 - `rss/writer.py`: YAML front matter Markdown 아카이브 IO, legacy 업그레이드, `.state.json`
 - `rss/store.py`: `research-index.sqlite3::evidence_items` 저장
 - `rss/service.py`: RSS import/feed/merge/cache payload
+- `signals/`: approved provider adapter, metadata-only 저장/조회, health와 retention
 - `indexing/service.py`: `build_index()`, `load_index()`, `build_document()`, `market_relevance()`
 - `indexing/research_index.py`: SQLite schema, FTS, manifest, `hybrid_search()`
 - `search/service.py`: `search_documents()`, `group_docs()`, `list_companies()`

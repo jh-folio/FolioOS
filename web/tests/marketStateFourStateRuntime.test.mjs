@@ -58,6 +58,21 @@ test("malformed dashboard payload fails closed to one empty state", async (t) =>
   assert.doesNotMatch(partialHtml, /data-qa=\"market-state-current\"/);
 });
 
+test("an age-expired snapshot is labeled as expired instead of merely needing an update", async (t) => {
+  const vite = await createServer({ configFile: false, root: webRoot, server: { middlewareMode: true, hmr: false }, appType: "custom" });
+  t.after(() => vite.close());
+  const { MarketStateDashboardView } = await vite.ssrLoadModule("/src/islands/MarketStateDashboard.tsx");
+  const payload = structuredClone(marketStateFixtures.stale);
+  payload.marketStateRef.freshnessReason = "age_exceeded";
+
+  const html = renderToStaticMarkup(React.createElement(MarketStateDashboardView, { payload }));
+
+  assert.match(html, /data-qa="market-state-stale"/);
+  assert.match(html, /<dd>만료<\/dd>/);
+  assert.match(html, /최신성 만료/);
+  assert.match(html, /72시간/);
+});
+
 test("snapshot asOf accepts an explicit local timezone offset", async (t) => {
   const vite = await createServer({ configFile: false, root: webRoot, server: { middlewareMode: true, hmr: false }, appType: "custom" });
   t.after(() => vite.close());

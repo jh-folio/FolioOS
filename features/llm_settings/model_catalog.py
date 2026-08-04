@@ -31,10 +31,16 @@ API_MODEL_FALLBACKS = {
     "claude": [
         {"value": "claude-fable-5", "label": "Claude Fable 5"},
         {"value": "claude-sonnet-5", "label": "Claude Sonnet 5"},
-        {"value": "claude-opus-4-8", "label": "Claude Opus 4.8"},
-        {"value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6"},
+        {"value": "claude-opus-5", "label": "Claude Opus 5"},
         {"value": "claude-haiku-4-5", "label": "Claude Haiku 4.5"},
     ],
+}
+
+DEPRECATED_MODEL_REPLACEMENTS = {
+    "claude": {
+        "claude-opus-4-8": "claude-opus-5",
+        "claude-sonnet-4-6": "claude-sonnet-5",
+    },
 }
 
 CLI_MODEL_FALLBACKS = {
@@ -80,6 +86,27 @@ def _choice(model_id: str) -> dict:
     return {"value": value, "label": _label_for(value)}
 
 
+def normalize_model_id(provider: str, model_id: str) -> str:
+    provider_id = str(provider or "").strip().lower()
+    value = str(model_id or "").strip()
+    return DEPRECATED_MODEL_REPLACEMENTS.get(provider_id, {}).get(value, value)
+
+
+def _sanitize_choices(provider: str, choices: list[dict]) -> list[dict]:
+    deprecated = DEPRECATED_MODEL_REPLACEMENTS.get(str(provider or "").strip().lower(), {})
+    return [
+        item for item in choices
+        if str((item or {}).get("value") or "").strip() not in deprecated
+    ]
+
+
+def _sanitize_catalog(provider: str, catalog: dict) -> dict:
+    return {
+        **catalog,
+        "modelChoices": _sanitize_choices(provider, list(catalog.get("modelChoices") or [])),
+    }
+
+
 def _dedupe_choices(primary: list[dict], fallback: list[dict]) -> list[dict]:
     seen = set()
     out = []
@@ -100,7 +127,7 @@ def _fallback_result(provider: str, transport: str, fallback: list[dict], status
         "source": "fallback",
         "status": status,
         "message": message,
-        "modelChoices": _dedupe_choices([], fallback),
+        "modelChoices": _sanitize_choices(provider, _dedupe_choices([], fallback)),
         "checkedAt": _now_iso(),
     }
 
@@ -112,7 +139,7 @@ def _remote_result(provider: str, transport: str, models: list[str], fallback: l
         "source": "remote",
         "status": "available",
         "message": "모델 목록을 가져왔습니다.",
-        "modelChoices": _dedupe_choices([_choice(model_id) for model_id in models], fallback),
+        "modelChoices": _sanitize_choices(provider, _dedupe_choices([_choice(model_id) for model_id in models], fallback)),
         "checkedAt": _now_iso(),
     }
 
@@ -148,16 +175,16 @@ def _get_any_cached(key: str) -> dict | None:
     return None
 
 
-def _cached_after_refresh_failure(key: str, status: str, message: str) -> dict | None:
+def _cached_after_refresh_failure(key: str, provider: str, status: str, message: str) -> dict | None:
     cached = _get_any_cached(key)
     if not cached:
         return None
-    return {
+    return _sanitize_catalog(provider, {
         **cached,
         "source": "cache",
         "status": status,
         "message": message,
-    }
+    })
 
 
 def _set_cached(key: str, entry: dict) -> dict:
@@ -230,7 +257,7 @@ def discover_api_models(
     key = f"api:{provider}"
     cached = _get_cached(key, refresh=refresh)
     if cached:
-        return cached
+        return _sanitize_catalog(provider, cached)
     if not refresh:
         return _fallback_result(provider, "api", fallback_choices, "cached_missing", "저장된 모델 목록이 없어 기본 모델 목록을 사용합니다.")
     try:
@@ -238,13 +265,13 @@ def discover_api_models(
             payload = json.loads(response.read().decode("utf-8"))
         models = _generation_model_ids(provider, payload)
         if not models:
-            cached = _cached_after_refresh_failure(key, "empty_cached", "Provider가 생성 모델을 반환하지 않아 저장된 모델 목록을 유지합니다.")
+            cached = _cached_after_refresh_failure(key, provider, "empty_cached", "Provider가 생성 모델을 반환하지 않아 저장된 모델 목록을 유지합니다.")
             if cached:
                 return cached
             return _fallback_result(provider, "api", fallback_choices, "empty", "Provider가 사용 가능한 생성 모델을 반환하지 않았습니다.")
         return _set_cached(key, _remote_result(provider, "api", models, fallback_choices))
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as exc:
-        cached = _cached_after_refresh_failure(key, "provider_error_cached", f"모델 목록 조회 실패로 저장된 모델 목록을 유지합니다: {type(exc).__name__}")
+        cached = _cached_after_refresh_failure(key, provider, "provider_error_cached", f"모델 목록 조회 실패로 저장된 모델 목록을 유지합니다: {type(exc).__name__}")
         if cached:
             return cached
         return _fallback_result(provider, "api", fallback_choices, "provider_error", f"모델 목록 조회 실패: {type(exc).__name__}")
@@ -275,6 +302,8 @@ def _parse_claude_help_models(stdout: str) -> list[str]:
         out.append("claude-fable-5")
     if re.search(r"\bsonnet\b", text, re.I):
         out.append("claude-sonnet-5")
+    if re.search(r"\bopus\b", text, re.I):
+        out.append("claude-opus-5")
     return list(dict.fromkeys(out))
 
 
@@ -296,7 +325,7 @@ def discover_cli_models(
     key = f"cli:{adapter}:{executable}"
     cached = _get_cached(key, refresh=refresh)
     if cached:
-        return cached
+        return _sanitize_catalog(adapter, cached)
     if not refresh:
         return _fallback_result(adapter, "cli", fallback_choices, "cached_missing", "저장된 모델 목록이 없어 기본 모델 목록을 사용합니다.")
     commands = [[executable, "models"], [executable, "model", "list"]]
@@ -319,7 +348,7 @@ def discover_cli_models(
                     return _set_cached(key, _remote_result(adapter, "cli", models, fallback_choices))
         except (OSError, subprocess.SubprocessError, TimeoutError):
             pass
-    cached = _cached_after_refresh_failure(key, "unsupported_cached", "CLI 모델 조회에 실패해 저장된 모델 목록을 유지합니다.")
+    cached = _cached_after_refresh_failure(key, adapter, "unsupported_cached", "CLI 모델 조회에 실패해 저장된 모델 목록을 유지합니다.")
     if cached:
         return cached
     return _fallback_result(adapter, "cli", fallback_choices, "unsupported", "CLI가 모델 목록 명령을 제공하지 않아 기본 모델 목록을 사용합니다.")

@@ -51,10 +51,13 @@ def rss_item_to_evidence(
         default_market = str((feed or {}).get("default_market") or "").strip().upper()
         if default_market in {"US", "KR", "GLOBAL"}:
             markets = [default_market]
+    # 보도자료 와이어는 기업 자료이지 편집된 뉴스가 아니다. source_type으로 갈라 두면
+    # 브리핑 입력에서만 제외하고 워치리스트·기업분석에서는 그대로 쓸 수 있다.
+    source_type = str((feed or {}).get("source_type") or "news").strip() or "news"
     return {
         "id": evidence_id,
         "collector": "rss",
-        "source_type": "news",
+        "source_type": source_type,
         "source": source,
         "title": title,
         "url": url,

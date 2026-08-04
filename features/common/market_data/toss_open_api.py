@@ -108,6 +108,60 @@ def request_json(path: str, params: dict[str, Any] | None = None, *, transport: 
     return fetch("GET", url, headers={"Authorization": f"Bearer {token}"}, timeout=10)
 
 
+def _calendar_day_date(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    text = str(value.get("date") or "").strip()
+    try:
+        return dt.date.fromisoformat(text[:10]).isoformat()
+    except (TypeError, ValueError):
+        return ""
+
+
+def fetch_toss_market_calendar(
+    market: str,
+    *,
+    date: str,
+    transport: Transport | None = None,
+) -> dict:
+    """Return the exchange calendar status for one KR/US local market date.
+
+    A valid response is authoritative for the requested date. Callers fall back
+    to the bundled static calendar when credentials are unavailable, the request
+    fails, or the response cannot be validated.
+    """
+    normalized_market = str(market or "").strip().upper()
+    if normalized_market not in {"KR", "US"}:
+        raise ValueError("Toss market calendar supports only KR or US")
+    requested_date = dt.date.fromisoformat(str(date or "")[:10]).isoformat()
+    payload = request_json(
+        f"/api/v1/market-calendar/{normalized_market}",
+        {"date": requested_date},
+        transport=transport,
+    )
+    result = payload.get("result") or {}
+    today = result.get("today") or {}
+    response_date = _calendar_day_date(today)
+    if response_date != requested_date:
+        return {}
+
+    if normalized_market == "KR":
+        regular_market = (today.get("integrated") or {}).get("regularMarket")
+    else:
+        regular_market = today.get("regularMarket")
+    previous_day = _calendar_day_date(result.get("previousBusinessDay"))
+    next_day = _calendar_day_date(result.get("nextBusinessDay"))
+    return {
+        "provider": "toss_open_api",
+        "market": normalized_market,
+        "date": response_date,
+        "isOpen": isinstance(regular_market, dict) and bool(regular_market),
+        "regularMarket": regular_market if isinstance(regular_market, dict) else None,
+        "previousBusinessDay": previous_day,
+        "nextBusinessDay": next_day,
+    }
+
+
 def fetch_toss_prices(symbols: list[str], *, transport: Transport | None = None) -> list[dict]:
     normalized = [toss_symbol_for(symbol) for symbol in symbols]
     normalized = [symbol for symbol in dict.fromkeys(normalized) if symbol]

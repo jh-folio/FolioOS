@@ -110,6 +110,47 @@ def test_leading_company_subjects_infer_market_from_generic_headings():
     assert parsed["warnings"] == []
 
 
+def test_leading_company_subjects_resolve_naver_from_korean_heading():
+    parsed = leading_company_subjects_from_markdown(
+        "## 4. 한국장을 주도한 기업 ② — NAVER"
+    )
+
+    assert [(row["ordinal"], row["ticker"]) for row in parsed["kr"]] == [(2, "035420")]
+    assert parsed["warnings"] == []
+
+
+def test_current_preopen_kr_visuals_use_previous_started_session():
+    requested_sessions = []
+
+    def price_fetcher(symbol, session_date):
+        requested_sessions.append(session_date)
+        return {
+            "intraday": {
+                "interval": "5m",
+                "points": [
+                    {"time": f"{session_date}T09:00:00+09:00", "open": 1, "high": 1, "low": 1, "close": 1},
+                    {"time": f"{session_date}T09:05:00+09:00", "open": 1, "high": 2, "low": 1, "close": 2},
+                ],
+            },
+            "daily": {"interval": "1d", "points": []},
+        }
+
+    result = collect_briefing_visuals(
+        "2026-08-04",
+        "kr",
+        {"kr": {"marketSessionDate": "2026-08-04"}},
+        price_history_fetcher=price_fetcher,
+        heatmap_fetchers=_heatmap_fetchers(),
+        leader_subjects={"us": [], "kr": [], "warnings": []},
+        now=dt.datetime(2026, 8, 3, 23, 2, tzinfo=dt.timezone.utc),
+    )
+
+    assert requested_sessions == ["2026-08-03", "2026-08-03"]
+    price = next(row for row in result["visualSnapshots"] if row["type"] == "price_series")
+    assert price["marketSessionDate"] == "2026-08-03"
+    assert all(row["intraday"]["points"] for row in price["series"])
+
+
 def test_unknown_leading_company_is_not_replaced_with_another_ticker():
     parsed = leading_company_subjects_from_markdown(
         "## 3. 미국장을 주도한 기업 ① — Completely Unknown Holdings"

@@ -2,6 +2,7 @@
 import datetime as dt
 import json
 import re
+import time
 from functools import lru_cache
 from features.common.config_bootstrap import resolve_config
 from features.common.utils import normalize
@@ -110,32 +111,133 @@ def kr_market_holidays(year):
     return holidays
 
 
-def is_market_open(day, market):
+_EXCHANGE_CALENDAR_CACHE = {}
+_EXCHANGE_CALENDAR_ERROR_TTL_SECONDS = 60
+
+
+def connected_exchange_calendar_status(day, market):
+    """Return a connected exchange API status, or None for static fallback."""
+    try:
+        from features.common.market_data.toss_open_api import (
+            fetch_toss_market_calendar,
+            toss_credentials_available,
+        )
+        if not toss_credentials_available():
+            return None
+    except Exception:
+        return None
+
+    normalized_market = str(market or "").strip().upper()
+    key = (normalized_market, day.isoformat())
+    cached = _EXCHANGE_CALENDAR_CACHE.get(key)
+    now = time.monotonic()
+    if cached and (cached[1] is not None or now - cached[0] < _EXCHANGE_CALENDAR_ERROR_TTL_SECONDS):
+        return cached[1]
+    try:
+        status = fetch_toss_market_calendar(normalized_market, date=day.isoformat())
+    except Exception:
+        status = None
+    if not isinstance(status, dict) or status.get("date") != day.isoformat() or not isinstance(status.get("isOpen"), bool):
+        status = None
+    _EXCHANGE_CALENDAR_CACHE[key] = (now, status)
+    return status
+
+
+def _normalize_exchange_calendar_status(day, market, raw):
+    if isinstance(raw, bool):
+        return {
+            "date": day.isoformat(),
+            "market": market,
+            "isOpen": raw,
+            "provider": "exchange_api",
+        }
+    if not isinstance(raw, dict):
+        return None
+    if raw.get("date") != day.isoformat() or not isinstance(raw.get("isOpen"), bool):
+        return None
+    return {
+        "date": day.isoformat(),
+        "market": market,
+        "isOpen": raw["isOpen"],
+        "provider": str(raw.get("provider") or "exchange_api"),
+        "previousBusinessDay": str(raw.get("previousBusinessDay") or "")[:10],
+        "nextBusinessDay": str(raw.get("nextBusinessDay") or "")[:10],
+    }
+
+
+def market_open_status(day, market, exchange_calendar_fetcher=None):
+    """Resolve one market date with exchange API priority and static fallback."""
+    normalized_market = str(market or "").strip().upper()
+    fetcher = exchange_calendar_fetcher or connected_exchange_calendar_status
+    try:
+        api_status = _normalize_exchange_calendar_status(day, normalized_market, fetcher(day, normalized_market))
+    except Exception:
+        api_status = None
+    if api_status is not None:
+        api_status["source"] = "exchange_api"
+        return api_status
+
     if day.weekday() >= 5:
-        return False
-    if market == "US":
-        return day not in us_market_holidays(day.year)
-    if market == "KR":
-        return day not in kr_market_holidays(day.year)
-    return True
+        is_open = False
+    elif normalized_market == "US":
+        is_open = day not in us_market_holidays(day.year)
+    elif normalized_market == "KR":
+        is_open = day not in kr_market_holidays(day.year)
+    else:
+        is_open = True
+    return {
+        "date": day.isoformat(),
+        "market": normalized_market,
+        "isOpen": is_open,
+        "provider": "static_calendar",
+        "source": "static",
+    }
 
 
-def previous_trading_day(day, market):
+def is_market_open(day, market, exchange_calendar_fetcher=None):
+    return market_open_status(day, market, exchange_calendar_fetcher)["isOpen"]
+
+
+def _business_day_from_status(status, field, *, before=None, after=None):
+    try:
+        value = dt.date.fromisoformat(str(status.get(field) or "")[:10])
+    except (TypeError, ValueError):
+        return None
+    if before is not None and value >= before:
+        return None
+    if after is not None and value <= after:
+        return None
+    return value
+
+
+def previous_trading_day(day, market, exchange_calendar_fetcher=None):
+    status = market_open_status(day, market, exchange_calendar_fetcher)
+    if status.get("source") == "exchange_api":
+        api_previous = _business_day_from_status(status, "previousBusinessDay", before=day)
+        if api_previous is not None:
+            return api_previous
     cursor = day - dt.timedelta(days=1)
     for _ in range(14):
-        if is_market_open(cursor, market):
+        if is_market_open(cursor, market, exchange_calendar_fetcher):
             return cursor
         cursor -= dt.timedelta(days=1)
     return day - dt.timedelta(days=1)
 
 
-def latest_trading_day_on_or_before(day, market):
+def latest_trading_day_on_or_before(day, market, exchange_calendar_fetcher=None):
+    status = market_open_status(day, market, exchange_calendar_fetcher)
+    if status["isOpen"]:
+        return day
+    if status.get("source") == "exchange_api":
+        api_previous = _business_day_from_status(status, "previousBusinessDay", before=day)
+        if api_previous is not None:
+            return api_previous
     cursor = day
     for _ in range(14):
-        if is_market_open(cursor, market):
+        if is_market_open(cursor, market, exchange_calendar_fetcher):
             return cursor
         cursor -= dt.timedelta(days=1)
-    return previous_trading_day(day, market)
+    return previous_trading_day(day, market, exchange_calendar_fetcher)
 
 
 def _date_range(start_iso, end_iso):
@@ -198,14 +300,25 @@ _MODE_PRIORITY_RULE = {
 }
 
 
-def briefing_market_windows(date):
+def briefing_market_windows(date, exchange_calendar_fetcher=None):
     briefing_day = parse_iso_date(date)
+    resolved = {}
+
+    def calendar_fetcher(day, market):
+        key = (market, day.isoformat())
+        if key not in resolved:
+            fetcher = exchange_calendar_fetcher or connected_exchange_calendar_status
+            resolved[key] = fetcher(day, market)
+        return resolved[key]
+
     # Always use the previous completed US session (D-1), never the briefing day itself.
     # On a Korean Monday morning the US briefing-day session hasn't opened yet.
-    us_previous = previous_trading_day(briefing_day, "US")
-    kr_current_open = is_market_open(briefing_day, "KR")
-    us_open = is_market_open(briefing_day, "US")
-    kr_previous = previous_trading_day(briefing_day, "KR") if kr_current_open else latest_trading_day_on_or_before(briefing_day, "KR")
+    us_status = market_open_status(briefing_day, "US", calendar_fetcher)
+    kr_status = market_open_status(briefing_day, "KR", calendar_fetcher)
+    us_previous = previous_trading_day(briefing_day, "US", calendar_fetcher)
+    kr_current_open = kr_status["isOpen"]
+    us_open = us_status["isOpen"]
+    kr_previous = previous_trading_day(briefing_day, "KR", calendar_fetcher) if kr_current_open else latest_trading_day_on_or_before(briefing_day, "KR", calendar_fetcher)
 
     # 브리핑 대상일의 시장 개장 상태로 분석 모드를 정한다.
     if kr_current_open and us_open:
@@ -263,6 +376,10 @@ def briefing_market_windows(date):
         "krCurrentSessionDate": briefing_day.isoformat() if kr_current_open else "",
         "krCurrentSessionOpen": kr_current_open,
         "usMarketOpenOnDate": us_open,
+        "calendarProviders": {
+            "US": us_status["provider"],
+            "KR": kr_status["provider"],
+        },
         "primarySessions": primary_sessions,
         "secondarySessions": secondary_sessions,
         "sessionRoles": session_roles,

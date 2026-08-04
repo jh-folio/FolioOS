@@ -84,6 +84,8 @@ class BriefingArchiveIndex:
                     search_text = " ".join((
                         item.get("title", ""),
                         item.get("summary", ""),
+                        item.get("sessionDate", ""),
+                        item.get("reportDate", ""),
                         str(section.get("markdown") or ""),
                     )).casefold()
                     rows.append({"item": item, "searchText": search_text})
@@ -194,9 +196,14 @@ class BriefingArchiveIndex:
                 continue
             if briefing_type != "all" and item["briefingType"] != briefing_type:
                 continue
-            if start and item["reportDate"] < start:
-                continue
-            if end and item["reportDate"] > end:
+            searchable_dates = [
+                value for value in (item.get("reportDate", ""), item.get("sessionDate", ""))
+                if value
+            ]
+            if (start or end) and not any(
+                (not start or value >= start) and (not end or value <= end)
+                for value in searchable_dates
+            ):
                 continue
             if needle and needle not in pair["searchText"]:
                 continue

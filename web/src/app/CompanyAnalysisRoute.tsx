@@ -689,6 +689,7 @@ export function CompanyAnalysisRoute() {
                       onClick={() => deleteReport(report)}
                       aria-label={`${reportLabel(report)} 삭제`}
                       data-tooltip="삭제"
+                      data-tooltip-pos="bottom"
                     >
                       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" />

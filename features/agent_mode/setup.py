@@ -7,7 +7,7 @@ from pathlib import Path
 
 from features.common.jobs import submit_job
 from features.llm_settings.client import load_dotenv, write_env_values
-from features.llm_settings.model_catalog import CLI_MODEL_FALLBACKS, choices_from_catalog, discover_cli_models
+from features.llm_settings.model_catalog import CLI_MODEL_FALLBACKS, choices_from_catalog, discover_cli_models, normalize_model_id
 
 ROOT = Path(__file__).resolve().parents[2]
 ADAPTERS = {"codex", "claude", "antigravity"}
@@ -49,7 +49,7 @@ def configured_model(adapter: str) -> str:
     adapter = normalize_adapter(adapter)
     configured = str(os.environ.get(f"FOLIO_AGENT_{adapter.upper()}_MODEL", "") or "").strip()
     if configured:
-        return configured
+        return normalize_model_id(adapter, configured)
     return MODEL_CHOICES[adapter][0]["value"]
 
 
@@ -130,12 +130,13 @@ def save_settings(body: dict | None = None) -> dict:
     for adapter in ADAPTERS:
         if adapter not in models:
             continue
-        model = str(models.get(adapter, "") or "").strip()
+        model = normalize_model_id(adapter, models.get(adapter, ""))
         if not model:
             continue
         if len(model) > 120 or any(ch.isspace() for ch in model):
             raise ValueError(f"Unsupported {adapter} model: {model}")
         updates[f"FOLIO_AGENT_{adapter.upper()}_MODEL"] = model
+        models[adapter] = model
     write_env_values(updates)
     invalidate_bridge_status()
     return _saved_settings_payload(provider, models)

@@ -43,12 +43,12 @@ def test_api_model_catalog_falls_back_without_api_key():
     catalog = model_catalog.discover_api_models(
         "claude",
         api_key="",
-        fallback=[{"value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6"}],
+        fallback=[{"value": "claude-opus-5", "label": "Claude Opus 5"}],
     )
 
     assert catalog["source"] == "fallback"
     assert catalog["status"] == "not_configured"
-    assert catalog["modelChoices"] == [{"value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6"}]
+    assert catalog["modelChoices"] == [{"value": "claude-opus-5", "label": "Claude Opus 5"}]
 
 
 def test_codex_fallback_includes_gpt_5_6_family_in_role_order():
@@ -107,6 +107,34 @@ def test_claude_cli_catalog_uses_help_model_hints_when_list_commands_are_missing
     assert catalog["source"] == "remote"
     assert "claude-fable-5" in values
     assert "claude-sonnet-5" in values
+    assert "claude-opus-5" in values
+
+
+def test_claude_catalog_filters_deprecated_models_from_existing_cache(tmp_path, monkeypatch):
+    cache_path = tmp_path / "llm-model-cache.json"
+    cache_path.write_text(json.dumps({
+        "api:claude": {
+            "provider": "claude",
+            "transport": "api",
+            "source": "remote",
+            "status": "available",
+            "modelChoices": [
+                {"value": "claude-opus-4-8", "label": "Claude Opus 4.8"},
+                {"value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6"},
+                {"value": "claude-opus-5", "label": "Claude Opus 5"},
+            ],
+        }
+    }), encoding="utf-8")
+    monkeypatch.setattr(model_catalog, "CACHE_PATH", cache_path)
+
+    catalog = model_catalog.discover_api_models("claude", api_key="test-key")
+
+    assert [item["value"] for item in catalog["modelChoices"]] == ["claude-opus-5"]
+
+
+def test_deprecated_claude_selections_migrate_to_current_family():
+    assert model_catalog.normalize_model_id("claude", "claude-opus-4-8") == "claude-opus-5"
+    assert model_catalog.normalize_model_id("claude", "claude-sonnet-4-6") == "claude-sonnet-5"
 
 
 def test_model_catalog_uses_cached_models_without_refresh(tmp_path, monkeypatch):

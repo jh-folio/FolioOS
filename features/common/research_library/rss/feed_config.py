@@ -83,6 +83,12 @@ def normalize_feed(row: dict) -> dict | None:
     default_market = str(row.get("default_market") or "").strip().upper()
     if default_market not in {"US", "KR", "GLOBAL"}:
         default_market = ""
+    # Aggregating feeds carry many outlets. When set, only items whose feed-declared
+    # publisher matches are kept, and the item is re-tagged with that publisher name.
+    raw_publishers = row.get("only_publishers")
+    only_publishers = [
+        str(v).strip() for v in raw_publishers if str(v or "").strip()
+    ] if isinstance(raw_publishers, list) else []
     return {
         "url": url,
         "media": media,
@@ -91,6 +97,9 @@ def normalize_feed(row: dict) -> dict | None:
         "allow_full_text": bool(row.get("allow_full_text", False)),
         "reliability_tier": int(row.get("reliability_tier") or 2),
         "default_market": default_market,
+        "only_publishers": only_publishers,
+        # "news"는 브리핑 입력에 포함되고, "press_release"는 기업 자료 전용으로 분리된다.
+        "source_type": str(row.get("source_type") or "news").strip() or "news",
     }
 
 

@@ -86,8 +86,13 @@ def parse_pub_date(text: str):
     return parsed.astimezone(dt.timezone.utc)
 
 
-def _raw_item(title: str, description: str, link: str, pub_date) -> dict | None:
-    """Build a uniform raw item, dropping entries missing required fields."""
+def _raw_item(title: str, description: str, link: str, pub_date, publisher: str = "") -> dict | None:
+    """Build a uniform raw item, dropping entries missing required fields.
+
+    ``publisher`` carries the feed-declared originating outlet (RSS ``<source>``).
+    Aggregating feeds such as Yahoo Finance mix many outlets in one feed, so this
+    is what lets a feed be filtered or re-tagged by the actual publisher.
+    """
     if not (title and link and pub_date):
         return None
     return {
@@ -95,6 +100,7 @@ def _raw_item(title: str, description: str, link: str, pub_date) -> dict | None:
         "description": strip_markup(html.unescape(description or "")),
         "link": link.strip(),
         "published_at_utc": pub_date,
+        "publisher": html.unescape(str(publisher or "")).strip()[:80],
     }
 
 
@@ -109,6 +115,7 @@ def parse_rss(xml_bytes: bytes) -> list[dict]:
             find_text(item, "description") or find_text(item, "encoded"),
             find_text(item, "link") or find_text(item, "guid"),
             parse_pub_date(find_text(item, "pubDate") or find_text(item, "date")),
+            find_text(item, "source") or find_text(item, "creator"),
         )
         if raw:
             results.append(raw)

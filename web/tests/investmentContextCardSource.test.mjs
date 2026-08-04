@@ -72,7 +72,7 @@ test("navigation exposes Watchlist while responsive context card styling stays b
 
   assert.match(routes, /id: "watchlist", label: "워치리스트", group: "home"/);
   assert.doesNotMatch(routes, /id: "watchlist"[^\n]+visibleInNav: false/);
-  assert.doesNotMatch(routes, /id: "portfolio"/);
+  assert.match(routes, /id: "portfolio", label: "포트폴리오", group: "portfolio"/);
   assert.match(css, /\.investment-context-card\s*\{[\s\S]*?min-width:\s*0/);
   assert.match(css, /\.investment-context-ledger\s*\{[\s\S]*?grid-template-columns/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.investment-context-ledger[\s\S]*?grid-template-columns:\s*1fr/);

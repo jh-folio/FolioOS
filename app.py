@@ -67,6 +67,8 @@ from features.common.research_library.rss.service import (
     rss_feed_payload,
     rss_merge_payload,
 )
+from features.common.research_library.signals.routes import create_signal_router
+from features.common.research_library.signals.runtime import start_signal_runtime, stop_signal_runtime
 from features.common.research_library.search.service import (
     group_docs,
     index_from_documents,
@@ -100,6 +102,10 @@ from features.watchlist_notes.service import (
 from features.common.market_data.snapshot import fetch_market_snapshot
 from features.common.market_data.providers import fetch_korea_market_data
 from features.common.market_data.tape import build_market_tape
+from features.common.market_data.routes import create_market_data_router
+from features.dashboard.routes import create_dashboard_router
+from features.market_calendar.routes import create_market_calendar_router
+from features.portfolio.routes import create_portfolio_router
 from features.common.research_schema.checkpoints import checkpoints_from_markdown
 from features.common.research_schema.data_gaps import data_gaps_from_messages
 from features.common.research_schema.service import (
@@ -169,6 +175,7 @@ from features.daily_briefing.archive import query_briefing_archive, refresh_brie
 from features.daily_briefing.schema import briefing_scope_view
 from features.daily_briefing.visuals import load_current_visuals, load_visual_sidecar
 from features.company_analysis.report_rules import build_rule_report
+from features.company_analysis.generation_service import analyze_company as generate_company_analysis
 from features.company_analysis.data_gap_resolver import resolve_company_analysis_gaps
 from features.company_analysis.style import analysis_prompt_path, normalize_analysis_style
 from features.company_analysis.service import (
@@ -238,25 +245,6 @@ from features.investment_review.service import (
     generate_review as generate_investment_review,
 )
 from features.investment_review.context_routes import create_investment_context_router
-from features.portfolio.service import (
-    delete_portfolio_backtest,
-    delete_portfolio_preset,
-    get_portfolio,
-    get_portfolio_backtest,
-    get_portfolio_preset,
-    list_portfolio_backtests,
-    list_portfolio_presets,
-    portfolio_analytics,
-    portfolio_summary,
-    preset_from_current_portfolio,
-    resolve_portfolio_ticker,
-    run_portfolio_backtest,
-    run_portfolio_backtest_comparison,
-    save_portfolio,
-    save_portfolio_backtest_result,
-    save_portfolio_preset,
-    search_portfolio_tickers,
-)
 
 ROOT = Path(__file__).resolve().parent
 APP_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -325,36 +313,23 @@ def build_briefing(
 
 
 def analyze_company(q, web_search_override=None, llm_override=None, analysis_style="beginner"):
-    analysis_style = normalize_analysis_style(analysis_style)
-    index = load_index()
-    docs = search_documents(index, query=q, company=q, limit=30)
-    company = infer_requested_company(q, docs)
-    materials = build_company_analysis_materials(q, docs, company)
-    selected_for_metadata = materials.get("selectedDocs", [])
-    tags = []
-    for d in selected_for_metadata:
-        tags += d.get("impactTags", [])
-    top_tags = sorted(set(tags), key=tags.count, reverse=True)[:6]
-    recent = " ".join([d.get("summary", "") for d in selected_for_metadata[:5]]) or "선별된 보조 뉴스/리포트 자료가 없습니다."
-    analysis_charts = build_company_analysis_charts(materials)
-    data_gaps = resolve_company_analysis_gaps(materials, web_search_allowed=bool(web_search_override))
-    quality_preflight = preflight_from_context("company_analysis", {}, {
-        "sourceCount": len(selected_for_metadata) or len(docs),
-        "documentCount": len(docs),
-        "analysisInputs": {
-            "secFactsOk": bool(materials.get("secFacts", {}).get("ok")),
-            "rankedFilingOk": bool(materials.get("rankedFiling", {}).get("ok")),
+    return generate_company_analysis(
+        q,
+        web_search_override=web_search_override,
+        llm_override=llm_override,
+        analysis_style=analysis_style,
+        runtime={
+            "load_index": load_index,
+            "search_documents": search_documents,
+            "infer_requested_company": infer_requested_company,
+            "build_company_analysis_materials": build_company_analysis_materials,
+            "build_company_analysis_charts": build_company_analysis_charts,
+            "generate_llm_company_analysis": generate_llm_company_analysis,
+            "build_rule_report": build_rule_report,
+            "company_analysis_sources": company_analysis_sources,
+            "selected_llm_config": selected_llm_config,
         },
-    })
-    llm_result, llm_status = generate_llm_company_analysis(q, docs, web_search_override=web_search_override, llm_override=llm_override, materials=materials, quality_preflight=quality_preflight, analysis_style=analysis_style)
-    if llm_result:
-        generation = {"mode": "llm", "status": llm_status, "provider": llm_result.get("provider", ""), "model": llm_result.get("model", ""), "responseId": llm_result.get("responseId", ""), "sourceCount": len(llm_result.get("usedDocs", [])), "webSearch": bool(llm_result.get("webSearch")), "tokenUsage": llm_result.get("tokenUsage") or {}}
-        generation["message"] = analysis_status_message(generation)
-        return {"saved": False, "generatedAt": now_iso(), "query": q, "company": company, "documentCount": len(docs), "headline": f"{company['name']} 기업 분석", "markdown": llm_result["markdown"], "analysisStyle": analysis_style, "dataGaps": data_gaps, "resolutionAttempts": data_gaps.get("gaps", []), "prompt": read_company_analysis_prompt(analysis_style), "promptPath": llm_result.get("promptPath") or str(analysis_prompt_path(analysis_style)), "generation": generation, "sources": company_analysis_sources(materials, llm_result.get("usedDocs", [])[:14]), "analysisCharts": analysis_charts, "analysisInputs": {"secFactsOk": bool(materials.get("secFacts", {}).get("ok")), "rankedFilingOk": bool(materials.get("rankedFiling", {}).get("ok")), "rankedParagraphs": len(materials.get("rankedFiling", {}).get("paragraphs", []))}, "qualityPreflight": quality_preflight}
-    generation = {"mode": "rules", "status": llm_status, "provider": selected_llm_config().get("provider", ""), "model": "", "sourceCount": 0}
-    generation["message"] = analysis_status_message(generation)
-    rule_markdown = build_rule_report(materials, analysis_style=analysis_style)
-    return {"saved": False, "generatedAt": now_iso(), "query": q, "company": company, "documentCount": len(docs), "headline": f"{company['name']} 규칙 기반 기업 분석", "markdown": rule_markdown, "analysisStyle": analysis_style, "dataGaps": data_gaps, "resolutionAttempts": data_gaps.get("gaps", []), "generation": generation, "sources": company_analysis_sources(materials, materials.get("selectedDocs", docs[:10])[:14]), "analysisCharts": analysis_charts, "analysisInputs": {"secFactsOk": bool(materials.get("secFacts", {}).get("ok")), "rankedFilingOk": bool(materials.get("rankedFiling", {}).get("ok")), "rankedParagraphs": len(materials.get("rankedFiling", {}).get("paragraphs", [])), "topTags": top_tags, "recent": recent}, "qualityPreflight": quality_preflight}
+    )
 
 
 @asynccontextmanager
@@ -362,7 +337,11 @@ async def lifespan(_app: FastAPI):
     ensure_dirs()
     schedule_startup_regime_refresh(MARKET_MEMORY_DB_PATH)
     schedule_automation_loop()
-    yield
+    start_signal_runtime(DATA_DIR, CONFIG_DIR / "evidence_sources.yaml")
+    try:
+        yield
+    finally:
+        stop_signal_runtime()
 
 
 fastapi_app = FastAPI(title="Folio OS", version=APP_VERSION, lifespan=lifespan)
@@ -389,6 +368,11 @@ fastapi_app.include_router(
 )
 fastapi_app.include_router(jobs_router)
 fastapi_app.include_router(work_log_router)
+fastapi_app.include_router(create_signal_router(DATA_DIR))
+fastapi_app.include_router(create_dashboard_router(DATA_DIR))
+fastapi_app.include_router(create_market_calendar_router(DATA_DIR))
+fastapi_app.include_router(create_market_data_router(DATA_DIR))
+fastapi_app.include_router(create_portfolio_router(DATA_DIR))
 
 
 @fastapi_app.get("/api/health")
@@ -944,99 +928,6 @@ def api_watchlist_detail(request: Request):
     item = qs.get("item", [""])[0]
     limit = int(qs.get("limit", ["12"])[0] or 12)
     return watchlist_detail(item, limit=min(max(limit, 1), 50))
-
-
-@fastapi_app.get("/api/portfolio")
-def api_get_portfolio():
-    return get_portfolio()
-
-
-@fastapi_app.post("/api/portfolio")
-def api_save_portfolio(body: dict | None = Body(default=None)):
-    return save_portfolio(body or {})
-
-
-@fastapi_app.get("/api/portfolio/summary")
-def api_portfolio_summary():
-    return portfolio_summary()
-
-
-@fastapi_app.get("/api/portfolio/resolve")
-def api_resolve_portfolio_ticker(request: Request):
-    qs = query_lists(request)
-    return resolve_portfolio_ticker(qs.get("ticker", [""])[0], qs.get("market", [""])[0])
-
-
-@fastapi_app.get("/api/portfolio/suggest")
-def api_suggest_portfolio_tickers(request: Request):
-    qs = query_lists(request)
-    limit = int(qs.get("limit", ["8"])[0] or 8)
-    return search_portfolio_tickers(qs.get("q", [""])[0], limit)
-
-
-@fastapi_app.get("/api/portfolio/analytics")
-def api_portfolio_analytics():
-    return portfolio_analytics()
-
-
-@fastapi_app.get("/api/portfolio/presets")
-def api_list_portfolio_presets():
-    return list_portfolio_presets()
-
-
-@fastapi_app.post("/api/portfolio/presets")
-def api_save_portfolio_preset(body: dict | None = Body(default=None)):
-    return save_portfolio_preset(body or {})
-
-
-@fastapi_app.post("/api/portfolio/presets/from-current")
-def api_save_portfolio_preset_from_current(body: dict | None = Body(default=None)):
-    body = body or {}
-    return preset_from_current_portfolio(body.get("name") or "현재 포트폴리오 목표 비중")
-
-
-@fastapi_app.delete("/api/portfolio/presets/{preset_id}")
-def api_delete_portfolio_preset(preset_id: str):
-    result = delete_portfolio_preset(preset_id)
-    if not result.get("deleted"):
-        raise HTTPException(status_code=404, detail="Portfolio preset not found")
-    return result
-
-
-@fastapi_app.get("/api/portfolio/backtests")
-def api_list_portfolio_backtests():
-    return list_portfolio_backtests()
-
-
-@fastapi_app.post("/api/portfolio/backtests")
-def api_run_portfolio_backtest(body: dict | None = Body(default=None)):
-    return run_portfolio_backtest(body or {}, save_result=False)
-
-
-@fastapi_app.post("/api/portfolio/backtests/compare")
-def api_run_portfolio_backtest_comparison(body: dict | None = Body(default=None)):
-    return run_portfolio_backtest_comparison(body or {})
-
-
-@fastapi_app.post("/api/portfolio/backtests/save")
-def api_save_portfolio_backtest(body: dict | None = Body(default=None)):
-    return save_portfolio_backtest_result(body or {})
-
-
-@fastapi_app.get("/api/portfolio/backtests/{backtest_id}")
-def api_get_portfolio_backtest(backtest_id: str):
-    result = get_portfolio_backtest(backtest_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Portfolio backtest not found")
-    return result
-
-
-@fastapi_app.delete("/api/portfolio/backtests/{backtest_id}")
-def api_delete_portfolio_backtest(backtest_id: str):
-    result = delete_portfolio_backtest(backtest_id)
-    if not result.get("deleted"):
-        raise HTTPException(status_code=404, detail="Portfolio backtest not found")
-    return result
 
 
 @fastapi_app.get("/api/notes")

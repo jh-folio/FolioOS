@@ -8,6 +8,8 @@ import { ReportBody } from "./reportReader/ReportBody";
 import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
 import { parsePersonalOverlayPayload } from "./deepResearchPayload";
+import { BriefingChangeStrip } from "./briefing/BriefingChangeStrip";
+import type { ChangeEvent } from "./watchlist/ChangeHistory";
 
 type MarketScope = "us" | "kr" | "both";
 type ArchiveMarketFilter = "all" | MarketScope;
@@ -36,11 +38,15 @@ type BriefingArchivePayload = {
 type Briefing = {
   title?: string;
   date?: string;
+  publicationDate?: string;
+  sessionDate?: string;
+  sessionMode?: string;
   marketScope?: string;
   markdown?: string;
   generation?: { message?: string; mode?: string; generatedAt?: string };
   canonicalRevision?: unknown;
   personalOverlay?: unknown;
+  changeSummary?: ChangeEvent;
 };
 
 type AgentJob = {
@@ -112,11 +118,11 @@ function archiveCardView(item: BriefingArchiveItem) {
       ? "KR Market Briefing"
       : stripTitleDate(item.title || "Daily Market Briefing");
   const formatted = formatArchiveDate(date);
-  const title = formatted ? `${displayTitle} — ${formatted}` : displayTitle;
+  const title = item.title || (formatted ? `${displayTitle} — ${formatted}` : displayTitle);
   const chips = (item.tags || []).filter((tag) => !BRIEFING_MARKET_TAGS.has(String(tag || "").trim()));
-  const session = item.sessionDate ? `시장 기준일 ${item.sessionDate}` : "시장 기준일 미상";
+  const publication = formatted ? `${formatted} KST 발행` : "발행일 미상";
   const generated = item.generatedAt ? new Date(item.generatedAt).toLocaleString("ko-KR") : "생성 시각 미상";
-  return { date, scope, title, chips, foot: `${session} · ${generated}` };
+  return { date, scope, title, chips, foot: `${publication} · ${generated}` };
 }
 
 function sleep(ms: number) {
@@ -438,14 +444,17 @@ export function BriefingRoute() {
       .filter((group) => group.rows.length > 0);
   }, [archiveView, filteredItems]);
   const readerContent = useMemo(() => splitReportTitle(briefing?.markdown || "", briefing?.title || "시장 브리핑"), [briefing?.markdown, briefing?.title]);
+  const readerTitle = briefing?.title || readerContent.title;
+  const publicationDate = briefing?.publicationDate || briefing?.date || detailRoute?.date || "";
 
   if (detailRoute && briefing) {
     return (
       <div className="react-briefing-route" data-briefing-route>
         {error && <p className="react-dashboard-error">{error}</p>}
         <ReportReaderShell
-          eyebrow={`DAILY BRIEFING · ${briefing.date || detailRoute.date}`}
-          title={readerContent.title}
+          eyebrow="DAILY BRIEFING"
+          title={readerTitle}
+          meta={`${formatArchiveDate(publicationDate)} KST 발행`}
           agentContext={{
             surface: "briefing_reader",
             viewId: "briefing",
@@ -458,7 +467,7 @@ export function BriefingRoute() {
               <button type="button" onClick={() => setBriefingHash()}>
                 브리핑
               </button>
-              <span>{readerContent.title}</span>
+              <span>{readerTitle}</span>
             </>
           )}
           onClose={() => setBriefingHash()}
@@ -472,7 +481,7 @@ export function BriefingRoute() {
                     reportKind: "briefing",
                     reportId: briefing.date || detailRoute.date,
                     marketScope: normalizedScope(briefing.marketScope || detailRoute.scope),
-                    message: `${readerContent.title}의 핵심과 투자 판단 체크포인트를 요약해줘.`,
+                    message: `${readerTitle}의 핵심과 투자 판단 체크포인트를 요약해줘.`,
                     autoSubmit: true,
                   })}
                 >
@@ -499,9 +508,10 @@ export function BriefingRoute() {
             briefing.date || detailRoute.date,
             normalizedScope(briefing.marketScope || detailRoute.scope),
           )}
-          noteLinkedTitle={readerContent.title}
+          noteLinkedTitle={readerTitle}
           noteOverlay={parsePersonalOverlayPayload(briefing.personalOverlay, briefing.canonicalRevision)}
         >
+          <BriefingChangeStrip summary={briefing.changeSummary} />
           <ReportBody
             markdown={readerContent.body || briefing.markdown || ""}
             marketScope={normalizedScope(briefing.marketScope || detailRoute.scope)}
@@ -693,6 +703,7 @@ export function BriefingRoute() {
                     onClick={() => deleteBriefing(view.date, view.scope)}
                     aria-label={`${view.date} 브리핑 삭제`}
                     data-tooltip="삭제"
+                    data-tooltip-pos="bottom"
                   >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" />

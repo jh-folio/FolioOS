@@ -435,6 +435,9 @@ def validate_market_state_snapshot(payload: dict, context: dict | None = None) -
         if key in payload or isinstance(context, dict) and key in context
     })
     snapshot["marketViews"] = _market_views(payload, snapshot, source_lookup)
+    for key in ("changeBasis", "changeSummary", "changeIntelligence"):
+        if isinstance(payload.get(key), dict):
+            snapshot[key] = payload[key]
     return snapshot
 
 
@@ -461,9 +464,6 @@ def save_market_state_snapshot(
     payload: dict,
     context: dict | None = None,
 ) -> dict:
-    snapshot = validate_market_state_snapshot(payload, context=context)
-    snapshot_id = snapshot.get("id") or "mss_" + re.sub(r"[^0-9A-Za-z]+", "", snapshot["asOf"])[:24]
-    snapshot["id"] = snapshot_id
     match db_path:
         case sqlite3.Connection() as connection:
             conn = connection
@@ -475,6 +475,26 @@ def save_market_state_snapshot(
             assert_never(unreachable)
     try:
         ensure_snapshot_table(conn, initialize_graph=owns_connection)
+        candidate = dict(payload or {})
+        tentative_id = candidate.get("id") or "mss_" + re.sub(r"[^0-9A-Za-z]+", "", str(candidate.get("asOf") or now_iso()))[:24]
+        candidate["id"] = tentative_id
+        if not isinstance(candidate.get("changeBasis"), dict):
+            from features.common.change_intelligence.adapters.market_memory import build_market_memory_basis
+            from features.common.change_intelligence.baseline import select_market_memory_baseline
+            from features.common.change_intelligence.basis import content_hash
+            from features.common.change_intelligence.comparator import compare_basis
+            from features.common.change_intelligence.projection import invalidation_token
+
+            basis = build_market_memory_basis(candidate)
+            previous, baseline_ref = select_market_memory_baseline(conn, basis)
+            current_ref = {"storageKind": "market_state_snapshot", "id": tentative_id, "revision": None, "contentHash": content_hash(basis)}
+            summary = compare_basis(basis, previous, current_ref=current_ref, baseline_ref=baseline_ref)
+            candidate["changeBasis"] = basis
+            candidate["changeSummary"] = summary
+            candidate["changeIntelligence"] = {"status": summary["status"], "authorityKind": "market_state_snapshot", "projectionStatus": "pending", "invalidationToken": invalidation_token(summary)}
+        snapshot = validate_market_state_snapshot(candidate, context=context)
+        snapshot_id = snapshot.get("id") or tentative_id
+        snapshot["id"] = snapshot_id
         conn.execute(
             """
             INSERT OR REPLACE INTO market_state_snapshots
@@ -490,6 +510,10 @@ def save_market_state_snapshot(
                 json.dumps(snapshot, ensure_ascii=False),
             ),
         )
+        if owns_connection and isinstance(snapshot.get("changeSummary"), dict):
+            from features.common.change_intelligence.projection import upsert_change_projection
+
+            upsert_change_projection(conn, snapshot["changeSummary"], authority_kind="market_state_snapshot", authority_id=snapshot_id)
         if owns_connection:
             conn.commit()
     finally:

@@ -52,6 +52,31 @@ def test_build_price_history_reports_actual_provider_from_rows():
     assert result["sourceByInterval"] == {"intraday": "toss_open_api", "daily": "toss_open_api"}
 
 
+def test_build_price_history_appends_target_daily_bar_when_daily_feed_lags():
+    def downloader(_symbol, *, start, end, interval):
+        if interval == "5m":
+            return [
+                {"time": "2026-08-03T09:00:00+09:00", "open": 100, "high": 102, "low": 99, "close": 101, "volume": 10, "provider": "yfinance"},
+                {"time": "2026-08-03T09:05:00+09:00", "open": 101, "high": 104, "low": 100, "close": 103, "volume": 20, "provider": "yfinance"},
+            ]
+        return [
+            {"time": "2026-07-31", "open": 98, "high": 101, "low": 97, "close": 100, "volume": 50, "provider": "yfinance"},
+        ]
+
+    result = build_price_history("^KS11", "2026-08-03", downloader=downloader)
+
+    assert result["daily"]["points"][-1] == {
+        "time": "2026-08-03",
+        "open": 100.0,
+        "high": 104.0,
+        "low": 99.0,
+        "close": 103.0,
+        "volume": 30.0,
+        "provider": "intraday_aggregate:yfinance",
+    }
+    assert result["sourceByInterval"]["daily"] == "yfinance+intraday_aggregate:yfinance"
+
+
 def test_build_price_history_skips_toss_without_release_flag(monkeypatch):
     monkeypatch.setenv("FOLIO_ENABLE_TOSS_OPEN_API", "0")
     monkeypatch.setenv("TOSS_OPEN_API_CLIENT_ID", "client-id")

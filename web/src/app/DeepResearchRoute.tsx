@@ -1088,7 +1088,7 @@ export function DeepResearchRoute() {
                 return (
                   <div className="report-feed-card-wrap" key={report.id || `${reportLabel(report)}-${report.date}`}>
                     <button className="report-feed-card is-topic" type="button" data-report-id={report.id} onClick={() => { if (report.id) { openingReportId.current = report.id; setTopicHash(report.id); } }}><span className="report-feed-card-meta">{report.mode && <span className="report-feed-badge">{String(report.mode).toUpperCase()}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">{displayDate(report.date || report.generatedAt)}</span></button>
-                    <button type="button" className="report-feed-card-delete" disabled={deleting} onClick={() => void deleteReport(report)} aria-label={`${reportLabel(report)} 삭제`} data-tooltip="삭제"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" /></svg></button>
+                    <button type="button" className="report-feed-card-delete" disabled={deleting} onClick={() => void deleteReport(report)} aria-label={`${reportLabel(report)} 삭제`} data-tooltip="삭제" data-tooltip-pos="bottom"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" /></svg></button>
                   </div>
                 );
               })}

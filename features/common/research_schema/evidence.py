@@ -1,6 +1,6 @@
 """Common Evidence Item schema.
 
-User notes can appear as linked hypotheses, but ``user_note`` items are excluded
+User notes and fast-origin leads can appear as linked context, but are excluded
 from evidence aggregation by ``is_countable_evidence``.
 """
 from __future__ import annotations
@@ -114,4 +114,9 @@ def evidence_items_from_list(
 
 
 def is_countable_evidence(item: dict) -> bool:
-    return not is_hypothesis_evidence_type((item or {}).get("type"))
+    row = item or {}
+    intake_stage = str(row.get("intakeStage") or row.get("intake_stage") or "evidence").strip().lower()
+    source_layer = str(row.get("sourceLayer") or row.get("source_layer") or "").strip().lower()
+    if intake_stage == "lead" or source_layer in {"user_consultation", "hypothesis"}:
+        return False
+    return not is_hypothesis_evidence_type(row.get("type"))

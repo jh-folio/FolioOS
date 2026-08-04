@@ -7,6 +7,7 @@ export type RouteId =
   | "analysis"
   | "deep-research"
   | "watchlist"
+  | "portfolio"
   | "settings";
 
 export type AppRoute = {
@@ -25,6 +26,7 @@ export const ROUTES: AppRoute[] = [
   { id: "analysis", label: "기업 분석", group: "research" },
   { id: "deep-research", label: "딥 리서치", group: "research" },
   { id: "watchlist", label: "워치리스트", group: "home" },
+  { id: "portfolio", label: "포트폴리오", group: "portfolio" },
   { id: "settings", label: "설정", group: "system" },
 ];
 

@@ -1,5 +1,6 @@
 """Step 0 regression contracts for the briefing market/visuals upgrade."""
 
+import datetime as dt
 import json
 import sys
 from copy import deepcopy
@@ -10,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from features.common.market_calendar import briefing_market_windows
+from features.common.market_calendar import briefing_market_windows, is_market_open
 from features.daily_briefing.contracts import (
     issue_label_fixture_errors,
     prompt_contract_errors,
@@ -26,11 +27,13 @@ from features.daily_briefing.schema import (
     MARKET_IMPACT_STATUSES,
     MARKET_SCOPES,
     US_SESSION_MODES,
+    briefing_expected_titles,
     briefing_file_name,
     briefing_archive_items,
     briefing_export_units,
     briefing_scope_view,
     enrich_briefing_sections,
+    normalize_briefing_markdown_titles,
     briefing_type_instruction,
     normalize_body_availability,
     normalize_briefing_contract,
@@ -62,8 +65,8 @@ def test_active_prompt_preserves_legacy_rules_and_sections():
     kr_prompt = PROMPT_KR_PATH.read_text(encoding="utf-8")
     assert prompt_contract_errors(us_prompt) == []
     assert prompt_contract_errors(kr_prompt) == []
-    assert "# US Market Briefing — YYYY.MM.DD" in us_prompt
-    assert "# Korea Market Briefing — YYYY.MM.DD" in kr_prompt
+    assert "# US Market Briefing — YYYY.MM.DD 마감" in us_prompt
+    assert "# Korea Market Briefing — YYYY.MM.DD 장중|마감" in kr_prompt
 
 
 def test_prompt_limits_us_market_repetition_inside_kr_briefing():
@@ -79,12 +82,12 @@ def test_scope_prompt_loader_uses_separate_market_files():
     kr_prompt = read_briefing_prompt("kr")
     both_prompt = read_briefing_prompt("both")
 
-    assert "# US Market Briefing — YYYY.MM.DD" in us_prompt
-    assert "# Korea Market Briefing — YYYY.MM.DD" not in us_prompt
-    assert "# Korea Market Briefing — YYYY.MM.DD" in kr_prompt
-    assert "# US Market Briefing — YYYY.MM.DD" not in kr_prompt
-    assert "# US Market Briefing — YYYY.MM.DD" in both_prompt
-    assert "# Korea Market Briefing — YYYY.MM.DD" in both_prompt
+    assert "# US Market Briefing — YYYY.MM.DD 마감" in us_prompt
+    assert "# Korea Market Briefing — YYYY.MM.DD 장중|마감" not in us_prompt
+    assert "# Korea Market Briefing — YYYY.MM.DD 장중|마감" in kr_prompt
+    assert "# US Market Briefing — YYYY.MM.DD 마감" not in kr_prompt
+    assert "# US Market Briefing — YYYY.MM.DD 마감" in both_prompt
+    assert "# Korea Market Briefing — YYYY.MM.DD 장중|마감" in both_prompt
     assert "prompt_us.md" in briefing_prompt_path_label("us")
     assert "prompt_kr.md" in briefing_prompt_path_label("kr")
 
@@ -153,10 +156,11 @@ def test_market_metadata_is_structured_and_does_not_mutate_report():
     items = briefing_archive_items(report)
     assert report == original
     assert [row["id"] for row in items] == ["2026-06-22:us", "2026-06-22:kr"]
-    assert items[0]["title"] == "US Market Briefing — 2026-06-22"
+    assert items[0]["title"] == "US Market Briefing — 2026.06.21 마감"
     assert items[0]["summary"] == "US summary"
     assert items[0]["tags"] == ["미국장", "시황중심"]
     assert items[1]["sessionDate"] == "2026-06-22"
+    assert items[1]["title"] == "Korea Market Briefing — 2026.06.22 마감"
     assert items[1]["reportScope"] == "both"
 
 
@@ -170,6 +174,7 @@ def test_enrichment_adds_metadata_without_changing_markdown():
     assert enriched["us"]["marketScope"] == "us"
     assert enriched["us"]["briefingType"] == "concise"
     assert enriched["us"]["sessionDate"] == "2026-06-21"
+    assert enriched["us"]["title"] == "US Market Briefing — 2026.06.21 마감"
     assert enriched["us"]["tags"] == ["미국장", "요약"]
 
 
@@ -198,9 +203,9 @@ def test_export_units_split_combined_report_without_mutation():
     assert [unit["marketScope"] for unit in units] == ["us", "kr"]
     assert units[0]["markdown"].endswith("US only")
     assert "KR only" not in units[0]["markdown"]
-    assert units[0]["title"] == "US Market Briefing — 2026-06-22"
+    assert units[0]["title"] == "US Market Briefing — 2026.06.21 마감"
     assert units[0]["tags"] == ["미국장", "시황중심"]
-    assert units[1]["title"] == "KR Market Briefing — 2026-06-22"
+    assert units[1]["title"] == "Korea Market Briefing — 2026.06.22 마감"
     assert units[1]["tags"] == ["한국장", "시황중심"]
     assert all(unit["reportScope"] == "both" for unit in units)
 
@@ -308,6 +313,93 @@ def test_market_calendar_session_fixtures_are_stable():
         windows = briefing_market_windows(case["date"])
         assert windows["analysisMode"] == case["analysisMode"], case
         assert bool(windows["weekendOrHolidayNewsMode"]) is case["weekendOrHolidayNewsMode"], case
+
+
+def test_connected_exchange_calendar_overrides_static_kr_holiday():
+    def exchange_calendar(day, market):
+        if market == "KR" and day.isoformat() == "2026-08-17":
+            return {
+                "date": "2026-08-17",
+                "isOpen": True,
+                "provider": "exchange_fixture",
+                "previousBusinessDay": "2026-08-14",
+            }
+        return None
+
+    windows = briefing_market_windows("2026-08-17", exchange_calendar_fetcher=exchange_calendar)
+
+    assert windows["krCurrentSessionOpen"] is True
+    assert windows["krCurrentSessionDate"] == "2026-08-17"
+    assert windows["calendarProviders"]["KR"] == "exchange_fixture"
+
+
+def test_connected_exchange_calendar_can_close_static_weekday_and_supply_previous_day():
+    def exchange_calendar(day, market):
+        if market == "KR" and day.isoformat() == "2026-08-18":
+            return {
+                "date": "2026-08-18",
+                "isOpen": False,
+                "provider": "exchange_fixture",
+                "previousBusinessDay": "2026-08-14",
+            }
+        return None
+
+    windows = briefing_market_windows("2026-08-18", exchange_calendar_fetcher=exchange_calendar)
+
+    assert windows["krCurrentSessionOpen"] is False
+    assert windows["krPreviousSessionDate"] == "2026-08-14"
+    assert windows["calendarProviders"]["KR"] == "exchange_fixture"
+
+
+def test_exchange_calendar_failure_falls_back_to_static_calendar():
+    def unavailable_exchange_calendar(day, market):
+        raise RuntimeError("calendar unavailable")
+
+    assert is_market_open(
+        dt.date(2026, 8, 17),
+        "KR",
+        exchange_calendar_fetcher=unavailable_exchange_calendar,
+    ) is False
+
+
+def test_market_titles_use_session_date_while_publication_date_stays_separate():
+    windows = briefing_market_windows("2026-08-04", exchange_calendar_fetcher=lambda _day, _market: None)
+    titles = briefing_expected_titles(
+        "2026-08-04",
+        "both",
+        market_windows=windows,
+        session_modes={"us": "us_close", "kr": "kr_intraday"},
+    )
+
+    assert titles == {
+        "us": "US Market Briefing — 2026.08.03 마감",
+        "kr": "Korea Market Briefing — 2026.08.04 장중",
+    }
+    item = briefing_archive_items({
+        "date": "2026-08-04",
+        "marketScope": "us",
+        "marketWindows": windows,
+        "sessionMode": "us_close",
+        "markdown": "# US Market Briefing — 2026.08.04\n\nBody",
+    })[0]
+    assert item["title"] == "US Market Briefing — 2026.08.03 마감"
+    assert item["sessionDate"] == "2026-08-03"
+    assert item["publicationDate"] == "2026-08-04"
+
+
+def test_market_title_normalization_corrects_llm_report_date_heading():
+    windows = briefing_market_windows("2026-08-04", exchange_calendar_fetcher=lambda _day, _market: None)
+    markdown = "# US Market Briefing — 2026.08.04\n\n## 0. 오늘의 미국장 성격\n본문"
+
+    normalized = normalize_briefing_markdown_titles(
+        markdown,
+        "2026-08-04",
+        "us",
+        market_windows=windows,
+        session_modes={"us": "us_close"},
+    )
+
+    assert normalized.startswith("# US Market Briefing — 2026.08.03 마감\n")
 
 
 def test_source_bias_baseline_is_aggregate_only_and_reproducible():

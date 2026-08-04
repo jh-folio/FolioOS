@@ -198,6 +198,17 @@
       "ticker": "373220",
       "sector": "Battery",
       "market": "KR"
+    },
+    {
+      "name": "NAVER",
+      "aliases": [
+        "네이버",
+        "035420",
+        "Naver"
+      ],
+      "ticker": "035420",
+      "sector": "Internet",
+      "market": "KR"
     }
   ]
 }

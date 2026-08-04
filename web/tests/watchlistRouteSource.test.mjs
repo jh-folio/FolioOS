@@ -25,13 +25,13 @@ test("Watchlist route preserves legacy visual class contracts", async () => {
   assert.match(source, /compact-item/);
 });
 
-test("Watchlist route integrates legacy TradingView detail renderer and Agent context", async () => {
+test("Watchlist route integrates TradingView detail, isolated consultation, and Agent context", async () => {
   const source = await readFile(new URL("../src/app/WatchlistRoute.tsx", import.meta.url), "utf8");
 
   assert.match(source, /FolioTradingViewWidgets\?\.renderWatchlistDetail/);
   assert.match(source, /FolioTradingViewWidgets\?\.cleanup/);
   assert.match(source, /surface: "watchlist_detail"/);
-  assert.match(source, /openReactAgentDock/);
+  assert.match(source, /ConsultationEntry/);
   assert.match(source, /setReactAgentContextScope/);
 });
 

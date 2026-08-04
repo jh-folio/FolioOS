@@ -89,6 +89,33 @@ def _combined_provider(*providers: str) -> str:
     return "+".join(parts) if parts else "custom"
 
 
+def _append_intraday_session_bar(daily: list[dict], intraday: list[dict], target: dt.date) -> list[dict]:
+    """Fill a delayed daily feed's target bar from the same session's 5m bars."""
+    if not intraday or any(str(row.get("time") or "")[:10] == target.isoformat() for row in daily):
+        return daily
+    opens = [_safe_float(row.get("open")) for row in intraday]
+    highs = [_safe_float(row.get("high")) for row in intraday]
+    lows = [_safe_float(row.get("low")) for row in intraday]
+    closes = [_safe_float(row.get("close")) for row in intraday]
+    volumes = [_safe_float(row.get("volume")) for row in intraday]
+    valid_closes = [value for value in closes if value is not None]
+    if not valid_closes:
+        return daily
+    first_open = next((value for value in opens if value is not None), valid_closes[0])
+    valid_highs = [value for value in highs if value is not None]
+    valid_lows = [value for value in lows if value is not None]
+    provider = _provider_from_rows(intraday)
+    return [*daily, {
+        "time": target.isoformat(),
+        "open": first_open,
+        "high": max(valid_highs) if valid_highs else max(valid_closes),
+        "low": min(valid_lows) if valid_lows else min(valid_closes),
+        "close": valid_closes[-1],
+        "volume": sum(value for value in volumes if value is not None) if any(value is not None for value in volumes) else None,
+        "provider": f"intraday_aggregate:{provider}",
+    }]
+
+
 def build_price_history(
     symbol: str,
     session_date: str,
@@ -123,8 +150,9 @@ def build_price_history(
     )
     intraday = _clip_rows(intraday_raw, target, intraday=True)
     daily = _clip_rows(daily_raw, target, intraday=False)
+    daily = _append_intraday_session_bar(daily, intraday, target)
     intraday_provider = _provider_from_rows(intraday_raw)
-    daily_provider = _provider_from_rows(daily_raw)
+    daily_provider = _provider_from_rows(daily)
     return {
         "provider": _combined_provider(intraday_provider, daily_provider),
         "sourceByInterval": {"intraday": intraday_provider, "daily": daily_provider},

@@ -416,6 +416,10 @@ def _normalize_market_filter(value):
 def _cache_where(start_dt=None, end_dt=None, source="", market=""):
     clauses = ["visible = 1"]
     params = []
+    # 보도자료 와이어는 기업 자료라 목록을 훑는 화면의 기본 대상이 아니다. 발행량이 많아
+    # 그대로 두면 최신순 앞쪽을 차지해 뉴스를 밀어낸다. 소스를 직접 고르면 그때 보여준다.
+    if not str(source).strip():
+        clauses.append("(source_type IS NULL OR source_type != 'press_release')")
     if start_dt:
         clauses.append("timestamp_sort >= ?")
         params.append(start_dt.isoformat())
@@ -595,6 +599,12 @@ def _import_rssarchive_locked(run_collection=True, progress=None):
     if progress:
         progress(f"RSS 피드 캐시 갱신 완료: 변경 {cache.get('updated', 0)}개, 삭제 {cache.get('deleted', 0)}개. 인덱스를 갱신합니다.", progress=68)
     index = build_index(incremental=True, progress=progress)
+    try:
+        from features.dashboard.story_share import invalidate_story_share_cache
+
+        invalidate_story_share_cache()
+    except Exception:
+        pass
     return {
         "output": "\n".join(output),
         "added": added,

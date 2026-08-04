@@ -17,7 +17,7 @@ LEGACY_OUTPUT_SECTIONS = (
 )
 
 US_OUTPUT_SECTIONS = (
-    "# US Market Briefing — YYYY.MM.DD",
+    "# US Market Briefing — YYYY.MM.DD 마감",
     "## 0. 오늘의 미국장 성격",
     "## 1. 미국장 시장 흐름",
     "## 2. 미국장을 움직인 핵심 변수",
@@ -29,7 +29,7 @@ US_OUTPUT_SECTIONS = (
 )
 
 KR_OUTPUT_SECTIONS = (
-    "# Korea Market Briefing — YYYY.MM.DD",
+    "# Korea Market Briefing — YYYY.MM.DD 장중|마감",
     "## 0. 오늘의 한국장 성격",
     "## 1. 한국장 시장 흐름",
     "## 2. 한국장을 움직인 핵심 변수",

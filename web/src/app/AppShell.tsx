@@ -6,6 +6,7 @@ import { CompanyAnalysisRoute } from "./CompanyAnalysisRoute";
 import { Dashboard } from "./Dashboard";
 import { DeepResearchRoute } from "./DeepResearchRoute";
 import { MarketMemoryRoute } from "./MarketMemoryRoute";
+import { PortfolioRoute } from "./PortfolioRoute";
 import { ReactAgentDock } from "./ReactAgentDock";
 import { RssRoute } from "./RssRoute";
 import { SettingsRoute } from "./SettingsRoute";
@@ -14,9 +15,11 @@ import { preferredHomeRoute, useUiPreferences } from "./homePreference";
 import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } from "./routes";
 import { useShellStatus } from "./statusStore";
 import { activateReactAgentContextScope } from "./agentContext";
+import { ConsultationPanel } from "./agentWorkspace/ConsultationPanel";
 
 const NAV_GROUPS: Array<{ id: string; title: string; routes: RouteId[] }> = [
-  { id: "home", title: "홈", routes: ["home", "dashboard", "watchlist"] },
+  { id: "home", title: "홈", routes: ["home", "dashboard"] },
+  { id: "portfolio", title: "투자", routes: ["watchlist", "portfolio"] },
   { id: "news", title: "뉴스", routes: ["briefing", "rss", "market-memory"] },
   { id: "research", title: "리서치", routes: ["analysis", "deep-research"] },
   { id: "system", title: "시스템", routes: ["settings"] },
@@ -86,6 +89,13 @@ const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
       <path d="M12 13V7m-3 3h6m4 11V7.8c0-1.68 0-2.52-.327-3.162a3 3 0 0 0-1.311-1.311C16.72 3 15.88 3 14.2 3H9.8c-1.68 0-2.52 0-3.162.327a3 3 0 0 0-1.311 1.311C5 5.28 5 6.12 5 7.8V21l7-4z" />
     </svg>
   ),
+  portfolio: (
+    <svg className="react-left-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 7.5h18v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <path d="M8 7.5V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2.5" />
+      <path d="M3 12h18M10 12v2h4v-2" />
+    </svg>
+  ),
   settings: (
     <svg className="react-left-nav-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
@@ -93,6 +103,12 @@ const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
     </svg>
   ),
 };
+
+const NARROW_VIEWPORT_QUERY = "(max-width: 1024px)";
+
+function isNarrowViewport() {
+  return typeof window !== "undefined" && window.matchMedia(NARROW_VIEWPORT_QUERY).matches;
+}
 
 function currentHash() {
   // Pixel Office 보류: 코드는 남기지만 사용자가 도달할 수 있는 입구는 두지 않는다.
@@ -147,10 +163,16 @@ export function AppShell() {
   const preferredHome = preferredHomeRoute(uiPreferences.preferences);
   const status = useShellStatus();
   const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem("folio.react.navCollapsed") === "1");
+  // 좁은 화면에서 도크는 본문 대부분을 덮으므로, 저장된 열림 선호보다 뷰포트를 우선한다.
+  const agentViewportForcedRef = useRef(false);
   const [agentOpen, setAgentOpen] = useState(() => {
     const stored = localStorage.getItem("folio.react.agentClosed");
-    if (stored !== null) return stored !== "1";
-    return !window.matchMedia("(max-width: 1024px)").matches;
+    const preferred = stored === null ? true : stored !== "1";
+    if (preferred && isNarrowViewport()) {
+      agentViewportForcedRef.current = true;
+      return false;
+    }
+    return preferred;
   });
   const [visitedRoutes, setVisitedRoutes] = useState<Set<RouteId>>(() => new Set([routeId]));
   const [routeHashes, setRouteHashes] = useState<Record<string, string>>(() => ({ [routeId]: currentHash() }));
@@ -172,8 +194,27 @@ export function AppShell() {
   }, [navCollapsed]);
 
   useEffect(() => {
+    // 뷰포트 때문에 강제로 닫은 경우에는 데스크톱 선호를 덮어쓰지 않는다.
+    if (agentViewportForcedRef.current) {
+      agentViewportForcedRef.current = false;
+      return;
+    }
     localStorage.setItem("folio.react.agentClosed", agentOpen ? "0" : "1");
   }, [agentOpen]);
+
+  useEffect(() => {
+    const query = window.matchMedia(NARROW_VIEWPORT_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) return;
+      setAgentOpen((open) => {
+        if (!open) return open;
+        agentViewportForcedRef.current = true;
+        return false;
+      });
+    };
+    query.addEventListener("change", handleChange);
+    return () => query.removeEventListener("change", handleChange);
+  }, []);
 
   useEffect(() => {
     setVisitedRoutes((current) => {
@@ -257,6 +298,7 @@ export function AppShell() {
     if (route.id === "analysis") return <CompanyAnalysisRoute />;
     if (route.id === "deep-research") return <DeepResearchRoute />;
     if (route.id === "watchlist") return <WatchlistRoute />;
+    if (route.id === "portfolio") return <PortfolioRoute />;
     if (route.id === "settings") return <SettingsRoute />;
     return null;
   }
@@ -266,7 +308,10 @@ export function AppShell() {
       <a
         className="react-skip-link"
         href="#folio-main-content"
-        onClick={() => window.requestAnimationFrame(() => routeHostRef.current?.focus({ preventScroll: true }))}
+        onClick={(event) => {
+          event.preventDefault();
+          window.requestAnimationFrame(() => routeHostRef.current?.focus({ preventScroll: true }));
+        }}
       >
         본문으로 건너뛰기
       </a>
@@ -360,6 +405,7 @@ export function AppShell() {
           onClose={() => setAgentOpen(false)}
         />
       )}
+      <ConsultationPanel />
       <CommandPalette />
     </div>
   );

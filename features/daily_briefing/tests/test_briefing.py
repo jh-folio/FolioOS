@@ -204,6 +204,57 @@ def test_weekend_offsession_priority_and_score():
     assert doc_analysis_priority(fri_us, w) == "primary"
 
 
+def test_weekend_rule_fallback_keeps_session_guardrails_out_of_reader_copy():
+    from features.common.market_calendar import briefing_market_windows as bmw
+
+    windows = bmw("2026-06-14")
+    doc = _doc(
+        title="해상 운송 위험과 유가 공급망 변화",
+        source="Reuters",
+        date="2026-06-13",
+        content="해상 운송 위험이 원유 공급과 운임에 영향을 줄 수 있다는 분석입니다.",
+        sectors=["Energy"],
+        impactTags=["Oil"],
+    )
+    groups = [{"sector": "Energy", "docs": [doc], "score": 80}]
+    drivers = sel.derive_market_drivers([doc], windows, limit=4)
+
+    markdown = svc.build_prompt_markdown(
+        "2026-06-14",
+        "2026-06-13/2026-06-14",
+        [doc],
+        groups,
+        [],
+        market_drivers=drivers,
+        market_windows=windows,
+        market_scope="us",
+    )
+
+    assert "주말/휴장" not in markdown
+    assert "정규장이 열리지" not in markdown
+    assert "정규장 가격 반응" not in markdown
+    assert "현재 반응을 단정" not in markdown
+    assert "off_session_news" not in markdown
+
+
+def test_reader_copy_removes_collection_failures_and_trivial_price_uncertainty():
+    markdown = """# US Market Briefing — 2026.06.14
+
+다만 해당 Financial Times 로컬 자료는 제목과 공개 요약만 확인되고 본문 수집에는 실패했다. 따라서 투자 구조, 자금 집행 시점, 회계 처리, 클라우드 사용 계약과의 연계는 입력 자료에서 확인되지 않는다. 다음 거래일 주가가 이 보도에 어떻게 반응할지도 아직 알 수 없다.
+
+확인된 계약 규모는 공급사의 수주 가시성을 높일 수 있다. 다만 실제 매출 인식은 납품 일정과 고객 검수 조건에 달려 있다.
+"""
+
+    cleaned = svc.reader_facing_briefing_markdown(markdown)
+
+    assert "Financial Times 로컬 자료" not in cleaned
+    assert "본문 수집" not in cleaned
+    assert "입력 자료" not in cleaned
+    assert "주가가 이 보도에 어떻게 반응" not in cleaned
+    assert "확인된 계약 규모는 공급사의 수주 가시성을 높일 수 있다." in cleaned
+    assert "실제 매출 인식은 납품 일정과 고객 검수 조건에 달려 있다." in cleaned
+
+
 def test_kr_current_intraday_seeded_in_context():
     from features.common.market_calendar import doc_market_bucket
     kr_doc = _doc(title="코스피 장중 외국인 순매수 전환…반도체 강세", source="연합인포맥스",

@@ -95,6 +95,16 @@ def commit_combined_update(
         insert_snapshot(connection, prepared.snapshot)
         if current_snapshot_hash(connection, prepared.snapshot.snapshot_id) != prepared.snapshot.target_hash:
             raise ReceiptVerificationError(code="snapshot_target_hash_mismatch")
+        payload = prepared.snapshot.logical_row["payload"]
+        if isinstance(payload, dict) and isinstance(payload.get("changeSummary"), dict):
+            from features.common.change_intelligence.projection import upsert_change_projection
+
+            upsert_change_projection(
+                connection,
+                payload["changeSummary"],
+                authority_kind="market_state_snapshot",
+                authority_id=prepared.snapshot.snapshot_id,
+            )
         write_receipt(
             connection,
             ReceiptRecord(
