@@ -595,6 +595,61 @@ def _text_has_token(text, token):
     return re.search(rf"(?<![a-z0-9]){re.escape(token)}s?(?![a-z])", text) is not None
 
 
+_EXPLICIT_MARKETS = {"US", "KR", "EUROPE", "JP", "GLOBAL", "EU"}
+
+
+def _canonical_market(token: str) -> str:
+    """`EU`는 경계에서만 받아주고 저장값은 `EUROPE`다(영국을 포함하므로)."""
+    return "EUROPE" if token == "EU" else token
+
+
+# 거래소·지수·통화·중앙은행처럼 그 시장을 특정하는 말만 넣는다. 국가명 단독은
+# 넣지 않는다 — "이탈리아 총선"이 시장 기사로 승격되기 때문이다.
+EUROPE_TOKENS = (
+    "유럽증시", "유럽 증시", "유로존", "유로화", "ecb", "유럽중앙은행", "european central bank",
+    "ftse", "dax", "cac 40", "aex", "ibex", "ftse mib", "stoxx", "euro stoxx",
+    "런던증시", "런던 증시", "프랑크푸르트", "유로스톡스",
+    "bank of england", "영란은행", "boe", "gilt", "bund", "분트",
+    "euronext", "xetra", "lse", "borsa italiana", "bolsa de madrid",
+    # 현지어: 각국 지수·중앙은행·거래소
+    "dax-index", "leitzins", "bundesbank", "aktienmarkt",
+    "bourse de paris", "banque de france", "cac40",
+    "beurs", "amsterdamse beurs", "aandelenmarkt",
+    "borsa", "piazza affari", "spread btp",
+    "bolsa", "ibex 35", "banco de españa", "banco de espana",
+)
+JAPAN_TOKENS = (
+    "일본증시", "일본 증시", "도쿄증시", "도쿄 증시", "닛케이", "nikkei", "topix", "토픽스",
+    "일본은행", "bank of japan", "boj", "엔화", "엔달러", "엔·달러", "yen",
+    "도쿄증권거래소", "tokyo stock exchange", "jpx",
+    # 일본어: 지수·중앙은행·거래소·통화
+    "日経平均", "日経", "東証", "東京証券取引所", "日銀", "円安", "円高",
+    "プライム市場", "topix", "国債利回り",
+)
+
+
+# 거래소 접미사는 자유 텍스트 토큰으로 두면 안 된다. `.t`는 URL·약어 어디에나
+# 들어 있어 미국·한국 기사를 일본으로 태깅했다(실측 회귀). 앞에 실제 티커가 붙은
+# 형태로만 인식한다: `7203.T`, `ASML.AS`, `SAP.DE`.
+_EXCHANGE_SUFFIX_MARKETS = {
+    "t": "JP",
+    "l": "EUROPE", "de": "EUROPE", "pa": "EUROPE",
+    "as": "EUROPE", "mi": "EUROPE", "mc": "EUROPE",
+}
+_EXCHANGE_TICKER_RE = re.compile(
+    # 슬래시 뒤는 제외한다. 추론 텍스트에 URL이 포함되므로 `a.com/b.t` 같은 경로가
+    # 티커로 읽히면 미국 기사가 일본으로 넘어간다.
+    r"(?<![a-z0-9/])[a-z0-9]{1,6}\.(t|l|de|pa|as|mi|mc)(?![a-z0-9])"
+)
+
+
+def _exchange_suffix_markets(text: str) -> set[str]:
+    return {
+        _EXCHANGE_SUFFIX_MARKETS[match.group(1)]
+        for match in _EXCHANGE_TICKER_RE.finditer(text)
+    }
+
+
 def infer_doc_markets(doc):
     """Infer all markets discussed by an article.
 
@@ -607,8 +662,8 @@ def infer_doc_markets(doc):
         values = []
         for item in explicit:
             token = str(item or "").strip().upper()
-            if token in {"US", "KR", "GLOBAL"} and token not in values:
-                values.append(token)
+            if token in _EXPLICIT_MARKETS and token not in values:
+                values.append(_canonical_market(token))
         if values:
             return values
     explicit_text = str(doc.get("market") or "").strip().upper()
@@ -616,14 +671,20 @@ def infer_doc_markets(doc):
         values = []
         for item in explicit_text.split(","):
             token = item.strip()
-            if token in {"US", "KR", "GLOBAL"} and token not in values:
-                values.append(token)
+            if token in _EXPLICIT_MARKETS and token not in values:
+                values.append(_canonical_market(token))
         if values:
             return values
-    if explicit_text in {"US", "KR", "GLOBAL"}:
-        return [explicit_text]
+    if explicit_text in _EXPLICIT_MARKETS:
+        return [_canonical_market(explicit_text)]
     if explicit_text == "BOTH":
         return ["US", "KR"]
+    # feed가 선언한 시장은 키워드 추론보다 우선한다. 각국 경제면에서 온 항목은
+    # 그 시장이 다루는 자료라는 것이 이미 확정돼 있고, 본문 키워드는 한국어/영어에
+    # 맞춰져 있어 현지어 기사에서는 신호가 되지 못한다.
+    feed_market = str(doc.get("defaultMarket") or doc.get("default_market") or "").strip().upper()
+    if feed_market in _EXPLICIT_MARKETS:
+        return [_canonical_market(feed_market)]
 
     """Infer the market discussed by an article without using publisher name.
 
@@ -664,19 +725,40 @@ def infer_doc_markets(doc):
     )
     is_kr = "KR" in company_markets or any(_text_has_token(text, token) for token in kr_tokens)
     is_us = "US" in company_markets or any(_text_has_token(text, token) for token in us_tokens)
+    suffix_markets = _exchange_suffix_markets(text)
+    is_europe = (
+        "EUROPE" in company_markets
+        or "EUROPE" in suffix_markets
+        or any(_text_has_token(text, token) for token in EUROPE_TOKENS)
+    )
+    is_jp = (
+        "JP" in company_markets
+        or "JP" in suffix_markets
+        or any(_text_has_token(text, token) for token in JAPAN_TOKENS)
+    )
     is_global = any(_text_has_token(text, token) for token in global_tokens)
     markets = []
     if is_us:
         markets.append("US")
     if is_kr:
         markets.append("KR")
-    if is_global or (is_us and is_kr):
+    if is_europe:
+        markets.append("EUROPE")
+    if is_jp:
+        markets.append("JP")
+    # 둘 이상의 시장이 함께 걸리면 지역 간 사안으로 본다.
+    if is_global or len(markets) > 1:
         markets.append("GLOBAL")
     return markets or ["UNKNOWN"]
 
 
 def infer_doc_market(doc):
-    """Backward-compatible primary market label for existing callers."""
+    """Backward-compatible primary market label for existing callers.
+
+    `BOTH` keeps meaning US+KR, exactly as stored reports use it. A document that
+    also touches Europe or Japan still collapses to whichever single label these
+    callers can handle; multi-market consumers should read `infer_doc_markets`.
+    """
     markets = infer_doc_markets(doc)
     if "US" in markets and "KR" in markets:
         return "BOTH"
@@ -684,6 +766,10 @@ def infer_doc_market(doc):
         return "KR"
     if "US" in markets:
         return "US"
+    if "EUROPE" in markets:
+        return "EUROPE"
+    if "JP" in markets:
+        return "JP"
     if "GLOBAL" in markets:
         return "GLOBAL"
     return "UNKNOWN"
