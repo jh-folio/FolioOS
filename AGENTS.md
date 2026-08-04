@@ -471,12 +471,11 @@ features/company_analysis/financial_quality_prompt.md
 ### Fast-Origin Signals (빠른 시장 신호)
 
 - 로직은 `features/common/research_library/signals/`에 둔다. 수집 단위는 metadata-only lead(제목/URL/시각/티커/신뢰 등급)이며 본문·이미지·provider raw response·비밀값을 저장하지 않는다.
-- provider allowlist는 Benzinga·기존 한국 RSS 2종으로 고정한다. 새 provider는 별도 계획 변경 없이 추가하지 않는다. Investing.com은 공개 피드 주소가 없고 약관상 사전 승인이 필요해, FinancialJuice는 한 줄짜리 지표 속보라 브리핑·기업분석 어느 쪽에도 쓰임이 없어 0.4.x 범위에서 **제외**한다(어댑터·설정·자격증명·WebSocket 런타임 모두 제거).
-- **자격증명이 필요 없는 경로는 사용자 설정 없이 기본 동작한다.** 사용자에게 묻는 것은 사용자만 제공할 수 있는 값(키·승인 주소)뿐이다.
-  - 한국 RSS: `promote_kr_rss_leads()`는 이미 수집된 `evidence_items` 행을 다시 읽을 뿐 네트워크·자격증명을 쓰지 않으므로, signals 자동화와 무관하게 **RSS 수집 작업에서도 함께 실행**한다. 대상 매체는 연합인포맥스·연합뉴스이며 매일경제는 일반 RSS로만 분류한다.
-  - Benzinga: 공식 공개 피드 목록이 2026-08 기준 비어 있거나 404라 기본 비활성이며 `disabled_reason`을 config에 남긴다. 사용자가 유효한 피드 주소를 넣으면 동작한다.
-- `signal-provider-settings.json` 오버레이는 사용자가 명시적으로 바꾼 provider만 담는다. 항목이 없으면 config 기본값을 유지하며, 파일 부재가 곧 "전부 꺼짐"을 뜻하지 않는다.
-- automation `signals` 작업은 기본 활성(5분 간격)이다. 공개 피드만 대상으로 하며 조건부 GET(ETag/Last-Modified)으로 재요청 비용을 낮춘다.
+- provider allowlist는 **기존 한국 RSS 하나**(`APPROVED_PROVIDERS = {"kr_existing"}`)다. 새 provider는 별도 계획 변경 없이 추가하지 않는다. 0.4.5에서 제외 확정: Benzinga(공개 피드 목록이 비어 있거나 404, 응답하는 피드도 시장 속보가 아님), FinancialJuice(한 줄짜리 지표 속보라 브리핑·기업분석 어느 쪽에도 쓰임 없음), Investing.com(공개 피드 주소 없음, 약관상 사전 승인 필요). 셋 다 어댑터·설정·env 키·UI·런타임을 모두 제거했다.
+- **fast-origin 경로에 자격증명·사용자 설정이 없다.** `promote_kr_rss_leads()`는 이미 수집된 `evidence_items` 행을 다시 읽을 뿐 네트워크를 쓰지 않으므로, signals 자동화와 무관하게 **RSS 수집 작업에서도 함께 실행**한다. 대상 매체는 연합인포맥스·연합뉴스이며 매일경제는 일반 RSS로만 분류한다.
+- provider 켜고 끄는 설정 화면과 `signal-provider-settings.json` 오버레이는 없다. 설정할 provider가 없기 때문이며, 다시 필요해지면 계획 변경으로 되살린다.
+- lead끼리의 교차 확인(`corroborated`)은 독립 provider가 둘 이상일 때만 성립하므로 현재 도달하지 않는 경로다. 확인은 공식 자료 경로(`confirm_signal`)가 담당한다.
+- automation `signals` 작업은 네트워크 호출 없이 한국 RSS 승격만 수행한다.
 - `evidence_items.intake_stage=lead`는 `is_countable_evidence()`에서 항상 제외되고 source ledger에 들어가지 않는다. corroboration/공식 확인 후 승격된 row만 evidence가 된다.
 - retention 기본값: 일반 lead 3일, Watchlist/Portfolio 관련 14일, corroborated 30일.
 - polling provider는 automation의 `signals` kind로 실행한다. 승인된 provider가 모두 polling RSS라 상시 WebSocket 연결은 두지 않는다(`start_signal_runtime`은 lifespan 호환용 no-op).

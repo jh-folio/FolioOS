@@ -27,17 +27,13 @@ bounding boxes.
 
 ## Fast-origin news services
 
-Benzinga and the existing Korean RSS sources are optional external news
-sources, not bundled libraries. Their names and links identify the origin of
-user-enabled feeds. Provider terms, availability, and delay policies continue to
+Fast-origin leads are promoted from Korean RSS items Folio OS already
+collected. No additional network call, credential, or provider setting is
+involved, and no external service is bundled. Publisher names and links
+identify the origin of the feeds the user enabled; publisher terms continue to
 apply.
 
-- Benzinga collection uses a configured official/authorized RSS URL; Folio OS
-  does not scrape the website or use a paid article bypass.
-- Korean fast-origin leads are promoted from RSS items Folio OS already
-  collected; no additional network call or credential is involved.
-
-They enter Folio OS as metadata-only, unconfirmed leads. They do not count as
+Leads enter Folio OS as metadata-only and unconfirmed. They do not count as
 report evidence until corroborated through an eligible evidence path.
 
 ## Optional OpenAI Vision import

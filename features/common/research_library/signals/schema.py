@@ -9,7 +9,7 @@ from typing import Any
 
 SIGNAL_STATUSES = {"unconfirmed", "corroborated", "expired", "retracted"}
 SOURCE_STATUSES = {"active", "delayed", "stale", "unhealthy", "disabled", "unauthorized"}
-APPROVED_PROVIDERS = {"benzinga", "kr_existing"}
+APPROVED_PROVIDERS = {"kr_existing"}
 PUBLIC_SOURCE_STATUSES = {"active", "delayed"}
 FORBIDDEN_INPUT_KEYS = {
     "body", "full_text", "fullText", "html", "image", "image_url", "imageUrl",
@@ -46,7 +46,6 @@ def iso(value: Any) -> str:
 def normalized_provider(value: Any) -> str:
     provider = re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_")
     aliases = {
-        "benzinga_rss": "benzinga",
         "yonhap": "kr_existing",
         "yonhap_infomax": "kr_existing",
     }

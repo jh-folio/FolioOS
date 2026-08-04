@@ -19,14 +19,6 @@ official_sources:
 # Fast-origin sources are metadata-only leads. Empty or unauthorized URLs stay
 # disabled; page scraping and undocumented APIs are never used.
 fast_origin_sources:
-  benzinga:
-    # 2026-08-03 확인: 공개 피드 목록(benzinga.com/feeds/list)의 항목이 대부분 비어 있거나 404다.
-    # /feed만 응답하지만 암호화폐 전망 기사 2건뿐이라 시장 속보 용도로 쓸 수 없어 기본 비활성으로 둔다.
-    enabled: false
-    transport: "rss"
-    feed_url: ""
-    source_status: "disabled"
-    disabled_reason: "public_feeds_unusable_2026_08"
   kr_existing:
     enabled: true
     transport: "rss"

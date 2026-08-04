@@ -8,16 +8,15 @@ import pytest
 
 from features.common.research_library.signals.adapters.generic_rss import normalize_feed_items
 from features.common.research_library.signals.schema import latency_telemetry, normalize_signal
-from features.common.research_library.signals.provider_settings import load_provider_settings, save_provider_settings
 from features.common.research_library.signals.service import provider_health, purge_expired, query_signals, upsert_signal
-from features.common.research_library.signals.runtime import _collect_rss_provider, _load_provider_config, _safe_error_code
+from features.common.research_library.signals.runtime import _safe_error_code
 from features.common.research_schema.evidence import is_countable_evidence
 from features.common.research_schema.source_ledger import source_ledger_from_items
 
 NOW = dt.datetime(2026, 8, 1, 0, 0, tzinfo=dt.timezone.utc)
 
 
-def row(provider="benzinga", *, title="NVDA guidance update", url="https://www.benzinga.com/a", received=NOW):
+def row(provider="kr_existing", *, title="NVDA guidance update", url="https://example.test/a", received=NOW):
     return {
         "provider": provider,
         "title": title,
@@ -44,13 +43,23 @@ def test_signal_rejects_body_raw_and_unapproved_provider():
         normalize_signal({**row("first_squawk")})
 
 
-def test_cluster_corroboration_and_cursor_query(tmp_path):
+def test_same_provider_repeats_do_not_corroborate(tmp_path):
+    """교차 확인은 독립 provider가 있어야 성립한다.
+
+    승인된 fast-origin provider가 kr_existing 하나뿐이라 lead끼리의 교차 확인은
+    현재 도달할 수 없는 경로다. 같은 매체가 두 번 실었다고 확인된 것이 아니므로
+    unconfirmed로 남아야 한다. 확인은 공식 자료 경로(confirm_signal)가 담당한다.
+    """
     db = tmp_path / "research-index.sqlite3"
-    first = normalize_signal(row())
-    second = normalize_signal(row("kr_existing"))
-    upsert_signal(db, first)
-    result = upsert_signal(db, second)
-    assert result["signalStatus"] == "corroborated"
+    upsert_signal(db, normalize_signal(row()))
+    result = upsert_signal(db, normalize_signal(row(url="https://example.test/b")))
+    assert result["signalStatus"] == "unconfirmed"
+
+
+def test_cursor_query_pages_and_hides_body(tmp_path):
+    db = tmp_path / "research-index.sqlite3"
+    upsert_signal(db, normalize_signal(row()))
+    upsert_signal(db, normalize_signal(row(url="https://example.test/b")))
     page = query_signals(db, ticker="NVDA", market="US", limit=1)
     assert page["count"] == 1 and page["nextCursor"]
     next_page = query_signals(db, ticker="NVDA", cursor=page["nextCursor"], limit=1)
@@ -80,24 +89,20 @@ def test_latency_rejects_clock_skew():
     assert telemetry["valid"] is False
 
 
-def test_provider_overrides_are_optional_and_round_trip(tmp_path):
-    # 기본은 "설정 없음"이며 config 기본값(공개 피드 on)을 덮지 않는다.
-    assert load_provider_settings(tmp_path) == {}
-    saved = save_provider_settings(tmp_path, {"benzinga": {"enabled": True}})
-    assert saved == {"benzinga": {"enabled": True}}
-    assert load_provider_settings(tmp_path) == saved
+def test_only_kr_existing_is_an_approved_fast_origin_provider():
+    """승인 목록이 비면 lead 승격 경로가 조용히 늘어날 수 없다."""
+    from features.common.research_library.signals.schema import APPROVED_PROVIDERS
+
+    assert APPROVED_PROVIDERS == {"kr_existing"}
 
 
-def test_provider_overlay_rejects_non_mapping_rows(tmp_path):
-    assert save_provider_settings(tmp_path, {"benzinga": 1, "kr_existing": "on"}) == {}
+def test_collect_signals_once_needs_no_network_or_credentials(tmp_path):
+    """남은 fast-origin 경로는 이미 수집된 행을 다시 읽는 것뿐이다."""
+    from features.common.research_library.signals.runtime import collect_signals_once
 
-
-def test_disabled_provider_reports_disabled_not_failure(tmp_path, monkeypatch):
-    monkeypatch.setattr("features.common.research_library.signals.runtime.load_dotenv", lambda: None)
-    assert _collect_rss_provider("benzinga", {"enabled": False}, data_dir=tmp_path, state={}) == 0
-    row = provider_health(tmp_path)["benzinga"]
-    assert row["sourceStatus"] == "disabled"
-    assert row["errorCode"] == "provider_disabled"
+    result = collect_signals_once(tmp_path, tmp_path / "evidence_sources.yaml")
+    assert result["ok"] is True
+    assert set(result["providers"]) == {"kr_existing"}
 
 
 def test_kr_fast_origin_excludes_maeil_kyungjae():
@@ -107,12 +112,11 @@ def test_kr_fast_origin_excludes_maeil_kyungjae():
     assert KR_FAST_ORIGIN_SOURCES == {"연합인포맥스", "연합뉴스"}
 
 
-def test_investing_com_is_out_of_scope():
-    from features.common.research_library.signals.provider_settings import PROVIDERS
+def test_removed_providers_are_out_of_scope():
     from features.common.research_library.signals.schema import APPROVED_PROVIDERS, normalized_provider
 
-    assert "investing" not in APPROVED_PROVIDERS
-    assert "investing" not in PROVIDERS
+    for provider in ("investing", "benzinga", "financialjuice"):
+        assert provider not in APPROVED_PROVIDERS
     assert normalized_provider("investing_com") == "investing_com"
 
 
@@ -125,7 +129,7 @@ def test_signal_cursor_query_p95_is_below_150ms_for_100_rows(tmp_path):
             normalize_signal(
                 row(
                     title=f"NVDA signal {index}",
-                    url=f"https://www.benzinga.com/{index}",
+                    url=f"https://example.test/{index}",
                     received=observed,
                 )
             ),

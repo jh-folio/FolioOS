@@ -33,9 +33,6 @@ type SettingsPayload = {
   fred?: { hasApiKey?: boolean; apiKeyMasked?: string };
   bok?: { hasApiKey?: boolean; apiKeyMasked?: string };
   notion?: { hasToken?: boolean; tokenMasked?: string; hasDb?: boolean; dbIdMasked?: string; dbId?: string };
-  fastOrigin?: {
-    benzinga?: { enabled?: boolean; hasApiKey?: boolean; apiKeyMasked?: string; hasAuthorizedFeed?: boolean; feedUrlMasked?: string };
-  };
 };
 
 type AgentAdapter = {
@@ -201,11 +198,6 @@ export function SettingsRoute() {
   const [agentProvider, setAgentProvider] = useState("codex");
   const [agentModel, setAgentModel] = useState("");
   const [apiDraft, setApiDraft] = useState({ fred: "", bok: "", dart: "" });
-  const [fastOriginDraft, setFastOriginDraft] = useState({
-    benzingaEnabled: false,
-    benzingaFeedUrl: "",
-    benzingaApiKey: "",
-  });
   const [notionDraft, setNotionDraft] = useState({ token: "", dbId: "" });
   const [vaultPath, setVaultPath] = useState("");
   const [llmStatus, setLlmStatus] = useState<Record<string, LlmTestResult & { checking?: boolean }>>({});
@@ -232,11 +224,6 @@ export function SettingsRoute() {
         getJson<ObsidianSettings>("/api/obsidian/settings"),
       ]);
       setSettings(settingsPayload);
-      setFastOriginDraft({
-        benzingaEnabled: Boolean(settingsPayload.fastOrigin?.benzinga?.enabled),
-        benzingaFeedUrl: "",
-        benzingaApiKey: "",
-      });
       setAgentEnabled(settingsPayload.agent?.enabled !== false);
       setAgentMode(settingsPayload.agent?.mode === "api" ? "api" : "cli");
       const nextProvider = providerOrDefault(settingsPayload.llm?.provider);
@@ -384,9 +371,6 @@ export function SettingsRoute() {
         fred: { apiKey: apiDraft.fred.trim() },
         bok: { apiKey: apiDraft.bok.trim() },
         dart: { apiKey: apiDraft.dart.trim() },
-        fastOrigin: {
-          benzinga: { enabled: fastOriginDraft.benzingaEnabled, authorizedFeedUrl: fastOriginDraft.benzingaFeedUrl.trim(), apiKey: fastOriginDraft.benzingaApiKey.trim() },
-        },
       });
       setSettings(payload);
       setApiDraft({
@@ -394,11 +378,6 @@ export function SettingsRoute() {
         bok: "",
         dart: "",
       });
-      setFastOriginDraft((current) => ({
-        ...current,
-        benzingaFeedUrl: "",
-        benzingaApiKey: "",
-      }));
       setStatus("외부 데이터 API 설정을 저장했습니다.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "API 설정 저장에 실패했습니다.");
@@ -653,28 +632,6 @@ export function SettingsRoute() {
               <div className="field"><span>DART 상태</span><p className="section-subtitle">{statusText(settings?.dart?.hasApiKey, settings?.dart?.apiKeyMasked, "국내 기업 분석용 DART API 키가 없습니다.", "DART API 키")}</p></div>
             </div>
             <div className="filter-actions settings-actions"><button className="filter-btn apply" type="button" onClick={saveApiSettings} disabled={busy === "api"}>API 설정 저장</button></div>
-          </section>
-
-          <section className="settings-panel input-panel">
-            <div className="input-panel-header">
-              <h3>저지연 뉴스 리드</h3>
-              <p>속보 매체는 확인 전 lead로만 표시되며, 보고서 근거·품질 점수·중대한 변화 판정에는 포함되지 않습니다.</p>
-            </div>
-            <div className="settings-notice warn" role="note">
-              <strong>보안·이용 조건</strong>
-              <span>공식 WebSocket 또는 사용 권한이 있는 RSS URL만 입력하세요. 유료 본문 우회나 페이지 스크래핑은 하지 않으며 원문·이미지·인증 URL은 저장하지 않습니다. 새 스트림 설정은 서버 재시작 후 적용될 수 있습니다.</span>
-            </div>
-            <div className="automation-routines fast-origin-settings">
-              <section className="automation-card">
-                <div className="automation-card-head">
-                  <div><span>Free RSS first</span><strong>Benzinga</strong><p>무료 RSS를 우선 사용하고 API Key는 향후 공식 API 연결 확인용으로만 보관합니다.</p></div>
-                  <ToggleSwitch ariaLabel="Benzinga 사용" checked={fastOriginDraft.benzingaEnabled} onChange={(checked) => setFastOriginDraft({ ...fastOriginDraft, benzingaEnabled: checked })} compact />
-                </div>
-                <label className="field"><span>공식 RSS URL</span><input value={fastOriginDraft.benzingaFeedUrl} onChange={(event) => setFastOriginDraft({ ...fastOriginDraft, benzingaFeedUrl: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.fastOrigin?.benzinga?.hasAuthorizedFeed ? `${settings.fastOrigin.benzinga.feedUrlMasked} 저장됨` : "https://... (공식 RSS만)"} /></label>
-                <label className="field"><span>API Key (선택)</span><input value={fastOriginDraft.benzingaApiKey} onChange={(event) => setFastOriginDraft({ ...fastOriginDraft, benzingaApiKey: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.fastOrigin?.benzinga?.hasApiKey ? `${settings.fastOrigin.benzinga.apiKeyMasked} 저장됨` : "선택 사항"} /></label>
-              </section>
-            </div>
-            <div className="filter-actions settings-actions"><button className="filter-btn apply" type="button" onClick={saveApiSettings} disabled={busy === "api"}>뉴스 리드 설정 저장</button></div>
           </section>
 
           <section className="settings-panel input-panel">
