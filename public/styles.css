@@ -14941,3 +14941,173 @@ main.page {
   .agent-action, .cal-filter, .sym-chip,
   .dashboard-mode-switch button, .story-share__toggle button { min-height: var(--touch-min); }
 }
+
+/* --- Step 2 확장: 화면별 전용 클래스 계보 (같은 화면에 무테/유테가 섞이는 문제 해소) ---
+   카드 좌측 의미색 스트라이프는 ::before 구현이라 border 제거와 무관하게 유지된다.
+   .cal-cell(캘린더 격자)은 밀집 표 hairline 예외로 의도적으로 남긴다(§5.2). */
+
+/* 목록 카드(페이지 배경 위): 무테 + r-group + 잔잔한 그림자. 아카이브 카드의 우측 그라데이션 음영 제거 */
+.briefing-archive-card, .report-feed-card {
+  border: none;
+  border-radius: var(--r-group);
+  background: var(--surface-panel);
+  box-shadow: var(--elev-1);
+}
+.react-rss-card {
+  border: none;
+  border-radius: var(--r-group);
+}
+
+/* 홈: 빠른 실행 타일·최근 보고서 칩 */
+.launch-tile {
+  border: none;
+  border-radius: var(--r-control);
+  box-shadow: var(--elev-1);
+}
+.rv-rc {
+  border: none;
+  background: var(--surface-control);
+}
+.rv-rc:hover { background: var(--surface-control-hover); }
+.agent-home-advanced-toggle {
+  border: none;
+  background: var(--surface-control);
+}
+
+/* RSS route 전용 컨트롤 */
+.react-rss-control-panel {
+  border: none;
+  border-radius: var(--r-panel);
+}
+.react-rss-secondary-action, .react-rss-period-action {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+}
+.react-rss-secondary-action:hover, .react-rss-period-action:hover:not(:disabled) { background: var(--surface-control-hover); }
+.react-rss-primary-action { border: none; border-radius: var(--r-control); }
+
+/* 패널 내부 그룹 카드: 무테 + r-group. 배경·레이아웃은 유지 */
+.market-driver-card, .automation-card, .memory-tool-card, .investment-context-card,
+.analysis-chart-card, .hypothesis-review-card, .agent-run-card, .evidence-rail, .change-contrast {
+  border: none;
+  border-radius: var(--r-group);
+}
+/* 의미색 좌측 액센트는 유지 (gold=collections, agent accent=welcome) */
+.topicrpt-collections-panel {
+  border: none;
+  border-left: 4px solid var(--folio-gold);
+  border-radius: var(--r-group);
+}
+.react-agent-welcome-card {
+  border: none;
+  border-left: 3px solid var(--react-agent-accent, var(--folio-gold));
+  border-radius: var(--r-group);
+}
+
+/* 아이콘·보조 버튼 */
+.icon-btn {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+}
+.icon-btn:hover { background: var(--surface-control-hover); }
+.react-agent-new-chat {
+  border: none;
+  background: var(--surface-control);
+}
+.react-agent-new-chat:hover { background: var(--surface-control-hover); }
+.briefing-archive-card-delete, .report-feed-card-delete { border: none; }
+.filter-btn.topicrpt-preset { border: none; background: var(--surface-control); color: var(--folio-ink-soft); }
+
+/* 홈 프롬프트 툴바·제안 버튼: 광역 (0,1,1) 규칙이 흰 배경+테두리를 깔아 별칭을 이겼다.
+   같은 특이성으로 되받는다. submit/첫 번째 제안 버튼의 어두운 primary는 기존 규칙이 유지한다. */
+.agent-home-toolbar button,
+.agent-home-proposal-actions button,
+.agent-home-attachments button {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  font-weight: var(--fw-medium);
+}
+.agent-home-toolbar button[type="submit"],
+.agent-home-proposal-actions button:first-child {
+  background: var(--folio-surface-dark);
+  color: var(--folio-ink-inverse);
+}
+
+/* RSS route: 옛 규칙이 모든 액션 버튼을 어두운 primary(800)로 칠한다(0,1,1).
+   토스 규율로는 primary 하나만 어둡다. 같은 특이성으로 되받고,
+   진짜 primary(.react-rss-primary-action)는 자기 !important 규칙이 지킨다. */
+.react-rss-hero-actions button, .react-rss-hero-actions a,
+.react-rss-filter-actions button, .react-rss-filter-actions a,
+.react-rss-search-form button,
+.react-rss-card-actions button, .react-rss-card-actions a,
+.react-rss-pagination button {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  color: var(--folio-ink-soft);
+  font-weight: var(--fw-medium);
+}
+.react-rss-hero-actions button:hover, .react-rss-hero-actions a:hover,
+.react-rss-filter-actions button:hover, .react-rss-filter-actions a:hover,
+.react-rss-search-form button:hover,
+.react-rss-card-actions button:hover, .react-rss-card-actions a:hover,
+.react-rss-pagination button:hover {
+  background: var(--surface-control-hover);
+  color: var(--folio-ink);
+}
+
+/* 카드 시장/유형 tint 그라데이션 → 깨끗한 면. 시장·유형 색은 ::before 스트라이프가 유지한다 */
+.briefing-archive-card.is-us, .briefing-archive-card.is-kr, .briefing-archive-card.is-both,
+.report-feed-card.is-analysis, .report-feed-card.is-topic {
+  background: var(--surface-panel);
+}
+
+/* 카드 삭제 버튼: (0,2,0) wrap 규칙이 테두리를 유지시켰다 */
+.briefing-archive-card-wrap .briefing-archive-card-delete,
+.report-feed-card-wrap .report-feed-card-delete {
+  border: none;
+  background: var(--surface-control);
+}
+.briefing-archive-card-wrap .briefing-archive-card-delete:hover,
+.report-feed-card-wrap .report-feed-card-delete:hover {
+  background: var(--surface-control-hover);
+}
+
+/* route hero 액션(모든 화면 우상단 새로고침 등): (0,1,1) 광역 테두리 규칙 되받기 */
+.react-route-hero-actions button {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  font-weight: var(--fw-medium);
+}
+.react-route-hero-actions button:hover { background: var(--surface-control-hover); }
+
+/* 설정 sub-tabs(연동/관리): 무테 fill, active 어두운 fill은 기존 규칙 유지 */
+.sub-tabs button {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  font-weight: var(--fw-medium);
+}
+.sub-tabs button:hover { background: var(--surface-control-hover); }
+
+/* 테마 선택(라이트/다크/시스템): 무테 fill. active의 파란 선택 배경은 기존 규칙이 유지 */
+.settings-theme-options button {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+}
+
+/* Agent 도크 입력 툴바: 테두리만 제거(보내기 primary 어두운 fill은 유지) */
+.react-agent-form-toolbar button { border: none; }
+
+/* 워치리스트 카드: 다른 목록 카드와 동일한 무테 처리 */
+.watchlist-card {
+  border: none;
+  border-radius: var(--r-group);
+  box-shadow: var(--elev-1);
+}
+.watchlist-card-delete, .watchlist-card .watchlist-card-delete { border: none; background: var(--surface-control); }
