@@ -4,13 +4,13 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.4.6 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.4.7 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.4.6
+## What You Can Do In 0.4.7
 
 - Chat with the Folio OS AI Agent from the Home screen.
 - Use the Research Cockpit Dashboard to see which stories led the market today, what actually changed in your latest reports, native symbol/index charts, market calendar events, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous widget board available.
@@ -19,12 +19,12 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Maintain a local company, sector, and theme Watchlist with separate fast-origin leads and confirmed report change history.
 - See fast market signals — headline and link only — promoted from the Korean RSS you already collect. Article bodies are not stored, and unverified headlines never count toward report sources or a major-change call.
 - Collect and search public RSS/news feeds. The source filter lists only outlets still being collected, and corporate press-release wires stay out of the feed screen while remaining available to watchlist and company analysis.
-- Generate US/KR daily market briefings.
+- Generate US/KR daily market briefings. The date you pick is the market session the briefing covers, not the day it is filed, and daily automation can choose its briefing type.
 - Read a simplified medium-term Market Memory view.
 - Generate company analysis reports from local evidence and official data where available.
 - Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, Smart Collection scope, and your own thinking kept as separate layers.
 - Review rule-based change summaries produced together with each new Briefing, Company Analysis, Topic Report, and Market Memory update — without an extra Agent call.
-- Manage your Portfolio holdings (a save made elsewhere is flagged before it gets overwritten), import positions from a cropped broker screenshot with locally installed Tesseract by default, and review every row yourself before saving.
+- Manage your Portfolio holdings (a save made elsewhere is flagged before it gets overwritten), import positions from one or more cropped broker screenshots with locally installed Tesseract by default — the dialog says up front when local recognition is unavailable — and review every row yourself before saving.
 - Continue a Watchlist or Portfolio consultation across reloads. Consultation text is kept on your computer, separate from report sources, and only becomes an investment note when you explicitly choose “노트로 정리” (save as note).
 - Keep your own notes beside a report and check how old they are, what argues against them, and what you said you would follow up on — no AI required.
 - See the tickers you track quietly linked into related research screens, without exposing quantities, prices, weights, or note bodies.
@@ -34,7 +34,7 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Not included in the 0.4.6 user surface:
+Not included in the 0.4.7 user surface:
 
 - Installer/tray-app polish.
 
