@@ -15,6 +15,7 @@ import threading
 import time
 
 from features.common.market_calendar import latest_trading_day_on_or_before, previous_trading_day
+from features.common.markets import PRODUCT_MARKETS
 from features.daily_briefing.issue_selection import documents_for_scope
 from features.daily_briefing.selection import infer_drivers
 from features.daily_briefing.service import news_documents, select_briefing_docs
@@ -38,6 +39,17 @@ def _story_counts(docs: list[dict]) -> tuple[dict[str, int], int]:
         for driver in drivers or [OTHER_LABEL]:
             counts[driver] = counts.get(driver, 0) + 1
     return counts, len(docs)
+
+
+# 시장은 계약에서 파생한다. 유럽·일본 수집량이 적어 비중이 흔들리므로
+# 표본이 이 수 미만이면 그 사실을 함께 내보낸다.
+STORY_SHARE_MARKETS = tuple(market.value.lower() for market in PRODUCT_MARKETS)
+MIN_CONFIDENT_SAMPLE = 12
+
+
+def _normalized_scope(scope: str) -> str:
+    token = str(scope or "us").strip().lower()
+    return token if token in STORY_SHARE_MARKETS else "us"
 
 
 def _scoped_docs(documents: list[dict], date: str, scope: str) -> list[dict]:
@@ -68,8 +80,8 @@ def _share_rows(counts: dict[str, int]) -> list[dict]:
 
 def build_story_share(documents: list[dict], date: str, scope: str) -> dict:
     """오늘·직전 거래일의 이야기 비중과 %p 델타. 순수 함수(주입식)라 DB 없이 테스트한다."""
-    scope = str(scope or "us").strip().lower()
-    market = "KR" if scope == "kr" else "US"
+    scope = _normalized_scope(scope)
+    market = scope.upper()
     today_docs = _scoped_docs(documents, date, scope)
     counts, doc_count = _story_counts(today_docs)
     rows = _share_rows(counts)
@@ -93,6 +105,12 @@ def build_story_share(documents: list[dict], date: str, scope: str) -> dict:
         warnings.append("no_collected_news_for_date")
     if not previous_total:
         warnings.append("no_previous_session_news")
+    # 표본이 적으면 기사 한두 건이 비중을 수십 %p 움직인다. 그 델타를 그대로
+    # 보여주면 수집량 변동이 내용 변화처럼 읽히므로, 표본 부족을 함께 밝힌다.
+    if 0 < doc_count < MIN_CONFIDENT_SAMPLE:
+        warnings.append("small_sample")
+    if 0 < previous_total < MIN_CONFIDENT_SAMPLE:
+        warnings.append("small_previous_sample")
     return {
         "schemaVersion": 1,
         "date": date,
@@ -102,6 +120,8 @@ def build_story_share(documents: list[dict], date: str, scope: str) -> dict:
         "previousCollectedCount": previous_doc_count,
         "items": rows,
         "warnings": warnings,
+        "smallSample": bool({"small_sample", "small_previous_sample"} & set(warnings)),
+        "minConfidentSample": MIN_CONFIDENT_SAMPLE,
         # 규칙 계산 표시용 계약: 비중 이동은 보도량 변화이지 내용 변화가 아니다.
         "basis": "collected_news_volume",
     }
@@ -112,9 +132,7 @@ def story_share_payload(date: str | None, scope: str) -> dict:
     from features.common.research_library.indexing.service import load_index
 
     date = date or dt.datetime.now(dt.timezone.utc).astimezone(dt.timezone(dt.timedelta(hours=9))).date().isoformat()
-    scope = str(scope or "us").strip().lower()
-    if scope not in {"us", "kr"}:
-        scope = "us"
+    scope = _normalized_scope(scope)
     key = (date, scope)
     now = time.monotonic()
     with _cache_lock:

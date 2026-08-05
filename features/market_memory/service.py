@@ -6,6 +6,8 @@ import sys
 import threading
 from pathlib import Path
 
+from features.common.markets import PRODUCT_MARKETS
+from features.daily_briefing.schema import MARKET_TAGS
 from features.common.utils import normalize, now_iso, kst_date, clean_brief_text
 from features.common.dataframe_ops import top_records
 from features.daily_briefing.service import (
@@ -377,11 +379,13 @@ def run_llm_market_memory(date=None):
         return {"ok": False, "status": "generation_failed", "saved": [], "message": "LLM 시장 내러티브 생성에 실패했습니다."}
 
 
-MARKET_STATE_SCOPES = ("overall", "us", "kr")
+# 시장 목록은 계약에서 파생한다. 여기에 다시 적으면 새 시장이 늘었을 때
+# 시장 상태 화면만 조용히 두 시장에 머문다.
+MARKET_STATE_SCOPES = ("overall", *(market.value.lower() for market in PRODUCT_MARKETS))
 
 
 def _market_state_scope_prompt(scope: str) -> str:
-    labels = {"overall": "종합", "us": "미국장", "kr": "한국장"}
+    labels = {"overall": "종합", **{key: MARKET_TAGS[key] for key in MARKET_STATE_SCOPES[1:]}}
     label = labels.get(scope, scope)
     return (
         MARKET_STATE_SNAPSHOT_PROMPT

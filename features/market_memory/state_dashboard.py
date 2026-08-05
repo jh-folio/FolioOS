@@ -5,7 +5,7 @@ from pathlib import Path
 
 from features.market_memory.market_state_ref import MarketStateRefQuery, resolve_market_state_ref
 from features.market_memory.memory import connect, init_db, list_states
-from features.market_memory.snapshot import current_market_state_snapshot, scrub_inline_refs
+from features.market_memory.snapshot import MARKET_VIEW_KEYS, current_market_state_snapshot, scrub_inline_refs
 
 ROOT = Path(__file__).resolve().parents[2]
 MARKET_MEMORY_DB_PATH = ROOT / "data" / "market-memory.sqlite3"
@@ -466,7 +466,7 @@ def dashboard_payload_from_snapshot(snapshot: dict) -> dict:
     raw_views = snapshot.get("marketViews") if isinstance(snapshot.get("marketViews"), dict) else {}
     views = {}
     if raw_views:
-        for key in ("overall", "us", "kr"):
+        for key in ("overall", *MARKET_VIEW_KEYS):
             view = raw_views.get(key)
             if isinstance(view, dict):
                 views[key] = _dashboard_payload_from_snapshot_view(snapshot, view)

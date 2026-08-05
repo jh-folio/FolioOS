@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { getJson } from "../../api";
 
-export type StoryMarket = "us" | "kr";
+export const STORY_MARKETS = ["us", "kr", "europe", "jp"] as const;
+export type StoryMarket = (typeof STORY_MARKETS)[number];
+export const STORY_MARKET_LABELS: Record<StoryMarket, string> = {
+  us: "미국", kr: "한국", europe: "유럽", jp: "일본",
+};
 
 type StoryShareRow = {
   label: string;
@@ -19,6 +23,8 @@ type StorySharePayload = {
   previousDate?: string;
   items?: StoryShareRow[];
   warnings?: string[];
+  smallSample?: boolean;
+  minConfidentSample?: number;
 };
 
 // 순위별 고정 팔레트 + "그 외"는 회색. 색이 의미(순위)를 담는다.
@@ -63,6 +69,13 @@ export function StoryShare({ market }: { market: StoryMarket }) {
         <span className="story-share__title">오늘의 이야기 비중</span>
         <span className="story-share__meta">수집 기사 {payload.collectedCount || 0}건 · 직전 거래일 대비</span>
       </div>
+      {payload.smallSample && (
+        // 표본이 적으면 기사 한두 건이 비중을 수십 %p 움직인다. 그 흔들림을
+        // 변화로 읽지 않도록 밝힌다.
+        <p className="story-share__note">
+          수집량이 적어({payload.collectedCount || 0}건) 비중과 증감이 크게 흔들릴 수 있습니다.
+        </p>
+      )}
       <div className="story-share__bar" role="img" aria-label={`이야기 비중: ${rows.map((row) => `${row.label} ${Math.round(row.share * 100)}%`).join(", ")}`}>
         {rows.map((row, index) => (
           <span key={row.label} data-tone={segmentTone(row, index)} style={{ width: `${Math.max(row.share * 100, 1)}%` }} />

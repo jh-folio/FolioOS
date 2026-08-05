@@ -456,12 +456,13 @@ def test_run_llm_market_state_snapshot_generates_independent_market_views(tmp_pa
     result = memory_service.run_llm_market_state_snapshot()
 
     assert result["ok"] is True
-    assert calls == ["overall", "us", "kr"]
+    # 4시장 제품이므로 종합 + 시장 넷이다. 시장 상태 갱신은 사용자가 명시적으로
+    # 누르는 action이고 호출 수는 시장 수를 따른다.
+    assert calls == ["overall", "us", "kr", "europe", "jp"]
     assert result["snapshot"]["headline"] == "overall headline"
     assert result["snapshot"]["sourceRefs"][0]["id"] == "rss:overall"
-    assert result["snapshot"]["marketViews"]["overall"]["sourceRefs"][0]["id"] == "rss:overall"
-    assert result["snapshot"]["marketViews"]["us"]["sourceRefs"][0]["id"] == "rss:us"
-    assert result["snapshot"]["marketViews"]["kr"]["sourceRefs"][0]["id"] == "rss:kr"
+    for scope in ("overall", "us", "kr", "europe", "jp"):
+        assert result["snapshot"]["marketViews"][scope]["sourceRefs"][0]["id"] == f"rss:{scope}"
 
 
 def test_snapshot_source_refs_resolve_internal_rss_ids_for_display():

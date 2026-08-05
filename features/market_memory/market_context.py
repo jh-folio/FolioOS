@@ -4,7 +4,11 @@ import datetime as dt
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from features.common.markets import PRODUCT_MARKETS
 from features.llm_settings.client import bok_api_key, fred_api_key
+
+# 시장 목록은 계약에서 파생한다. 여기 다시 적으면 새 시장이 늘어도 이 층만 뒤처진다.
+MARKET_KEYS = tuple(market.value.lower() for market in PRODUCT_MARKETS)
 
 try:
     KST = ZoneInfo("Asia/Seoul")
@@ -64,22 +68,22 @@ def normalize_market_tape(tape: dict | None) -> dict:
         return {
             "status": "unavailable",
             "asOf": _now(),
-            "markets": {"us": [], "kr": []},
+            "markets": {key: [] for key in MARKET_KEYS},
             "dataGaps": ["marketTape unavailable"],
         }
     markets = tape.get("markets") if isinstance(tape.get("markets"), dict) else {}
     normalized = {
         "status": str(tape.get("status") or "partial").strip(),
         "asOf": str(tape.get("asOf") or _now()).strip(),
-        "markets": {"us": [], "kr": []},
+        "markets": {key: [] for key in MARKET_KEYS},
         "dataGaps": [str(item) for item in (tape.get("dataGaps") or tape.get("warnings") or []) if str(item).strip()][:12],
     }
-    for market in ("us", "kr"):
+    for market in MARKET_KEYS:
         rows = markets.get(market) if isinstance(markets.get(market), list) else []
         normalized["markets"][market] = [
             item for raw in rows[:12] if (item := _compact_market_item(raw, "yfinance")).get("label")
         ]
-    if not normalized["markets"]["us"] and not normalized["markets"]["kr"] and normalized["status"] != "unavailable":
+    if not any(normalized["markets"].values()) and normalized["status"] != "unavailable":
         normalized["status"] = "unavailable"
         normalized["dataGaps"].append("no market rows")
     return normalized
@@ -167,7 +171,7 @@ def normalize_macro_snapshot(snapshot: dict | None) -> dict:
         },
         "dataGaps": [str(item) for item in (snapshot.get("dataGaps") or snapshot.get("errors") or []) if str(item).strip()][:12],
     }
-    for market in ("us", "kr"):
+    for market in MARKET_KEYS:
         rows = items.get(market) if isinstance(items.get(market), list) else []
         normalized["items"][market] = [
             {

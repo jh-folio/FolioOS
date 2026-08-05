@@ -9,7 +9,7 @@ import {
   type ChangedItem,
   type ChangeEvent,
 } from "../changeEvents";
-import { StoryShare, type StoryMarket } from "./StoryShare";
+import { STORY_MARKETS, STORY_MARKET_LABELS, StoryShare, type StoryMarket } from "./StoryShare";
 
 export const CHANGE_STATUS_LABELS: Record<string, string> = {
   major_change: "중대한 변화", developing_signal: "발전 중", conflicting_uncertain: "충돌·불확실",
@@ -194,9 +194,9 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
       <div className="cockpit-panel__head">
         <div><span>CHANGE INTELLIGENCE</span><h2 id="cockpit-change-title">무엇이 달라졌나</h2></div>
         <div className="story-share__toggle" role="group" aria-label="이야기 비중 시장">
-          {(["us", "kr"] as const).map((option) => (
+          {STORY_MARKETS.map((option) => (
             <button key={option} type="button" className={`sym-chip${storyMarket === option ? " sym-chip--active" : ""}`} aria-pressed={storyMarket === option} onClick={() => setStoryMarket(option)}>
-              {option.toUpperCase()}
+              {STORY_MARKET_LABELS[option]}
             </button>
           ))}
         </div>

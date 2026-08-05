@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 from typing import assert_never
 
+from features.common.markets import PRODUCT_MARKETS
 from features.common.utils import now_iso
 from features.common.market_calendar import infer_doc_markets
 from features.market_memory.digest import build_rss_digest
@@ -67,6 +68,8 @@ MAX_DRIVERS = 5
 MAX_WATCH_ITEMS = 5
 MAX_COUNTER_EVIDENCE = 5
 MAX_SOURCE_REFS = 60
+# 시장별 뷰 키. 시장 계약에서 파생해 새 시장이 자동으로 포함된다.
+MARKET_VIEW_KEYS = tuple(market.value.lower() for market in PRODUCT_MARKETS)
 RSS_CONTEXT_LIMIT = 120
 
 
@@ -429,7 +432,7 @@ def _market_views(payload: dict, fallback: dict, lookup: dict[str, dict] | None 
             "uncertainties": fallback.get("uncertainties", [])[:MAX_COUNTER_EVIDENCE],
         }
     views["overall"] = overall
-    for key in ("us", "kr"):
+    for key in MARKET_VIEW_KEYS:
         view = _market_view(raw_views.get(key), key, fallback, lookup)
         if view:
             views[key] = view
@@ -662,7 +665,7 @@ def build_market_state_context(
     if states is None:
         states = list_states(db_path, status="current", limit=12)
     market_scope = str(market_scope or "overall").strip().lower()
-    if market_scope not in {"overall", "us", "kr"}:
+    if market_scope not in {"overall", *MARKET_VIEW_KEYS}:
         market_scope = "overall"
     all_candidates = [
         candidate
@@ -826,7 +829,7 @@ def render_market_memory_context(db_path: str | Path = MARKET_MEMORY_DB_PATH, *,
     if isinstance(views, dict) and views:
         lines.append("")
         lines.append("### Market Views")
-        for key in ("overall", "us", "kr"):
+        for key in ("overall", *MARKET_VIEW_KEYS):
             view = views.get(key)
             if not isinstance(view, dict):
                 continue
