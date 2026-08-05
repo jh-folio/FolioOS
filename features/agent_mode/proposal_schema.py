@@ -56,9 +56,19 @@ class ProposalErrorCode(StrEnum):
 
 
 class ProposalMarketScope(StrEnum):
+    """Which market's saved file a proposal may change.
+
+    A proposal targets one stored report, so the scope has to name the market
+    whose file will be rewritten. Without Europe and Japan here, a revision to a
+    Japanese briefing could not be scoped to its own file.
+    """
     BOTH = "both"
+    ALL = "all"
+    MULTI = "multi"
     US = "us"
     KR = "kr"
+    EUROPE = "europe"
+    JP = "jp"
     NONE = "none"
 
 

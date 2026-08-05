@@ -36,9 +36,7 @@ export function changeEventRoute(event: ChangeEvent): string {
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       // Events written before the id carried a market only know their market from
       // the lineage; without this they all opened the combined view instead.
-      const fromLineage = /^briefing:(us|kr)$/.exec(String(event.lineageId || ""))?.[1];
-      const scope = id.endsWith(".us") ? "us" : id.endsWith(".kr") ? "kr" : fromLineage || "both";
-      return `#/briefing/${date}/${scope}`;
+      return `#/briefing/${date}/${briefingScope(id, event.lineageId)}`;
     }
     return "#/briefing";
   }
@@ -48,14 +46,26 @@ export function changeEventRoute(event: ChangeEvent): string {
   return "#/dashboard";
 }
 
+// 변화 이벤트 id는 시장별로 접미사를 단다(`2026-08-05.europe`). 시장을 못
+// 읽으면 유럽·일본 카드가 전부 통합 뷰를 열어 어느 브리핑이 바뀐 건지 사라진다.
+const BRIEFING_SCOPES = ["us", "kr", "europe", "jp"] as const;
+
+function briefingScope(id: string, lineageId?: unknown): string {
+  const suffix = BRIEFING_SCOPES.find((scope) => id.endsWith(`.${scope}`));
+  if (suffix) return suffix;
+  // 시장이 id에 들어가기 전에 쓰인 이벤트는 lineage로만 시장을 안다.
+  const fromLineage = new RegExp(`^briefing:(${BRIEFING_SCOPES.join("|")})$`)
+    .exec(String(lineageId || ""))?.[1];
+  return fromLineage || "both";
+}
+
 /** 기준 브리핑(비교 대상)을 여는 경로. 기준이 없으면 빈 문자열. */
 export function baselineRoute(event: ChangeEvent): string {
   if (String(event.artifactKind || "") !== "briefing") return "";
   const id = String(event.baselineRef?.id || "");
   const date = id.slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
-  const scope = id.endsWith(".us") ? "us" : id.endsWith(".kr") ? "kr" : /^briefing:(us|kr)$/.exec(String(event.lineageId || ""))?.[1] || "both";
-  return `#/briefing/${date}/${scope}`;
+  return `#/briefing/${date}/${briefingScope(id, event.lineageId)}`;
 }
 
 /** 카드 대표 항목: 의미 verdict가 강한 순 → 없으면 첫 변화 항목. */

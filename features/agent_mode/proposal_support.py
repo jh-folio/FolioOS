@@ -102,8 +102,24 @@ def parse_market_scope(kind: ReportKind, value: str) -> ProposalMarketScope:
         raise ProposalActionError("proposal_invalid", "지원하지 않는 시장 범위입니다.", 422) from exc
 
 
+# 시장 파일을 가리키는 범위. 통합 범위(both/all/multi)와 none은 파일 하나를
+# 지목하지 않으므로 여기서 제외된다.
+SINGLE_MARKET_PROPOSAL_SCOPES = frozenset({
+    ProposalMarketScope.US,
+    ProposalMarketScope.KR,
+    ProposalMarketScope.EUROPE,
+    ProposalMarketScope.JP,
+})
+
+
 def exact_path(paths: ProposalPaths, kind: ReportKind, report_id: str, scope: ProposalMarketScope) -> Path:
-    market_scope = scope.value if scope in {ProposalMarketScope.US, ProposalMarketScope.KR} else None
+    """The one file this proposal may rewrite.
+
+    A single-market scope must resolve to that market's file. Leaving Europe and
+    Japan out sent their proposals to the aggregate `{date}.json` instead, so an
+    approved Japanese revision would have rewritten the wrong report.
+    """
+    market_scope = scope.value if scope in SINGLE_MARKET_PROPOSAL_SCOPES else None
     try:
         return resolve_exact_report_path(paths.data_root, kind, report_id, market_scope)
     except CanonicalNotFoundError as exc:
