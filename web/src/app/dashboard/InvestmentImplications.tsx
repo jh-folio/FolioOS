@@ -32,9 +32,9 @@ export function InvestmentImplications({ items, portfolioState }: { items: Impli
       )}
       <div className="cockpit-actions">
         {emptyPortfolio && (
-          <button className="filter-btn" type="button" onClick={() => { window.location.hash = "#/portfolio"; }}>Portfolio에서 보유 종목 입력</button>
+          <button className="btn" type="button" onClick={() => { window.location.hash = "#/portfolio"; }}>Portfolio에서 보유 종목 입력</button>
         )}
-        <button className="filter-btn" type="button" onClick={() => openConsultation({ scope: { kind: "portfolio" } })}>Agent와 검토</button>
+        <button className="btn" type="button" onClick={() => openConsultation({ scope: { kind: "portfolio" } })}>Agent와 검토</button>
       </div>
     </section>
   );

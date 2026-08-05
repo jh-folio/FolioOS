@@ -207,7 +207,7 @@ export function MarketMemoryRoute() {
       {resumableJob && !busy ? (
         <div className="react-dashboard-warning market-state-job-resume" data-qa="market-state-job-still-running" role="status">
           <span>작업 {resumableJob.id} · 서버에서 계속 실행 중</span>
-          <button className="filter-btn clear" type="button" data-qa="market-state-job-resume" onClick={() => void resumeMarketMemoryUpdate()}>같은 작업 다시 확인</button>
+          <button className="btn" type="button" data-qa="market-state-job-resume" onClick={() => void resumeMarketMemoryUpdate()}>같은 작업 다시 확인</button>
         </div>
       ) : null}
 

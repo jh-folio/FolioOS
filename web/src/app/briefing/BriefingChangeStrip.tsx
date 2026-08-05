@@ -15,7 +15,7 @@ export function BriefingChangeStrip({ summary }: { summary?: ChangeEvent }) {
   return (
     <aside className="briefing-change-strip" data-status={summary.status} aria-label="이 브리핑에서 달라진 것">
       <div className="briefing-change-strip__head">
-        <span className="status-chip">{CHANGE_STATUS_LABELS[summary.status] || summary.status}</span>
+        <span className="chip status-chip">{CHANGE_STATUS_LABELS[summary.status] || summary.status}</span>
         <strong>이 브리핑에서 달라진 것</strong>
         {baseline ? <em>{baseline}</em> : null}
       </div>
@@ -25,7 +25,7 @@ export function BriefingChangeStrip({ summary }: { summary?: ChangeEvent }) {
           return (
             <li key={item.id || item.subject}>
               <span className="briefing-change-strip__subject">{item.subject}</span>
-              {verdict ? <span className="change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
+              {verdict ? <span className="chip change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
               {item.semanticNote ? <span className="briefing-change-strip__note">{item.semanticNote}</span> : null}
             </li>
           );

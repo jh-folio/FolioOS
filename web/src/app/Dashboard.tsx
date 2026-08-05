@@ -181,7 +181,7 @@ export function Dashboard() {
           eyebrow="Research Cockpit"
           title="대시보드"
           description="새 보고서에서 확인된 변화, 집중 차트, 시장 일정을 한 화면에서 점검합니다."
-          actions={<div className="dashboard-mode-switch" role="group" aria-label="대시보드 모드"><button type="button" aria-pressed="true">Cockpit</button><button type="button" aria-pressed="false" onClick={() => changeDashboardMode("legacy")}>Legacy</button></div>}
+          actions={<div className="segment dashboard-mode-switch" role="group" aria-label="대시보드 모드"><button type="button" aria-pressed="true">Cockpit</button><button type="button" aria-pressed="false" onClick={() => changeDashboardMode("legacy")}>Legacy</button></div>}
         />
         <ResearchCockpit />
       </div>
@@ -194,7 +194,7 @@ export function Dashboard() {
         eyebrow="Investment Review"
         title="대시보드"
         description="시장 상태와 투자 체크포인트를 한 화면에서 점검합니다."
-        actions={<div className="dashboard-mode-switch" role="group" aria-label="대시보드 모드"><button type="button" aria-pressed="false" onClick={() => changeDashboardMode("cockpit")}>Cockpit</button><button type="button" aria-pressed="true">Legacy</button><button type="button" onClick={load} disabled={loading}>{loading ? "불러오는 중" : "새로고침"}</button></div>}
+        actions={<><div className="segment dashboard-mode-switch" role="group" aria-label="대시보드 모드"><button type="button" aria-pressed="false" onClick={() => changeDashboardMode("cockpit")}>Cockpit</button><button type="button" aria-pressed="true">Legacy</button></div><button className="btn" type="button" onClick={load} disabled={loading}>{loading ? "불러오는 중" : "새로고침"}</button></>}
       />
 
       {error && <p className="react-dashboard-error">{error}</p>}

@@ -386,13 +386,13 @@ export default function LegacyMarketWidgetBoard() {
           <h2 id="marketWidgetTitle">Current Market</h2>
         </div>
         <div className="market-widget-actions">
-          <button id="editGlobalMarketsBtn" className="filter-btn" type="button" disabled={busyAction === "overview"} onClick={(event) => { event.stopPropagation(); void addWidget("overview"); }}>
+          <button id="editGlobalMarketsBtn" className="btn" type="button" disabled={busyAction === "overview"} onClick={(event) => { event.stopPropagation(); void addWidget("overview"); }}>
             {busyAction === "overview" ? "추가 중" : "위젯 추가"}
           </button>
-          <button id="addMarketChartBtn" className="filter-btn" type="button" disabled={busyAction === "chart"} onClick={(event) => { event.stopPropagation(); void addWidget("chart"); }}>
+          <button id="addMarketChartBtn" className="btn" type="button" disabled={busyAction === "chart"} onClick={(event) => { event.stopPropagation(); void addWidget("chart"); }}>
             {busyAction === "chart" ? "추가 중" : "빠른 차트 추가"}
           </button>
-          <button id="resetMarketWidgetsBtn" className="filter-btn clear" type="button" disabled={busyAction === "reset"} onClick={(event) => { event.stopPropagation(); void resetWidgets(); }}>
+          <button id="resetMarketWidgetsBtn" className="btn" type="button" disabled={busyAction === "reset"} onClick={(event) => { event.stopPropagation(); void resetWidgets(); }}>
             {busyAction === "reset" ? "복원 중" : "기본값"}
           </button>
         </div>

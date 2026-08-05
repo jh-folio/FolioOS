@@ -34,12 +34,12 @@ export function ResearchCockpit() {
   return (
     <div className="research-cockpit" data-invalidation-token={payload.invalidationToken}>
       <div className="cockpit-summary" role="status" aria-label="오늘의 변화 요약">
-        <span className="cockpit-summary__chip" data-tone="burgundy">중대한 변화 {counts.majorChange || 0}</span>
-        <span className="cockpit-summary__chip" data-tone="blue">발전 중 {counts.developingSignal || 0}</span>
-        <span className="cockpit-summary__chip" data-tone="gold">충돌·불확실 {counts.conflictingUncertain || 0}</span>
-        <span className="cockpit-summary__chip" data-tone="muted">그 외 평가 {counts.quiet || 0}</span>
+        <span className="chip cockpit-summary__chip" data-tone="burgundy">중대한 변화 {counts.majorChange || 0}</span>
+        <span className="chip cockpit-summary__chip" data-tone="blue">발전 중 {counts.developingSignal || 0}</span>
+        <span className="chip cockpit-summary__chip" data-tone="gold">충돌·불확실 {counts.conflictingUncertain || 0}</span>
+        <span className="chip cockpit-summary__chip" data-tone="muted">그 외 평가 {counts.quiet || 0}</span>
         {providerIssues.map((row) => (
-          <span className="cockpit-summary__chip" data-tone="burgundy" key={row.provider}>{row.provider} 수집 문제</span>
+          <span className="chip cockpit-summary__chip" data-tone="burgundy" key={row.provider}>{row.provider} 수집 문제</span>
         ))}
       </div>
       <ChangeFeed events={payload.changes || []} quiet={payload.quietChanges || []} />

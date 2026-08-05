@@ -17,7 +17,7 @@ export function ReaderActionButton({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: ReaderActionIconName; children: ReactNode }) {
   return (
-    <button className="report-action-btn" type="button" {...props}>
+    <button className="btn report-action-btn" type="button" {...props}>
       <ReaderActionIcon name={icon} />
       <span>{children}</span>
     </button>

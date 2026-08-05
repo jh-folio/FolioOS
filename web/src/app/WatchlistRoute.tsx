@@ -302,10 +302,10 @@ export function WatchlistRoute() {
         description="관심 기업, 섹터, 테마를 추적하고 관련 뉴스와 시장 반응을 확인합니다."
         actions={(
         <div className="brief-controls">
-          <button className="filter-btn clear" type="button" onClick={loadWatchlist} disabled={loading}>
+          <button className="btn" type="button" onClick={loadWatchlist} disabled={loading}>
             {loading ? "불러오는 중" : "다시 읽기"}
           </button>
-          <button className="filter-btn apply" type="button" onClick={() => persistWatchlist(items, "워치리스트를 저장했습니다.")} disabled={saving}>
+          <button className="btn btn--primary" type="button" onClick={() => persistWatchlist(items, "워치리스트를 저장했습니다.")} disabled={saving}>
             {saving ? "저장 중" : "저장"}
           </button>
         </div>
@@ -327,7 +327,7 @@ export function WatchlistRoute() {
           }}
           placeholder="예: NVDA, 삼성전자, AI"
         />
-        <button className="filter-btn clear" type="button" onClick={addKeyword} disabled={saving}>추가</button>
+        <button className="btn" type="button" onClick={addKeyword} disabled={saving}>추가</button>
       </div>
       {error && <p className="react-dashboard-error">{error}</p>}
       {status && <p className="react-dashboard-warning">{status}</p>}

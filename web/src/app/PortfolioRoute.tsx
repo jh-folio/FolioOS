@@ -42,7 +42,7 @@ export function PortfolioRoute() {
       <div className="portfolio-route-grid">
         <section className="cockpit-panel portfolio-holdings" aria-labelledby="portfolio-holdings-title">
           <div className="cockpit-panel__head"><div><span>HOLDINGS</span><h2 id="portfolio-holdings-title">현재 보유 종목</h2></div><b>버전 {portfolio?.revision ?? 0}</b></div>
-          <div className="portfolio-actions"><button className="filter-btn" type="button" onClick={() => setPositions([...positions, { ticker: "", quantity: "", averagePrice: "" }])}>종목 추가</button><button className="filter-btn" type="button" onClick={() => setShowImport(true)}>사진에서 가져오기</button><button className="filter-btn apply" type="button" disabled={busy || !portfolio} onClick={save}>{busy ? "저장 중" : "Portfolio 저장"}</button></div>
+          <div className="portfolio-actions"><button className="btn" type="button" onClick={() => setPositions([...positions, { ticker: "", quantity: "", averagePrice: "" }])}>종목 추가</button><button className="btn" type="button" onClick={() => setShowImport(true)}>사진에서 가져오기</button><button className="btn btn--primary" type="button" disabled={busy || !portfolio} onClick={save}>{busy ? "저장 중" : "Portfolio 저장"}</button></div>
           <HoldingsTable positions={positions} onChange={setPositions} />
           {status && <p className="react-reader-status">{status}</p>}{error && <p className="react-dashboard-error" role="alert">{error}</p>}
         </section>

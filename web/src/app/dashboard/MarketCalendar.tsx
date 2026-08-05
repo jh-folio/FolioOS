@@ -176,14 +176,14 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
       <div className="cockpit-panel__head">
         <div><span>MARKET CALENDAR</span><h2 id="market-calendar-title">주요 실적·지표 일정</h2></div>
         <div className="cockpit-panel__actions">
-          <div className="cockpit-chart-controls"><div role="group" aria-label="캘린더 보기">
+          <div className="cockpit-chart-controls"><div className="segment" role="group" aria-label="캘린더 보기">
             <button type="button" aria-pressed={view === "week"} onClick={() => { setView("week"); persist({ calendarView: "week" }); }}>주간</button>
             <button type="button" aria-pressed={view === "month"} onClick={() => { setView("month"); persist({ calendarView: "month" }); }}>월간</button>
           </div></div>
-          <button className="filter-btn" type="button" aria-label={view === "week" ? "이전 주" : "이전 달"} onClick={() => move(-1)}>◀</button>
-          <button className="filter-btn" type="button" onClick={() => { const now = new Date(); setAnchor(now); setSelectedDay(dateKey(now)); }}>오늘</button>
-          <button className="filter-btn" type="button" aria-label={view === "week" ? "다음 주" : "다음 달"} onClick={() => move(1)}>▶</button>
-          <button className="filter-btn apply" type="button" onClick={refresh} disabled={busy}>{busy ? "수집 중" : "일정 수집"}</button>
+          <button className="btn" type="button" aria-label={view === "week" ? "이전 주" : "이전 달"} onClick={() => move(-1)}>◀</button>
+          <button className="btn" type="button" onClick={() => { const now = new Date(); setAnchor(now); setSelectedDay(dateKey(now)); }}>오늘</button>
+          <button className="btn" type="button" aria-label={view === "week" ? "다음 주" : "다음 달"} onClick={() => move(1)}>▶</button>
+          <button className="btn btn--primary" type="button" onClick={refresh} disabled={busy}>{busy ? "수집 중" : "일정 수집"}</button>
         </div>
       </div>
       <div className="cal-filter-row" role="group" aria-label="일정 필터">
@@ -248,13 +248,13 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             {dayEvents.map((event) => (
               <tr key={event.id}>
                 <td>{timeLabelKST(event)}</td>
-                <td><span className="mkt-chip">{MARKET_KO[event.market || ""] || event.market || "—"}</span></td>
+                <td><span className="chip mkt-chip">{MARKET_KO[event.market || ""] || event.market || "—"}</span></td>
                 <td><span className="imp" aria-label={`중요도 ${event.importance || 1}/3`}>{[1, 2, 3].map((level) => <u key={level} className={(event.importance || 1) >= level ? "on" : ""} />)}</span></td>
                 <td>
                   {event.sourceUrl ? <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.title}</strong></a> : <strong>{event.title}</strong>}
                   <small>{KIND_KO[event.kind] || event.kind}{event.source ? ` · ${event.source}` : ""}</small>
                 </td>
-                <td><span className={`certainty-badge certainty-badge--${event.status}`}>{STATUS_KO[event.status] || event.status}</span></td>
+                <td><span className={`chip certainty-badge--${event.status}`}>{STATUS_KO[event.status] || event.status}</span></td>
               </tr>
             ))}
           </tbody>

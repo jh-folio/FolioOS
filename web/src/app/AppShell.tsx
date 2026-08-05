@@ -331,7 +331,7 @@ export function AppShell() {
         <div className="react-shell-status" aria-live="polite">
           <span>{restartStatus || status.statusText || "준비됨"}</span>
           {status.activeJobId && <span>{status.activeJobId}</span>}
-          <button type="button" onClick={restartServer} disabled={restarting}>
+          <button className="btn btn--sm" type="button" onClick={restartServer} disabled={restarting}>
             {restarting ? "재시작 중" : "재시작"}
           </button>
         </div>

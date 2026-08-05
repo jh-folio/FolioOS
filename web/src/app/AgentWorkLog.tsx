@@ -192,10 +192,10 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
       <div className="work-log-toolbar">
         {showFilters ? (
           <div className="work-log-filters" data-qa="work-log-filter" aria-label="작업 범주">
-            {(["all", "companion", "task"] as const).map((value) => <button key={value} type="button" className={`filter-btn${filter === value ? " active" : ""}`} data-qa={`work-log-filter-${value}`} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{value === "all" ? "전체" : value === "companion" ? "대화" : "작업"}</button>)}
+            {(["all", "companion", "task"] as const).map((value) => <button key={value} type="button" className={`btn${filter === value ? " active" : ""}`} data-qa={`work-log-filter-${value}`} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{value === "all" ? "전체" : value === "companion" ? "대화" : "작업"}</button>)}
           </div>
         ) : <span />}
-        <button className="filter-btn clear icon-btn" type="button" data-qa="work-log-refresh" disabled={loading} onClick={() => void load()} aria-label="작업 기록 새로고침" data-tooltip="새로고침">
+        <button className="btn btn--icon" type="button" data-qa="work-log-refresh" disabled={loading} onClick={() => void load()} aria-label="작업 기록 새로고침" data-tooltip="새로고침">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2.5V6H10" /></svg>
         </button>
       </div>
@@ -223,7 +223,7 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
               </div>
               <div className="work-log-item-side">
                 <time data-qa="work-log-time" dateTime={entry.updatedAt}>{displayTime(entry.finishedAt || entry.updatedAt)}</time>
-                {entry.proposalId && (entry.proposalStatus === "pending" || entry.proposalStatus === "applying") && <button type="button" className="filter-btn clear" data-qa="work-log-proposal-open" disabled={proposalLoading === entry.proposalId} onClick={() => void openProposal(entry)}>{proposalLoading === entry.proposalId ? <span data-qa="work-log-proposal-loading">불러오는 중</span> : "승인 검토"}</button>}
+                {entry.proposalId && (entry.proposalStatus === "pending" || entry.proposalStatus === "applying") && <button type="button" className="btn" data-qa="work-log-proposal-open" disabled={proposalLoading === entry.proposalId} onClick={() => void openProposal(entry)}>{proposalLoading === entry.proposalId ? <span data-qa="work-log-proposal-loading">불러오는 중</span> : "승인 검토"}</button>}
               </div>
             </article>
           );
@@ -241,7 +241,7 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
       </footer>}
 
       {dialog === "clear" && clearPreview && <div className="work-log-dialog-backdrop"><div className="work-log-dialog" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="work-log-clear-title" data-qa="work-log-clear-dialog"><h3 id="work-log-clear-title">작업 기록 숨기기</h3><p data-qa="work-log-clear-count">현재 범위 {clearPreview.count}건</p><p>목록에서만 숨깁니다. 공유 작업, 보고서, 제안, 레거시 파일은 삭제하지 않습니다.</p><div className="work-log-dialog-actions"><button type="button" data-qa="work-log-clear-confirm" disabled={clearBusy} onClick={() => void confirmClear()}>숨기기 확인</button><button type="button" data-qa="work-log-clear-cancel" onClick={closeDialog}>취소</button></div></div></div>}
-      {proposal && <aside className="work-log-proposal-surface" data-qa="proposal-approval-surface" aria-label="활성 제안 승인 검토"><div><p className="section-kicker">승인 필요</p><h3>{boundedProposalSummary(proposal.summary) || "저장 변경 제안"}</h3><p>이 내용은 작업 기록이 아니라 요청 시 별도로 불러온 승인 제안입니다.</p></div>{proposal.diff && <pre>{boundedProposalDiff(proposal.diff)}</pre>}<button type="button" className="filter-btn clear" onClick={() => setProposal(null)}>닫기</button></aside>}
+      {proposal && <aside className="work-log-proposal-surface" data-qa="proposal-approval-surface" aria-label="활성 제안 승인 검토"><div><p className="section-kicker">승인 필요</p><h3>{boundedProposalSummary(proposal.summary) || "저장 변경 제안"}</h3><p>이 내용은 작업 기록이 아니라 요청 시 별도로 불러온 승인 제안입니다.</p></div>{proposal.diff && <pre>{boundedProposalDiff(proposal.diff)}</pre>}<button type="button" className="btn" onClick={() => setProposal(null)}>닫기</button></aside>}
     </>
   );
   return (

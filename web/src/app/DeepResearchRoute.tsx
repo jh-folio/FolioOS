@@ -448,8 +448,8 @@ function PlanReview({
           <p>현재 선택된 외부 근거가 0건입니다. 확인하면 규칙 기반 결과로 진행하며, 보고서에 근거 공백과 반대 근거를 표시합니다.</p>
           {degradedConfirming ? (
             <div className="topicrpt-degraded-actions">
-              <button className="filter-btn apply" type="button" data-qa="dr-degraded-confirm" onClick={onConfirmDegraded}>근거 부족을 확인하고 계속</button>
-              <button className="filter-btn clear" type="button" onClick={onCancelDegraded}>취소</button>
+              <button className="btn btn--primary" type="button" data-qa="dr-degraded-confirm" onClick={onConfirmDegraded}>근거 부족을 확인하고 계속</button>
+              <button className="btn" type="button" onClick={onCancelDegraded}>취소</button>
             </div>
           ) : <p>계속하기를 누르면 확인 단계가 열립니다.</p>}
         </div>
@@ -473,8 +473,8 @@ function PlanReview({
             </select>
           </label>
         )}
-        <button className="filter-btn clear" type="button" onClick={onEdit}>질문 수정</button>
-        <button className="filter-btn apply" type="button" data-qa="dr-continue" onClick={onContinue}>
+        <button className="btn" type="button" onClick={onEdit}>질문 수정</button>
+        <button className="btn btn--primary" type="button" data-qa="dr-continue" onClick={onContinue}>
           {zeroEvidence.required ? "계속하기" : "이 계획으로 생성"}
         </button>
       </div>
@@ -931,7 +931,7 @@ export function DeepResearchRoute() {
           <p className="section-kicker">DEEP RESEARCH</p>
           <h1>{notFound ? "저장된 리포트를 찾을 수 없습니다" : "리포트를 열 수 없습니다"}</h1>
           <p data-qa={notFound ? "dr-not-found" : undefined}>{error || "보고서 주소나 저장 데이터를 확인한 뒤 목록에서 다시 여세요."}</p>
-          <button className="filter-btn clear" type="button" data-qa="dr-report-return" onClick={returnToReportList}>딥 리서치 목록으로 돌아가기</button>
+          <button className="btn" type="button" data-qa="dr-report-return" onClick={returnToReportList}>딥 리서치 목록으로 돌아가기</button>
         </section>
       </div>
     );
@@ -990,12 +990,12 @@ export function DeepResearchRoute() {
         eyebrow="Deep Research"
         title="딥 리서치"
         description="투자 질문을 실행 계획으로 정리해 확인한 뒤, 정해진 자료 범위 안에서 근거를 구분한 보고서를 생성합니다."
-        actions={<button className="filter-btn clear" type="button" onClick={() => void loadReports()} disabled={loading}>{loading ? "불러오는 중" : "새로고침"}</button>}
+        actions={<button className="btn" type="button" onClick={() => void loadReports()} disabled={loading}>{loading ? "불러오는 중" : "새로고침"}</button>}
       />
 
       {phase === "readiness" && <p className="react-dashboard-warning" data-qa="dr-readiness-loading" role="status">저장된 리포트와 자료 상태를 확인하는 중입니다.</p>}
       {readinessKind && phase === "recoverable-error" && <p className="react-dashboard-error" data-qa={`dr-readiness-${readinessKind}`}>{error}</p>}
-      {showError && <div className="react-dashboard-error topicrpt-recoverable-error" data-qa={`dr-error-${errorKind || "request"}`} role="alert"><strong>다시 시도할 수 있습니다</strong><span data-qa={`dr-error-${(errorReason || "request").replace(/_/g, "-")}`} data-error-code={errorReason || "request"}>{error}</span><p>입력한 질문과 컨텍스트, 마지막 계획은 유지됩니다.</p><button className="filter-btn clear" type="button" onClick={() => { setError(""); setErrorKind(null); setErrorReason(""); setPhase(planEnvelope ? "plan-review" : "draft"); }}>돌아가서 수정</button></div>}
+      {showError && <div className="react-dashboard-error topicrpt-recoverable-error" data-qa={`dr-error-${errorKind || "request"}`} role="alert"><strong>다시 시도할 수 있습니다</strong><span data-qa={`dr-error-${(errorReason || "request").replace(/_/g, "-")}`} data-error-code={errorReason || "request"}>{error}</span><p>입력한 질문과 컨텍스트, 마지막 계획은 유지됩니다.</p><button className="btn" type="button" onClick={() => { setError(""); setErrorKind(null); setErrorReason(""); setPhase(planEnvelope ? "plan-review" : "draft"); }}>돌아가서 수정</button></div>}
 
       {phase !== "plan-review" && phase !== "generation" && (
         <form className="input-panel topicrpt-form" onSubmit={handlePreview} noValidate>
@@ -1006,7 +1006,7 @@ export function DeepResearchRoute() {
           </div>
           <div className="topicrpt-topic-row">
             <div className="topicrpt-preset-btns" aria-label="리서치 모드">
-              {TOPIC_PRESETS.map((preset) => <span className="filter-btn topicrpt-preset active" data-topic={preset.key} key={preset.key}>{preset.label}</span>)}
+              {TOPIC_PRESETS.map((preset) => <span className="btn topicrpt-preset active" data-topic={preset.key} key={preset.key}>{preset.label}</span>)}
             </div>
           </div>
           <label className="field topicrpt-question-field">
@@ -1049,7 +1049,7 @@ export function DeepResearchRoute() {
           </details>
           <div className="topicrpt-action-row">
             <span className="topicrpt-policy-note">심층 조사 · 최대 2라운드</span>
-            <button className="filter-btn apply" type="submit" data-qa="dr-preview" disabled={isBusy}>{phase === "plan-loading" ? "계획 준비 중" : "계획 미리보기"}</button>
+            <button className="btn btn--primary" type="submit" data-qa="dr-preview" disabled={isBusy}>{phase === "plan-loading" ? "계획 준비 중" : "계획 미리보기"}</button>
           </div>
           <input type="hidden" value={customLabel} data-legacy-topic={topicKey} readOnly aria-hidden="true" />
           <input type="hidden" value={deepResearch ? "true" : "false"} readOnly aria-hidden="true" />

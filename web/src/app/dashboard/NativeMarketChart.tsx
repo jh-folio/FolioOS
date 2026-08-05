@@ -221,11 +221,11 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
       <div className="cockpit-panel__head">
         <div><span>MARKET CHART</span><h2 id="native-chart-title">시장 차트</h2></div>
         <div className="cockpit-chart-controls">
-          <div role="group" aria-label="차트 유형">
+          <div className="segment" role="group" aria-label="차트 유형">
             <button type="button" aria-pressed={style === "line"} onClick={() => pickStyle("line")}>라인</button>
             <button type="button" aria-pressed={style === "candle"} onClick={() => pickStyle("candle")}>캔들</button>
           </div>
-          <div role="group" aria-label="차트 기간">{RANGES.map((value) => <button type="button" aria-pressed={range === value} onClick={() => pickRange(value)} key={value}>{value}</button>)}</div>
+          <div className="segment" role="group" aria-label="차트 기간">{RANGES.map((value) => <button type="button" aria-pressed={range === value} onClick={() => pickRange(value)} key={value}>{value}</button>)}</div>
         </div>
       </div>
       <div className="chart-symbols" role="group" aria-label="지수 차트">
@@ -260,7 +260,7 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
       <div className="cockpit-chart-stage" ref={targetRef}>{!window.LightweightCharts && <p>차트 라이브러리를 사용할 수 없습니다. 아래 표를 이용하세요.</p>}</div>
       {nextEvent && (
         <p className="chart-next">
-          <span className={`certainty-badge certainty-badge--${nextEvent.status}`}>{STATUS_KO[nextEvent.status] || nextEvent.status}</span>
+          <span className={`chip certainty-badge--${nextEvent.status}`}>{STATUS_KO[nextEvent.status] || nextEvent.status}</span>
           다음 일정 — <b>{nextEventLabel(nextEvent)}</b>
           <small>시장 캘린더 연동</small>
         </p>

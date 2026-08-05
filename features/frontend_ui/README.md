@@ -126,6 +126,71 @@ public/react/folio-react.js
 - 상태 그룹은 평소엔 텍스트만 보이고, 작업 진행 중(`.job-progress`가 보일 때)에만 `:has()`로 알약 배경이 떠 강조된다.
 - 작업 취소(`.agent-job-cancel`)는 `.icon-btn`의 `display:grid`가 기본 `[hidden]`을 덮어쓰지 않도록 `.agent-job-cancel[hidden]{display:none}`로 명시한다(작업 없을 때 ×가 상시 노출되던 버그 방지).
 
+## 프리미티브 계약 (0.5 Stage D)
+
+**새 화면은 프리미티브 4종만 쓴다.** `public/styles.css` 말미의 `/* 프리미티브 */` 블록이 이들의 유일한 정의다. 화면 전용 CSS에서 버튼·칩·세그먼트·패널의 **모양을 다시 선언하지 않는다** — 배치만 갖는다.
+
+| 프리미티브 | 무엇 | 변형 |
+|---|---|---|
+| `.btn` | 모든 버튼 | `--primary`(어두운 fill) / 기본(회색 fill) / `--text`(투명) × `--sm`(32px) / `--icon`(원형) |
+| `.surface` | 패널 면 | `--group`(패널 안 그룹) / `--inset`(가장 안쪽) |
+| `.chip` | 비대화형 상태 표시 | `data-tone="muted|burgundy|gold|blue|teal"` |
+| `.segment` | 상호배타 선택 | 항목 수 무관. 좁으면 가로 스크롤 |
+
+### `.btn--primary` vs 기본 vs `.btn--text`
+
+- **`--primary`**: 그 화면/패널에서 **하나**. 생성·저장·전송처럼 사용자가 여기 온 이유인 동작.
+- **기본(회색 fill)**: 나머지 실행 버튼 전부. 초기화·새로고침·내보내기.
+- **`--text`**: 취소·닫기처럼 되돌리는 동작, 또는 목록 안에서 반복돼 fill이 시끄러운 경우.
+- **테두리 버튼은 없다.** 0.5에서 전 화면에서 제거했다.
+
+선택 상태는 `aria-pressed="true"`가 소유한다. `.active` 클래스로 칠하지 않는다 — 레거시 `.filter-btn.active`는 마크업에만 있고 규칙이 없어 Work Log 필터가 무엇이 선택됐는지 보여주지 못했다.
+
+### `.surface` 3단계 중첩
+
+```text
+.surface           페이지 배경 위 최상위 패널   r18 + elev-1
+  .surface--group  패널 안 묶음 면              r14, 그림자 없음
+    .surface--inset 가장 안쪽(코드·인용·값)     r10, 그림자 없음
+```
+
+깊이가 내려갈수록 **가벼워진다**. 3단계보다 깊게 중첩하지 않는다 — 더 필요하면 정보 구조가 잘못된 것이다.
+
+**기존 패널 클래스는 유지한다.** `.cockpit-panel`·`.input-panel`은 BEM 부모(`__head`, `__actions`)이고 참조가 많아 유틸리티로 개명하면 자식 규칙이 고아가 된다. 이들은 클래스를 유지하되 모양은 프리미티브 토큰에서 읽는다. 새 패널은 `.surface`를 직접 쓴다.
+
+### 훅 클래스 패턴
+
+의미색이나 화면별 배치가 필요하면 프리미티브 **뒤에 훅을 덧붙인다**. 프리미티브가 기하를, 훅이 색·배치를 갖는다.
+
+```tsx
+<span className="chip status-chip" />           {/* 기하=chip, 색=조상 규칙이 status-chip으로 */}
+<button className="btn report-action-btn" />     {/* 기하=btn, 풀폭·좌측정렬=레일 규칙 */}
+```
+
+훅을 지우면 안 되는 경우가 있다. Change Feed 카드 안에는 상태 칩과 판정 칩이 함께 있어, 훅 없이 `.chip`만 남기면 `.cockpit-change-feed li[data-status] .chip` 규칙이 **두 칩을 같은 색으로** 칠한다.
+
+### 토큰만 쓴다
+
+- 모서리: `--r-control`(10) / `--r-group`(14) / `--r-panel`(18) / `--r-pill`. px 직접 쓰지 않는다.
+- 굵기: `--fw-normal`(400) / `--fw-medium`(600) / `--fw-bold`(700).
+- 레거시 `--folio-radius`는 `--r-control`을 가리킨다. 이름은 남아 있지만 새 코드에서 쓰지 않는다.
+- **예외**: 캘린더 격자(`.cal-cell`)는 밀집 표라 hairline과 자체 모서리를 유지한다. 진행바·스트라이프 같은 1~3px 장식 슬라이버도 컴포넌트 모서리가 아니다.
+
+### 특이성 규칙
+
+화면 CSS에서 `min-height`를 다시 박지 않는다. `.react-rss-filter-actions .btn`(0,2,0)이 모바일 터치 규칙 `.btn`(0,1,0)을 이겨 44px 타깃이 무너진 사례가 있다. 데스크톱 전용 크기가 정말 필요하면 `@media (min-width: 769px)` 안에 둔다.
+
+컨테이너에서 자손 `button`을 통째로 칠하지 않는다. `.react-route-hero-actions button`이 세그먼트 알약까지 사각형으로 덮어썼다.
+
+### 새 화면 체크리스트
+
+1. 가장 가까운 기존 화면을 데스크톱·모바일로 열어 재사용할 패턴을 먼저 찾는다.
+2. 버튼·칩·세그먼트는 프리미티브로 시작한다. 새 클래스를 만들기 전에 훅으로 되는지 본다.
+3. 새 CSS에 `border-radius`/`font-weight` 숫자가 들어가면 멈추고 토큰을 쓴다.
+4. 375px에서 가로 스크롤이 없는지, 대화형 요소가 44×44인지 확인한다.
+5. Light/Dark 양쪽에서 본다.
+6. 키보드로 순회해 포커스 링이 항상 보이는지 본다.
+
 ## UI 규칙
 
 ### 타이포와 elevation 계약
@@ -147,7 +212,7 @@ public/react/folio-react.js
 - RSS 피드는 한 페이지에 20개씩 보여주고 페이지 번호로 이동합니다.
 - RSS 필터는 시간과 소스 조건을 함께 제공합니다.
 - 모바일에서 버튼과 카드가 넘치지 않아야 합니다.
-- Notion 내보내기 버튼은 `.filter-btn.notion` 클래스를 사용합니다. (어두운 배경, Notion N 로고 SVG 포함)
+- Notion 내보내기 버튼은 `.btn.notion` 클래스를 사용합니다. (어두운 배경, Notion N 로고 SVG 포함)
 - 내보내기 성공 후 버튼은 Notion 페이지 링크(`filter-btn notion` 스타일의 `<a>`)로 교체됩니다.
 
 ## 주의점

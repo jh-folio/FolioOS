@@ -565,7 +565,7 @@ export function CompanyAnalysisRoute() {
         title="기업 분석"
         description="SEC, DART, 시장 데이터와 로컬 자료를 활용해 기업 분석 보고서를 생성합니다."
         actions={(
-          <button type="button" onClick={loadReports} disabled={loading}>
+          <button className="btn" type="button" onClick={loadReports} disabled={loading}>
             {loading ? "불러오는 중" : "새로고침"}
           </button>
         )}
@@ -588,7 +588,7 @@ export function CompanyAnalysisRoute() {
         </div>
         <fieldset className="react-analysis-style" aria-label="보고서 모드">
           <legend>보고서 모드</legend>
-          <div className="react-analysis-style-toggle" data-style={analysisStyle}>
+          <div className="segment react-analysis-style-toggle" data-style={analysisStyle}>
             {ANALYSIS_STYLES.map((style) => (
               <button
                 type="button"
@@ -603,7 +603,7 @@ export function CompanyAnalysisRoute() {
             ))}
           </div>
         </fieldset>
-        <button type="submit" disabled={generating || !query.trim()}>
+        <button className="btn btn--primary" type="submit" disabled={generating || !query.trim()}>
           {generating ? "분석 중" : "분석"}
         </button>
       </form>
@@ -623,7 +623,7 @@ export function CompanyAnalysisRoute() {
             />
           </label>
           <button
-            className="filter-btn clear"
+            className="btn"
             type="button"
             onClick={() => {
               setReportQuery("");

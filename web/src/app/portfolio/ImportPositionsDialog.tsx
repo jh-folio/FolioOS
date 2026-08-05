@@ -188,7 +188,7 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
   return (
     <div className="portfolio-import-backdrop" role="presentation">
       <section className="portfolio-import-dialog" role="dialog" aria-modal="true" aria-labelledby="portfolio-import-title">
-        <div className="cockpit-panel__head"><div><span>LOCAL-FIRST IMPORT</span><h2 id="portfolio-import-title">증권사 화면에서 가져오기</h2></div><button type="button" className="filter-btn clear" onClick={onClose}>닫기</button></div>
+        <div className="cockpit-panel__head"><div><span>LOCAL-FIRST IMPORT</span><h2 id="portfolio-import-title">증권사 화면에서 가져오기</h2></div><button type="button" className="btn" onClick={onClose}>닫기</button></div>
         <p className="section-subtitle">계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본과 OCR 원문은 저장하지 않습니다.</p>
         {/* 네이티브 파일 입력은 OS 기본 버튼으로 그려져 이 다이얼로그의 다른 버튼과 따로 논다.
             Agent 작성창과 같은 방식으로 입력을 숨기고 앱 버튼이 대신 열게 한다. */}
@@ -219,7 +219,7 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
               event.currentTarget.value = "";
             }}
           />
-          <button type="button" className="filter-btn" onClick={() => fileInputRef.current?.click()}>
+          <button type="button" className="btn" onClick={() => fileInputRef.current?.click()}>
             {files.length ? "사진 다시 선택" : "사진 선택"}
           </button>
           <span className="portfolio-import-file__name">
@@ -232,7 +232,7 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
               <button
                 key={`${row.name}-${index}`}
                 type="button"
-                className={`filter-btn${index === activeIndex ? " apply" : ""}`}
+                className={`btn${index === activeIndex ? " btn--primary" : ""}`}
                 aria-pressed={index === activeIndex}
                 onClick={() => setActiveIndex(index)}
               >
@@ -249,14 +249,14 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
           <canvas className="portfolio-crop-preview" ref={canvasRef} aria-label="전송될 이미지 미리보기" />
           <fieldset className="portfolio-import-mode"><legend>인식 방식</legend><label><input type="radio" name="portfolio-import-mode" checked={mode === "local"} disabled={localBlocked} onChange={() => setMode("local")} /> 로컬 Tesseract (기본){localBlocked ? " — 사용 불가" : ""}</label><label><input type="radio" name="portfolio-import-mode" checked={mode === "vision"} onChange={() => setMode("vision")} /> 외부 Vision (선택)</label></fieldset>
           {mode === "vision" && <label className="settings-notice warn"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} /> <span>위 미리보기 crop이 설정된 외부 AI 제공자에게 전송되며, Folio OS 요청은 저장 비활성화를 사용한다는 점을 확인했습니다.</span></label>}
-          <button className="filter-btn apply" type="button" disabled={busy || (mode === "local" && localBlocked)} onClick={runPreview}>{busy ? "인식 중" : `저장하지 않고 미리보기${files.length > 1 ? ` (${files.length}장)` : ""}`}</button>
+          <button className="btn btn--primary" type="button" disabled={busy || (mode === "local" && localBlocked)} onClick={runPreview}>{busy ? "인식 중" : `저장하지 않고 미리보기${files.length > 1 ? ` (${files.length}장)` : ""}`}</button>
         </>}
         {error && <p className="react-dashboard-error" role="alert">{error}</p>}
         {preview && <div className="portfolio-import-results">
           <p>{preview.engine} · Portfolio 저장 안 됨</p>
           {(preview.notices || []).map((notice) => <p className="section-subtitle" key={notice}>{notice}</p>)}
-          <table><thead><tr><th>종목</th><th>수량</th><th>평균단가</th><th>판정</th><th>기존 종목</th></tr></thead><tbody>{drafts.map((row, index) => <tr key={index}><td><input value={row.ticker} onChange={(event) => updateDraft(index, "ticker", event.currentTarget.value.toUpperCase())} /></td><td><input value={row.quantity ?? ""} onChange={(event) => updateDraft(index, "quantity", event.currentTarget.value)} /></td><td><input value={row.averagePrice ?? ""} onChange={(event) => updateDraft(index, "averagePrice", event.currentTarget.value)} /></td><td><span className={`certainty-badge certainty-badge--${row.status === "confirmed" ? "confirmed" : "tentative"}`}>{row.status}</span></td><td><select value={row.action} onChange={(event) => updateDraft(index, "action", event.currentTarget.value)}><option value="skip">건너뛰기</option><option value="merge">합치기</option><option value="replace">교체</option></select></td></tr>)}</tbody></table>
-          <div className="filter-actions"><button className="filter-btn apply" type="button" onClick={() => onApply(mergePositions(current, drafts))}>편집표에 적용</button><span>적용 후 Portfolio 저장 버튼을 눌러야 실제 저장됩니다.</span></div>
+          <table><thead><tr><th>종목</th><th>수량</th><th>평균단가</th><th>판정</th><th>기존 종목</th></tr></thead><tbody>{drafts.map((row, index) => <tr key={index}><td><input value={row.ticker} onChange={(event) => updateDraft(index, "ticker", event.currentTarget.value.toUpperCase())} /></td><td><input value={row.quantity ?? ""} onChange={(event) => updateDraft(index, "quantity", event.currentTarget.value)} /></td><td><input value={row.averagePrice ?? ""} onChange={(event) => updateDraft(index, "averagePrice", event.currentTarget.value)} /></td><td><span className={`chip certainty-badge--${row.status === "confirmed" ? "confirmed" : "tentative"}`}>{row.status}</span></td><td><select value={row.action} onChange={(event) => updateDraft(index, "action", event.currentTarget.value)}><option value="skip">건너뛰기</option><option value="merge">합치기</option><option value="replace">교체</option></select></td></tr>)}</tbody></table>
+          <div className="filter-actions"><button className="btn btn--primary" type="button" onClick={() => onApply(mergePositions(current, drafts))}>편집표에 적용</button><span>적용 후 Portfolio 저장 버튼을 눌러야 실제 저장됩니다.</span></div>
         </div>}
       </section>
     </div>

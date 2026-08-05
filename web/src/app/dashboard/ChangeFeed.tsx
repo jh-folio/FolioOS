@@ -122,7 +122,7 @@ function ChangeItemContrast({ item }: { item: ChangedItem }) {
     <li className="change-contrast">
       <div className="change-contrast__subject">
         <strong>{item.subject || "항목"}</strong>
-        {verdict ? <span className="change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
+        {verdict ? <span className="chip change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
       </div>
       {item.semanticNote ? <p className="change-contrast__note">{item.semanticNote}</p> : null}
       <div className="change-contrast__cols">
@@ -157,8 +157,8 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
     <li data-status={event.status} data-tone={verdict?.tone || ""}>
       <div className="cockpit-change-card">
         <div className="cockpit-change-card__meta">
-          <span className="status-chip">{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span>
-          {verdict ? <span className="change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
+          <span className="chip status-chip">{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span>
+          {verdict ? <span className="chip change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
           <time>{event.generatedAt ? new Date(event.generatedAt).toLocaleString("ko-KR") : ""}</time>
         </div>
         <strong>{item?.subject || artifactLabel(event)}</strong>
@@ -169,15 +169,15 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
           {Number(event.reliability || 0) > 0 ? <> · 신뢰도 {Math.round(Number(event.reliability) * 100)}</> : null}
         </small>
         <div className="cockpit-change-card__actions">
-          <button type="button" className="agent-action" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+          <button type="button" className="btn btn--sm agent-action" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
             {expanded ? "접기" : `펼치기${items.length > 1 ? ` (${items.length}건)` : ""}`}
           </button>
-          <button type="button" className="agent-action" onClick={() => { window.location.hash = targetRoute; }}>보고서 열기</button>
-          {baseline ? <button type="button" className="agent-action" onClick={() => { window.location.hash = baseline; }}>기준 열기</button> : null}
+          <button type="button" className="btn btn--sm agent-action" onClick={() => { window.location.hash = targetRoute; }}>보고서 열기</button>
+          {baseline ? <button type="button" className="btn btn--sm agent-action" onClick={() => { window.location.hash = baseline; }}>기준 열기</button> : null}
           {/* 시장 내러티브 카드와 같은 로고 아이콘 버튼. 슬롯은 applyAgentBranding bridge가 채운다. */}
           <button
             type="button"
-            className="agent-action agent-ask-btn"
+            className="btn btn--icon agent-action agent-ask-btn"
             data-tooltip="Agent에게 묻기"
             data-tooltip-pos="left"
             aria-label="Agent에게 묻기"
@@ -203,7 +203,7 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
     <section className="cockpit-panel cockpit-change-feed" aria-labelledby="cockpit-change-title">
       <div className="cockpit-panel__head">
         <div><span>CHANGE INTELLIGENCE</span><h2 id="cockpit-change-title">무엇이 달라졌나</h2></div>
-        <div className="story-share__toggle" role="group" aria-label="이야기 비중 시장">
+        <div className="segment story-share__toggle" role="group" aria-label="이야기 비중 시장">
           {STORY_MARKETS.map((option) => (
             <button key={option} type="button" className={`sym-chip${storyMarket === option ? " sym-chip--active" : ""}`} aria-pressed={storyMarket === option} onClick={() => setStoryMarket(option)}>
               {STORY_MARKET_LABELS[option]}

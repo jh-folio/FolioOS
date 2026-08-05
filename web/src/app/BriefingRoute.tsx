@@ -606,10 +606,10 @@ export function BriefingRoute() {
             </label>
           </div>
           <div className="brief-gen-actionbar">
-            <button className="filter-btn clear icon-btn" type="button" onClick={loadArchive} disabled={loading} aria-label="새로고침" data-tooltip="새로고침">
+            <button className="btn btn--icon" type="button" onClick={loadArchive} disabled={loading} aria-label="새로고침" data-tooltip="새로고침">
               ↻
             </button>
-            <button className="filter-btn apply" type="button" onClick={() => generateBriefing()} disabled={generating}>
+            <button className="btn btn--primary" type="button" onClick={() => generateBriefing()} disabled={generating}>
               {generating ? "생성 중" : "오늘 브리핑 생성"}
             </button>
             <span className="brief-gen-actionbar-divider" aria-hidden="true" />
@@ -622,7 +622,7 @@ export function BriefingRoute() {
               aria-label={`${SCOPE_LABELS[marketScope]} 기준일`}
               title={`${SCOPE_LABELS[marketScope]} 세션 기준일`}
             />
-            <button className="filter-btn clear" type="button" onClick={() => generateBriefing(briefingDate)} disabled={generating || !briefingDate}>
+            <button className="btn" type="button" onClick={() => generateBriefing(briefingDate)} disabled={generating || !briefingDate}>
               이 기준일로 생성
             </button>
           </div>
@@ -651,7 +651,7 @@ export function BriefingRoute() {
             <input type="date" value={archiveEnd} onChange={(event) => setArchiveEnd(event.currentTarget.value)} />
           </label>
           <button
-            className="filter-btn clear"
+            className="btn"
             type="button"
             onClick={() => {
               setArchiveQuery("");
@@ -733,7 +733,7 @@ export function BriefingRoute() {
                     <span className="briefing-archive-card-meta">
                       <span className="briefing-archive-market">{MARKET_BADGE[view.scope]}</span>
                       {view.chips.map((chip) => (
-                        <span className="briefing-archive-chip" key={chip}>{chip}</span>
+                        <span className="chip briefing-archive-chip" key={chip}>{chip}</span>
                       ))}
                     </span>
                     <strong>{view.title}</strong>

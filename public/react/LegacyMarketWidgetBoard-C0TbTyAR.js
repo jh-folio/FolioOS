@@ -263,7 +263,7 @@ function s() {
 					children: [
 						/* @__PURE__ */ (0, o.jsx)("button", {
 							id: "editGlobalMarketsBtn",
-							className: "filter-btn",
+							className: "btn",
 							type: "button",
 							disabled: d === "overview",
 							onClick: (e) => {
@@ -273,7 +273,7 @@ function s() {
 						}),
 						/* @__PURE__ */ (0, o.jsx)("button", {
 							id: "addMarketChartBtn",
-							className: "filter-btn",
+							className: "btn",
 							type: "button",
 							disabled: d === "chart",
 							onClick: (e) => {
@@ -283,7 +283,7 @@ function s() {
 						}),
 						/* @__PURE__ */ (0, o.jsx)("button", {
 							id: "resetMarketWidgetsBtn",
-							className: "filter-btn clear",
+							className: "btn",
 							type: "button",
 							disabled: d === "reset",
 							onClick: (e) => {

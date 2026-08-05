@@ -145,6 +145,7 @@ Python 패키지명에는 하이픈을 쓸 수 없으므로 런타임 코드는 
 - 기존 React + TypeScript + plain CSS 구조를 유지한다. 명시 요청 없이 Tailwind·shadcn·새 UI 프레임워크·새 폰트·새 아이콘 라이브러리를 도입하지 않는다.
 - 색상·타이포·간격은 기존 토큰을 우선한다. 스킬이 추천한 팔레트·폰트·스타일이 기존 계약과 충돌하면 `AGENTS.md`, `features/frontend_ui/README.md`, 기존 토큰과 인접 화면이 우선한다.
 - 사용자가 새 디자인 시스템 산출물을 명시적으로 요청하지 않은 한 스킬의 `--persist`를 실행하거나 `design-system/` 폴더를 만들지 않는다.
+- **프리미티브 우선(0.5 Stage D)**: 버튼·칩·세그먼트·패널 면은 `public/styles.css` 말미의 프리미티브 4종(`.btn` / `.surface` / `.chip` / `.segment`)을 쓴다. 화면 전용 CSS에서 이들의 **모양을 다시 선언하지 않는다** — 배치만 갖는다. 의미색·화면별 배치가 필요하면 프리미티브 뒤에 훅 클래스를 덧붙인다(`className="chip status-chip"`). 모서리와 굵기는 토큰(`--r-control|group|panel|pill`, `--fw-normal|medium|bold`)만 쓰고 숫자를 직접 넣지 않는다. 선택 상태는 `aria-pressed`가 소유하며 `.active`로 칠하지 않는다. 컨테이너에서 자손 `button`을 통째로 칠하지 않는다(세그먼트 알약까지 덮어쓴 사례가 있다). 상세 규칙과 새 화면 체크리스트는 `features/frontend_ui/README.md`의 "프리미티브 계약"을 따른다.
 - 완료 전 실제 화면을 데스크톱과 모바일, 지원되는 Light/Dark 테마에서 캡처해 인접 화면과 비교한다. 키보드 focus, reduced motion, 가로 overflow, loading/empty/error 상태를 확인하고 관련 Playwright/axe 및 프론트엔드 검증을 실행한다.
 - UI 작업의 완료 기준은 코드 동작만이 아니라 기존 Folio OS와의 시각적·상호작용적 일관성까지 확인한 상태다.
 

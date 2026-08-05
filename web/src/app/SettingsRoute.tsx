@@ -454,7 +454,7 @@ export function SettingsRoute() {
         title="설정"
         description="LLM, 외부 데이터, 내보내기, 자동화 설정을 관리합니다."
         actions={(
-        <button className="filter-btn clear" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>
+        <button className="btn" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>
           {busy === "load" ? "불러오는 중" : "새로고침"}
         </button>
         )}
@@ -562,11 +562,11 @@ export function SettingsRoute() {
                       <div className="cli-provider-main">
                         <div className="cli-provider-head">
                           <strong>{adapter.label || adapter.id}</strong>
-                          <span className={`cli-status-chip ${adapterStatusClass(adapter)}`}>{adapterStatus(adapter)}</span>
+                          <span className={`cli-chip status-chip ${adapterStatusClass(adapter)}`}>{adapterStatus(adapter)}</span>
                         </div>
                         <div className="cli-provider-meta">{adapter.bridgeSupported === false ? adapter.error || "현재 환경에서 사용할 수 없습니다." : adapter.model || "모델 미설정"}</div>
                       </div>
-                      {adapter.docsUrl && <a className="filter-btn" href={adapter.docsUrl} target="_blank" rel="noreferrer">문서</a>}
+                      {adapter.docsUrl && <a className="btn" href={adapter.docsUrl} target="_blank" rel="noreferrer">문서</a>}
                     </div>
                   ))}
                 </div>
@@ -601,13 +601,13 @@ export function SettingsRoute() {
                       <div className="cli-provider-main">
                         <div className="cli-provider-head">
                           <strong>{row.label || PROVIDER_LABELS[providerId].name}</strong>
-                          <span className={`cli-status-chip ${className}`}>{label}</span>
+                          <span className={`cli-chip status-chip ${className}`}>{label}</span>
                         </div>
                         <div className="cli-provider-meta">{detail}</div>
                       </div>
                       <div className="cli-provider-actions">
-                        <button className="filter-btn" type="button" disabled={!row.hasApiKey || Boolean(llmStatus[providerId]?.checking)} onClick={() => testProvider(providerId)}>연결 확인</button>
-                        {row.setupUrl && <a className="filter-btn" href={row.setupUrl} target="_blank" rel="noreferrer">API Key 발급</a>}
+                        <button className="btn" type="button" disabled={!row.hasApiKey || Boolean(llmStatus[providerId]?.checking)} onClick={() => testProvider(providerId)}>연결 확인</button>
+                        {row.setupUrl && <a className="btn" href={row.setupUrl} target="_blank" rel="noreferrer">API Key 발급</a>}
                       </div>
                     </div>
                   ))}
@@ -617,8 +617,8 @@ export function SettingsRoute() {
 
             </fieldset>
             <div className="filter-actions settings-actions">
-              <button className="filter-btn apply" type="button" onClick={saveAiAgentSettings} disabled={busy === "agent"}>AI Agent 설정 저장</button>
-              <button className="filter-btn clear" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>모델/상태 새로고침</button>
+              <button className="btn btn--primary" type="button" onClick={saveAiAgentSettings} disabled={busy === "agent"}>AI Agent 설정 저장</button>
+              <button className="btn" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>모델/상태 새로고침</button>
             </div>
           </section>
 
@@ -636,7 +636,7 @@ export function SettingsRoute() {
               <label className="field"><span>DART API Key</span><input value={apiDraft.dart} onChange={(event) => setApiDraft({ ...apiDraft, dart: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.dart?.hasApiKey ? `${settings.dart.apiKeyMasked} 저장됨` : "OpenDART API 키"} /></label>
               <div className="field"><span>DART 상태</span><p className="section-subtitle">{statusText(settings?.dart?.hasApiKey, settings?.dart?.apiKeyMasked, "국내 기업 분석용 DART API 키가 없습니다.", "DART API 키")}</p></div>
             </div>
-            <div className="filter-actions settings-actions"><button className="filter-btn apply" type="button" onClick={saveApiSettings} disabled={busy === "api"}>API 설정 저장</button></div>
+            <div className="filter-actions settings-actions"><button className="btn btn--primary" type="button" onClick={saveApiSettings} disabled={busy === "api"}>API 설정 저장</button></div>
           </section>
 
           <section className="settings-panel input-panel">
@@ -649,7 +649,7 @@ export function SettingsRoute() {
               <label className="field"><span>데이터베이스 ID</span><input value={notionDraft.dbId} onChange={(event) => setNotionDraft({ ...notionDraft, dbId: event.currentTarget.value })} placeholder="32자리 Database ID" /></label>
               <div className="field"><span>DB 상태</span><p className="section-subtitle">{settings?.notion?.hasDb ? `DB 저장됨: ${settings.notion.dbIdMasked}` : "Notion 데이터베이스 ID가 없습니다."}</p></div>
             </div>
-            <div className="filter-actions settings-actions"><button className="filter-btn apply" type="button" onClick={saveNotionSettings} disabled={busy === "notion"}>Notion 설정 저장</button></div>
+            <div className="filter-actions settings-actions"><button className="btn btn--primary" type="button" onClick={saveNotionSettings} disabled={busy === "notion"}>Notion 설정 저장</button></div>
           </section>
 
           <section className="settings-panel input-panel">
@@ -658,7 +658,7 @@ export function SettingsRoute() {
               <label className="field"><span>Vault 폴더 경로</span><input value={vaultPath} onChange={(event) => setVaultPath(event.currentTarget.value)} type="text" placeholder="C:\Users\username\Documents\MyVault" /></label>
               <div className="field"><span>경로 상태</span><p className="section-subtitle">{obsidian.vaultPath ? `설정됨: ${obsidian.vaultPath}` : "Vault 경로가 설정되지 않았습니다."}</p></div>
             </div>
-            <div className="filter-actions settings-actions"><button className="filter-btn apply" type="button" onClick={saveObsidianSettings} disabled={busy === "obsidian"}>Obsidian 설정 저장</button></div>
+            <div className="filter-actions settings-actions"><button className="btn btn--primary" type="button" onClick={saveObsidianSettings} disabled={busy === "obsidian"}>Obsidian 설정 저장</button></div>
           </section>
         </div>
       ) : (
@@ -722,7 +722,7 @@ export function SettingsRoute() {
               </section>
             </div>
             <div className="filter-actions settings-actions">
-              <button className="filter-btn apply" type="button" onClick={saveAutomationSettings} disabled={busy === "automation"}>자동화 저장</button>
+              <button className="btn btn--primary" type="button" onClick={saveAutomationSettings} disabled={busy === "automation"}>자동화 저장</button>
             </div>
           </section>
           <section className="settings-panel input-panel">
@@ -731,7 +731,7 @@ export function SettingsRoute() {
                 <h3>캐시 관리</h3>
                 <p>기업 분석용 SEC/DART per-company 캐시 중 오래된 항목만 정리합니다. 공통 ticker/corpCode 목록은 삭제하지 않습니다.</p>
               </div>
-              <button className="filter-btn clear" type="button" onClick={loadCacheStats} disabled={busy === "cache"}>
+              <button className="btn" type="button" onClick={loadCacheStats} disabled={busy === "cache"}>
                 {busy === "cache" ? "확인 중" : "상태 확인"}
               </button>
             </div>
@@ -759,7 +759,7 @@ export function SettingsRoute() {
               <p className="section-subtitle">상태 확인을 누르면 캐시 사용량을 확인합니다.</p>
             )}
             <div className="filter-actions settings-actions">
-              <button className="filter-btn apply" type="button" onClick={cleanupCache} disabled={busy === "cache-cleanup"}>
+              <button className="btn btn--primary" type="button" onClick={cleanupCache} disabled={busy === "cache-cleanup"}>
                 {busy === "cache-cleanup" ? "정리 중" : "오래된 캐시 정리"}
               </button>
             </div>

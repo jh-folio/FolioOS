@@ -6799,14 +6799,14 @@ function kt({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 					"task"
 				].map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 					type: "button",
-					className: `filter-btn${c === e ? " active" : ""}`,
+					className: `btn${c === e ? " active" : ""}`,
 					"data-qa": `work-log-filter-${e}`,
 					"aria-pressed": c === e,
 					onClick: () => te(e),
 					children: e === "all" ? "전체" : e === "companion" ? "대화" : "작업"
 				}, e))
 			}) : /* @__PURE__ */ (0, x.jsx)("span", {}), /* @__PURE__ */ (0, x.jsx)("button", {
-				className: "filter-btn clear icon-btn",
+				className: "btn btn--icon",
 				type: "button",
 				"data-qa": "work-log-refresh",
 				disabled: h,
@@ -6922,7 +6922,7 @@ function kt({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 							children: Ot(e.finishedAt || e.updatedAt)
 						}), e.proposalId && (e.proposalStatus === "pending" || e.proposalStatus === "applying") && /* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "filter-btn clear",
+							className: "btn",
 							"data-qa": "work-log-proposal-open",
 							disabled: P === e.proposalId,
 							onClick: () => void ie(e),
@@ -7040,7 +7040,7 @@ function kt({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 				M.diff && /* @__PURE__ */ (0, x.jsx)("pre", { children: H(M.diff) }),
 				/* @__PURE__ */ (0, x.jsx)("button", {
 					type: "button",
-					className: "filter-btn clear",
+					className: "btn",
 					onClick: () => N(null),
 					children: "닫기"
 				})
@@ -7386,7 +7386,7 @@ function Vt({ title: e, children: t }) {
 }
 function Ht({ icon: e, children: t, ...n }) {
 	return /* @__PURE__ */ (0, x.jsxs)("button", {
-		className: "report-action-btn",
+		className: "btn report-action-btn",
 		type: "button",
 		...n,
 		children: [/* @__PURE__ */ (0, x.jsx)(Ut, { name: e }), /* @__PURE__ */ (0, x.jsx)("span", { children: t })]
@@ -8912,7 +8912,7 @@ function vr({ item: e }) {
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "change-contrast__subject",
 				children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.subject || "항목" }), a ? /* @__PURE__ */ (0, x.jsx)("span", {
-					className: "change-verdict-chip",
+					className: "chip change-verdict-chip",
 					"data-tone": a.tone,
 					children: a.label
 				}) : null]
@@ -8964,11 +8964,11 @@ function yr({ event: e }) {
 					className: "cockpit-change-card__meta",
 					children: [
 						/* @__PURE__ */ (0, x.jsx)("span", {
-							className: "status-chip",
+							className: "chip status-chip",
 							children: or[e.status || ""] || e.status
 						}),
 						i ? /* @__PURE__ */ (0, x.jsx)("span", {
-							className: "change-verdict-chip",
+							className: "chip change-verdict-chip",
 							"data-tone": i.tone,
 							children: i.label
 						}) : null,
@@ -8991,14 +8991,14 @@ function yr({ event: e }) {
 					children: [
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "agent-action",
+							className: "btn btn--sm agent-action",
 							"aria-expanded": t,
 							onClick: () => n((e) => !e),
 							children: t ? "접기" : `펼치기${o.length > 1 ? ` (${o.length}건)` : ""}`
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "agent-action",
+							className: "btn btn--sm agent-action",
 							onClick: () => {
 								window.location.hash = l;
 							},
@@ -9006,7 +9006,7 @@ function yr({ event: e }) {
 						}),
 						u ? /* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "agent-action",
+							className: "btn btn--sm agent-action",
 							onClick: () => {
 								window.location.hash = u;
 							},
@@ -9014,7 +9014,7 @@ function yr({ event: e }) {
 						}) : null,
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "agent-action agent-ask-btn",
+							className: "btn btn--icon agent-action agent-ask-btn",
 							"data-tooltip": "Agent에게 묻기",
 							"data-tooltip-pos": "left",
 							"aria-label": "Agent에게 묻기",
@@ -9053,7 +9053,7 @@ function br({ events: e, quiet: t }) {
 					id: "cockpit-change-title",
 					children: "무엇이 달라졌나"
 				})] }), /* @__PURE__ */ (0, x.jsx)("div", {
-					className: "story-share__toggle",
+					className: "segment story-share__toggle",
 					role: "group",
 					"aria-label": "이야기 비중 시장",
 					children: er.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
@@ -9109,7 +9109,7 @@ function xr({ summary: e }) {
 				className: "briefing-change-strip__head",
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("span", {
-						className: "status-chip",
+						className: "chip status-chip",
 						children: or[e.status] || e.status
 					}),
 					/* @__PURE__ */ (0, x.jsx)("strong", { children: "이 브리핑에서 달라진 것" }),
@@ -9124,7 +9124,7 @@ function xr({ summary: e }) {
 						children: e.subject
 					}),
 					t ? /* @__PURE__ */ (0, x.jsx)("span", {
-						className: "change-verdict-chip",
+						className: "chip change-verdict-chip",
 						"data-tone": t.tone,
 						children: t.label
 					}) : null,
@@ -9611,7 +9611,7 @@ function Yr() {
 							className: "brief-gen-actionbar",
 							children: [
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear icon-btn",
+									className: "btn btn--icon",
 									type: "button",
 									onClick: U,
 									disabled: s,
@@ -9620,7 +9620,7 @@ function Yr() {
 									children: "↻"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: () => K(),
 									disabled: u,
@@ -9638,7 +9638,7 @@ function Yr() {
 									title: `${Er[S]} 세션 기준일`
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									onClick: () => K(E),
 									disabled: u || !E,
@@ -9676,7 +9676,7 @@ function Yr() {
 							onChange: (e) => R(e.currentTarget.value)
 						})] }),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn clear",
+							className: "btn",
 							type: "button",
 							onClick: () => {
 								A(""), M("all"), P("all"), I(""), R(""), B("recent");
@@ -9795,7 +9795,7 @@ function Yr() {
 											className: "briefing-archive-market",
 											children: Dr[t.scope]
 										}), t.chips.map((e) => /* @__PURE__ */ (0, x.jsx)("span", {
-											className: "briefing-archive-chip",
+											className: "chip briefing-archive-chip",
 											children: e
 										}, e))]
 									}),
@@ -10952,6 +10952,7 @@ function Zi() {
 				title: "기업 분석",
 				description: "SEC, DART, 시장 데이터와 로컬 자료를 활용해 기업 분석 보고서를 생성합니다.",
 				actions: /* @__PURE__ */ (0, x.jsx)("button", {
+					className: "btn",
 					type: "button",
 					onClick: j,
 					disabled: g,
@@ -10979,7 +10980,7 @@ function Zi() {
 						className: "react-analysis-style",
 						"aria-label": "보고서 모드",
 						children: [/* @__PURE__ */ (0, x.jsx)("legend", { children: "보고서 모드" }), /* @__PURE__ */ (0, x.jsx)("div", {
-							className: "react-analysis-style-toggle",
+							className: "segment react-analysis-style-toggle",
 							"data-style": u,
 							children: ki.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 								type: "button",
@@ -10992,6 +10993,7 @@ function Zi() {
 						})]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
+						className: "btn btn--primary",
 						type: "submit",
 						disabled: v || !s.trim(),
 						children: v ? "분석 중" : "분석"
@@ -11017,7 +11019,7 @@ function Zi() {
 						onChange: (e) => p(e.currentTarget.value),
 						placeholder: "티커·회사명·보고서 검색"
 					})] }), /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: () => {
 							p(""), h("recent");
@@ -11352,7 +11354,7 @@ function ha({ driver: e }) {
 				e.confidencePct ? ` · ${e.confidencePct}%` : ""
 			] }), /* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
-				className: "agent-action agent-ask-btn",
+				className: "btn btn--icon agent-action agent-ask-btn",
 				"data-tooltip": "Agent에게 묻기",
 				"aria-label": "Agent에게 묻기",
 				onClick: () => Ae({ message: e.askAgentPrompt }),
@@ -11482,14 +11484,14 @@ function Ca({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 				}), /* @__PURE__ */ (0, x.jsx)("h2", { children: m?.title || e?.title || "현재 중기 시장 상황" })] }), /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "market-state-head-actions",
 					children: [/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						"data-qa": "market-state-update",
 						onClick: s,
 						disabled: !s || i || r || n,
 						children: r ? "업데이트 중" : u === "current" ? "시장 메모리 업데이트" : "시장 상태 업데이트"
 					}), /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: c,
 						disabled: !c || n || r,
@@ -11776,7 +11778,7 @@ function Da() {
 					/* @__PURE__ */ (0, x.jsx)("strong", { children: "기존 로컬 대화가 있습니다." }),
 					/* @__PURE__ */ (0, x.jsx)("span", { children: "자동으로 옮기거나 삭제하지 않습니다. 필요한 내용을 확인해 새 상담에 직접 붙여 넣을 수 있습니다." }),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: () => {
 							rt(), S(!1);
@@ -11791,7 +11793,7 @@ function Da() {
 					className: "consultation-sessions",
 					"aria-label": "저장된 상담",
 					children: [/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						onClick: () => A(p),
 						children: "새 상담"
@@ -11818,25 +11820,25 @@ function Da() {
 									onChange: (e) => f(e.currentTarget.value)
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn",
+									className: "btn",
 									type: "button",
 									onClick: M,
 									children: "이름 저장"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn",
+									className: "btn",
 									type: "button",
 									onClick: F,
 									children: "내보내기"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn",
+									className: "btn",
 									type: "button",
 									onClick: N,
 									children: "보관"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									onClick: P,
 									children: "삭제"
@@ -11860,7 +11862,7 @@ function Da() {
 							}, e.id))
 						}),
 						R && /* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn",
+							className: "btn",
 							type: "button",
 							disabled: h,
 							onClick: z,
@@ -11875,12 +11877,12 @@ function Da() {
 								placeholder: "지금 궁금한 점이나 검토할 상황을 그대로 적어보세요.",
 								rows: 4
 							}), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("button", {
-								className: "filter-btn",
+								className: "btn",
 								type: "button",
 								onClick: I,
 								children: "노트로 정리"
 							}), /* @__PURE__ */ (0, x.jsx)("button", {
-								className: "filter-btn apply",
+								className: "btn btn--primary",
 								type: "submit",
 								disabled: h || !c.trim(),
 								children: h ? "답변 작성 중" : "보내기"
@@ -11937,12 +11939,12 @@ function Da() {
 						})
 					})] }),
 					/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: () => w(null),
 						children: "취소"
 					}), /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						onClick: L,
 						children: "내 생각 노트로 저장"
@@ -11977,14 +11979,14 @@ function Oa({ items: e, portfolioState: t }) {
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "cockpit-actions",
 				children: [n && /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn",
+					className: "btn",
 					type: "button",
 					onClick: () => {
 						window.location.hash = "#/portfolio";
 					},
 					children: "Portfolio에서 보유 종목 입력"
 				}), /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn",
+					className: "btn",
 					type: "button",
 					onClick: () => Ea({ scope: { kind: "portfolio" } }),
 					children: "Agent와 검토"
@@ -12190,6 +12192,7 @@ function Ha({ focusSymbols: e }) {
 						/* @__PURE__ */ (0, x.jsx)("div", {
 							className: "cockpit-chart-controls",
 							children: /* @__PURE__ */ (0, x.jsxs)("div", {
+								className: "segment",
 								role: "group",
 								"aria-label": "캘린더 보기",
 								children: [/* @__PURE__ */ (0, x.jsx)("button", {
@@ -12210,14 +12213,14 @@ function Ha({ focusSymbols: e }) {
 							})
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn",
+							className: "btn",
 							type: "button",
 							"aria-label": r === "week" ? "이전 주" : "이전 달",
 							onClick: () => R(-1),
 							children: "◀"
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn",
+							className: "btn",
 							type: "button",
 							onClick: () => {
 								let e = /* @__PURE__ */ new Date();
@@ -12226,14 +12229,14 @@ function Ha({ focusSymbols: e }) {
 							children: "오늘"
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn",
+							className: "btn",
 							type: "button",
 							"aria-label": r === "week" ? "다음 주" : "다음 달",
 							onClick: () => R(1),
 							children: "▶"
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn apply",
+							className: "btn btn--primary",
 							type: "button",
 							onClick: z,
 							disabled: _,
@@ -12383,7 +12386,7 @@ function Ha({ focusSymbols: e }) {
 					] }) }), /* @__PURE__ */ (0, x.jsx)("tbody", { children: F.map((e) => /* @__PURE__ */ (0, x.jsxs)("tr", { children: [
 						/* @__PURE__ */ (0, x.jsx)("td", { children: za(e) }),
 						/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
-							className: "mkt-chip",
+							className: "chip mkt-chip",
 							children: Ma[e.market || ""] || e.market || "—"
 						}) }),
 						/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
@@ -12402,7 +12405,7 @@ function Ha({ focusSymbols: e }) {
 							children: /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title })
 						}) : /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title }), /* @__PURE__ */ (0, x.jsxs)("small", { children: [ka[e.kind] || e.kind, e.source ? ` · ${e.source}` : ""] })] }),
 						/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
-							className: `certainty-badge certainty-badge--${e.status}`,
+							className: `chip certainty-badge--${e.status}`,
 							children: Aa[e.status] || e.status
 						}) })
 					] }, e.id)) })]
@@ -12635,6 +12638,7 @@ function Ja({ symbols: e }) {
 				})] }), /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "cockpit-chart-controls",
 					children: [/* @__PURE__ */ (0, x.jsxs)("div", {
+						className: "segment",
 						role: "group",
 						"aria-label": "차트 유형",
 						children: [/* @__PURE__ */ (0, x.jsx)("button", {
@@ -12649,6 +12653,7 @@ function Ja({ symbols: e }) {
 							children: "캔들"
 						})]
 					}), /* @__PURE__ */ (0, x.jsx)("div", {
+						className: "segment",
 						role: "group",
 						"aria-label": "차트 기간",
 						children: Wa.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
@@ -12722,7 +12727,7 @@ function Ja({ symbols: e }) {
 				className: "chart-next",
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("span", {
-						className: `certainty-badge certainty-badge--${f.status}`,
+						className: `chip certainty-badge--${f.status}`,
 						children: Aa[f.status] || f.status
 					}),
 					"다음 일정 — ",
@@ -12765,27 +12770,27 @@ function Ya() {
 				"aria-label": "오늘의 변화 요약",
 				children: [
 					/* @__PURE__ */ (0, x.jsxs)("span", {
-						className: "cockpit-summary__chip",
+						className: "chip cockpit-summary__chip",
 						"data-tone": "burgundy",
 						children: ["중대한 변화 ", a.majorChange || 0]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("span", {
-						className: "cockpit-summary__chip",
+						className: "chip cockpit-summary__chip",
 						"data-tone": "blue",
 						children: ["발전 중 ", a.developingSignal || 0]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("span", {
-						className: "cockpit-summary__chip",
+						className: "chip cockpit-summary__chip",
 						"data-tone": "gold",
 						children: ["충돌·불확실 ", a.conflictingUncertain || 0]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("span", {
-						className: "cockpit-summary__chip",
+						className: "chip cockpit-summary__chip",
 						"data-tone": "muted",
 						children: ["그 외 평가 ", a.quiet || 0]
 					}),
 					o.map((e) => /* @__PURE__ */ (0, x.jsxs)("span", {
-						className: "cockpit-summary__chip",
+						className: "chip cockpit-summary__chip",
 						"data-tone": "burgundy",
 						children: [e.provider, " 수집 문제"]
 					}, e.provider))
@@ -12806,7 +12811,7 @@ function Ya() {
 }
 //#endregion
 //#region src/app/Dashboard.tsx
-var Xa = (0, b.lazy)(() => import("./LegacyMarketWidgetBoard-BfnLQ_Lu.js")), Za = {
+var Xa = (0, b.lazy)(() => import("./LegacyMarketWidgetBoard-C0TbTyAR.js")), Za = {
 	positive: "긍정",
 	watch: "주의",
 	negative: "부정",
@@ -12943,7 +12948,7 @@ function io() {
 			title: "대시보드",
 			description: "새 보고서에서 확인된 변화, 집중 차트, 시장 일정을 한 화면에서 점검합니다.",
 			actions: /* @__PURE__ */ (0, x.jsxs)("div", {
-				className: "dashboard-mode-switch",
+				className: "segment dashboard-mode-switch",
 				role: "group",
 				"aria-label": "대시보드 모드",
 				children: [/* @__PURE__ */ (0, x.jsx)("button", {
@@ -12966,30 +12971,27 @@ function io() {
 				eyebrow: "Investment Review",
 				title: "대시보드",
 				description: "시장 상태와 투자 체크포인트를 한 화면에서 점검합니다.",
-				actions: /* @__PURE__ */ (0, x.jsxs)("div", {
-					className: "dashboard-mode-switch",
+				actions: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsxs)("div", {
+					className: "segment dashboard-mode-switch",
 					role: "group",
 					"aria-label": "대시보드 모드",
-					children: [
-						/* @__PURE__ */ (0, x.jsx)("button", {
-							type: "button",
-							"aria-pressed": "false",
-							onClick: () => p("cockpit"),
-							children: "Cockpit"
-						}),
-						/* @__PURE__ */ (0, x.jsx)("button", {
-							type: "button",
-							"aria-pressed": "true",
-							children: "Legacy"
-						}),
-						/* @__PURE__ */ (0, x.jsx)("button", {
-							type: "button",
-							onClick: f,
-							disabled: i,
-							children: i ? "불러오는 중" : "새로고침"
-						})
-					]
-				})
+					children: [/* @__PURE__ */ (0, x.jsx)("button", {
+						type: "button",
+						"aria-pressed": "false",
+						onClick: () => p("cockpit"),
+						children: "Cockpit"
+					}), /* @__PURE__ */ (0, x.jsx)("button", {
+						type: "button",
+						"aria-pressed": "true",
+						children: "Legacy"
+					})]
+				}), /* @__PURE__ */ (0, x.jsx)("button", {
+					className: "btn",
+					type: "button",
+					onClick: f,
+					disabled: i,
+					children: i ? "불러오는 중" : "새로고침"
+				})] })
 			}),
 			u && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "react-dashboard-error",
@@ -13215,14 +13217,14 @@ function lo({ mode: e, revision: t, draft: n, busy: r, onChange: i, onCancel: a,
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "topicrpt-collections-actions",
 				children: [/* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					"data-qa": "collection-cancel",
 					disabled: r,
 					onClick: a,
 					children: "취소"
 				}), /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn apply",
+					className: "btn btn--primary",
 					type: "button",
 					"data-qa": "collection-save",
 					disabled: r,
@@ -13413,14 +13415,14 @@ function go({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 				] }), /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "topicrpt-collections-actions",
 					children: [/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						"data-qa": "collection-reload",
 						disabled: p || A || i,
 						onClick: () => void H(),
 						children: p ? "불러오는 중" : "다시 불러오기"
 					}), /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						"data-qa": "collection-new",
 						disabled: A || i,
@@ -13443,12 +13445,12 @@ function go({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 					/* @__PURE__ */ (0, x.jsx)("strong", { children: P.code === "duplicate_name" ? "같은 이름이 이미 있습니다" : "다른 탭에서 정의가 변경되었습니다" }),
 					/* @__PURE__ */ (0, x.jsxs)("span", { children: [P.currentRevision ? `현재 버전 ${P.currentRevision}. ` : "", "입력 내용은 유지했습니다. 최신 버전을 불러온 뒤 다시 저장하세요."] }),
 					P.code === "duplicate_name" ? /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: () => F(null),
 						children: "이름 수정"
 					}) : /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: () => void H(!0),
 						children: "최신 버전 불러오기"
@@ -13503,7 +13505,7 @@ function go({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 							className: "topicrpt-collections-actions topicrpt-selection-actions",
 							children: [
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									"data-qa": "collection-open-workspace",
 									disabled: A || i,
@@ -13511,7 +13513,7 @@ function go({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 									children: "상세 워크스페이스"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									"data-qa": "collection-edit",
 									disabled: A || i,
@@ -13519,7 +13521,7 @@ function go({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 									children: "선택 규칙 편집"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									"data-qa": "collection-delete",
 									disabled: A || i,
@@ -13527,7 +13529,7 @@ function go({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 									children: "삭제"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									"data-qa": "collection-clear-selection",
 									onClick: () => {
@@ -13646,7 +13648,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 		className: "topicrpt-collection-workspace",
 		"data-qa": "collection-workspace",
 		children: [/* @__PURE__ */ (0, x.jsx)("button", {
-			className: "filter-btn clear",
+			className: "btn",
 			type: "button",
 			"data-qa": "collection-workspace-back",
 			onClick: t,
@@ -13662,7 +13664,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 		className: "topicrpt-collection-workspace",
 		"data-qa": "collection-workspace",
 		children: [/* @__PURE__ */ (0, x.jsx)("button", {
-			className: "filter-btn clear",
+			className: "btn",
 			type: "button",
 			"data-qa": "collection-workspace-back",
 			onClick: t,
@@ -13675,7 +13677,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 				/* @__PURE__ */ (0, x.jsx)("strong", { children: "현재 외부 자료를 읽을 수 없습니다" }),
 				/* @__PURE__ */ (0, x.jsx)("p", { children: g }),
 				/* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					onClick: () => void y(),
 					children: "다시 확인"
@@ -13687,7 +13689,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 		className: "topicrpt-collection-workspace",
 		"data-qa": "collection-workspace",
 		children: [/* @__PURE__ */ (0, x.jsx)("button", {
-			className: "filter-btn clear",
+			className: "btn",
 			type: "button",
 			"data-qa": "collection-workspace-back",
 			onClick: t,
@@ -13699,7 +13701,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 				/* @__PURE__ */ (0, x.jsx)("strong", { children: "컬렉션을 열지 못했습니다" }),
 				/* @__PURE__ */ (0, x.jsx)("p", { children: g }),
 				/* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					onClick: () => void y(),
 					children: "다시 확인"
@@ -13716,7 +13718,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "topicrpt-collection-workspace-head",
 				children: [/* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					"data-qa": "collection-workspace-back",
 					onClick: t,
@@ -13725,7 +13727,7 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 					className: "topicrpt-collections-actions",
 					children: [
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn clear",
+							className: "btn",
 							type: "button",
 							"data-qa": "collection-workspace-refresh",
 							disabled: f,
@@ -13733,14 +13735,14 @@ function _o({ collectionId: e, onBack: t, onStartResearch: n }) {
 							children: f ? "새로고침 중" : "현재 자료 새로고침"
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn clear",
+							className: "btn",
 							type: "button",
 							"data-qa": "collection-workspace-ask-change",
 							onClick: C,
 							children: "Agent에게 변화 묻기"
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn apply",
+							className: "btn btn--primary",
 							type: "button",
 							"data-qa": "collection-workspace-start",
 							onClick: () => n({
@@ -14421,13 +14423,13 @@ function Vo({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 					s ? /* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "topicrpt-degraded-actions",
 						children: [/* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn apply",
+							className: "btn btn--primary",
 							type: "button",
 							"data-qa": "dr-degraded-confirm",
 							onClick: c,
 							children: "근거 부족을 확인하고 계속"
 						}), /* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn clear",
+							className: "btn",
 							type: "button",
 							onClick: l,
 							children: "취소"
@@ -14478,13 +14480,13 @@ function Vo({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 						})]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: o,
 						children: "질문 수정"
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						"data-qa": "dr-continue",
 						onClick: a,
@@ -14811,7 +14813,7 @@ function Ho() {
 						children: W || "보고서 주소나 저장 데이터를 확인한 뒤 목록에서 다시 여세요."
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						"data-qa": "dr-report-return",
 						onClick: Se,
@@ -14935,7 +14937,7 @@ function Ho() {
 				title: "딥 리서치",
 				description: "투자 질문을 실행 계획으로 정리해 확인한 뒤, 정해진 자료 범위 안에서 근거를 구분한 보고서를 생성합니다.",
 				actions: /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					onClick: () => void xe(),
 					disabled: H,
@@ -14966,7 +14968,7 @@ function Ho() {
 					}),
 					/* @__PURE__ */ (0, x.jsx)("p", { children: "입력한 질문과 컨텍스트, 마지막 계획은 유지됩니다." }),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: () => {
 							ee(""), K(null), ne(""), N(P ? "plan-review" : "draft");
@@ -14997,7 +14999,7 @@ function Ho() {
 							className: "topicrpt-preset-btns",
 							"aria-label": "리서치 모드",
 							children: xo.map((e) => /* @__PURE__ */ (0, x.jsx)("span", {
-								className: "filter-btn topicrpt-preset active",
+								className: "btn topicrpt-preset active",
 								"data-topic": e.key,
 								children: e.label
 							}, e.key))
@@ -15102,7 +15104,7 @@ function Ho() {
 							className: "topicrpt-policy-note",
 							children: "심층 조사 · 최대 2라운드"
 						}), /* @__PURE__ */ (0, x.jsx)("button", {
-							className: "filter-btn apply",
+							className: "btn btn--primary",
 							type: "submit",
 							"data-qa": "dr-preview",
 							disabled: Le,
@@ -15463,7 +15465,7 @@ function ss() {
 					c.id,
 					" · 서버에서 계속 실행 중"
 				] }), /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					"data-qa": "market-state-job-resume",
 					onClick: () => void g(),
@@ -15533,7 +15535,7 @@ function cs({ positions: e, onChange: t }) {
 				}) }),
 				/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("button", {
 					type: "button",
-					className: "filter-btn clear",
+					className: "btn",
 					onClick: () => t(e.filter((e, t) => t !== i)),
 					children: "삭제"
 				}) })
@@ -15698,7 +15700,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 						children: "증권사 화면에서 가져오기"
 					})] }), /* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
-						className: "filter-btn clear",
+						className: "btn",
 						onClick: n,
 						children: "닫기"
 					})]
@@ -15732,7 +15734,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 						}),
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
-							className: "filter-btn",
+							className: "btn",
 							onClick: () => M.current?.click(),
 							children: r.length ? "사진 다시 선택" : "사진 선택"
 						}),
@@ -15748,7 +15750,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 					"aria-label": "자를 사진 선택",
 					children: [r.map((e, t) => /* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
-						className: `filter-btn${t === a ? " apply" : ""}`,
+						className: `btn${t === a ? " btn--primary" : ""}`,
 						"aria-pressed": t === a,
 						onClick: () => o(t),
 						children: t + 1
@@ -15823,7 +15825,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 						]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						disabled: D || _ === "local" && g,
 						onClick: P,
@@ -15863,7 +15865,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 								onChange: (e) => F(t, "averagePrice", e.currentTarget.value)
 							}) }),
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
-								className: `certainty-badge certainty-badge--${e.status === "confirmed" ? "confirmed" : "tentative"}`,
+								className: `chip certainty-badge--${e.status === "confirmed" ? "confirmed" : "tentative"}`,
 								children: e.status
 							}) }),
 							/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsxs)("select", {
@@ -15888,7 +15890,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 						/* @__PURE__ */ (0, x.jsxs)("div", {
 							className: "filter-actions",
 							children: [/* @__PURE__ */ (0, x.jsx)("button", {
-								className: "filter-btn apply",
+								className: "btn btn--primary",
 								type: "button",
 								onClick: () => t(ps(e, T)),
 								children: "편집표에 적용"
@@ -15904,7 +15906,7 @@ function ms({ current: e, onApply: t, onClose: n }) {
 //#region src/app/portfolio/ConsultationEntry.tsx
 function hs({ tickers: e }) {
 	return /* @__PURE__ */ (0, x.jsx)("button", {
-		className: "filter-btn apply",
+		className: "btn btn--primary",
 		type: "button",
 		onClick: () => Ea({
 			title: "현재 Portfolio 상담",
@@ -15976,7 +15978,7 @@ function gs() {
 							className: "portfolio-actions",
 							children: [
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn",
+									className: "btn",
 									type: "button",
 									onClick: () => r([...n, {
 										ticker: "",
@@ -15986,13 +15988,13 @@ function gs() {
 									children: "종목 추가"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn",
+									className: "btn",
 									type: "button",
 									onClick: () => a(!0),
 									children: "사진에서 가져오기"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									disabled: s || !e,
 									onClick: g,
@@ -16577,6 +16579,7 @@ function Ws({ surface: e, open: t, onOpen: n, onClose: r }) {
 								]
 							})]
 						}), /* @__PURE__ */ (0, x.jsx)("button", {
+							className: "btn btn--primary btn--sm",
 							type: "submit",
 							"data-qa": "agent-submit",
 							disabled: v || !f.trim(),
@@ -17232,7 +17235,7 @@ function bc() {
 			/* @__PURE__ */ (0, x.jsx)("div", {
 				className: "filter-actions settings-actions",
 				children: /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					"data-qa": "work-log-migration-preview",
 					disabled: i,
@@ -17621,7 +17624,7 @@ function Ac() {
 				title: "설정",
 				description: "LLM, 외부 데이터, 내보내기, 자동화 설정을 관리합니다.",
 				actions: /* @__PURE__ */ (0, x.jsx)("button", {
-					className: "filter-btn clear",
+					className: "btn",
 					type: "button",
 					onClick: () => oe(!0),
 					disabled: U === "load",
@@ -17797,7 +17800,7 @@ function Ac() {
 											children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "cli-provider-head",
 												children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.label || e.id }), /* @__PURE__ */ (0, x.jsx)("span", {
-													className: `cli-status-chip ${Ec(e)}`,
+													className: `cli-chip status-chip ${Ec(e)}`,
 													children: Tc(e)
 												})]
 											}), /* @__PURE__ */ (0, x.jsx)("div", {
@@ -17805,7 +17808,7 @@ function Ac() {
 												children: e.bridgeSupported === !1 ? e.error || "현재 환경에서 사용할 수 없습니다." : e.model || "모델 미설정"
 											})]
 										}), e.docsUrl && /* @__PURE__ */ (0, x.jsx)("a", {
-											className: "filter-btn",
+											className: "btn",
 											href: e.docsUrl,
 											target: "_blank",
 											rel: "noreferrer",
@@ -17870,7 +17873,7 @@ function Ac() {
 												children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 													className: "cli-provider-head",
 													children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.label || Sc[e].name }), /* @__PURE__ */ (0, x.jsx)("span", {
-														className: `cli-status-chip ${r}`,
+														className: `cli-chip status-chip ${r}`,
 														children: n
 													})]
 												}), /* @__PURE__ */ (0, x.jsx)("div", {
@@ -17880,13 +17883,13 @@ function Ac() {
 											}), /* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "cli-provider-actions",
 												children: [/* @__PURE__ */ (0, x.jsx)("button", {
-													className: "filter-btn",
+													className: "btn",
 													type: "button",
 													disabled: !t.hasApiKey || !!z[e]?.checking,
 													onClick: () => ue(e),
 													children: "연결 확인"
 												}), t.setupUrl && /* @__PURE__ */ (0, x.jsx)("a", {
-													className: "filter-btn",
+													className: "btn",
 													href: t.setupUrl,
 													target: "_blank",
 													rel: "noreferrer",
@@ -17900,13 +17903,13 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsxs)("div", {
 								className: "filter-actions settings-actions",
 								children: [/* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: le,
 									disabled: U === "agent",
 									children: "AI Agent 설정 저장"
 								}), /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									onClick: () => oe(!0),
 									disabled: U === "load",
@@ -17991,7 +17994,7 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsx)("div", {
 								className: "filter-actions settings-actions",
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: de,
 									disabled: U === "api",
@@ -18052,7 +18055,7 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsx)("div", {
 								className: "filter-actions settings-actions",
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: fe,
 									disabled: U === "notion",
@@ -18089,7 +18092,7 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsx)("div", {
 								className: "filter-actions settings-actions",
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: pe,
 									disabled: U === "obsidian",
@@ -18424,7 +18427,7 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsx)("div", {
 								className: "filter-actions settings-actions",
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: me,
 									disabled: U === "automation",
@@ -18439,7 +18442,7 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsxs)("div", {
 								className: "input-panel-header",
 								children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "캐시 관리" }), /* @__PURE__ */ (0, x.jsx)("p", { children: "기업 분석용 SEC/DART per-company 캐시 중 오래된 항목만 정리합니다. 공통 ticker/corpCode 목록은 삭제하지 않습니다." })] }), /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn clear",
+									className: "btn",
 									type: "button",
 									onClick: se,
 									disabled: U === "cache",
@@ -18478,7 +18481,7 @@ function Ac() {
 							/* @__PURE__ */ (0, x.jsx)("div", {
 								className: "filter-actions settings-actions",
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
-									className: "filter-btn apply",
+									className: "btn btn--primary",
 									type: "button",
 									onClick: ce,
 									disabled: U === "cache-cleanup",
@@ -18504,7 +18507,7 @@ function Ac() {
 function jc({ item: e }) {
 	return /* @__PURE__ */ (0, x.jsx)("button", {
 		type: "button",
-		className: "filter-btn apply",
+		className: "btn btn--primary",
 		onClick: () => Ea({
 			title: `${e} 상담`,
 			scope: {
@@ -18778,13 +18781,13 @@ function Hc() {
 				actions: /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "brief-controls",
 					children: [/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: O,
 						disabled: m,
 						children: m ? "불러오는 중" : "다시 읽기"
 					}), /* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn apply",
+						className: "btn btn--primary",
 						type: "button",
 						onClick: () => k(t, "워치리스트를 저장했습니다."),
 						disabled: v,
@@ -18808,7 +18811,7 @@ function Hc() {
 						placeholder: "예: NVDA, 삼성전자, AI"
 					}),
 					/* @__PURE__ */ (0, x.jsx)("button", {
-						className: "filter-btn clear",
+						className: "btn",
 						type: "button",
 						onClick: j,
 						disabled: v,
@@ -19212,6 +19215,7 @@ function $c() {
 						/* @__PURE__ */ (0, x.jsx)("span", { children: m || i.statusText || "준비됨" }),
 						i.activeJobId && /* @__PURE__ */ (0, x.jsx)("span", { children: i.activeJobId }),
 						/* @__PURE__ */ (0, x.jsx)("button", {
+							className: "btn btn--sm",
 							type: "button",
 							onClick: E,
 							disabled: g,

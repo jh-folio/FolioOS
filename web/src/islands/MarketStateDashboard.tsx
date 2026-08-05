@@ -229,7 +229,7 @@ function DriverCard({ driver }: { driver: Driver }) {
             .agent-logo-slot is filled by the shared applyAgentBranding bridge. */}
         <button
           type="button"
-          className="agent-action agent-ask-btn"
+          className="btn btn--icon agent-action agent-ask-btn"
           data-tooltip="Agent에게 묻기"
           aria-label="Agent에게 묻기"
           onClick={() => openReactAgentDock({ message: driver.askAgentPrompt })}
@@ -370,10 +370,10 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
           <h2>{activePayload?.title || payload?.title || "현재 중기 시장 상황"}</h2>
         </div>
         <div className="market-state-head-actions">
-          <button className="filter-btn apply" type="button" data-qa="market-state-update" onClick={onUpdate} disabled={!onUpdate || updateDisabled || updating || loading}>
+          <button className="btn btn--primary" type="button" data-qa="market-state-update" onClick={onUpdate} disabled={!onUpdate || updateDisabled || updating || loading}>
             {updating ? "업데이트 중" : state === "current" ? "시장 메모리 업데이트" : "시장 상태 업데이트"}
           </button>
-          <button className="filter-btn clear" type="button" onClick={onReload} disabled={!onReload || loading || updating}>
+          <button className="btn" type="button" onClick={onReload} disabled={!onReload || loading || updating}>
             {loading ? "불러오는 중…" : "새로고침"}
           </button>
         </div>

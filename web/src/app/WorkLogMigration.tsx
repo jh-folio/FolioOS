@@ -89,7 +89,7 @@ export function WorkLogMigrationControl() {
   return (
     <div className="work-log-migration-control">
       <div className="filter-actions settings-actions">
-        <button className="filter-btn clear" type="button" data-qa="work-log-migration-preview" disabled={busy} onClick={(event) => void openPreview(event.currentTarget)}>
+        <button className="btn" type="button" data-qa="work-log-migration-preview" disabled={busy} onClick={(event) => void openPreview(event.currentTarget)}>
           {busy && !preview ? "확인 중" : "이전 작업 기록 가져오기"}
         </button>
       </div>

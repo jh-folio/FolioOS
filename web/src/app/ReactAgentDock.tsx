@@ -657,7 +657,7 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
               <option value="max">노력 최대</option>
             </select>
           </div>
-          <button type="submit" data-qa="agent-submit" disabled={busy || !input.trim()}>{busy ? "작업 중" : "보내기"}</button>
+          <button className="btn btn--primary btn--sm" type="submit" data-qa="agent-submit" disabled={busy || !input.trim()}>{busy ? "작업 중" : "보내기"}</button>
         </div>
         {error && <p className="react-agent-error">{error}</p>}
       </form>

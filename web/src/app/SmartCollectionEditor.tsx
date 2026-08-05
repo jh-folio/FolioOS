@@ -85,8 +85,8 @@ export function SmartCollectionEditor({
         <label className="field"><span>태그 · 쉼표 구분</span><input data-qa="collection-tags" value={draft.tags} onChange={(event) => onChange("tags", event.currentTarget.value)} /></label>
       </div>
       <div className="topicrpt-collections-actions">
-        <button className="filter-btn clear" type="button" data-qa="collection-cancel" disabled={busy} onClick={onCancel}>취소</button>
-        <button className="filter-btn apply" type="button" data-qa="collection-save" disabled={busy} onClick={onSave}>{busy ? "저장 중" : mode === "create" ? "컬렉션 저장" : "변경 저장"}</button>
+        <button className="btn" type="button" data-qa="collection-cancel" disabled={busy} onClick={onCancel}>취소</button>
+        <button className="btn btn--primary" type="button" data-qa="collection-save" disabled={busy} onClick={onSave}>{busy ? "저장 중" : mode === "create" ? "컬렉션 저장" : "변경 저장"}</button>
       </div>
     </div>
   );

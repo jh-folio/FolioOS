@@ -284,8 +284,8 @@ export function SmartCollectionsPanel({
           <p>미리 저장해 둔 검색 규칙으로 자료 범위를 좁힙니다. 근거 자체가 아니며, 계획 시점에 일치하는 자료를 다시 확인합니다.</p>
         </div>
         <div className="topicrpt-collections-actions">
-          <button className="filter-btn clear" type="button" data-qa="collection-reload" disabled={loadingList || busy || disabled} onClick={() => void loadCollections()}>{loadingList ? "불러오는 중" : "다시 불러오기"}</button>
-          <button className="filter-btn apply" type="button" data-qa="collection-new" disabled={busy || disabled} onClick={beginCreate}>새 컬렉션</button>
+          <button className="btn" type="button" data-qa="collection-reload" disabled={loadingList || busy || disabled} onClick={() => void loadCollections()}>{loadingList ? "불러오는 중" : "다시 불러오기"}</button>
+          <button className="btn btn--primary" type="button" data-qa="collection-new" disabled={busy || disabled} onClick={beginCreate}>새 컬렉션</button>
         </div>
       </div>
 
@@ -295,8 +295,8 @@ export function SmartCollectionsPanel({
           <strong>{conflict.code === "duplicate_name" ? "같은 이름이 이미 있습니다" : "다른 탭에서 정의가 변경되었습니다"}</strong>
           <span>{conflict.currentRevision ? `현재 버전 ${conflict.currentRevision}. ` : ""}입력 내용은 유지했습니다. 최신 버전을 불러온 뒤 다시 저장하세요.</span>
           {conflict.code === "duplicate_name"
-            ? <button className="filter-btn clear" type="button" onClick={() => setConflict(null)}>이름 수정</button>
-            : <button className="filter-btn clear" type="button" onClick={() => void loadCollections(true)}>최신 버전 불러오기</button>}
+            ? <button className="btn" type="button" onClick={() => setConflict(null)}>이름 수정</button>
+            : <button className="btn" type="button" onClick={() => void loadCollections(true)}>최신 버전 불러오기</button>}
         </div>
       )}
 
@@ -318,10 +318,10 @@ export function SmartCollectionsPanel({
           {total > collections.length && <p className="topicrpt-collection-disclosure">처음 {collections.length}개를 표시합니다. 전체 {total}개 중 나머지는 API 페이지에서 확인할 수 있습니다.</p>}
           {selectedCollection && (
             <div className="topicrpt-collections-actions topicrpt-selection-actions">
-              <button className="filter-btn apply" type="button" data-qa="collection-open-workspace" disabled={busy || disabled} onClick={() => onOpenDetail(selectedCollection.id)}>상세 워크스페이스</button>
-              <button className="filter-btn clear" type="button" data-qa="collection-edit" disabled={busy || disabled} onClick={beginEdit}>선택 규칙 편집</button>
-              <button className="filter-btn clear" type="button" data-qa="collection-delete" disabled={busy || disabled} onClick={() => void deleteCollection()}>삭제</button>
-              <button className="filter-btn clear" type="button" data-qa="collection-clear-selection" onClick={() => { previewController.current?.abort(); setPreview(null); onSelectedRef(null); }}>선택 해제</button>
+              <button className="btn btn--primary" type="button" data-qa="collection-open-workspace" disabled={busy || disabled} onClick={() => onOpenDetail(selectedCollection.id)}>상세 워크스페이스</button>
+              <button className="btn" type="button" data-qa="collection-edit" disabled={busy || disabled} onClick={beginEdit}>선택 규칙 편집</button>
+              <button className="btn" type="button" data-qa="collection-delete" disabled={busy || disabled} onClick={() => void deleteCollection()}>삭제</button>
+              <button className="btn" type="button" data-qa="collection-clear-selection" onClick={() => { previewController.current?.abort(); setPreview(null); onSelectedRef(null); }}>선택 해제</button>
             </div>
           )}
         </div>
@@ -462,7 +462,7 @@ export function SmartCollectionWorkspace({
   if (failure === "deleted") {
     return (
       <section className="topicrpt-collection-workspace" data-qa="collection-workspace">
-        <button className="filter-btn clear" type="button" data-qa="collection-workspace-back" onClick={onBack}>딥 리서치로 돌아가기</button>
+        <button className="btn" type="button" data-qa="collection-workspace-back" onClick={onBack}>딥 리서치로 돌아가기</button>
         <div className="react-dashboard-warning" data-qa="collection-workspace-deleted" role="status"><strong>이 컬렉션은 삭제되었습니다</strong><p>열려 있던 주소는 유지되지만 더 이상 새로고침하거나 리서치 범위로 사용할 수 없습니다.</p></div>
       </section>
     );
@@ -471,8 +471,8 @@ export function SmartCollectionWorkspace({
   if (failure === "source") {
     return (
       <section className="topicrpt-collection-workspace" data-qa="collection-workspace">
-        <button className="filter-btn clear" type="button" data-qa="collection-workspace-back" onClick={onBack}>딥 리서치로 돌아가기</button>
-        <div className="react-dashboard-error" data-qa="collection-workspace-source-unavailable" role="alert"><strong>현재 외부 자료를 읽을 수 없습니다</strong><p>{message}</p><button className="filter-btn clear" type="button" onClick={() => void loadWorkspace()}>다시 확인</button></div>
+        <button className="btn" type="button" data-qa="collection-workspace-back" onClick={onBack}>딥 리서치로 돌아가기</button>
+        <div className="react-dashboard-error" data-qa="collection-workspace-source-unavailable" role="alert"><strong>현재 외부 자료를 읽을 수 없습니다</strong><p>{message}</p><button className="btn" type="button" onClick={() => void loadWorkspace()}>다시 확인</button></div>
       </section>
     );
   }
@@ -480,8 +480,8 @@ export function SmartCollectionWorkspace({
   if (!workspace) {
     return (
       <section className="topicrpt-collection-workspace" data-qa="collection-workspace">
-        <button className="filter-btn clear" type="button" data-qa="collection-workspace-back" onClick={onBack}>딥 리서치로 돌아가기</button>
-        <div className="react-dashboard-error" role="alert"><strong>컬렉션을 열지 못했습니다</strong><p>{message}</p><button className="filter-btn clear" type="button" onClick={() => void loadWorkspace()}>다시 확인</button></div>
+        <button className="btn" type="button" data-qa="collection-workspace-back" onClick={onBack}>딥 리서치로 돌아가기</button>
+        <div className="react-dashboard-error" role="alert"><strong>컬렉션을 열지 못했습니다</strong><p>{message}</p><button className="btn" type="button" onClick={() => void loadWorkspace()}>다시 확인</button></div>
       </section>
     );
   }
@@ -490,11 +490,11 @@ export function SmartCollectionWorkspace({
   return (
     <section className="topicrpt-collection-workspace" data-qa="collection-workspace" data-health={health}>
       <div className="topicrpt-collection-workspace-head">
-        <button className="filter-btn clear" type="button" data-qa="collection-workspace-back" onClick={onBack}>← 딥 리서치</button>
+        <button className="btn" type="button" data-qa="collection-workspace-back" onClick={onBack}>← 딥 리서치</button>
         <div className="topicrpt-collections-actions">
-          <button className="filter-btn clear" type="button" data-qa="collection-workspace-refresh" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? "새로고침 중" : "현재 자료 새로고침"}</button>
-          <button className="filter-btn clear" type="button" data-qa="collection-workspace-ask-change" onClick={askWhatChanged}>Agent에게 변화 묻기</button>
-          <button className="filter-btn apply" type="button" data-qa="collection-workspace-start" onClick={() => onStartResearch({ id: workspace.collection.id, revision: workspace.collection.revision })}>이 범위로 리서치 시작</button>
+          <button className="btn" type="button" data-qa="collection-workspace-refresh" disabled={refreshing} onClick={() => void refresh()}>{refreshing ? "새로고침 중" : "현재 자료 새로고침"}</button>
+          <button className="btn" type="button" data-qa="collection-workspace-ask-change" onClick={askWhatChanged}>Agent에게 변화 묻기</button>
+          <button className="btn btn--primary" type="button" data-qa="collection-workspace-start" onClick={() => onStartResearch({ id: workspace.collection.id, revision: workspace.collection.revision })}>이 범위로 리서치 시작</button>
         </div>
       </div>
 
