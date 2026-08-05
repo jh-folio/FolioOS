@@ -16,6 +16,7 @@ from features.daily_briefing.schema import (
     briefing_archive_items,
     briefing_market_metadata,
     market_keys_for_briefing_scope,
+    market_selection_scope,
     normalize_market_scope,
 )
 
@@ -113,7 +114,7 @@ class BriefingArchiveIndex:
         return (item.get("reportDate", ""), item.get("marketScope", ""))
 
     @staticmethod
-    def _merge_combined_pairs(group, scope):
+    def _merge_combined_pairs(group, scope, markets=()):
         """Collapse the per-market files of one aggregate generation into one card.
 
         The card records the markets that were actually written, not the label
@@ -150,7 +151,9 @@ class BriefingArchiveIndex:
         item["combinedGeneration"] = True
         item["generationScope"] = scope
         item["includedMarkets"] = [it.get("marketScope") for it in items]
-        item["expectedMarkets"] = list(market_keys_for_briefing_scope(scope))
+        # 요청 시장은 저장된 목록이 우선이다. 레이블에서 되짚으면 `multi`가
+        # 네 시장을 요청했다고 말하게 된다.
+        item["expectedMarkets"] = list(markets or market_keys_for_briefing_scope(scope))
         item["sessionDates"] = {
             it.get("marketScope"): it.get("sessionDate", "") for it in items
         }
@@ -169,12 +172,17 @@ class BriefingArchiveIndex:
         for pair in pairs:
             item = pair["item"]
             if item.get("combinedGeneration"):
-                scope = normalize_market_scope(item.get("generationScope") or "both")
-                groups.setdefault((item.get("reportDate", ""), scope), []).append(pair)
+                # 생성 시장 목록이 있으면 그게 묶음의 기준이다. 이름 없는 조합
+                # (미국+일본 등)은 레이블만으로 서로 구분되지 않는다.
+                markets = tuple(item.get("generationMarkets") or ())
+                key = markets or (normalize_market_scope(item.get("generationScope") or "both"),)
+                groups.setdefault((item.get("reportDate", ""), key), []).append(pair)
             else:
                 passthrough.append(pair)
-        for (_, scope), group in groups.items():
-            passthrough.append(self._merge_combined_pairs(group, scope))
+        for (_, key), group in groups.items():
+            markets = key if len(key) > 1 or key[0] in SINGLE_MARKET_SCOPES else ()
+            scope = market_selection_scope(markets) if markets else key[0]
+            passthrough.append(self._merge_combined_pairs(group, scope, markets))
         return passthrough
 
     @staticmethod

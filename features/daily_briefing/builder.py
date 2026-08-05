@@ -45,7 +45,9 @@ from features.daily_briefing.schema import (
     normalize_briefing_markdown_titles,
     normalize_briefing_type,
     market_keys_for_briefing_scope,
+    market_selection_scope,
     normalize_market_scope,
+    normalize_market_selection,
     visual_sidecar_gzip_file_name,
 )
 from features.daily_briefing.selection import (
@@ -310,6 +312,12 @@ def _single_market_briefing(briefing, scope):
     # generation's per-market files into a single combined card. `briefing` still
     # carries the request-level marketScope here (scope_view returns a copy).
     scoped["generationScope"] = normalize_market_scope(briefing.get("marketScope"))
+    # 조합에 이름이 없을 수 있으므로 실제 시장 목록도 함께 남긴다. 아카이브는
+    # 이름이 아니라 이 목록으로 한 번의 생성을 묶는다.
+    generation_markets = briefing.get("generationMarkets")
+    scoped["generationMarkets"] = [
+        str(key).lower() for key in (generation_markets or market_keys_for_briefing_scope(scoped["generationScope"]))
+    ]
     scoped["briefings"] = {}
     scoped["visualRecommendations"] = _items_for_market(briefing.get("visualRecommendations"), scope)
     scoped["visualSnapshots"] = _items_for_market(briefing.get("visualSnapshots"), scope)
@@ -337,11 +345,17 @@ def build_briefing(
     quality_mode="diagnose_only",
     market_scope="both",
     briefing_type="default",
+    markets=None,
 ):
     generated_at = now_iso()
     today = kst_date()
     date = date or today
-    market_scope = normalize_market_scope(market_scope)
+    # 선택은 시장 집합이다. `markets`가 오면 그게 권위이고, 없으면 예전 범위 이름을
+    # 집합으로 푼다. 저장·표시용 레이블은 그 집합에서 파생한다.
+    requested_markets = normalize_market_selection(
+        markets if markets is not None else market_scope
+    )
+    market_scope = market_selection_scope(requested_markets)
     briefing_type = normalize_briefing_type(briefing_type)
     quality_mode = normalize_quality_mode(quality_mode)
     try:
@@ -369,7 +383,7 @@ def build_briefing(
     prev_briefing = load_prev_briefing(date)
     prev_checklist = extract_prev_checklist((prev_briefing or {}).get("markdown", ""))
 
-    requested_scopes = list(market_keys_for_briefing_scope(market_scope))
+    requested_scopes = list(requested_markets)
     results = {
         scope: _scope_result(
             scope, briefing_type, date, source_date, docs, market_windows, market_snapshot, korea_market_data,
@@ -478,9 +492,12 @@ def build_briefing(
         "generatedAt": generated_at,
         "title": f"Daily Market Briefing — {date.replace('-', '.')}",
         "summary": report_summary,
-        "prompt": read_briefing_prompt(market_scope),
-        "promptPath": briefing_prompt_path_label(market_scope),
+        "prompt": read_briefing_prompt(requested_scopes),
+        "promptPath": briefing_prompt_path_label(requested_scopes),
         "marketScope": market_scope,
+        # 시장 집합이 권위다. 레이블(`multi` 등)은 표시용일 뿐이라 각 시장 파일이
+        # 이 목록을 물려받아야 아카이브가 한 번의 생성을 정확히 묶는다.
+        "generationMarkets": list(requested_scopes),
         "briefingType": briefing_type,
         "markdown": markdown,
         "briefings": briefing_sections,

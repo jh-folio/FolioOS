@@ -12,11 +12,24 @@ import { BriefingChangeStrip } from "./briefing/BriefingChangeStrip";
 import type { ChangeEvent } from "./watchlist/ChangeHistory";
 
 // `all`은 네 시장 생성 범위, `both`는 US/KR만 담은 예전 저장본이다.
-type MarketScope = "us" | "kr" | "europe" | "jp" | "all" | "both";
+type MarketScope = "us" | "kr" | "europe" | "jp" | "all" | "both" | "multi";
 // 아카이브 필터의 `all`은 "시장 필터 없음"이라 생성 범위 `all`과 다른 말이다.
 type ArchiveMarketFilter = "all" | "aggregate" | MarketScope;
 const SINGLE_MARKETS = ["us", "kr", "europe", "jp"] as const;
-const ALL_SCOPES: MarketScope[] = [...SINGLE_MARKETS, "all", "both"];
+type SingleMarket = (typeof SINGLE_MARKETS)[number];
+const MARKET_CHOICE_LABELS: Record<SingleMarket, string> = {
+  us: "미국장", kr: "한국장", europe: "유럽장", jp: "일본장",
+};
+
+// 조합에 이름이 없을 수 있다. `all`/`both`는 늘 뜻하던 집합에만 쓰고,
+// 나머지는 `multi`로 표시한다 — 실제 커버리지는 서버가 목록으로 돌려준다.
+function selectionScope(markets: SingleMarket[]): MarketScope {
+  if (markets.length === 1) return markets[0];
+  if (markets.length === SINGLE_MARKETS.length) return "all";
+  if (markets.length === 2 && markets.includes("us") && markets.includes("kr")) return "both";
+  return "multi";
+}
+const ALL_SCOPES: MarketScope[] = [...SINGLE_MARKETS, "all", "both", "multi"];
 type ArchiveViewMode = "recent" | "month" | "market";
 
 type BriefingArchiveItem = {
@@ -85,12 +98,13 @@ const SCOPE_LABELS: Record<MarketScope, string> = {
   jp: "일본",
   all: "통합",
   both: "통합",
+  multi: "선택 시장",
 };
 
 const MARKET_BADGE: Record<MarketScope, string> = {
-  us: "US", kr: "KR", europe: "EU", jp: "JP", all: "ALL", both: "US/KR",
+  us: "US", kr: "KR", europe: "EU", jp: "JP", all: "ALL", both: "US/KR", multi: "MULTI",
 };
-const BRIEFING_MARKET_TAGS = new Set(["미국장", "한국장", "유럽장", "일본장", "종합"]);
+const BRIEFING_MARKET_TAGS = new Set(["미국장", "한국장", "유럽장", "일본장", "종합", "선택 시장"]);
 const BRIEFING_TYPE_LABELS: Record<string, string> = {
   default: "기본",
   market_focused: "시황 중심",
@@ -227,7 +241,21 @@ export function BriefingRoute() {
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [actionBusy, setActionBusy] = useState("");
-  const [marketScope, setMarketScope] = useState<MarketScope>("us");
+  // 생성 대상은 시장 집합이다. 하나만 고르면 그 시장, 여럿이면 각각 만들어진다.
+  const [selectedMarkets, setSelectedMarkets] = useState<SingleMarket[]>(["us"]);
+  const marketScope = selectionScope(selectedMarkets);
+
+  // 시장 순서는 계약을 따른다. 클릭 순서로 두면 같은 조합이 다르게 저장된다.
+  function toggleMarket(market: SingleMarket) {
+    setSelectedMarkets((current) => {
+      const next = current.includes(market)
+        ? current.filter((item) => item !== market)
+        : [...current, market];
+      // 전부 끄면 생성할 대상이 없다. 마지막 하나는 끄지 않는다.
+      if (!next.length) return current;
+      return SINGLE_MARKETS.filter((item) => next.includes(item));
+    });
+  }
   const [briefingType, setBriefingType] = useState("default");
   const [briefingDate, setBriefingDate] = useState(() => todayIsoDate());
   const [archiveQuery, setArchiveQuery] = useState("");
@@ -388,7 +416,7 @@ export function BriefingRoute() {
       const response = await postJson<Briefing | AgentJob>("/api/briefings", {
         date: targetDate || undefined,
         strictDate,
-        marketScope,
+        markets: selectedMarkets,
         briefingType,
       });
       if (isAgentJob(response)) {
@@ -552,24 +580,18 @@ export function BriefingRoute() {
           </div>
           <div className="brief-gen-settings-row">
             <div className="brief-gen-field brief-gen-market-field">
-              <div className="brief-market-segment" role="radiogroup" aria-label="시장 범위" data-scope={marketScope}>
+              <div className="brief-market-segment" role="group" aria-label="생성할 시장" data-scope={marketScope}>
                 <span className="brief-market-segment-title">시장</span>
-                {([
-                  ["all", "종합"],
-                  ["us", "미국장"],
-                  ["kr", "한국장"],
-                  ["europe", "유럽장"],
-                  ["jp", "일본장"],
-                ] as Array<[MarketScope, string]>).map(([value, label]) => (
+                {SINGLE_MARKETS.map((value) => (
                   <label key={value}>
                     <input
-                      type="radio"
-                      name="reactBriefingMarketScope"
+                      type="checkbox"
+                      name="reactBriefingMarkets"
                       value={value}
-                      checked={marketScope === value}
-                      onChange={() => setMarketScope(value)}
+                      checked={selectedMarkets.includes(value)}
+                      onChange={() => toggleMarket(value)}
                     />
-                    <span>{label}</span>
+                    <span>{MARKET_CHOICE_LABELS[value]}</span>
                   </label>
                 ))}
               </div>

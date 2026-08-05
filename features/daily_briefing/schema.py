@@ -12,8 +12,10 @@ import re
 
 # `both`는 US/KR만 담은 저장된 묶음이고 `all`은 네 시장이다. 둘을 하나로 합치면
 # 예전 보고서가 담지 않은 시장을 담았다고 주장하게 된다.
-MARKET_SCOPES = frozenset({"us", "kr", "europe", "jp", "all", "both"})
-AGGREGATE_SCOPES = frozenset({"all", "both"})
+# `multi`는 이름 없는 조합(예: 미국+일본)의 표시 레이블이다. 조합마다 이름을
+# 만들면 추측이 자리만 옮긴다 — 실제 커버리지는 `includedMarkets`가 말한다.
+MARKET_SCOPES = frozenset({"us", "kr", "europe", "jp", "all", "both", "multi"})
+AGGREGATE_SCOPES = frozenset({"all", "both", "multi"})
 SINGLE_MARKET_SCOPES = ("us", "kr", "europe", "jp")
 LEGACY_AGGREGATE_MARKETS = ("us", "kr")
 BRIEFING_TYPES = frozenset({"default", "market_focused", "concise"})
@@ -45,7 +47,7 @@ VISUAL_TYPES = frozenset({"price_series", "market_heatmap", "index_chart"})
 VISUAL_FAMILIES = frozenset({"trend", "composition"})
 MARKET_TAGS = {
     "us": "미국장", "kr": "한국장", "europe": "유럽장", "jp": "일본장",
-    "all": "종합", "both": "종합",
+    "all": "종합", "both": "종합", "multi": "선택 시장",
 }
 MARKET_TITLE_LABELS = {
     "us": "US Market Briefing", "kr": "Korea Market Briefing",
@@ -153,18 +155,72 @@ def normalize_session_mode(scope, value):
 
 
 def market_keys_for_briefing_scope(value):
-    """The markets a scope actually covers.
+    """The markets a scope covers.
 
     `both` stays two markets forever: reports saved under it never held Europe
     or Japan, and widening it retroactively would claim coverage that was never
     generated.
+
+    `multi` names a set the label cannot describe, so this returns every market
+    as a **search space** — "look for any of these" — not as a coverage claim.
+    What a `multi` report actually holds is in its stored market list, which is
+    why the read path prefers that over this.
     """
     scope = normalize_market_scope(value)
-    if scope == "all":
+    if scope in {"all", "multi"}:
         return SINGLE_MARKET_SCOPES
     if scope == "both":
         return LEGACY_AGGREGATE_MARKETS
     return (scope,)
+
+
+def normalize_market_selection(value, *, default=LEGACY_AGGREGATE_MARKETS):
+    """Resolve a requested market set from either a list or a legacy scope name.
+
+    The selector is a set of markets, not a scope: {US, JP} is a perfectly good
+    request and no scope name describes it. A scope string still resolves, so
+    saved settings and old callers keep working, but the market list is what
+    generation actually runs on.
+
+    Order follows the market contract rather than the caller, so the same set
+    always produces the same file order and the same archive card.
+    """
+    if isinstance(value, str) or value is None:
+        text = str(value or "").strip()
+        if not text:
+            return tuple(default)
+        # 쉼표 목록도 받는다. 쿼리스트링에서는 리스트가 문자열로 도착한다.
+        if "," in text:
+            value = text.split(",")
+        else:
+            return market_keys_for_briefing_scope(text)
+    selected = set()
+    for item in value:
+        scope = str(item or "").strip().lower()
+        if scope in SINGLE_MARKET_SCOPES:
+            selected.add(scope)
+        elif scope in AGGREGATE_SCOPES:
+            selected.update(market_keys_for_briefing_scope(scope))
+    ordered = tuple(key for key in SINGLE_MARKET_SCOPES if key in selected)
+    return ordered or tuple(default)
+
+
+def market_selection_scope(markets):
+    """A display label for a market set.
+
+    `all` and `both` are kept for the sets they have always meant so saved
+    reports and archive filters keep their behavior. Every other combination is
+    `multi`: inventing a name per subset would just move the guessing, and
+    `includedMarkets` is what a reader should trust anyway.
+    """
+    selected = tuple(markets or ())
+    if len(selected) == 1:
+        return selected[0]
+    if set(selected) == set(SINGLE_MARKET_SCOPES):
+        return "all"
+    if set(selected) == set(LEGACY_AGGREGATE_MARKETS):
+        return "both"
+    return "multi"
 
 
 def _dotted_date(value):
@@ -388,7 +444,11 @@ def briefing_market_metadata(report, market_scope, section=None):
     # group came from a two-market `both` run or a four-market `all` run — the
     # file set alone cannot say, because an `all` run can lose two markets.
     generation_scope = str(report.get("generationScope") or "").strip().lower()
-    combined_generation = generation_scope in AGGREGATE_SCOPES
+    generation_markets = [
+        str(key).lower() for key in (report.get("generationMarkets") or [])
+        if str(key).lower() in SINGLE_MARKET_SCOPES
+    ]
+    combined_generation = generation_scope in AGGREGATE_SCOPES or len(generation_markets) > 1
     return {
         "id": f"{report_date}:{scope}",
         "reportDate": report_date,
@@ -404,6 +464,8 @@ def briefing_market_metadata(report, market_scope, section=None):
         "tags": [MARKET_TAGS[scope], BRIEFING_TYPE_TAGS[briefing_type]],
         "combinedGeneration": combined_generation,
         "generationScope": generation_scope if combined_generation else "",
+        # 조합에 이름이 없을 수 있으므로 목록이 묶음의 기준이다.
+        "generationMarkets": generation_markets if combined_generation else [],
     }
 
 

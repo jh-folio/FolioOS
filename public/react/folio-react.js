@@ -396,7 +396,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			default: return "";
 		}
 	}
-	function G(e) {
+	function ee(e) {
 		if (e == null) return null;
 		if (typeof e == "function") return e.displayName || e.name || null;
 		if (typeof e == "string") return e;
@@ -414,16 +414,16 @@ var h = /* @__PURE__ */ i(((e) => {
 			case j:
 				var t = e.render;
 				return e = e.displayName, e ||= (e = t.displayName || t.name || "", e === "" ? "ForwardRef" : "ForwardRef(" + e + ")"), e;
-			case P: return t = e.displayName || null, t === null ? G(e.type) || "Memo" : t;
+			case P: return t = e.displayName || null, t === null ? ee(e.type) || "Memo" : t;
 			case F:
 				t = e._payload, e = e._init;
 				try {
-					return G(e(t));
+					return ee(e(t));
 				} catch {}
 		}
 		return null;
 	}
-	function K(e) {
+	function G(e) {
 		var t = e.type;
 		switch (e.tag) {
 			case 24: return "Cache";
@@ -436,7 +436,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			case 4: return "Portal";
 			case 3: return "Root";
 			case 6: return "Text";
-			case 16: return G(t);
+			case 16: return ee(t);
 			case 8: return t === D ? "StrictMode" : "Mode";
 			case 22: return "Offscreen";
 			case 12: return "Profiler";
@@ -455,7 +455,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return null;
 	}
-	function q(e) {
+	function K(e) {
 		switch (typeof e) {
 			case "boolean":
 			case "number":
@@ -465,12 +465,12 @@ var h = /* @__PURE__ */ i(((e) => {
 			default: return "";
 		}
 	}
-	function ee(e) {
+	function te(e) {
 		var t = e.type;
 		return (e = e.nodeName) && e.toLowerCase() === "input" && (t === "checkbox" || t === "radio");
 	}
-	function te(e) {
-		var t = ee(e) ? "checked" : "value", n = Object.getOwnPropertyDescriptor(e.constructor.prototype, t), r = "" + e[t];
+	function ne(e) {
+		var t = te(e) ? "checked" : "value", n = Object.getOwnPropertyDescriptor(e.constructor.prototype, t), r = "" + e[t];
 		if (!e.hasOwnProperty(t) && n !== void 0 && typeof n.get == "function" && typeof n.set == "function") {
 			var i = n.get, a = n.set;
 			return Object.defineProperty(e, t, {
@@ -494,17 +494,17 @@ var h = /* @__PURE__ */ i(((e) => {
 			};
 		}
 	}
-	function ne(e) {
-		e._valueTracker ||= te(e);
-	}
 	function re(e) {
+		e._valueTracker ||= ne(e);
+	}
+	function ie(e) {
 		if (!e) return !1;
 		var t = e._valueTracker;
 		if (!t) return !0;
 		var n = t.getValue(), r = "";
-		return e && (r = ee(e) ? e.checked ? "true" : "false" : e.value), e = r, e !== n && (t.setValue(e), !0);
+		return e && (r = te(e) ? e.checked ? "true" : "false" : e.value), e = r, e !== n && (t.setValue(e), !0);
 	}
-	function ie(e) {
+	function ae(e) {
 		if (e ||= typeof document < "u" ? document : void 0, e === void 0) return null;
 		try {
 			return e.activeElement || e.body;
@@ -512,7 +512,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			return e.body;
 		}
 	}
-	function ae(e, t) {
+	function oe(e, t) {
 		var n = t.checked;
 		return z({}, t, {
 			defaultChecked: void 0,
@@ -521,28 +521,28 @@ var h = /* @__PURE__ */ i(((e) => {
 			checked: n ?? e._wrapperState.initialChecked
 		});
 	}
-	function oe(e, t) {
+	function se(e, t) {
 		var n = t.defaultValue == null ? "" : t.defaultValue, r = t.checked == null ? t.defaultChecked : t.checked;
-		n = q(t.value == null ? n : t.value), e._wrapperState = {
+		n = K(t.value == null ? n : t.value), e._wrapperState = {
 			initialChecked: r,
 			initialValue: n,
 			controlled: t.type === "checkbox" || t.type === "radio" ? t.checked != null : t.value != null
 		};
 	}
-	function se(e, t) {
+	function ce(e, t) {
 		t = t.checked, t != null && S(e, "checked", t, !1);
 	}
-	function ce(e, t) {
-		se(e, t);
-		var n = q(t.value), r = t.type;
+	function le(e, t) {
+		ce(e, t);
+		var n = K(t.value), r = t.type;
 		if (n != null) r === "number" ? (n === 0 && e.value === "" || e.value != n) && (e.value = "" + n) : e.value !== "" + n && (e.value = "" + n);
 		else if (r === "submit" || r === "reset") {
 			e.removeAttribute("value");
 			return;
 		}
-		t.hasOwnProperty("value") ? ue(e, t.type, n) : t.hasOwnProperty("defaultValue") && ue(e, t.type, q(t.defaultValue)), t.checked == null && t.defaultChecked != null && (e.defaultChecked = !!t.defaultChecked);
+		t.hasOwnProperty("value") ? de(e, t.type, n) : t.hasOwnProperty("defaultValue") && de(e, t.type, K(t.defaultValue)), t.checked == null && t.defaultChecked != null && (e.defaultChecked = !!t.defaultChecked);
 	}
-	function le(e, t, n) {
+	function ue(e, t, n) {
 		if (t.hasOwnProperty("value") || t.hasOwnProperty("defaultValue")) {
 			var r = t.type;
 			if (!(r !== "submit" && r !== "reset" || t.value !== void 0 && t.value !== null)) return;
@@ -550,17 +550,17 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		n = e.name, n !== "" && (e.name = ""), e.defaultChecked = !!e._wrapperState.initialChecked, n !== "" && (e.name = n);
 	}
-	function ue(e, t, n) {
-		(t !== "number" || ie(e.ownerDocument) !== e) && (n == null ? e.defaultValue = "" + e._wrapperState.initialValue : e.defaultValue !== "" + n && (e.defaultValue = "" + n));
+	function de(e, t, n) {
+		(t !== "number" || ae(e.ownerDocument) !== e) && (n == null ? e.defaultValue = "" + e._wrapperState.initialValue : e.defaultValue !== "" + n && (e.defaultValue = "" + n));
 	}
-	var de = Array.isArray;
-	function fe(e, t, n, r) {
+	var fe = Array.isArray;
+	function pe(e, t, n, r) {
 		if (e = e.options, t) {
 			t = {};
 			for (var i = 0; i < n.length; i++) t["$" + n[i]] = !0;
 			for (n = 0; n < e.length; n++) i = t.hasOwnProperty("$" + e[n].value), e[n].selected !== i && (e[n].selected = i), i && r && (e[n].defaultSelected = !0);
 		} else {
-			for (n = "" + q(n), t = null, i = 0; i < e.length; i++) {
+			for (n = "" + K(n), t = null, i = 0; i < e.length; i++) {
 				if (e[i].value === n) {
 					e[i].selected = !0, r && (e[i].defaultSelected = !0);
 					return;
@@ -570,7 +570,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			t !== null && (t.selected = !0);
 		}
 	}
-	function pe(e, t) {
+	function me(e, t) {
 		if (t.dangerouslySetInnerHTML != null) throw Error(r(91));
 		return z({}, t, {
 			value: void 0,
@@ -578,12 +578,12 @@ var h = /* @__PURE__ */ i(((e) => {
 			children: "" + e._wrapperState.initialValue
 		});
 	}
-	function me(e, t) {
+	function he(e, t) {
 		var n = t.value;
 		if (n == null) {
 			if (n = t.children, t = t.defaultValue, n != null) {
 				if (t != null) throw Error(r(92));
-				if (de(n)) {
+				if (fe(n)) {
 					if (1 < n.length) throw Error(r(93));
 					n = n[0];
 				}
@@ -591,27 +591,27 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 			t ??= "", n = t;
 		}
-		e._wrapperState = { initialValue: q(n) };
+		e._wrapperState = { initialValue: K(n) };
 	}
-	function he(e, t) {
-		var n = q(t.value), r = q(t.defaultValue);
+	function ge(e, t) {
+		var n = K(t.value), r = K(t.defaultValue);
 		n != null && (n = "" + n, n !== e.value && (e.value = n), t.defaultValue == null && e.defaultValue !== n && (e.defaultValue = n)), r != null && (e.defaultValue = "" + r);
 	}
-	function ge(e) {
+	function _e(e) {
 		var t = e.textContent;
 		t === e._wrapperState.initialValue && t !== "" && t !== null && (e.value = t);
 	}
-	function _e(e) {
+	function ve(e) {
 		switch (e) {
 			case "svg": return "http://www.w3.org/2000/svg";
 			case "math": return "http://www.w3.org/1998/Math/MathML";
 			default: return "http://www.w3.org/1999/xhtml";
 		}
 	}
-	function ve(e, t) {
-		return e == null || e === "http://www.w3.org/1999/xhtml" ? _e(t) : e === "http://www.w3.org/2000/svg" && t === "foreignObject" ? "http://www.w3.org/1999/xhtml" : e;
+	function ye(e, t) {
+		return e == null || e === "http://www.w3.org/1999/xhtml" ? ve(t) : e === "http://www.w3.org/2000/svg" && t === "foreignObject" ? "http://www.w3.org/1999/xhtml" : e;
 	}
-	var ye, be = function(e) {
+	var be, xe = function(e) {
 		return typeof MSApp < "u" && MSApp.execUnsafeLocalFunction ? function(t, n, r, i) {
 			MSApp.execUnsafeLocalFunction(function() {
 				return e(t, n, r, i);
@@ -620,11 +620,11 @@ var h = /* @__PURE__ */ i(((e) => {
 	}(function(e, t) {
 		if (e.namespaceURI !== "http://www.w3.org/2000/svg" || "innerHTML" in e) e.innerHTML = t;
 		else {
-			for (ye ||= document.createElement("div"), ye.innerHTML = "<svg>" + t.valueOf().toString() + "</svg>", t = ye.firstChild; e.firstChild;) e.removeChild(e.firstChild);
+			for (be ||= document.createElement("div"), be.innerHTML = "<svg>" + t.valueOf().toString() + "</svg>", t = be.firstChild; e.firstChild;) e.removeChild(e.firstChild);
 			for (; t.firstChild;) e.appendChild(t.firstChild);
 		}
 	});
-	function xe(e, t) {
+	function Se(e, t) {
 		if (t) {
 			var n = e.firstChild;
 			if (n && n === e.lastChild && n.nodeType === 3) {
@@ -634,7 +634,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		e.textContent = t;
 	}
-	var Se = {
+	var Ce = {
 		animationIterationCount: !0,
 		aspectRatio: !0,
 		borderImageOutset: !0,
@@ -678,27 +678,27 @@ var h = /* @__PURE__ */ i(((e) => {
 		strokeMiterlimit: !0,
 		strokeOpacity: !0,
 		strokeWidth: !0
-	}, Ce = [
+	}, we = [
 		"Webkit",
 		"ms",
 		"Moz",
 		"O"
 	];
-	Object.keys(Se).forEach(function(e) {
-		Ce.forEach(function(t) {
-			t = t + e.charAt(0).toUpperCase() + e.substring(1), Se[t] = Se[e];
+	Object.keys(Ce).forEach(function(e) {
+		we.forEach(function(t) {
+			t = t + e.charAt(0).toUpperCase() + e.substring(1), Ce[t] = Ce[e];
 		});
 	});
-	function we(e, t, n) {
-		return t == null || typeof t == "boolean" || t === "" ? "" : n || typeof t != "number" || t === 0 || Se.hasOwnProperty(e) && Se[e] ? ("" + t).trim() : t + "px";
+	function Te(e, t, n) {
+		return t == null || typeof t == "boolean" || t === "" ? "" : n || typeof t != "number" || t === 0 || Ce.hasOwnProperty(e) && Ce[e] ? ("" + t).trim() : t + "px";
 	}
-	function Te(e, t) {
+	function Ee(e, t) {
 		for (var n in e = e.style, t) if (t.hasOwnProperty(n)) {
-			var r = n.indexOf("--") === 0, i = we(n, t[n], r);
+			var r = n.indexOf("--") === 0, i = Te(n, t[n], r);
 			n === "float" && (n = "cssFloat"), r ? e.setProperty(n, i) : e[n] = i;
 		}
 	}
-	var Ee = z({ menuitem: !0 }, {
+	var De = z({ menuitem: !0 }, {
 		area: !0,
 		base: !0,
 		br: !0,
@@ -715,9 +715,9 @@ var h = /* @__PURE__ */ i(((e) => {
 		track: !0,
 		wbr: !0
 	});
-	function De(e, t) {
+	function Oe(e, t) {
 		if (t) {
-			if (Ee[e] && (t.children != null || t.dangerouslySetInnerHTML != null)) throw Error(r(137, e));
+			if (De[e] && (t.children != null || t.dangerouslySetInnerHTML != null)) throw Error(r(137, e));
 			if (t.dangerouslySetInnerHTML != null) {
 				if (t.children != null) throw Error(r(60));
 				if (typeof t.dangerouslySetInnerHTML != "object" || !("__html" in t.dangerouslySetInnerHTML)) throw Error(r(61));
@@ -725,7 +725,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			if (t.style != null && typeof t.style != "object") throw Error(r(62));
 		}
 	}
-	function Oe(e, t) {
+	function ke(e, t) {
 		if (e.indexOf("-") === -1) return typeof t.is == "string";
 		switch (e) {
 			case "annotation-xml":
@@ -739,45 +739,45 @@ var h = /* @__PURE__ */ i(((e) => {
 			default: return !0;
 		}
 	}
-	var ke = null;
-	function Ae(e) {
+	var Ae = null;
+	function je(e) {
 		return e = e.target || e.srcElement || window, e.correspondingUseElement && (e = e.correspondingUseElement), e.nodeType === 3 ? e.parentNode : e;
 	}
-	var je = null, Me = null, Ne = null;
-	function Pe(e) {
-		if (e = Mi(e)) {
-			if (typeof je != "function") throw Error(r(280));
-			var t = e.stateNode;
-			t && (t = Pi(t), je(e.stateNode, e.type, t));
-		}
-	}
+	var Me = null, Ne = null, Pe = null;
 	function Fe(e) {
-		Me ? Ne ? Ne.push(e) : Ne = [e] : Me = e;
-	}
-	function Ie() {
-		if (Me) {
-			var e = Me, t = Ne;
-			if (Ne = Me = null, Pe(e), t) for (e = 0; e < t.length; e++) Pe(t[e]);
+		if (e = Ni(e)) {
+			if (typeof Me != "function") throw Error(r(280));
+			var t = e.stateNode;
+			t && (t = Fi(t), Me(e.stateNode, e.type, t));
 		}
 	}
-	function Le(e, t) {
+	function Ie(e) {
+		Ne ? Pe ? Pe.push(e) : Pe = [e] : Ne = e;
+	}
+	function Le() {
+		if (Ne) {
+			var e = Ne, t = Pe;
+			if (Pe = Ne = null, Fe(e), t) for (e = 0; e < t.length; e++) Fe(t[e]);
+		}
+	}
+	function Re(e, t) {
 		return e(t);
 	}
-	function Re() {}
-	var ze = !1;
-	function Be(e, t, n) {
-		if (ze) return e(t, n);
-		ze = !0;
+	function ze() {}
+	var Be = !1;
+	function Ve(e, t, n) {
+		if (Be) return e(t, n);
+		Be = !0;
 		try {
-			return Le(e, t, n);
+			return Re(e, t, n);
 		} finally {
-			ze = !1, (Me !== null || Ne !== null) && (Re(), Ie());
+			Be = !1, (Ne !== null || Pe !== null) && (ze(), Le());
 		}
 	}
-	function Ve(e, t) {
+	function He(e, t) {
 		var n = e.stateNode;
 		if (n === null) return null;
-		var i = Pi(n);
+		var i = Fi(n);
 		if (i === null) return null;
 		n = i[t];
 		a: switch (t) {
@@ -800,16 +800,16 @@ var h = /* @__PURE__ */ i(((e) => {
 		if (n && typeof n != "function") throw Error(r(231, t, typeof n));
 		return n;
 	}
-	var He = !1;
+	var Ue = !1;
 	if (l) try {
-		var Ue = {};
-		Object.defineProperty(Ue, "passive", { get: function() {
-			He = !0;
-		} }), window.addEventListener("test", Ue, Ue), window.removeEventListener("test", Ue, Ue);
+		var We = {};
+		Object.defineProperty(We, "passive", { get: function() {
+			Ue = !0;
+		} }), window.addEventListener("test", We, We), window.removeEventListener("test", We, We);
 	} catch {
-		He = !1;
+		Ue = !1;
 	}
-	function We(e, t, n, r, i, a, o, s, c) {
+	function Ge(e, t, n, r, i, a, o, s, c) {
 		var l = Array.prototype.slice.call(arguments, 3);
 		try {
 			t.apply(n, l);
@@ -817,22 +817,22 @@ var h = /* @__PURE__ */ i(((e) => {
 			this.onError(e);
 		}
 	}
-	var Ge = !1, Ke = null, qe = !1, Je = null, Ye = { onError: function(e) {
-		Ge = !0, Ke = e;
+	var Ke = !1, qe = null, Je = !1, Ye = null, Xe = { onError: function(e) {
+		Ke = !0, qe = e;
 	} };
-	function Xe(e, t, n, r, i, a, o, s, c) {
-		Ge = !1, Ke = null, We.apply(Ye, arguments);
+	function Ze(e, t, n, r, i, a, o, s, c) {
+		Ke = !1, qe = null, Ge.apply(Xe, arguments);
 	}
-	function Ze(e, t, n, i, a, o, s, c, l) {
-		if (Xe.apply(this, arguments), Ge) {
-			if (Ge) {
-				var u = Ke;
-				Ge = !1, Ke = null;
+	function Qe(e, t, n, i, a, o, s, c, l) {
+		if (Ze.apply(this, arguments), Ke) {
+			if (Ke) {
+				var u = qe;
+				Ke = !1, qe = null;
 			} else throw Error(r(198));
-			qe || (qe = !0, Je = u);
+			Je || (Je = !0, Ye = u);
 		}
 	}
-	function Qe(e) {
+	function $e(e) {
 		var t = e, n = e;
 		if (e.alternate) for (; t.return;) t = t.return;
 		else {
@@ -843,20 +843,20 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return t.tag === 3 ? n : null;
 	}
-	function $e(e) {
+	function et(e) {
 		if (e.tag === 13) {
 			var t = e.memoizedState;
 			if (t === null && (e = e.alternate, e !== null && (t = e.memoizedState)), t !== null) return t.dehydrated;
 		}
 		return null;
 	}
-	function et(e) {
-		if (Qe(e) !== e) throw Error(r(188));
-	}
 	function tt(e) {
+		if ($e(e) !== e) throw Error(r(188));
+	}
+	function nt(e) {
 		var t = e.alternate;
 		if (!t) {
-			if (t = Qe(e), t === null) throw Error(r(188));
+			if (t = $e(e), t === null) throw Error(r(188));
 			return t === e ? e : null;
 		}
 		for (var n = e, i = t;;) {
@@ -872,8 +872,8 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 			if (a.child === o.child) {
 				for (o = a.child; o;) {
-					if (o === n) return et(a), e;
-					if (o === i) return et(a), t;
+					if (o === n) return tt(a), e;
+					if (o === i) return tt(a), t;
 					o = o.sibling;
 				}
 				throw Error(r(188));
@@ -911,30 +911,30 @@ var h = /* @__PURE__ */ i(((e) => {
 		if (n.tag !== 3) throw Error(r(188));
 		return n.stateNode.current === n ? e : t;
 	}
-	function nt(e) {
-		return e = tt(e), e === null ? null : rt(e);
-	}
 	function rt(e) {
+		return e = nt(e), e === null ? null : it(e);
+	}
+	function it(e) {
 		if (e.tag === 5 || e.tag === 6) return e;
 		for (e = e.child; e !== null;) {
-			var t = rt(e);
+			var t = it(e);
 			if (t !== null) return t;
 			e = e.sibling;
 		}
 		return null;
 	}
-	var it = n.unstable_scheduleCallback, at = n.unstable_cancelCallback, ot = n.unstable_shouldYield, st = n.unstable_requestPaint, ct = n.unstable_now, lt = n.unstable_getCurrentPriorityLevel, ut = n.unstable_ImmediatePriority, dt = n.unstable_UserBlockingPriority, ft = n.unstable_NormalPriority, pt = n.unstable_LowPriority, mt = n.unstable_IdlePriority, ht = null, gt = null;
-	function _t(e) {
-		if (gt && typeof gt.onCommitFiberRoot == "function") try {
-			gt.onCommitFiberRoot(ht, e, void 0, (e.current.flags & 128) == 128);
+	var at = n.unstable_scheduleCallback, ot = n.unstable_cancelCallback, st = n.unstable_shouldYield, ct = n.unstable_requestPaint, lt = n.unstable_now, ut = n.unstable_getCurrentPriorityLevel, dt = n.unstable_ImmediatePriority, ft = n.unstable_UserBlockingPriority, pt = n.unstable_NormalPriority, mt = n.unstable_LowPriority, ht = n.unstable_IdlePriority, gt = null, _t = null;
+	function vt(e) {
+		if (_t && typeof _t.onCommitFiberRoot == "function") try {
+			_t.onCommitFiberRoot(gt, e, void 0, (e.current.flags & 128) == 128);
 		} catch {}
 	}
-	var vt = Math.clz32 ? Math.clz32 : xt, yt = Math.log, bt = Math.LN2;
-	function xt(e) {
-		return e >>>= 0, e === 0 ? 32 : 31 - (yt(e) / bt | 0) | 0;
+	var yt = Math.clz32 ? Math.clz32 : St, bt = Math.log, xt = Math.LN2;
+	function St(e) {
+		return e >>>= 0, e === 0 ? 32 : 31 - (bt(e) / xt | 0) | 0;
 	}
-	var St = 64, Ct = 4194304;
-	function wt(e) {
+	var Ct = 64, wt = 4194304;
+	function Tt(e) {
 		switch (e & -e) {
 			case 1: return 1;
 			case 2: return 2;
@@ -970,20 +970,20 @@ var h = /* @__PURE__ */ i(((e) => {
 			default: return e;
 		}
 	}
-	function Tt(e, t) {
+	function Et(e, t) {
 		var n = e.pendingLanes;
 		if (n === 0) return 0;
 		var r = 0, i = e.suspendedLanes, a = e.pingedLanes, o = n & 268435455;
 		if (o !== 0) {
 			var s = o & ~i;
-			s === 0 ? (a &= o, a !== 0 && (r = wt(a))) : r = wt(s);
-		} else o = n & ~i, o === 0 ? a !== 0 && (r = wt(a)) : r = wt(o);
+			s === 0 ? (a &= o, a !== 0 && (r = Tt(a))) : r = Tt(s);
+		} else o = n & ~i, o === 0 ? a !== 0 && (r = Tt(a)) : r = Tt(o);
 		if (r === 0) return 0;
 		if (t !== 0 && t !== r && (t & i) === 0 && (i = r & -r, a = t & -t, i >= a || i === 16 && a & 4194240)) return t;
-		if (r & 4 && (r |= n & 16), t = e.entangledLanes, t !== 0) for (e = e.entanglements, t &= r; 0 < t;) n = 31 - vt(t), i = 1 << n, r |= e[n], t &= ~i;
+		if (r & 4 && (r |= n & 16), t = e.entangledLanes, t !== 0) for (e = e.entanglements, t &= r; 0 < t;) n = 31 - yt(t), i = 1 << n, r |= e[n], t &= ~i;
 		return r;
 	}
-	function Et(e, t) {
+	function Dt(e, t) {
 		switch (e) {
 			case 1:
 			case 2:
@@ -1019,99 +1019,99 @@ var h = /* @__PURE__ */ i(((e) => {
 			default: return -1;
 		}
 	}
-	function Dt(e, t) {
+	function Ot(e, t) {
 		for (var n = e.suspendedLanes, r = e.pingedLanes, i = e.expirationTimes, a = e.pendingLanes; 0 < a;) {
-			var o = 31 - vt(a), s = 1 << o, c = i[o];
-			c === -1 ? ((s & n) === 0 || (s & r) !== 0) && (i[o] = Et(s, t)) : c <= t && (e.expiredLanes |= s), a &= ~s;
+			var o = 31 - yt(a), s = 1 << o, c = i[o];
+			c === -1 ? ((s & n) === 0 || (s & r) !== 0) && (i[o] = Dt(s, t)) : c <= t && (e.expiredLanes |= s), a &= ~s;
 		}
 	}
-	function Ot(e) {
+	function kt(e) {
 		return e = e.pendingLanes & -1073741825, e === 0 ? e & 1073741824 ? 1073741824 : 0 : e;
 	}
-	function kt() {
-		var e = St;
-		return St <<= 1, !(St & 4194240) && (St = 64), e;
+	function At() {
+		var e = Ct;
+		return Ct <<= 1, !(Ct & 4194240) && (Ct = 64), e;
 	}
-	function At(e) {
+	function jt(e) {
 		for (var t = [], n = 0; 31 > n; n++) t.push(e);
 		return t;
 	}
-	function jt(e, t, n) {
-		e.pendingLanes |= t, t !== 536870912 && (e.suspendedLanes = 0, e.pingedLanes = 0), e = e.eventTimes, t = 31 - vt(t), e[t] = n;
+	function Mt(e, t, n) {
+		e.pendingLanes |= t, t !== 536870912 && (e.suspendedLanes = 0, e.pingedLanes = 0), e = e.eventTimes, t = 31 - yt(t), e[t] = n;
 	}
-	function Mt(e, t) {
+	function Nt(e, t) {
 		var n = e.pendingLanes & ~t;
 		e.pendingLanes = t, e.suspendedLanes = 0, e.pingedLanes = 0, e.expiredLanes &= t, e.mutableReadLanes &= t, e.entangledLanes &= t, t = e.entanglements;
 		var r = e.eventTimes;
 		for (e = e.expirationTimes; 0 < n;) {
-			var i = 31 - vt(n), a = 1 << i;
+			var i = 31 - yt(n), a = 1 << i;
 			t[i] = 0, r[i] = -1, e[i] = -1, n &= ~a;
 		}
 	}
-	function Nt(e, t) {
+	function Pt(e, t) {
 		var n = e.entangledLanes |= t;
 		for (e = e.entanglements; n;) {
-			var r = 31 - vt(n), i = 1 << r;
+			var r = 31 - yt(n), i = 1 << r;
 			i & t | e[r] & t && (e[r] |= t), n &= ~i;
 		}
 	}
-	var J = 0;
-	function Pt(e) {
+	var q = 0;
+	function Ft(e) {
 		return e &= -e, 1 < e ? 4 < e ? e & 268435455 ? 16 : 536870912 : 4 : 1;
 	}
-	var Ft, It, Lt, Rt, zt, Bt = !1, Vt = [], Ht = null, Ut = null, Wt = null, Gt = /* @__PURE__ */ new Map(), Kt = /* @__PURE__ */ new Map(), qt = [], Jt = "mousedown mouseup touchcancel touchend touchstart auxclick dblclick pointercancel pointerdown pointerup dragend dragstart drop compositionend compositionstart keydown keypress keyup input textInput copy cut paste click change contextmenu reset submit".split(" ");
-	function Yt(e, t) {
+	var It, Lt, Rt, zt, Bt, Vt = !1, Ht = [], Ut = null, Wt = null, Gt = null, Kt = /* @__PURE__ */ new Map(), qt = /* @__PURE__ */ new Map(), Jt = [], Yt = "mousedown mouseup touchcancel touchend touchstart auxclick dblclick pointercancel pointerdown pointerup dragend dragstart drop compositionend compositionstart keydown keypress keyup input textInput copy cut paste click change contextmenu reset submit".split(" ");
+	function Xt(e, t) {
 		switch (e) {
 			case "focusin":
 			case "focusout":
-				Ht = null;
+				Ut = null;
 				break;
 			case "dragenter":
 			case "dragleave":
-				Ut = null;
+				Wt = null;
 				break;
 			case "mouseover":
 			case "mouseout":
-				Wt = null;
+				Gt = null;
 				break;
 			case "pointerover":
 			case "pointerout":
-				Gt.delete(t.pointerId);
+				Kt.delete(t.pointerId);
 				break;
 			case "gotpointercapture":
-			case "lostpointercapture": Kt.delete(t.pointerId);
+			case "lostpointercapture": qt.delete(t.pointerId);
 		}
 	}
-	function Xt(e, t, n, r, i, a) {
+	function Zt(e, t, n, r, i, a) {
 		return e === null || e.nativeEvent !== a ? (e = {
 			blockedOn: t,
 			domEventName: n,
 			eventSystemFlags: r,
 			nativeEvent: a,
 			targetContainers: [i]
-		}, t !== null && (t = Mi(t), t !== null && It(t)), e) : (e.eventSystemFlags |= r, t = e.targetContainers, i !== null && t.indexOf(i) === -1 && t.push(i), e);
+		}, t !== null && (t = Ni(t), t !== null && Lt(t)), e) : (e.eventSystemFlags |= r, t = e.targetContainers, i !== null && t.indexOf(i) === -1 && t.push(i), e);
 	}
-	function Zt(e, t, n, r, i) {
+	function Qt(e, t, n, r, i) {
 		switch (t) {
-			case "focusin": return Ht = Xt(Ht, e, t, n, r, i), !0;
-			case "dragenter": return Ut = Xt(Ut, e, t, n, r, i), !0;
-			case "mouseover": return Wt = Xt(Wt, e, t, n, r, i), !0;
+			case "focusin": return Ut = Zt(Ut, e, t, n, r, i), !0;
+			case "dragenter": return Wt = Zt(Wt, e, t, n, r, i), !0;
+			case "mouseover": return Gt = Zt(Gt, e, t, n, r, i), !0;
 			case "pointerover":
 				var a = i.pointerId;
-				return Gt.set(a, Xt(Gt.get(a) || null, e, t, n, r, i)), !0;
-			case "gotpointercapture": return a = i.pointerId, Kt.set(a, Xt(Kt.get(a) || null, e, t, n, r, i)), !0;
+				return Kt.set(a, Zt(Kt.get(a) || null, e, t, n, r, i)), !0;
+			case "gotpointercapture": return a = i.pointerId, qt.set(a, Zt(qt.get(a) || null, e, t, n, r, i)), !0;
 		}
 		return !1;
 	}
-	function Qt(e) {
-		var t = ji(e.target);
+	function $t(e) {
+		var t = Mi(e.target);
 		if (t !== null) {
-			var n = Qe(t);
+			var n = $e(t);
 			if (n !== null) {
 				if (t = n.tag, t === 13) {
-					if (t = $e(n), t !== null) {
-						e.blockedOn = t, zt(e.priority, function() {
-							Lt(n);
+					if (t = et(n), t !== null) {
+						e.blockedOn = t, Bt(e.priority, function() {
+							Rt(n);
 						});
 						return;
 					}
@@ -1123,89 +1123,89 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		e.blockedOn = null;
 	}
-	function $t(e) {
+	function en(e) {
 		if (e.blockedOn !== null) return !1;
 		for (var t = e.targetContainers; 0 < t.length;) {
-			var n = dn(e.domEventName, e.eventSystemFlags, t[0], e.nativeEvent);
+			var n = fn(e.domEventName, e.eventSystemFlags, t[0], e.nativeEvent);
 			if (n === null) {
 				n = e.nativeEvent;
 				var r = new n.constructor(n.type, n);
-				ke = r, n.target.dispatchEvent(r), ke = null;
-			} else return t = Mi(n), t !== null && It(t), e.blockedOn = n, !1;
+				Ae = r, n.target.dispatchEvent(r), Ae = null;
+			} else return t = Ni(n), t !== null && Lt(t), e.blockedOn = n, !1;
 			t.shift();
 		}
 		return !0;
 	}
-	function en(e, t, n) {
-		$t(e) && n.delete(t);
+	function tn(e, t, n) {
+		en(e) && n.delete(t);
 	}
-	function tn() {
-		Bt = !1, Ht !== null && $t(Ht) && (Ht = null), Ut !== null && $t(Ut) && (Ut = null), Wt !== null && $t(Wt) && (Wt = null), Gt.forEach(en), Kt.forEach(en);
+	function nn() {
+		Vt = !1, Ut !== null && en(Ut) && (Ut = null), Wt !== null && en(Wt) && (Wt = null), Gt !== null && en(Gt) && (Gt = null), Kt.forEach(tn), qt.forEach(tn);
 	}
-	function nn(e, t) {
-		e.blockedOn === t && (e.blockedOn = null, Bt || (Bt = !0, n.unstable_scheduleCallback(n.unstable_NormalPriority, tn)));
+	function rn(e, t) {
+		e.blockedOn === t && (e.blockedOn = null, Vt || (Vt = !0, n.unstable_scheduleCallback(n.unstable_NormalPriority, nn)));
 	}
-	function rn(e) {
+	function an(e) {
 		function t(t) {
-			return nn(t, e);
+			return rn(t, e);
 		}
-		if (0 < Vt.length) {
-			nn(Vt[0], e);
-			for (var n = 1; n < Vt.length; n++) {
-				var r = Vt[n];
+		if (0 < Ht.length) {
+			rn(Ht[0], e);
+			for (var n = 1; n < Ht.length; n++) {
+				var r = Ht[n];
 				r.blockedOn === e && (r.blockedOn = null);
 			}
 		}
-		for (Ht !== null && nn(Ht, e), Ut !== null && nn(Ut, e), Wt !== null && nn(Wt, e), Gt.forEach(t), Kt.forEach(t), n = 0; n < qt.length; n++) r = qt[n], r.blockedOn === e && (r.blockedOn = null);
-		for (; 0 < qt.length && (n = qt[0], n.blockedOn === null);) Qt(n), n.blockedOn === null && qt.shift();
+		for (Ut !== null && rn(Ut, e), Wt !== null && rn(Wt, e), Gt !== null && rn(Gt, e), Kt.forEach(t), qt.forEach(t), n = 0; n < Jt.length; n++) r = Jt[n], r.blockedOn === e && (r.blockedOn = null);
+		for (; 0 < Jt.length && (n = Jt[0], n.blockedOn === null);) $t(n), n.blockedOn === null && Jt.shift();
 	}
-	var an = C.ReactCurrentBatchConfig, on = !0;
-	function sn(e, t, n, r) {
-		var i = J, a = an.transition;
-		an.transition = null;
-		try {
-			J = 1, ln(e, t, n, r);
-		} finally {
-			J = i, an.transition = a;
-		}
-	}
+	var on = C.ReactCurrentBatchConfig, sn = !0;
 	function cn(e, t, n, r) {
-		var i = J, a = an.transition;
-		an.transition = null;
+		var i = q, a = on.transition;
+		on.transition = null;
 		try {
-			J = 4, ln(e, t, n, r);
+			q = 1, un(e, t, n, r);
 		} finally {
-			J = i, an.transition = a;
+			q = i, on.transition = a;
 		}
 	}
 	function ln(e, t, n, r) {
-		if (on) {
-			var i = dn(e, t, n, r);
-			if (i === null) ri(e, t, r, un, n), Yt(e, r);
-			else if (Zt(i, e, t, n, r)) r.stopPropagation();
-			else if (Yt(e, r), t & 4 && -1 < Jt.indexOf(e)) {
+		var i = q, a = on.transition;
+		on.transition = null;
+		try {
+			q = 4, un(e, t, n, r);
+		} finally {
+			q = i, on.transition = a;
+		}
+	}
+	function un(e, t, n, r) {
+		if (sn) {
+			var i = fn(e, t, n, r);
+			if (i === null) ii(e, t, r, dn, n), Xt(e, r);
+			else if (Qt(i, e, t, n, r)) r.stopPropagation();
+			else if (Xt(e, r), t & 4 && -1 < Yt.indexOf(e)) {
 				for (; i !== null;) {
-					var a = Mi(i);
-					if (a !== null && Ft(a), a = dn(e, t, n, r), a === null && ri(e, t, r, un, n), a === i) break;
+					var a = Ni(i);
+					if (a !== null && It(a), a = fn(e, t, n, r), a === null && ii(e, t, r, dn, n), a === i) break;
 					i = a;
 				}
 				i !== null && r.stopPropagation();
-			} else ri(e, t, r, null, n);
+			} else ii(e, t, r, null, n);
 		}
 	}
-	var un = null;
-	function dn(e, t, n, r) {
-		if (un = null, e = Ae(r), e = ji(e), e !== null) if (t = Qe(e), t === null) e = null;
+	var dn = null;
+	function fn(e, t, n, r) {
+		if (dn = null, e = je(r), e = Mi(e), e !== null) if (t = $e(e), t === null) e = null;
 		else if (n = t.tag, n === 13) {
-			if (e = $e(t), e !== null) return e;
+			if (e = et(t), e !== null) return e;
 			e = null;
 		} else if (n === 3) {
 			if (t.stateNode.current.memoizedState.isDehydrated) return t.tag === 3 ? t.stateNode.containerInfo : null;
 			e = null;
 		} else t !== e && (e = null);
-		return un = e, null;
+		return dn = e, null;
 	}
-	function fn(e) {
+	function pn(e) {
 		switch (e) {
 			case "cancel":
 			case "click":
@@ -1277,56 +1277,56 @@ var h = /* @__PURE__ */ i(((e) => {
 			case "mouseleave":
 			case "pointerenter":
 			case "pointerleave": return 4;
-			case "message": switch (lt()) {
-				case ut: return 1;
-				case dt: return 4;
-				case ft:
-				case pt: return 16;
-				case mt: return 536870912;
+			case "message": switch (ut()) {
+				case dt: return 1;
+				case ft: return 4;
+				case pt:
+				case mt: return 16;
+				case ht: return 536870912;
 				default: return 16;
 			}
 			default: return 16;
 		}
 	}
-	var pn = null, mn = null, hn = null;
-	function gn() {
-		if (hn) return hn;
-		var e, t = mn, n = t.length, r, i = "value" in pn ? pn.value : pn.textContent, a = i.length;
+	var mn = null, hn = null, gn = null;
+	function _n() {
+		if (gn) return gn;
+		var e, t = hn, n = t.length, r, i = "value" in mn ? mn.value : mn.textContent, a = i.length;
 		for (e = 0; e < n && t[e] === i[e]; e++);
 		var o = n - e;
 		for (r = 1; r <= o && t[n - r] === i[a - r]; r++);
-		return hn = i.slice(e, 1 < r ? 1 - r : void 0);
+		return gn = i.slice(e, 1 < r ? 1 - r : void 0);
 	}
-	function _n(e) {
+	function vn(e) {
 		var t = e.keyCode;
 		return "charCode" in e ? (e = e.charCode, e === 0 && t === 13 && (e = 13)) : e = t, e === 10 && (e = 13), 32 <= e || e === 13 ? e : 0;
 	}
-	function vn() {
+	function yn() {
 		return !0;
 	}
-	function yn() {
+	function bn() {
 		return !1;
 	}
-	function Y(e) {
+	function J(e) {
 		function t(t, n, r, i, a) {
 			for (var o in this._reactName = t, this._targetInst = r, this.type = n, this.nativeEvent = i, this.target = a, this.currentTarget = null, e) e.hasOwnProperty(o) && (t = e[o], this[o] = t ? t(i) : i[o]);
-			return this.isDefaultPrevented = (i.defaultPrevented == null ? !1 === i.returnValue : i.defaultPrevented) ? vn : yn, this.isPropagationStopped = yn, this;
+			return this.isDefaultPrevented = (i.defaultPrevented == null ? !1 === i.returnValue : i.defaultPrevented) ? yn : bn, this.isPropagationStopped = bn, this;
 		}
 		return z(t.prototype, {
 			preventDefault: function() {
 				this.defaultPrevented = !0;
 				var e = this.nativeEvent;
-				e && (e.preventDefault ? e.preventDefault() : typeof e.returnValue != "unknown" && (e.returnValue = !1), this.isDefaultPrevented = vn);
+				e && (e.preventDefault ? e.preventDefault() : typeof e.returnValue != "unknown" && (e.returnValue = !1), this.isDefaultPrevented = yn);
 			},
 			stopPropagation: function() {
 				var e = this.nativeEvent;
-				e && (e.stopPropagation ? e.stopPropagation() : typeof e.cancelBubble != "unknown" && (e.cancelBubble = !0), this.isPropagationStopped = vn);
+				e && (e.stopPropagation ? e.stopPropagation() : typeof e.cancelBubble != "unknown" && (e.cancelBubble = !0), this.isPropagationStopped = yn);
 			},
 			persist: function() {},
-			isPersistent: vn
+			isPersistent: yn
 		}), t;
 	}
-	var X = {
+	var Y = {
 		eventPhase: 0,
 		bubbles: 0,
 		cancelable: 0,
@@ -1335,10 +1335,10 @@ var h = /* @__PURE__ */ i(((e) => {
 		},
 		defaultPrevented: 0,
 		isTrusted: 0
-	}, bn = Y(X), xn = z({}, X, {
+	}, xn = J(Y), Sn = z({}, Y, {
 		view: 0,
 		detail: 0
-	}), Sn = Y(xn), Cn, wn, Tn, En = z({}, xn, {
+	}), Cn = J(Sn), wn, Tn, En, Dn = z({}, Sn, {
 		screenX: 0,
 		screenY: 0,
 		clientX: 0,
@@ -1349,25 +1349,25 @@ var h = /* @__PURE__ */ i(((e) => {
 		shiftKey: 0,
 		altKey: 0,
 		metaKey: 0,
-		getModifierState: Ln,
+		getModifierState: Rn,
 		button: 0,
 		buttons: 0,
 		relatedTarget: function(e) {
 			return e.relatedTarget === void 0 ? e.fromElement === e.srcElement ? e.toElement : e.fromElement : e.relatedTarget;
 		},
 		movementX: function(e) {
-			return "movementX" in e ? e.movementX : (e !== Tn && (Tn && e.type === "mousemove" ? (Cn = e.screenX - Tn.screenX, wn = e.screenY - Tn.screenY) : wn = Cn = 0, Tn = e), Cn);
+			return "movementX" in e ? e.movementX : (e !== En && (En && e.type === "mousemove" ? (wn = e.screenX - En.screenX, Tn = e.screenY - En.screenY) : Tn = wn = 0, En = e), wn);
 		},
 		movementY: function(e) {
-			return "movementY" in e ? e.movementY : wn;
+			return "movementY" in e ? e.movementY : Tn;
 		}
-	}), Dn = Y(En), On = Y(z({}, En, { dataTransfer: 0 })), kn = Y(z({}, xn, { relatedTarget: 0 })), An = Y(z({}, X, {
+	}), On = J(Dn), kn = J(z({}, Dn, { dataTransfer: 0 })), An = J(z({}, Sn, { relatedTarget: 0 })), jn = J(z({}, Y, {
 		animationName: 0,
 		elapsedTime: 0,
 		pseudoElement: 0
-	})), jn = Y(z({}, X, { clipboardData: function(e) {
+	})), Mn = J(z({}, Y, { clipboardData: function(e) {
 		return "clipboardData" in e ? e.clipboardData : window.clipboardData;
-	} })), Mn = Y(z({}, X, { data: 0 })), Nn = {
+	} })), Nn = J(z({}, Y, { data: 0 })), Pn = {
 		Esc: "Escape",
 		Spacebar: " ",
 		Left: "ArrowLeft",
@@ -1380,7 +1380,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		Apps: "ContextMenu",
 		Scroll: "ScrollLock",
 		MozPrintableKey: "Unidentified"
-	}, Pn = {
+	}, Fn = {
 		8: "Backspace",
 		9: "Tab",
 		12: "Clear",
@@ -1417,26 +1417,26 @@ var h = /* @__PURE__ */ i(((e) => {
 		144: "NumLock",
 		145: "ScrollLock",
 		224: "Meta"
-	}, Fn = {
+	}, In = {
 		Alt: "altKey",
 		Control: "ctrlKey",
 		Meta: "metaKey",
 		Shift: "shiftKey"
 	};
-	function In(e) {
+	function Ln(e) {
 		var t = this.nativeEvent;
-		return t.getModifierState ? t.getModifierState(e) : (e = Fn[e]) ? !!t[e] : !1;
+		return t.getModifierState ? t.getModifierState(e) : (e = In[e]) ? !!t[e] : !1;
 	}
-	function Ln() {
-		return In;
+	function Rn() {
+		return Ln;
 	}
-	var Rn = Y(z({}, xn, {
+	var zn = J(z({}, Sn, {
 		key: function(e) {
 			if (e.key) {
-				var t = Nn[e.key] || e.key;
+				var t = Pn[e.key] || e.key;
 				if (t !== "Unidentified") return t;
 			}
-			return e.type === "keypress" ? (e = _n(e), e === 13 ? "Enter" : String.fromCharCode(e)) : e.type === "keydown" || e.type === "keyup" ? Pn[e.keyCode] || "Unidentified" : "";
+			return e.type === "keypress" ? (e = vn(e), e === 13 ? "Enter" : String.fromCharCode(e)) : e.type === "keydown" || e.type === "keyup" ? Fn[e.keyCode] || "Unidentified" : "";
 		},
 		code: 0,
 		location: 0,
@@ -1446,17 +1446,17 @@ var h = /* @__PURE__ */ i(((e) => {
 		metaKey: 0,
 		repeat: 0,
 		locale: 0,
-		getModifierState: Ln,
+		getModifierState: Rn,
 		charCode: function(e) {
-			return e.type === "keypress" ? _n(e) : 0;
+			return e.type === "keypress" ? vn(e) : 0;
 		},
 		keyCode: function(e) {
 			return e.type === "keydown" || e.type === "keyup" ? e.keyCode : 0;
 		},
 		which: function(e) {
-			return e.type === "keypress" ? _n(e) : e.type === "keydown" || e.type === "keyup" ? e.keyCode : 0;
+			return e.type === "keypress" ? vn(e) : e.type === "keydown" || e.type === "keyup" ? e.keyCode : 0;
 		}
-	})), zn = Y(z({}, En, {
+	})), Bn = J(z({}, Dn, {
 		pointerId: 0,
 		width: 0,
 		height: 0,
@@ -1467,7 +1467,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		twist: 0,
 		pointerType: 0,
 		isPrimary: 0
-	})), Bn = Y(z({}, xn, {
+	})), Vn = J(z({}, Sn, {
 		touches: 0,
 		targetTouches: 0,
 		changedTouches: 0,
@@ -1475,12 +1475,12 @@ var h = /* @__PURE__ */ i(((e) => {
 		metaKey: 0,
 		ctrlKey: 0,
 		shiftKey: 0,
-		getModifierState: Ln
-	})), Vn = Y(z({}, X, {
+		getModifierState: Rn
+	})), Hn = J(z({}, Y, {
 		propertyName: 0,
 		elapsedTime: 0,
 		pseudoElement: 0
-	})), Hn = Y(z({}, En, {
+	})), Un = J(z({}, Dn, {
 		deltaX: function(e) {
 			return "deltaX" in e ? e.deltaX : "wheelDeltaX" in e ? -e.wheelDeltaX : 0;
 		},
@@ -1489,17 +1489,17 @@ var h = /* @__PURE__ */ i(((e) => {
 		},
 		deltaZ: 0,
 		deltaMode: 0
-	})), Un = [
+	})), Wn = [
 		9,
 		13,
 		27,
 		32
-	], Wn = l && "CompositionEvent" in window, Gn = null;
-	l && "documentMode" in document && (Gn = document.documentMode);
-	var Kn = l && "TextEvent" in window && !Gn, qn = l && (!Wn || Gn && 8 < Gn && 11 >= Gn), Jn = " ", Yn = !1;
-	function Xn(e, t) {
+	], Gn = l && "CompositionEvent" in window, Kn = null;
+	l && "documentMode" in document && (Kn = document.documentMode);
+	var qn = l && "TextEvent" in window && !Kn, Jn = l && (!Gn || Kn && 8 < Kn && 11 >= Kn), Yn = " ", Xn = !1;
+	function Zn(e, t) {
 		switch (e) {
-			case "keyup": return Un.indexOf(t.keyCode) !== -1;
+			case "keyup": return Wn.indexOf(t.keyCode) !== -1;
 			case "keydown": return t.keyCode !== 229;
 			case "keypress":
 			case "mousedown":
@@ -1507,20 +1507,20 @@ var h = /* @__PURE__ */ i(((e) => {
 			default: return !1;
 		}
 	}
-	function Zn(e) {
+	function Qn(e) {
 		return e = e.detail, typeof e == "object" && "data" in e ? e.data : null;
 	}
-	var Qn = !1;
-	function $n(e, t) {
+	var $n = !1;
+	function er(e, t) {
 		switch (e) {
-			case "compositionend": return Zn(t);
-			case "keypress": return t.which === 32 ? (Yn = !0, Jn) : null;
-			case "textInput": return e = t.data, e === Jn && Yn ? null : e;
+			case "compositionend": return Qn(t);
+			case "keypress": return t.which === 32 ? (Xn = !0, Yn) : null;
+			case "textInput": return e = t.data, e === Yn && Xn ? null : e;
 			default: return null;
 		}
 	}
-	function er(e, t) {
-		if (Qn) return e === "compositionend" || !Wn && Xn(e, t) ? (e = gn(), hn = mn = pn = null, Qn = !1, e) : null;
+	function tr(e, t) {
+		if ($n) return e === "compositionend" || !Gn && Zn(e, t) ? (e = _n(), gn = hn = mn = null, $n = !1, e) : null;
 		switch (e) {
 			case "paste": return null;
 			case "keypress":
@@ -1529,11 +1529,11 @@ var h = /* @__PURE__ */ i(((e) => {
 					if (t.which) return String.fromCharCode(t.which);
 				}
 				return null;
-			case "compositionend": return qn && t.locale !== "ko" ? null : t.data;
+			case "compositionend": return Jn && t.locale !== "ko" ? null : t.data;
 			default: return null;
 		}
 	}
-	var tr = {
+	var nr = {
 		color: !0,
 		date: !0,
 		datetime: !0,
@@ -1550,81 +1550,81 @@ var h = /* @__PURE__ */ i(((e) => {
 		url: !0,
 		week: !0
 	};
-	function nr(e) {
+	function rr(e) {
 		var t = e && e.nodeName && e.nodeName.toLowerCase();
-		return t === "input" ? !!tr[e.type] : t === "textarea";
+		return t === "input" ? !!nr[e.type] : t === "textarea";
 	}
-	function rr(e, t, n, r) {
-		Fe(r), t = ai(t, "onChange"), 0 < t.length && (n = new bn("onChange", "change", null, n, r), e.push({
+	function ir(e, t, n, r) {
+		Ie(r), t = oi(t, "onChange"), 0 < t.length && (n = new xn("onChange", "change", null, n, r), e.push({
 			event: n,
 			listeners: t
 		}));
 	}
-	var ir = null, ar = null;
-	function or(e) {
-		Zr(e, 0);
-	}
+	var ar = null, or = null;
 	function sr(e) {
-		if (re(Ni(e))) return e;
+		Qr(e, 0);
 	}
-	function cr(e, t) {
+	function cr(e) {
+		if (ie(Pi(e))) return e;
+	}
+	function lr(e, t) {
 		if (e === "change") return t;
 	}
-	var lr = !1;
+	var ur = !1;
 	if (l) {
-		var ur;
+		var dr;
 		if (l) {
-			var dr = "oninput" in document;
-			if (!dr) {
-				var fr = document.createElement("div");
-				fr.setAttribute("oninput", "return;"), dr = typeof fr.oninput == "function";
+			var fr = "oninput" in document;
+			if (!fr) {
+				var pr = document.createElement("div");
+				pr.setAttribute("oninput", "return;"), fr = typeof pr.oninput == "function";
 			}
-			ur = dr;
-		} else ur = !1;
-		lr = ur && (!document.documentMode || 9 < document.documentMode);
+			dr = fr;
+		} else dr = !1;
+		ur = dr && (!document.documentMode || 9 < document.documentMode);
 	}
-	function pr() {
-		ir && (ir.detachEvent("onpropertychange", mr), ar = ir = null);
+	function mr() {
+		ar && (ar.detachEvent("onpropertychange", hr), or = ar = null);
 	}
-	function mr(e) {
-		if (e.propertyName === "value" && sr(ar)) {
+	function hr(e) {
+		if (e.propertyName === "value" && cr(or)) {
 			var t = [];
-			rr(t, ar, e, Ae(e)), Be(or, t);
+			ir(t, or, e, je(e)), Ve(sr, t);
 		}
 	}
-	function hr(e, t, n) {
-		e === "focusin" ? (pr(), ir = t, ar = n, ir.attachEvent("onpropertychange", mr)) : e === "focusout" && pr();
+	function gr(e, t, n) {
+		e === "focusin" ? (mr(), ar = t, or = n, ar.attachEvent("onpropertychange", hr)) : e === "focusout" && mr();
 	}
-	function gr(e) {
-		if (e === "selectionchange" || e === "keyup" || e === "keydown") return sr(ar);
-	}
-	function _r(e, t) {
-		if (e === "click") return sr(t);
+	function _r(e) {
+		if (e === "selectionchange" || e === "keyup" || e === "keydown") return cr(or);
 	}
 	function vr(e, t) {
-		if (e === "input" || e === "change") return sr(t);
+		if (e === "click") return cr(t);
 	}
 	function yr(e, t) {
+		if (e === "input" || e === "change") return cr(t);
+	}
+	function br(e, t) {
 		return e === t && (e !== 0 || 1 / e == 1 / t) || e !== e && t !== t;
 	}
-	var br = typeof Object.is == "function" ? Object.is : yr;
-	function xr(e, t) {
-		if (br(e, t)) return !0;
+	var xr = typeof Object.is == "function" ? Object.is : br;
+	function Sr(e, t) {
+		if (xr(e, t)) return !0;
 		if (typeof e != "object" || !e || typeof t != "object" || !t) return !1;
 		var n = Object.keys(e), r = Object.keys(t);
 		if (n.length !== r.length) return !1;
 		for (r = 0; r < n.length; r++) {
 			var i = n[r];
-			if (!u.call(t, i) || !br(e[i], t[i])) return !1;
+			if (!u.call(t, i) || !xr(e[i], t[i])) return !1;
 		}
 		return !0;
 	}
-	function Sr(e) {
+	function Cr(e) {
 		for (; e && e.firstChild;) e = e.firstChild;
 		return e;
 	}
-	function Cr(e, t) {
-		var n = Sr(e);
+	function wr(e, t) {
+		var n = Cr(e);
 		e = 0;
 		for (var r; n;) {
 			if (n.nodeType === 3) {
@@ -1644,14 +1644,14 @@ var h = /* @__PURE__ */ i(((e) => {
 				}
 				n = void 0;
 			}
-			n = Sr(n);
+			n = Cr(n);
 		}
 	}
-	function wr(e, t) {
-		return e && t ? e === t ? !0 : e && e.nodeType === 3 ? !1 : t && t.nodeType === 3 ? wr(e, t.parentNode) : "contains" in e ? e.contains(t) : e.compareDocumentPosition ? !!(e.compareDocumentPosition(t) & 16) : !1 : !1;
+	function Tr(e, t) {
+		return e && t ? e === t ? !0 : e && e.nodeType === 3 ? !1 : t && t.nodeType === 3 ? Tr(e, t.parentNode) : "contains" in e ? e.contains(t) : e.compareDocumentPosition ? !!(e.compareDocumentPosition(t) & 16) : !1 : !1;
 	}
-	function Tr() {
-		for (var e = window, t = ie(); t instanceof e.HTMLIFrameElement;) {
+	function Er() {
+		for (var e = window, t = ae(); t instanceof e.HTMLIFrameElement;) {
 			try {
 				var n = typeof t.contentWindow.location.href == "string";
 			} catch {
@@ -1659,24 +1659,24 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 			if (n) e = t.contentWindow;
 			else break;
-			t = ie(e.document);
+			t = ae(e.document);
 		}
 		return t;
 	}
-	function Er(e) {
+	function Dr(e) {
 		var t = e && e.nodeName && e.nodeName.toLowerCase();
 		return t && (t === "input" && (e.type === "text" || e.type === "search" || e.type === "tel" || e.type === "url" || e.type === "password") || t === "textarea" || e.contentEditable === "true");
 	}
-	function Dr(e) {
-		var t = Tr(), n = e.focusedElem, r = e.selectionRange;
-		if (t !== n && n && n.ownerDocument && wr(n.ownerDocument.documentElement, n)) {
-			if (r !== null && Er(n)) {
+	function Or(e) {
+		var t = Er(), n = e.focusedElem, r = e.selectionRange;
+		if (t !== n && n && n.ownerDocument && Tr(n.ownerDocument.documentElement, n)) {
+			if (r !== null && Dr(n)) {
 				if (t = r.start, e = r.end, e === void 0 && (e = t), "selectionStart" in n) n.selectionStart = t, n.selectionEnd = Math.min(e, n.value.length);
 				else if (e = (t = n.ownerDocument || document) && t.defaultView || window, e.getSelection) {
 					e = e.getSelection();
 					var i = n.textContent.length, a = Math.min(r.start, i);
-					r = r.end === void 0 ? a : Math.min(r.end, i), !e.extend && a > r && (i = r, r = a, a = i), i = Cr(n, a);
-					var o = Cr(n, r);
+					r = r.end === void 0 ? a : Math.min(r.end, i), !e.extend && a > r && (i = r, r = a, a = i), i = wr(n, a);
+					var o = wr(n, r);
 					i && o && (e.rangeCount !== 1 || e.anchorNode !== i.node || e.anchorOffset !== i.offset || e.focusNode !== o.node || e.focusOffset !== o.offset) && (t = t.createRange(), t.setStart(i.node, i.offset), e.removeAllRanges(), a > r ? (e.addRange(t), e.extend(o.node, o.offset)) : (t.setEnd(o.node, o.offset), e.addRange(t)));
 				}
 			}
@@ -1688,10 +1688,10 @@ var h = /* @__PURE__ */ i(((e) => {
 			for (typeof n.focus == "function" && n.focus(), n = 0; n < t.length; n++) e = t[n], e.element.scrollLeft = e.left, e.element.scrollTop = e.top;
 		}
 	}
-	var Or = l && "documentMode" in document && 11 >= document.documentMode, kr = null, Ar = null, jr = null, Mr = !1;
-	function Nr(e, t, n) {
+	var kr = l && "documentMode" in document && 11 >= document.documentMode, Ar = null, jr = null, Mr = null, Nr = !1;
+	function Pr(e, t, n) {
 		var r = n.window === n ? n.document : n.nodeType === 9 ? n : n.ownerDocument;
-		Mr || kr == null || kr !== ie(r) || (r = kr, "selectionStart" in r && Er(r) ? r = {
+		Nr || Ar == null || Ar !== ae(r) || (r = Ar, "selectionStart" in r && Dr(r) ? r = {
 			start: r.selectionStart,
 			end: r.selectionEnd
 		} : (r = (r.ownerDocument && r.ownerDocument.defaultView || window).getSelection(), r = {
@@ -1699,49 +1699,49 @@ var h = /* @__PURE__ */ i(((e) => {
 			anchorOffset: r.anchorOffset,
 			focusNode: r.focusNode,
 			focusOffset: r.focusOffset
-		}), jr && xr(jr, r) || (jr = r, r = ai(Ar, "onSelect"), 0 < r.length && (t = new bn("onSelect", "select", null, t, n), e.push({
+		}), Mr && Sr(Mr, r) || (Mr = r, r = oi(jr, "onSelect"), 0 < r.length && (t = new xn("onSelect", "select", null, t, n), e.push({
 			event: t,
 			listeners: r
-		}), t.target = kr)));
+		}), t.target = Ar)));
 	}
-	function Pr(e, t) {
+	function Fr(e, t) {
 		var n = {};
 		return n[e.toLowerCase()] = t.toLowerCase(), n["Webkit" + e] = "webkit" + t, n["Moz" + e] = "moz" + t, n;
 	}
-	var Fr = {
-		animationend: Pr("Animation", "AnimationEnd"),
-		animationiteration: Pr("Animation", "AnimationIteration"),
-		animationstart: Pr("Animation", "AnimationStart"),
-		transitionend: Pr("Transition", "TransitionEnd")
-	}, Ir = {}, Lr = {};
-	l && (Lr = document.createElement("div").style, "AnimationEvent" in window || (delete Fr.animationend.animation, delete Fr.animationiteration.animation, delete Fr.animationstart.animation), "TransitionEvent" in window || delete Fr.transitionend.transition);
-	function Rr(e) {
-		if (Ir[e]) return Ir[e];
-		if (!Fr[e]) return e;
-		var t = Fr[e], n;
-		for (n in t) if (t.hasOwnProperty(n) && n in Lr) return Ir[e] = t[n];
+	var Ir = {
+		animationend: Fr("Animation", "AnimationEnd"),
+		animationiteration: Fr("Animation", "AnimationIteration"),
+		animationstart: Fr("Animation", "AnimationStart"),
+		transitionend: Fr("Transition", "TransitionEnd")
+	}, Lr = {}, Rr = {};
+	l && (Rr = document.createElement("div").style, "AnimationEvent" in window || (delete Ir.animationend.animation, delete Ir.animationiteration.animation, delete Ir.animationstart.animation), "TransitionEvent" in window || delete Ir.transitionend.transition);
+	function zr(e) {
+		if (Lr[e]) return Lr[e];
+		if (!Ir[e]) return e;
+		var t = Ir[e], n;
+		for (n in t) if (t.hasOwnProperty(n) && n in Rr) return Lr[e] = t[n];
 		return e;
 	}
-	var zr = Rr("animationend"), Br = Rr("animationiteration"), Vr = Rr("animationstart"), Hr = Rr("transitionend"), Ur = /* @__PURE__ */ new Map(), Wr = "abort auxClick cancel canPlay canPlayThrough click close contextMenu copy cut drag dragEnd dragEnter dragExit dragLeave dragOver dragStart drop durationChange emptied encrypted ended error gotPointerCapture input invalid keyDown keyPress keyUp load loadedData loadedMetadata loadStart lostPointerCapture mouseDown mouseMove mouseOut mouseOver mouseUp paste pause play playing pointerCancel pointerDown pointerMove pointerOut pointerOver pointerUp progress rateChange reset resize seeked seeking stalled submit suspend timeUpdate touchCancel touchEnd touchStart volumeChange scroll toggle touchMove waiting wheel".split(" ");
-	function Gr(e, t) {
-		Ur.set(e, t), o(t, [e]);
+	var Br = zr("animationend"), Vr = zr("animationiteration"), Hr = zr("animationstart"), Ur = zr("transitionend"), Wr = /* @__PURE__ */ new Map(), Gr = "abort auxClick cancel canPlay canPlayThrough click close contextMenu copy cut drag dragEnd dragEnter dragExit dragLeave dragOver dragStart drop durationChange emptied encrypted ended error gotPointerCapture input invalid keyDown keyPress keyUp load loadedData loadedMetadata loadStart lostPointerCapture mouseDown mouseMove mouseOut mouseOver mouseUp paste pause play playing pointerCancel pointerDown pointerMove pointerOut pointerOver pointerUp progress rateChange reset resize seeked seeking stalled submit suspend timeUpdate touchCancel touchEnd touchStart volumeChange scroll toggle touchMove waiting wheel".split(" ");
+	function Kr(e, t) {
+		Wr.set(e, t), o(t, [e]);
 	}
-	for (var Kr = 0; Kr < Wr.length; Kr++) {
-		var qr = Wr[Kr];
-		Gr(qr.toLowerCase(), "on" + (qr[0].toUpperCase() + qr.slice(1)));
+	for (var qr = 0; qr < Gr.length; qr++) {
+		var Jr = Gr[qr];
+		Kr(Jr.toLowerCase(), "on" + (Jr[0].toUpperCase() + Jr.slice(1)));
 	}
-	Gr(zr, "onAnimationEnd"), Gr(Br, "onAnimationIteration"), Gr(Vr, "onAnimationStart"), Gr("dblclick", "onDoubleClick"), Gr("focusin", "onFocus"), Gr("focusout", "onBlur"), Gr(Hr, "onTransitionEnd"), c("onMouseEnter", ["mouseout", "mouseover"]), c("onMouseLeave", ["mouseout", "mouseover"]), c("onPointerEnter", ["pointerout", "pointerover"]), c("onPointerLeave", ["pointerout", "pointerover"]), o("onChange", "change click focusin focusout input keydown keyup selectionchange".split(" ")), o("onSelect", "focusout contextmenu dragend focusin keydown keyup mousedown mouseup selectionchange".split(" ")), o("onBeforeInput", [
+	Kr(Br, "onAnimationEnd"), Kr(Vr, "onAnimationIteration"), Kr(Hr, "onAnimationStart"), Kr("dblclick", "onDoubleClick"), Kr("focusin", "onFocus"), Kr("focusout", "onBlur"), Kr(Ur, "onTransitionEnd"), c("onMouseEnter", ["mouseout", "mouseover"]), c("onMouseLeave", ["mouseout", "mouseover"]), c("onPointerEnter", ["pointerout", "pointerover"]), c("onPointerLeave", ["pointerout", "pointerover"]), o("onChange", "change click focusin focusout input keydown keyup selectionchange".split(" ")), o("onSelect", "focusout contextmenu dragend focusin keydown keyup mousedown mouseup selectionchange".split(" ")), o("onBeforeInput", [
 		"compositionend",
 		"keypress",
 		"textInput",
 		"paste"
 	]), o("onCompositionEnd", "compositionend focusout keydown keypress keyup mousedown".split(" ")), o("onCompositionStart", "compositionstart focusout keydown keypress keyup mousedown".split(" ")), o("onCompositionUpdate", "compositionupdate focusout keydown keypress keyup mousedown".split(" "));
-	var Jr = "abort canplay canplaythrough durationchange emptied encrypted ended error loadeddata loadedmetadata loadstart pause play playing progress ratechange resize seeked seeking stalled suspend timeupdate volumechange waiting".split(" "), Yr = new Set("cancel close invalid load scroll toggle".split(" ").concat(Jr));
-	function Xr(e, t, n) {
+	var Yr = "abort canplay canplaythrough durationchange emptied encrypted ended error loadeddata loadedmetadata loadstart pause play playing progress ratechange resize seeked seeking stalled suspend timeupdate volumechange waiting".split(" "), Xr = new Set("cancel close invalid load scroll toggle".split(" ").concat(Yr));
+	function Zr(e, t, n) {
 		var r = e.type || "unknown-event";
-		e.currentTarget = n, Ze(r, t, void 0, e), e.currentTarget = null;
+		e.currentTarget = n, Qe(r, t, void 0, e), e.currentTarget = null;
 	}
-	function Zr(e, t) {
+	function Qr(e, t) {
 		t = !!(t & 4);
 		for (var n = 0; n < e.length; n++) {
 			var r = e[n], i = r.event;
@@ -1751,52 +1751,52 @@ var h = /* @__PURE__ */ i(((e) => {
 				if (t) for (var o = r.length - 1; 0 <= o; o--) {
 					var s = r[o], c = s.instance, l = s.currentTarget;
 					if (s = s.listener, c !== a && i.isPropagationStopped()) break a;
-					Xr(i, s, l), a = c;
+					Zr(i, s, l), a = c;
 				}
 				else for (o = 0; o < r.length; o++) {
 					if (s = r[o], c = s.instance, l = s.currentTarget, s = s.listener, c !== a && i.isPropagationStopped()) break a;
-					Xr(i, s, l), a = c;
+					Zr(i, s, l), a = c;
 				}
 			}
 		}
-		if (qe) throw e = Je, qe = !1, Je = null, e;
+		if (Je) throw e = Ye, Je = !1, Ye = null, e;
 	}
-	function Qr(e, t) {
-		var n = t[Oi];
-		n === void 0 && (n = t[Oi] = /* @__PURE__ */ new Set());
+	function $r(e, t) {
+		var n = t[ki];
+		n === void 0 && (n = t[ki] = /* @__PURE__ */ new Set());
 		var r = e + "__bubble";
-		n.has(r) || (ni(t, e, 2, !1), n.add(r));
+		n.has(r) || (ri(t, e, 2, !1), n.add(r));
 	}
-	function $r(e, t, n) {
+	function ei(e, t, n) {
 		var r = 0;
-		t && (r |= 4), ni(n, e, r, t);
+		t && (r |= 4), ri(n, e, r, t);
 	}
-	var ei = "_reactListening" + Math.random().toString(36).slice(2);
-	function ti(e) {
-		if (!e[ei]) {
-			e[ei] = !0, i.forEach(function(t) {
-				t !== "selectionchange" && (Yr.has(t) || $r(t, !1, e), $r(t, !0, e));
+	var ti = "_reactListening" + Math.random().toString(36).slice(2);
+	function ni(e) {
+		if (!e[ti]) {
+			e[ti] = !0, i.forEach(function(t) {
+				t !== "selectionchange" && (Xr.has(t) || ei(t, !1, e), ei(t, !0, e));
 			});
 			var t = e.nodeType === 9 ? e : e.ownerDocument;
-			t === null || t[ei] || (t[ei] = !0, $r("selectionchange", !1, t));
+			t === null || t[ti] || (t[ti] = !0, ei("selectionchange", !1, t));
 		}
 	}
-	function ni(e, t, n, r) {
-		switch (fn(t)) {
+	function ri(e, t, n, r) {
+		switch (pn(t)) {
 			case 1:
-				var i = sn;
+				var i = cn;
 				break;
 			case 4:
-				i = cn;
+				i = ln;
 				break;
-			default: i = ln;
+			default: i = un;
 		}
-		n = i.bind(null, t, n, e), i = void 0, !He || t !== "touchstart" && t !== "touchmove" && t !== "wheel" || (i = !0), r ? i === void 0 ? e.addEventListener(t, n, !0) : e.addEventListener(t, n, {
+		n = i.bind(null, t, n, e), i = void 0, !Ue || t !== "touchstart" && t !== "touchmove" && t !== "wheel" || (i = !0), r ? i === void 0 ? e.addEventListener(t, n, !0) : e.addEventListener(t, n, {
 			capture: !0,
 			passive: i
 		}) : i === void 0 ? e.addEventListener(t, n, !1) : e.addEventListener(t, n, { passive: i });
 	}
-	function ri(e, t, n, r, i) {
+	function ii(e, t, n, r, i) {
 		var a = r;
 		if (!(t & 1) && !(t & 2) && r !== null) a: for (;;) {
 			if (r === null) return;
@@ -1810,7 +1810,7 @@ var h = /* @__PURE__ */ i(((e) => {
 					o = o.return;
 				}
 				for (; s !== null;) {
-					if (o = ji(s), o === null) return;
+					if (o = Mi(s), o === null) return;
 					if (c = o.tag, c === 5 || c === 6) {
 						r = a = o;
 						continue a;
@@ -1820,27 +1820,27 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 			r = r.return;
 		}
-		Be(function() {
-			var r = a, i = Ae(n), o = [];
+		Ve(function() {
+			var r = a, i = je(n), o = [];
 			a: {
-				var s = Ur.get(e);
+				var s = Wr.get(e);
 				if (s !== void 0) {
-					var c = bn, l = e;
+					var c = xn, l = e;
 					switch (e) {
-						case "keypress": if (_n(n) === 0) break a;
+						case "keypress": if (vn(n) === 0) break a;
 						case "keydown":
 						case "keyup":
-							c = Rn;
+							c = zn;
 							break;
 						case "focusin":
-							l = "focus", c = kn;
+							l = "focus", c = An;
 							break;
 						case "focusout":
-							l = "blur", c = kn;
+							l = "blur", c = An;
 							break;
 						case "beforeblur":
 						case "afterblur":
-							c = kn;
+							c = An;
 							break;
 						case "click": if (n.button === 2) break a;
 						case "auxclick":
@@ -1851,7 +1851,7 @@ var h = /* @__PURE__ */ i(((e) => {
 						case "mouseout":
 						case "mouseover":
 						case "contextmenu":
-							c = Dn;
+							c = On;
 							break;
 						case "drag":
 						case "dragend":
@@ -1861,32 +1861,32 @@ var h = /* @__PURE__ */ i(((e) => {
 						case "dragover":
 						case "dragstart":
 						case "drop":
-							c = On;
+							c = kn;
 							break;
 						case "touchcancel":
 						case "touchend":
 						case "touchmove":
 						case "touchstart":
-							c = Bn;
-							break;
-						case zr:
-						case Br:
-						case Vr:
-							c = An;
-							break;
-						case Hr:
 							c = Vn;
 							break;
+						case Br:
+						case Vr:
+						case Hr:
+							c = jn;
+							break;
+						case Ur:
+							c = Hn;
+							break;
 						case "scroll":
-							c = Sn;
+							c = Cn;
 							break;
 						case "wheel":
-							c = Hn;
+							c = Un;
 							break;
 						case "copy":
 						case "cut":
 						case "paste":
-							c = jn;
+							c = Mn;
 							break;
 						case "gotpointercapture":
 						case "lostpointercapture":
@@ -1895,14 +1895,14 @@ var h = /* @__PURE__ */ i(((e) => {
 						case "pointermove":
 						case "pointerout":
 						case "pointerover":
-						case "pointerup": c = zn;
+						case "pointerup": c = Bn;
 					}
 					var u = !!(t & 4), d = !u && e === "scroll", f = u ? s === null ? null : s + "Capture" : s;
 					u = [];
 					for (var p = r, m; p !== null;) {
 						m = p;
 						var h = m.stateNode;
-						if (m.tag === 5 && h !== null && (m = h, f !== null && (h = Ve(p, f), h != null && u.push(ii(p, h, m)))), d) break;
+						if (m.tag === 5 && h !== null && (m = h, f !== null && (h = He(p, f), h != null && u.push(ai(p, h, m)))), d) break;
 						p = p.return;
 					}
 					0 < u.length && (s = new c(s, l, null, n, i), o.push({
@@ -1913,58 +1913,58 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 			if (!(t & 7)) {
 				a: {
-					if (s = e === "mouseover" || e === "pointerover", c = e === "mouseout" || e === "pointerout", s && n !== ke && (l = n.relatedTarget || n.fromElement) && (ji(l) || l[Di])) break a;
-					if ((c || s) && (s = i.window === i ? i : (s = i.ownerDocument) ? s.defaultView || s.parentWindow : window, c ? (l = n.relatedTarget || n.toElement, c = r, l = l ? ji(l) : null, l !== null && (d = Qe(l), l !== d || l.tag !== 5 && l.tag !== 6) && (l = null)) : (c = null, l = r), c !== l)) {
-						if (u = Dn, h = "onMouseLeave", f = "onMouseEnter", p = "mouse", (e === "pointerout" || e === "pointerover") && (u = zn, h = "onPointerLeave", f = "onPointerEnter", p = "pointer"), d = c == null ? s : Ni(c), m = l == null ? s : Ni(l), s = new u(h, p + "leave", c, n, i), s.target = d, s.relatedTarget = m, h = null, ji(i) === r && (u = new u(f, p + "enter", l, n, i), u.target = m, u.relatedTarget = d, h = u), d = h, c && l) b: {
-							for (u = c, f = l, p = 0, m = u; m; m = oi(m)) p++;
-							for (m = 0, h = f; h; h = oi(h)) m++;
-							for (; 0 < p - m;) u = oi(u), p--;
-							for (; 0 < m - p;) f = oi(f), m--;
+					if (s = e === "mouseover" || e === "pointerover", c = e === "mouseout" || e === "pointerout", s && n !== Ae && (l = n.relatedTarget || n.fromElement) && (Mi(l) || l[Oi])) break a;
+					if ((c || s) && (s = i.window === i ? i : (s = i.ownerDocument) ? s.defaultView || s.parentWindow : window, c ? (l = n.relatedTarget || n.toElement, c = r, l = l ? Mi(l) : null, l !== null && (d = $e(l), l !== d || l.tag !== 5 && l.tag !== 6) && (l = null)) : (c = null, l = r), c !== l)) {
+						if (u = On, h = "onMouseLeave", f = "onMouseEnter", p = "mouse", (e === "pointerout" || e === "pointerover") && (u = Bn, h = "onPointerLeave", f = "onPointerEnter", p = "pointer"), d = c == null ? s : Pi(c), m = l == null ? s : Pi(l), s = new u(h, p + "leave", c, n, i), s.target = d, s.relatedTarget = m, h = null, Mi(i) === r && (u = new u(f, p + "enter", l, n, i), u.target = m, u.relatedTarget = d, h = u), d = h, c && l) b: {
+							for (u = c, f = l, p = 0, m = u; m; m = si(m)) p++;
+							for (m = 0, h = f; h; h = si(h)) m++;
+							for (; 0 < p - m;) u = si(u), p--;
+							for (; 0 < m - p;) f = si(f), m--;
 							for (; p--;) {
 								if (u === f || f !== null && u === f.alternate) break b;
-								u = oi(u), f = oi(f);
+								u = si(u), f = si(f);
 							}
 							u = null;
 						}
 						else u = null;
-						c !== null && si(o, s, c, u, !1), l !== null && d !== null && si(o, d, l, u, !0);
+						c !== null && ci(o, s, c, u, !1), l !== null && d !== null && ci(o, d, l, u, !0);
 					}
 				}
 				a: {
-					if (s = r ? Ni(r) : window, c = s.nodeName && s.nodeName.toLowerCase(), c === "select" || c === "input" && s.type === "file") var g = cr;
-					else if (nr(s)) if (lr) g = vr;
+					if (s = r ? Pi(r) : window, c = s.nodeName && s.nodeName.toLowerCase(), c === "select" || c === "input" && s.type === "file") var g = lr;
+					else if (rr(s)) if (ur) g = yr;
 					else {
-						g = gr;
-						var _ = hr;
+						g = _r;
+						var _ = gr;
 					}
-					else (c = s.nodeName) && c.toLowerCase() === "input" && (s.type === "checkbox" || s.type === "radio") && (g = _r);
+					else (c = s.nodeName) && c.toLowerCase() === "input" && (s.type === "checkbox" || s.type === "radio") && (g = vr);
 					if (g &&= g(e, r)) {
-						rr(o, g, n, i);
+						ir(o, g, n, i);
 						break a;
 					}
-					_ && _(e, s, r), e === "focusout" && (_ = s._wrapperState) && _.controlled && s.type === "number" && ue(s, "number", s.value);
+					_ && _(e, s, r), e === "focusout" && (_ = s._wrapperState) && _.controlled && s.type === "number" && de(s, "number", s.value);
 				}
-				switch (_ = r ? Ni(r) : window, e) {
+				switch (_ = r ? Pi(r) : window, e) {
 					case "focusin":
-						(nr(_) || _.contentEditable === "true") && (kr = _, Ar = r, jr = null);
+						(rr(_) || _.contentEditable === "true") && (Ar = _, jr = r, Mr = null);
 						break;
 					case "focusout":
-						jr = Ar = kr = null;
+						Mr = jr = Ar = null;
 						break;
 					case "mousedown":
-						Mr = !0;
+						Nr = !0;
 						break;
 					case "contextmenu":
 					case "mouseup":
 					case "dragend":
-						Mr = !1, Nr(o, n, i);
+						Nr = !1, Pr(o, n, i);
 						break;
-					case "selectionchange": if (Or) break;
+					case "selectionchange": if (kr) break;
 					case "keydown":
-					case "keyup": Nr(o, n, i);
+					case "keyup": Pr(o, n, i);
 				}
 				var v;
-				if (Wn) b: {
+				if (Gn) b: {
 					switch (e) {
 						case "compositionstart":
 							var y = "onCompositionStart";
@@ -1978,86 +1978,86 @@ var h = /* @__PURE__ */ i(((e) => {
 					}
 					y = void 0;
 				}
-				else Qn ? Xn(e, n) && (y = "onCompositionEnd") : e === "keydown" && n.keyCode === 229 && (y = "onCompositionStart");
-				y && (qn && n.locale !== "ko" && (Qn || y !== "onCompositionStart" ? y === "onCompositionEnd" && Qn && (v = gn()) : (pn = i, mn = "value" in pn ? pn.value : pn.textContent, Qn = !0)), _ = ai(r, y), 0 < _.length && (y = new Mn(y, e, null, n, i), o.push({
+				else $n ? Zn(e, n) && (y = "onCompositionEnd") : e === "keydown" && n.keyCode === 229 && (y = "onCompositionStart");
+				y && (Jn && n.locale !== "ko" && ($n || y !== "onCompositionStart" ? y === "onCompositionEnd" && $n && (v = _n()) : (mn = i, hn = "value" in mn ? mn.value : mn.textContent, $n = !0)), _ = oi(r, y), 0 < _.length && (y = new Nn(y, e, null, n, i), o.push({
 					event: y,
 					listeners: _
-				}), v ? y.data = v : (v = Zn(n), v !== null && (y.data = v)))), (v = Kn ? $n(e, n) : er(e, n)) && (r = ai(r, "onBeforeInput"), 0 < r.length && (i = new Mn("onBeforeInput", "beforeinput", null, n, i), o.push({
+				}), v ? y.data = v : (v = Qn(n), v !== null && (y.data = v)))), (v = qn ? er(e, n) : tr(e, n)) && (r = oi(r, "onBeforeInput"), 0 < r.length && (i = new Nn("onBeforeInput", "beforeinput", null, n, i), o.push({
 					event: i,
 					listeners: r
 				}), i.data = v));
 			}
-			Zr(o, t);
+			Qr(o, t);
 		});
 	}
-	function ii(e, t, n) {
+	function ai(e, t, n) {
 		return {
 			instance: e,
 			listener: t,
 			currentTarget: n
 		};
 	}
-	function ai(e, t) {
+	function oi(e, t) {
 		for (var n = t + "Capture", r = []; e !== null;) {
 			var i = e, a = i.stateNode;
-			i.tag === 5 && a !== null && (i = a, a = Ve(e, n), a != null && r.unshift(ii(e, a, i)), a = Ve(e, t), a != null && r.push(ii(e, a, i))), e = e.return;
+			i.tag === 5 && a !== null && (i = a, a = He(e, n), a != null && r.unshift(ai(e, a, i)), a = He(e, t), a != null && r.push(ai(e, a, i))), e = e.return;
 		}
 		return r;
 	}
-	function oi(e) {
+	function si(e) {
 		if (e === null) return null;
 		do
 			e = e.return;
 		while (e && e.tag !== 5);
 		return e || null;
 	}
-	function si(e, t, n, r, i) {
+	function ci(e, t, n, r, i) {
 		for (var a = t._reactName, o = []; n !== null && n !== r;) {
 			var s = n, c = s.alternate, l = s.stateNode;
 			if (c !== null && c === r) break;
-			s.tag === 5 && l !== null && (s = l, i ? (c = Ve(n, a), c != null && o.unshift(ii(n, c, s))) : i || (c = Ve(n, a), c != null && o.push(ii(n, c, s)))), n = n.return;
+			s.tag === 5 && l !== null && (s = l, i ? (c = He(n, a), c != null && o.unshift(ai(n, c, s))) : i || (c = He(n, a), c != null && o.push(ai(n, c, s)))), n = n.return;
 		}
 		o.length !== 0 && e.push({
 			event: t,
 			listeners: o
 		});
 	}
-	var ci = /\r\n?/g, li = /\u0000|\uFFFD/g;
-	function ui(e) {
-		return (typeof e == "string" ? e : "" + e).replace(ci, "\n").replace(li, "");
+	var li = /\r\n?/g, ui = /\u0000|\uFFFD/g;
+	function di(e) {
+		return (typeof e == "string" ? e : "" + e).replace(li, "\n").replace(ui, "");
 	}
-	function di(e, t, n) {
-		if (t = ui(t), ui(e) !== t && n) throw Error(r(425));
+	function fi(e, t, n) {
+		if (t = di(t), di(e) !== t && n) throw Error(r(425));
 	}
-	function fi() {}
-	var pi = null, mi = null;
-	function hi(e, t) {
+	function pi() {}
+	var mi = null, hi = null;
+	function gi(e, t) {
 		return e === "textarea" || e === "noscript" || typeof t.children == "string" || typeof t.children == "number" || typeof t.dangerouslySetInnerHTML == "object" && t.dangerouslySetInnerHTML !== null && t.dangerouslySetInnerHTML.__html != null;
 	}
-	var gi = typeof setTimeout == "function" ? setTimeout : void 0, _i = typeof clearTimeout == "function" ? clearTimeout : void 0, vi = typeof Promise == "function" ? Promise : void 0, yi = typeof queueMicrotask == "function" ? queueMicrotask : vi === void 0 ? gi : function(e) {
-		return vi.resolve(null).then(e).catch(bi);
+	var _i = typeof setTimeout == "function" ? setTimeout : void 0, vi = typeof clearTimeout == "function" ? clearTimeout : void 0, yi = typeof Promise == "function" ? Promise : void 0, bi = typeof queueMicrotask == "function" ? queueMicrotask : yi === void 0 ? _i : function(e) {
+		return yi.resolve(null).then(e).catch(xi);
 	};
-	function bi(e) {
+	function xi(e) {
 		setTimeout(function() {
 			throw e;
 		});
 	}
-	function xi(e, t) {
+	function Si(e, t) {
 		var n = t, r = 0;
 		do {
 			var i = n.nextSibling;
 			if (e.removeChild(n), i && i.nodeType === 8) if (n = i.data, n === "/$") {
 				if (r === 0) {
-					e.removeChild(i), rn(t);
+					e.removeChild(i), an(t);
 					return;
 				}
 				r--;
 			} else n !== "$" && n !== "$?" && n !== "$!" || r++;
 			n = i;
 		} while (n);
-		rn(t);
+		an(t);
 	}
-	function Si(e) {
+	function Ci(e) {
 		for (; e != null; e = e.nextSibling) {
 			var t = e.nodeType;
 			if (t === 1 || t === 3) break;
@@ -2068,7 +2068,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return e;
 	}
-	function Ci(e) {
+	function wi(e) {
 		e = e.previousSibling;
 		for (var t = 0; e;) {
 			if (e.nodeType === 8) {
@@ -2082,15 +2082,15 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return null;
 	}
-	var wi = Math.random().toString(36).slice(2), Ti = "__reactFiber$" + wi, Ei = "__reactProps$" + wi, Di = "__reactContainer$" + wi, Oi = "__reactEvents$" + wi, ki = "__reactListeners$" + wi, Ai = "__reactHandles$" + wi;
-	function ji(e) {
-		var t = e[Ti];
+	var Ti = Math.random().toString(36).slice(2), Ei = "__reactFiber$" + Ti, Di = "__reactProps$" + Ti, Oi = "__reactContainer$" + Ti, ki = "__reactEvents$" + Ti, Ai = "__reactListeners$" + Ti, ji = "__reactHandles$" + Ti;
+	function Mi(e) {
+		var t = e[Ei];
 		if (t) return t;
 		for (var n = e.parentNode; n;) {
-			if (t = n[Di] || n[Ti]) {
-				if (n = t.alternate, t.child !== null || n !== null && n.child !== null) for (e = Ci(e); e !== null;) {
-					if (n = e[Ti]) return n;
-					e = Ci(e);
+			if (t = n[Oi] || n[Ei]) {
+				if (n = t.alternate, t.child !== null || n !== null && n.child !== null) for (e = wi(e); e !== null;) {
+					if (n = e[Ei]) return n;
+					e = wi(e);
 				}
 				return t;
 			}
@@ -2098,166 +2098,166 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return null;
 	}
-	function Mi(e) {
-		return e = e[Ti] || e[Di], !e || e.tag !== 5 && e.tag !== 6 && e.tag !== 13 && e.tag !== 3 ? null : e;
-	}
 	function Ni(e) {
+		return e = e[Ei] || e[Oi], !e || e.tag !== 5 && e.tag !== 6 && e.tag !== 13 && e.tag !== 3 ? null : e;
+	}
+	function Pi(e) {
 		if (e.tag === 5 || e.tag === 6) return e.stateNode;
 		throw Error(r(33));
 	}
-	function Pi(e) {
-		return e[Ei] || null;
+	function Fi(e) {
+		return e[Di] || null;
 	}
-	var Fi = [], Ii = -1;
-	function Li(e) {
+	var Ii = [], Li = -1;
+	function Ri(e) {
 		return { current: e };
 	}
-	function Z(e) {
-		0 > Ii || (e.current = Fi[Ii], Fi[Ii] = null, Ii--);
+	function zi(e) {
+		0 > Li || (e.current = Ii[Li], Ii[Li] = null, Li--);
 	}
-	function Ri(e, t) {
-		Ii++, Fi[Ii] = e.current, e.current = t;
+	function Bi(e, t) {
+		Li++, Ii[Li] = e.current, e.current = t;
 	}
-	var zi = {}, Bi = Li(zi), Vi = Li(!1), Hi = zi;
-	function Ui(e, t) {
+	var Vi = {}, Hi = Ri(Vi), Ui = Ri(!1), Wi = Vi;
+	function Gi(e, t) {
 		var n = e.type.contextTypes;
-		if (!n) return zi;
+		if (!n) return Vi;
 		var r = e.stateNode;
 		if (r && r.__reactInternalMemoizedUnmaskedChildContext === t) return r.__reactInternalMemoizedMaskedChildContext;
 		var i = {}, a;
 		for (a in n) i[a] = t[a];
 		return r && (e = e.stateNode, e.__reactInternalMemoizedUnmaskedChildContext = t, e.__reactInternalMemoizedMaskedChildContext = i), i;
 	}
-	function Wi(e) {
+	function Ki(e) {
 		return e = e.childContextTypes, e != null;
 	}
-	function Gi() {
-		Z(Vi), Z(Bi);
+	function qi() {
+		zi(Ui), zi(Hi);
 	}
-	function Ki(e, t, n) {
-		if (Bi.current !== zi) throw Error(r(168));
-		Ri(Bi, t), Ri(Vi, n);
-	}
-	function qi(e, t, n) {
-		var i = e.stateNode;
-		if (t = t.childContextTypes, typeof i.getChildContext != "function") return n;
-		for (var a in i = i.getChildContext(), i) if (!(a in t)) throw Error(r(108, K(e) || "Unknown", a));
-		return z({}, n, i);
-	}
-	function Ji(e) {
-		return e = (e = e.stateNode) && e.__reactInternalMemoizedMergedChildContext || zi, Hi = Bi.current, Ri(Bi, e), Ri(Vi, Vi.current), !0;
+	function Ji(e, t, n) {
+		if (Hi.current !== Vi) throw Error(r(168));
+		Bi(Hi, t), Bi(Ui, n);
 	}
 	function Yi(e, t, n) {
 		var i = e.stateNode;
+		if (t = t.childContextTypes, typeof i.getChildContext != "function") return n;
+		for (var a in i = i.getChildContext(), i) if (!(a in t)) throw Error(r(108, G(e) || "Unknown", a));
+		return z({}, n, i);
+	}
+	function Xi(e) {
+		return e = (e = e.stateNode) && e.__reactInternalMemoizedMergedChildContext || Vi, Wi = Hi.current, Bi(Hi, e), Bi(Ui, Ui.current), !0;
+	}
+	function Zi(e, t, n) {
+		var i = e.stateNode;
 		if (!i) throw Error(r(169));
-		n ? (e = qi(e, t, Hi), i.__reactInternalMemoizedMergedChildContext = e, Z(Vi), Z(Bi), Ri(Bi, e)) : Z(Vi), Ri(Vi, n);
+		n ? (e = Yi(e, t, Wi), i.__reactInternalMemoizedMergedChildContext = e, zi(Ui), zi(Hi), Bi(Hi, e)) : zi(Ui), Bi(Ui, n);
 	}
-	var Xi = null, Zi = !1, Qi = !1;
-	function $i(e) {
-		Xi === null ? Xi = [e] : Xi.push(e);
+	var Qi = null, $i = !1, ea = !1;
+	function ta(e) {
+		Qi === null ? Qi = [e] : Qi.push(e);
 	}
-	function ea(e) {
-		Zi = !0, $i(e);
+	function na(e) {
+		$i = !0, ta(e);
 	}
-	function ta() {
-		if (!Qi && Xi !== null) {
-			Qi = !0;
-			var e = 0, t = J;
+	function ra() {
+		if (!ea && Qi !== null) {
+			ea = !0;
+			var e = 0, t = q;
 			try {
-				var n = Xi;
-				for (J = 1; e < n.length; e++) {
+				var n = Qi;
+				for (q = 1; e < n.length; e++) {
 					var r = n[e];
 					do
 						r = r(!0);
 					while (r !== null);
 				}
-				Xi = null, Zi = !1;
+				Qi = null, $i = !1;
 			} catch (t) {
-				throw Xi !== null && (Xi = Xi.slice(e + 1)), it(ut, ta), t;
+				throw Qi !== null && (Qi = Qi.slice(e + 1)), at(dt, ra), t;
 			} finally {
-				J = t, Qi = !1;
+				q = t, ea = !1;
 			}
 		}
 		return null;
 	}
-	var na = [], ra = 0, ia = null, aa = 0, oa = [], sa = 0, ca = null, la = 1, ua = "";
-	function da(e, t) {
-		na[ra++] = aa, na[ra++] = ia, ia = e, aa = t;
+	var ia = [], aa = 0, oa = null, sa = 0, ca = [], la = 0, ua = null, da = 1, fa = "";
+	function pa(e, t) {
+		ia[aa++] = sa, ia[aa++] = oa, oa = e, sa = t;
 	}
-	function fa(e, t, n) {
-		oa[sa++] = la, oa[sa++] = ua, oa[sa++] = ca, ca = e;
-		var r = la;
-		e = ua;
-		var i = 32 - vt(r) - 1;
+	function ma(e, t, n) {
+		ca[la++] = da, ca[la++] = fa, ca[la++] = ua, ua = e;
+		var r = da;
+		e = fa;
+		var i = 32 - yt(r) - 1;
 		r &= ~(1 << i), n += 1;
-		var a = 32 - vt(t) + i;
+		var a = 32 - yt(t) + i;
 		if (30 < a) {
 			var o = i - i % 5;
-			a = (r & (1 << o) - 1).toString(32), r >>= o, i -= o, la = 1 << 32 - vt(t) + i | n << i | r, ua = a + e;
-		} else la = 1 << a | n << i | r, ua = e;
+			a = (r & (1 << o) - 1).toString(32), r >>= o, i -= o, da = 1 << 32 - yt(t) + i | n << i | r, fa = a + e;
+		} else da = 1 << a | n << i | r, fa = e;
 	}
-	function pa(e) {
-		e.return !== null && (da(e, 1), fa(e, 1, 0));
+	function ha(e) {
+		e.return !== null && (pa(e, 1), ma(e, 1, 0));
 	}
-	function ma(e) {
-		for (; e === ia;) ia = na[--ra], na[ra] = null, aa = na[--ra], na[ra] = null;
-		for (; e === ca;) ca = oa[--sa], oa[sa] = null, ua = oa[--sa], oa[sa] = null, la = oa[--sa], oa[sa] = null;
+	function ga(e) {
+		for (; e === oa;) oa = ia[--aa], ia[aa] = null, sa = ia[--aa], ia[aa] = null;
+		for (; e === ua;) ua = ca[--la], ca[la] = null, fa = ca[--la], ca[la] = null, da = ca[--la], ca[la] = null;
 	}
-	var ha = null, ga = null, _a = !1, va = null;
-	function ya(e, t) {
+	var _a = null, va = null, ya = !1, ba = null;
+	function xa(e, t) {
 		var n = Kl(5, null, null, 0);
 		n.elementType = "DELETED", n.stateNode = t, n.return = e, t = e.deletions, t === null ? (e.deletions = [n], e.flags |= 16) : t.push(n);
 	}
-	function ba(e, t) {
+	function Sa(e, t) {
 		switch (e.tag) {
 			case 5:
 				var n = e.type;
-				return t = t.nodeType !== 1 || n.toLowerCase() !== t.nodeName.toLowerCase() ? null : t, t !== null && (e.stateNode = t, ha = e, ga = Si(t.firstChild), !0);
-			case 6: return t = e.pendingProps === "" || t.nodeType !== 3 ? null : t, t !== null && (e.stateNode = t, ha = e, ga = null, !0);
-			case 13: return t = t.nodeType === 8 ? t : null, t !== null && (n = ca === null ? null : {
-				id: la,
-				overflow: ua
+				return t = t.nodeType !== 1 || n.toLowerCase() !== t.nodeName.toLowerCase() ? null : t, t !== null && (e.stateNode = t, _a = e, va = Ci(t.firstChild), !0);
+			case 6: return t = e.pendingProps === "" || t.nodeType !== 3 ? null : t, t !== null && (e.stateNode = t, _a = e, va = null, !0);
+			case 13: return t = t.nodeType === 8 ? t : null, t !== null && (n = ua === null ? null : {
+				id: da,
+				overflow: fa
 			}, e.memoizedState = {
 				dehydrated: t,
 				treeContext: n,
 				retryLane: 1073741824
-			}, n = Kl(18, null, null, 0), n.stateNode = t, n.return = e, e.child = n, ha = e, ga = null, !0);
+			}, n = Kl(18, null, null, 0), n.stateNode = t, n.return = e, e.child = n, _a = e, va = null, !0);
 			default: return !1;
 		}
 	}
-	function xa(e) {
+	function Ca(e) {
 		return !!(e.mode & 1) && !(e.flags & 128);
 	}
-	function Sa(e) {
-		if (_a) {
-			var t = ga;
+	function wa(e) {
+		if (ya) {
+			var t = va;
 			if (t) {
 				var n = t;
-				if (!ba(e, t)) {
-					if (xa(e)) throw Error(r(418));
-					t = Si(n.nextSibling);
-					var i = ha;
-					t && ba(e, t) ? ya(i, n) : (e.flags = e.flags & -4097 | 2, _a = !1, ha = e);
+				if (!Sa(e, t)) {
+					if (Ca(e)) throw Error(r(418));
+					t = Ci(n.nextSibling);
+					var i = _a;
+					t && Sa(e, t) ? xa(i, n) : (e.flags = e.flags & -4097 | 2, ya = !1, _a = e);
 				}
 			} else {
-				if (xa(e)) throw Error(r(418));
-				e.flags = e.flags & -4097 | 2, _a = !1, ha = e;
+				if (Ca(e)) throw Error(r(418));
+				e.flags = e.flags & -4097 | 2, ya = !1, _a = e;
 			}
 		}
 	}
-	function Ca(e) {
+	function Ta(e) {
 		for (e = e.return; e !== null && e.tag !== 5 && e.tag !== 3 && e.tag !== 13;) e = e.return;
-		ha = e;
+		_a = e;
 	}
-	function wa(e) {
-		if (e !== ha) return !1;
-		if (!_a) return Ca(e), _a = !0, !1;
+	function Ea(e) {
+		if (e !== _a) return !1;
+		if (!ya) return Ta(e), ya = !0, !1;
 		var t;
-		if ((t = e.tag !== 3) && !(t = e.tag !== 5) && (t = e.type, t = t !== "head" && t !== "body" && !hi(e.type, e.memoizedProps)), t &&= ga) {
-			if (xa(e)) throw Ta(), Error(r(418));
-			for (; t;) ya(e, t), t = Si(t.nextSibling);
+		if ((t = e.tag !== 3) && !(t = e.tag !== 5) && (t = e.type, t = t !== "head" && t !== "body" && !gi(e.type, e.memoizedProps)), t &&= va) {
+			if (Ca(e)) throw Da(), Error(r(418));
+			for (; t;) xa(e, t), t = Ci(t.nextSibling);
 		}
-		if (Ca(e), e.tag === 13) {
+		if (Ta(e), e.tag === 13) {
 			if (e = e.memoizedState, e = e === null ? null : e.dehydrated, !e) throw Error(r(317));
 			a: {
 				for (e = e.nextSibling, t = 0; e;) {
@@ -2265,7 +2265,7 @@ var h = /* @__PURE__ */ i(((e) => {
 						var n = e.data;
 						if (n === "/$") {
 							if (t === 0) {
-								ga = Si(e.nextSibling);
+								va = Ci(e.nextSibling);
 								break a;
 							}
 							t--;
@@ -2273,22 +2273,22 @@ var h = /* @__PURE__ */ i(((e) => {
 					}
 					e = e.nextSibling;
 				}
-				ga = null;
+				va = null;
 			}
-		} else ga = ha ? Si(e.stateNode.nextSibling) : null;
+		} else va = _a ? Ci(e.stateNode.nextSibling) : null;
 		return !0;
 	}
-	function Ta() {
-		for (var e = ga; e;) e = Si(e.nextSibling);
+	function Da() {
+		for (var e = va; e;) e = Ci(e.nextSibling);
 	}
-	function Ea() {
-		ga = ha = null, _a = !1;
+	function Oa() {
+		va = _a = null, ya = !1;
 	}
-	function Da(e) {
-		va === null ? va = [e] : va.push(e);
+	function ka(e) {
+		ba === null ? ba = [e] : ba.push(e);
 	}
-	var Oa = C.ReactCurrentBatchConfig;
-	function ka(e, t, n) {
+	var Aa = C.ReactCurrentBatchConfig;
+	function ja(e, t, n) {
 		if (e = n.ref, e !== null && typeof e != "function" && typeof e != "object") {
 			if (n._owner) {
 				if (n = n._owner, n) {
@@ -2307,14 +2307,14 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return e;
 	}
-	function Aa(e, t) {
+	function Ma(e, t) {
 		throw e = Object.prototype.toString.call(t), Error(r(31, e === "[object Object]" ? "object with keys {" + Object.keys(t).join(", ") + "}" : e));
 	}
-	function ja(e) {
+	function Na(e) {
 		var t = e._init;
 		return t(e._payload);
 	}
-	function Ma(e) {
+	function Pa(e) {
 		function t(t, n) {
 			if (e) {
 				var r = t.deletions;
@@ -2344,7 +2344,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		function l(e, t, n, r) {
 			var i = n.type;
-			return i === E ? d(e, t, n.props.children, r, n.key) : t !== null && (t.elementType === i || typeof i == "object" && i && i.$$typeof === F && ja(i) === t.type) ? (r = a(t, n.props), r.ref = ka(e, t, n), r.return = e, r) : (r = Xl(n.type, n.key, n.props, null, e.mode, r), r.ref = ka(e, t, n), r.return = e, r);
+			return i === E ? d(e, t, n.props.children, r, n.key) : t !== null && (t.elementType === i || typeof i == "object" && i && i.$$typeof === F && Na(i) === t.type) ? (r = a(t, n.props), r.ref = ja(e, t, n), r.return = e, r) : (r = Xl(n.type, n.key, n.props, null, e.mode, r), r.ref = ja(e, t, n), r.return = e, r);
 		}
 		function u(e, t, n, r) {
 			return t === null || t.tag !== 4 || t.stateNode.containerInfo !== n.containerInfo || t.stateNode.implementation !== n.implementation ? (t = eu(n, e.mode, r), t.return = e, t) : (t = a(t, n.children || []), t.return = e, t);
@@ -2356,14 +2356,14 @@ var h = /* @__PURE__ */ i(((e) => {
 			if (typeof t == "string" && t !== "" || typeof t == "number") return t = $l("" + t, e.mode, n), t.return = e, t;
 			if (typeof t == "object" && t) {
 				switch (t.$$typeof) {
-					case w: return n = Xl(t.type, t.key, t.props, null, e.mode, n), n.ref = ka(e, null, t), n.return = e, n;
+					case w: return n = Xl(t.type, t.key, t.props, null, e.mode, n), n.ref = ja(e, null, t), n.return = e, n;
 					case T: return t = eu(t, e.mode, n), t.return = e, t;
 					case F:
 						var r = t._init;
 						return f(e, r(t._payload), n);
 				}
-				if (de(t) || R(t)) return t = Zl(t, e.mode, n, null), t.return = e, t;
-				Aa(e, t);
+				if (fe(t) || R(t)) return t = Zl(t, e.mode, n, null), t.return = e, t;
+				Ma(e, t);
 			}
 			return null;
 		}
@@ -2376,8 +2376,8 @@ var h = /* @__PURE__ */ i(((e) => {
 					case T: return n.key === i ? u(e, t, n, r) : null;
 					case F: return i = n._init, p(e, t, i(n._payload), r);
 				}
-				if (de(n) || R(n)) return i === null ? d(e, t, n, r, null) : null;
-				Aa(e, n);
+				if (fe(n) || R(n)) return i === null ? d(e, t, n, r, null) : null;
+				Ma(e, n);
 			}
 			return null;
 		}
@@ -2391,8 +2391,8 @@ var h = /* @__PURE__ */ i(((e) => {
 						var a = r._init;
 						return m(e, t, n, a(r._payload), i);
 				}
-				if (de(r) || R(r)) return e = e.get(n) || null, d(t, e, r, i, null);
-				Aa(t, r);
+				if (fe(r) || R(r)) return e = e.get(n) || null, d(t, e, r, i, null);
+				Ma(t, r);
 			}
 			return null;
 		}
@@ -2406,15 +2406,15 @@ var h = /* @__PURE__ */ i(((e) => {
 				}
 				e && d && _.alternate === null && t(r, d), a = o(_, a, h), u === null ? l = _ : u.sibling = _, u = _, d = g;
 			}
-			if (h === s.length) return n(r, d), _a && da(r, h), l;
+			if (h === s.length) return n(r, d), ya && pa(r, h), l;
 			if (d === null) {
 				for (; h < s.length; h++) d = f(r, s[h], c), d !== null && (a = o(d, a, h), u === null ? l = d : u.sibling = d, u = d);
-				return _a && da(r, h), l;
+				return ya && pa(r, h), l;
 			}
 			for (d = i(r, d); h < s.length; h++) g = m(d, r, h, s[h], c), g !== null && (e && g.alternate !== null && d.delete(g.key === null ? h : g.key), a = o(g, a, h), u === null ? l = g : u.sibling = g, u = g);
 			return e && d.forEach(function(e) {
 				return t(r, e);
-			}), _a && da(r, h), l;
+			}), ya && pa(r, h), l;
 		}
 		function g(a, s, c, l) {
 			var u = R(c);
@@ -2429,15 +2429,15 @@ var h = /* @__PURE__ */ i(((e) => {
 				}
 				e && h && y.alternate === null && t(a, h), s = o(y, s, g), d === null ? u = y : d.sibling = y, d = y, h = _;
 			}
-			if (v.done) return n(a, h), _a && da(a, g), u;
+			if (v.done) return n(a, h), ya && pa(a, g), u;
 			if (h === null) {
 				for (; !v.done; g++, v = c.next()) v = f(a, v.value, l), v !== null && (s = o(v, s, g), d === null ? u = v : d.sibling = v, d = v);
-				return _a && da(a, g), u;
+				return ya && pa(a, g), u;
 			}
 			for (h = i(a, h); !v.done; g++, v = c.next()) v = m(h, a, g, v.value, l), v !== null && (e && v.alternate !== null && h.delete(v.key === null ? g : v.key), s = o(v, s, g), d === null ? u = v : d.sibling = v, d = v);
 			return e && h.forEach(function(e) {
 				return t(a, e);
-			}), _a && da(a, g), u;
+			}), ya && pa(a, g), u;
 		}
 		function _(e, r, i, o) {
 			if (typeof i == "object" && i && i.type === E && i.key === null && (i = i.props.children), typeof i == "object" && i) {
@@ -2451,8 +2451,8 @@ var h = /* @__PURE__ */ i(((e) => {
 											n(e, l.sibling), r = a(l, i.props.children), r.return = e, e = r;
 											break a;
 										}
-									} else if (l.elementType === c || typeof c == "object" && c && c.$$typeof === F && ja(c) === l.type) {
-										n(e, l.sibling), r = a(l, i.props), r.ref = ka(e, l, i), r.return = e, e = r;
+									} else if (l.elementType === c || typeof c == "object" && c && c.$$typeof === F && Na(c) === l.type) {
+										n(e, l.sibling), r = a(l, i.props), r.ref = ja(e, l, i), r.return = e, e = r;
 										break a;
 									}
 									n(e, l);
@@ -2460,7 +2460,7 @@ var h = /* @__PURE__ */ i(((e) => {
 								}
 								t(e, l), l = l.sibling;
 							}
-							i.type === E ? (r = Zl(i.props.children, e.mode, o, i.key), r.return = e, e = r) : (o = Xl(i.type, i.key, i.props, null, e.mode, o), o.ref = ka(e, r, i), o.return = e, e = o);
+							i.type === E ? (r = Zl(i.props.children, e.mode, o, i.key), r.return = e, e = r) : (o = Xl(i.type, i.key, i.props, null, e.mode, o), o.ref = ja(e, r, i), o.return = e, e = o);
 						}
 						return s(e);
 					case T:
@@ -2480,63 +2480,63 @@ var h = /* @__PURE__ */ i(((e) => {
 						return s(e);
 					case F: return l = i._init, _(e, r, l(i._payload), o);
 				}
-				if (de(i)) return h(e, r, i, o);
+				if (fe(i)) return h(e, r, i, o);
 				if (R(i)) return g(e, r, i, o);
-				Aa(e, i);
+				Ma(e, i);
 			}
 			return typeof i == "string" && i !== "" || typeof i == "number" ? (i = "" + i, r !== null && r.tag === 6 ? (n(e, r.sibling), r = a(r, i), r.return = e, e = r) : (n(e, r), r = $l(i, e.mode, o), r.return = e, e = r), s(e)) : n(e, r);
 		}
 		return _;
 	}
-	var Na = Ma(!0), Pa = Ma(!1), Fa = Li(null), Ia = null, La = null, Ra = null;
-	function za() {
-		Ra = La = Ia = null;
+	var Fa = Pa(!0), Ia = Pa(!1), La = Ri(null), Ra = null, za = null, Ba = null;
+	function Va() {
+		Ba = za = Ra = null;
 	}
-	function Ba(e) {
-		var t = Fa.current;
-		Z(Fa), e._currentValue = t;
+	function Ha(e) {
+		var t = La.current;
+		zi(La), e._currentValue = t;
 	}
-	function Va(e, t, n) {
+	function Ua(e, t, n) {
 		for (; e !== null;) {
 			var r = e.alternate;
 			if ((e.childLanes & t) === t ? r !== null && (r.childLanes & t) !== t && (r.childLanes |= t) : (e.childLanes |= t, r !== null && (r.childLanes |= t)), e === n) break;
 			e = e.return;
 		}
 	}
-	function Ha(e, t) {
-		Ia = e, Ra = La = null, e = e.dependencies, e !== null && e.firstContext !== null && ((e.lanes & t) !== 0 && (Ms = !0), e.firstContext = null);
+	function Wa(e, t) {
+		Ra = e, Ba = za = null, e = e.dependencies, e !== null && e.firstContext !== null && ((e.lanes & t) !== 0 && (Ms = !0), e.firstContext = null);
 	}
-	function Ua(e) {
+	function Ga(e) {
 		var t = e._currentValue;
-		if (Ra !== e) if (e = {
+		if (Ba !== e) if (e = {
 			context: e,
 			memoizedValue: t,
 			next: null
-		}, La === null) {
-			if (Ia === null) throw Error(r(308));
-			La = e, Ia.dependencies = {
+		}, za === null) {
+			if (Ra === null) throw Error(r(308));
+			za = e, Ra.dependencies = {
 				lanes: 0,
 				firstContext: e
 			};
-		} else La = La.next = e;
+		} else za = za.next = e;
 		return t;
 	}
-	var Wa = null;
-	function Ga(e) {
-		Wa === null ? Wa = [e] : Wa.push(e);
+	var Ka = null;
+	function qa(e) {
+		Ka === null ? Ka = [e] : Ka.push(e);
 	}
-	function Ka(e, t, n, r) {
+	function Ja(e, t, n, r) {
 		var i = t.interleaved;
-		return i === null ? (n.next = n, Ga(t)) : (n.next = i.next, i.next = n), t.interleaved = n, qa(e, r);
+		return i === null ? (n.next = n, qa(t)) : (n.next = i.next, i.next = n), t.interleaved = n, Ya(e, r);
 	}
-	function qa(e, t) {
+	function Ya(e, t) {
 		e.lanes |= t;
 		var n = e.alternate;
 		for (n !== null && (n.lanes |= t), n = e, e = e.return; e !== null;) e.childLanes |= t, n = e.alternate, n !== null && (n.childLanes |= t), n = e, e = e.return;
 		return n.tag === 3 ? n.stateNode : null;
 	}
-	var Ja = !1;
-	function Ya(e) {
+	var Xa = !1;
+	function Za(e) {
 		e.updateQueue = {
 			baseState: e.memoizedState,
 			firstBaseUpdate: null,
@@ -2549,7 +2549,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			effects: null
 		};
 	}
-	function Xa(e, t) {
+	function Qa(e, t) {
 		e = e.updateQueue, t.updateQueue === e && (t.updateQueue = {
 			baseState: e.baseState,
 			firstBaseUpdate: e.firstBaseUpdate,
@@ -2558,7 +2558,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			effects: e.effects
 		});
 	}
-	function Za(e, t) {
+	function $a(e, t) {
 		return {
 			eventTime: e,
 			lane: t,
@@ -2568,22 +2568,22 @@ var h = /* @__PURE__ */ i(((e) => {
 			next: null
 		};
 	}
-	function Qa(e, t, n) {
+	function eo(e, t, n) {
 		var r = e.updateQueue;
 		if (r === null) return null;
 		if (r = r.shared, $ & 2) {
 			var i = r.pending;
-			return i === null ? t.next = t : (t.next = i.next, i.next = t), r.pending = t, qa(e, n);
+			return i === null ? t.next = t : (t.next = i.next, i.next = t), r.pending = t, Ya(e, n);
 		}
-		return i = r.interleaved, i === null ? (t.next = t, Ga(r)) : (t.next = i.next, i.next = t), r.interleaved = t, qa(e, n);
+		return i = r.interleaved, i === null ? (t.next = t, qa(r)) : (t.next = i.next, i.next = t), r.interleaved = t, Ya(e, n);
 	}
-	function $a(e, t, n) {
+	function to(e, t, n) {
 		if (t = t.updateQueue, t !== null && (t = t.shared, n & 4194240)) {
 			var r = t.lanes;
-			r &= e.pendingLanes, n |= r, t.lanes = n, Nt(e, n);
+			r &= e.pendingLanes, n |= r, t.lanes = n, Pt(e, n);
 		}
 	}
-	function eo(e, t) {
+	function no(e, t) {
 		var n = e.updateQueue, r = e.alternate;
 		if (r !== null && (r = r.updateQueue, n === r)) {
 			var i = null, a = null;
@@ -2612,9 +2612,9 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		e = n.lastBaseUpdate, e === null ? n.firstBaseUpdate = t : e.next = t, n.lastBaseUpdate = t;
 	}
-	function to(e, t, n, r) {
+	function ro(e, t, n, r) {
 		var i = e.updateQueue;
-		Ja = !1;
+		Xa = !1;
 		var a = i.firstBaseUpdate, o = i.lastBaseUpdate, s = i.shared.pending;
 		if (s !== null) {
 			i.shared.pending = null;
@@ -2652,7 +2652,7 @@ var h = /* @__PURE__ */ i(((e) => {
 								if (m = h.payload, f = typeof m == "function" ? m.call(p, d, f) : m, f == null) break a;
 								d = z({}, d, f);
 								break a;
-							case 2: Ja = !0;
+							case 2: Xa = !0;
 						}
 					}
 					s.callback !== null && s.lane !== 0 && (e.flags |= 64, f = i.effects, f === null ? i.effects = [s] : f.push(s));
@@ -2678,7 +2678,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			Jc |= o, e.lanes = o, e.memoizedState = d;
 		}
 	}
-	function no(e, t, n) {
+	function io(e, t, n) {
 		if (e = t.effects, t.effects = null, e !== null) for (t = 0; t < e.length; t++) {
 			var i = e[t], a = i.callback;
 			if (a !== null) {
@@ -2687,34 +2687,34 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 		}
 	}
-	var ro = {}, io = Li(ro), ao = Li(ro), oo = Li(ro);
-	function so(e) {
-		if (e === ro) throw Error(r(174));
+	var ao = {}, oo = Ri(ao), so = Ri(ao), co = Ri(ao);
+	function lo(e) {
+		if (e === ao) throw Error(r(174));
 		return e;
 	}
-	function co(e, t) {
-		switch (Ri(oo, t), Ri(ao, e), Ri(io, ro), e = t.nodeType, e) {
+	function uo(e, t) {
+		switch (Bi(co, t), Bi(so, e), Bi(oo, ao), e = t.nodeType, e) {
 			case 9:
 			case 11:
-				t = (t = t.documentElement) ? t.namespaceURI : ve(null, "");
+				t = (t = t.documentElement) ? t.namespaceURI : ye(null, "");
 				break;
-			default: e = e === 8 ? t.parentNode : t, t = e.namespaceURI || null, e = e.tagName, t = ve(t, e);
+			default: e = e === 8 ? t.parentNode : t, t = e.namespaceURI || null, e = e.tagName, t = ye(t, e);
 		}
-		Z(io), Ri(io, t);
+		zi(oo), Bi(oo, t);
 	}
-	function lo() {
-		Z(io), Z(ao), Z(oo);
+	function fo() {
+		zi(oo), zi(so), zi(co);
 	}
-	function uo(e) {
-		so(oo.current);
-		var t = so(io.current), n = ve(t, e.type);
-		t !== n && (Ri(ao, e), Ri(io, n));
+	function po(e) {
+		lo(co.current);
+		var t = lo(oo.current), n = ye(t, e.type);
+		t !== n && (Bi(so, e), Bi(oo, n));
 	}
-	function fo(e) {
-		ao.current === e && (Z(io), Z(ao));
-	}
-	var po = Li(0);
 	function mo(e) {
+		so.current === e && (zi(oo), zi(so));
+	}
+	var X = Ri(0);
+	function ho(e) {
 		for (var t = e; t !== null;) {
 			if (t.tag === 13) {
 				var n = t.memoizedState;
@@ -2734,34 +2734,34 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		return null;
 	}
-	var ho = [];
-	function go() {
-		for (var e = 0; e < ho.length; e++) ho[e]._workInProgressVersionPrimary = null;
-		ho.length = 0;
+	var go = [];
+	function _o() {
+		for (var e = 0; e < go.length; e++) go[e]._workInProgressVersionPrimary = null;
+		go.length = 0;
 	}
-	var _o = C.ReactCurrentDispatcher, vo = C.ReactCurrentBatchConfig, yo = 0, bo = null, xo = null, So = null, Co = !1, wo = !1, To = 0, Eo = 0;
-	function Do() {
+	var vo = C.ReactCurrentDispatcher, yo = C.ReactCurrentBatchConfig, bo = 0, xo = null, So = null, Co = null, wo = !1, To = !1, Eo = 0, Do = 0;
+	function Z() {
 		throw Error(r(321));
 	}
 	function Oo(e, t) {
 		if (t === null) return !1;
-		for (var n = 0; n < t.length && n < e.length; n++) if (!br(e[n], t[n])) return !1;
+		for (var n = 0; n < t.length && n < e.length; n++) if (!xr(e[n], t[n])) return !1;
 		return !0;
 	}
 	function ko(e, t, n, i, a, o) {
-		if (yo = o, bo = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, _o.current = e === null || e.memoizedState === null ? fs : ps, e = n(i, a), wo) {
+		if (bo = o, xo = t, t.memoizedState = null, t.updateQueue = null, t.lanes = 0, vo.current = e === null || e.memoizedState === null ? fs : ps, e = n(i, a), To) {
 			o = 0;
 			do {
-				if (wo = !1, To = 0, 25 <= o) throw Error(r(301));
-				o += 1, So = xo = null, t.updateQueue = null, _o.current = ms, e = n(i, a);
-			} while (wo);
+				if (To = !1, Eo = 0, 25 <= o) throw Error(r(301));
+				o += 1, Co = So = null, t.updateQueue = null, vo.current = ms, e = n(i, a);
+			} while (To);
 		}
-		if (_o.current = ds, t = xo !== null && xo.next !== null, yo = 0, So = xo = bo = null, Co = !1, t) throw Error(r(300));
+		if (vo.current = ds, t = So !== null && So.next !== null, bo = 0, Co = So = xo = null, wo = !1, t) throw Error(r(300));
 		return e;
 	}
 	function Ao() {
-		var e = To !== 0;
-		return To = 0, e;
+		var e = Eo !== 0;
+		return Eo = 0, e;
 	}
 	function jo() {
 		var e = {
@@ -2771,26 +2771,26 @@ var h = /* @__PURE__ */ i(((e) => {
 			queue: null,
 			next: null
 		};
-		return So === null ? bo.memoizedState = So = e : So = So.next = e, So;
+		return Co === null ? xo.memoizedState = Co = e : Co = Co.next = e, Co;
 	}
 	function Mo() {
-		if (xo === null) {
-			var e = bo.alternate;
+		if (So === null) {
+			var e = xo.alternate;
 			e = e === null ? null : e.memoizedState;
-		} else e = xo.next;
-		var t = So === null ? bo.memoizedState : So.next;
-		if (t !== null) So = t, xo = e;
+		} else e = So.next;
+		var t = Co === null ? xo.memoizedState : Co.next;
+		if (t !== null) Co = t, So = e;
 		else {
 			if (e === null) throw Error(r(310));
-			xo = e, e = {
-				memoizedState: xo.memoizedState,
-				baseState: xo.baseState,
-				baseQueue: xo.baseQueue,
-				queue: xo.queue,
+			So = e, e = {
+				memoizedState: So.memoizedState,
+				baseState: So.baseState,
+				baseQueue: So.baseQueue,
+				queue: So.queue,
 				next: null
-			}, So === null ? bo.memoizedState = So = e : So = So.next = e;
+			}, Co === null ? xo.memoizedState = Co = e : Co = Co.next = e;
 		}
-		return So;
+		return Co;
 	}
 	function No(e, t) {
 		return typeof t == "function" ? t(e) : t;
@@ -2799,7 +2799,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		var t = Mo(), n = t.queue;
 		if (n === null) throw Error(r(311));
 		n.lastRenderedReducer = e;
-		var i = xo, a = i.baseQueue, o = n.pending;
+		var i = So, a = i.baseQueue, o = n.pending;
 		if (o !== null) {
 			if (a !== null) {
 				var s = a.next;
@@ -2812,7 +2812,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			var c = s = null, l = null, u = o;
 			do {
 				var d = u.lane;
-				if ((yo & d) === d) l !== null && (l = l.next = {
+				if ((bo & d) === d) l !== null && (l = l.next = {
 					lane: 0,
 					action: u.action,
 					hasEagerState: u.hasEagerState,
@@ -2827,16 +2827,16 @@ var h = /* @__PURE__ */ i(((e) => {
 						eagerState: u.eagerState,
 						next: null
 					};
-					l === null ? (c = l = f, s = i) : l = l.next = f, bo.lanes |= d, Jc |= d;
+					l === null ? (c = l = f, s = i) : l = l.next = f, xo.lanes |= d, Jc |= d;
 				}
 				u = u.next;
 			} while (u !== null && u !== o);
-			l === null ? s = i : l.next = c, br(i, t.memoizedState) || (Ms = !0), t.memoizedState = i, t.baseState = s, t.baseQueue = l, n.lastRenderedState = i;
+			l === null ? s = i : l.next = c, xr(i, t.memoizedState) || (Ms = !0), t.memoizedState = i, t.baseState = s, t.baseQueue = l, n.lastRenderedState = i;
 		}
 		if (e = n.interleaved, e !== null) {
 			a = e;
 			do
-				o = a.lane, bo.lanes |= o, Jc |= o, a = a.next;
+				o = a.lane, xo.lanes |= o, Jc |= o, a = a.next;
 			while (a !== e);
 		} else a === null && (n.lanes = 0);
 		return [t.memoizedState, n.dispatch];
@@ -2852,16 +2852,16 @@ var h = /* @__PURE__ */ i(((e) => {
 			do
 				o = e(o, s.action), s = s.next;
 			while (s !== a);
-			br(o, t.memoizedState) || (Ms = !0), t.memoizedState = o, t.baseQueue === null && (t.baseState = o), n.lastRenderedState = o;
+			xr(o, t.memoizedState) || (Ms = !0), t.memoizedState = o, t.baseQueue === null && (t.baseState = o), n.lastRenderedState = o;
 		}
 		return [o, i];
 	}
 	function Io() {}
 	function Lo(e, t) {
-		var n = bo, i = Mo(), a = t(), o = !br(i.memoizedState, a);
-		if (o && (i.memoizedState = a, Ms = !0), i = i.queue, Yo(Bo.bind(null, n, i, e), [e]), i.getSnapshot !== t || o || So !== null && So.memoizedState.tag & 1) {
+		var n = xo, i = Mo(), a = t(), o = !xr(i.memoizedState, a);
+		if (o && (i.memoizedState = a, Ms = !0), i = i.queue, Yo(Bo.bind(null, n, i, e), [e]), i.getSnapshot !== t || o || Co !== null && Co.memoizedState.tag & 1) {
 			if (n.flags |= 2048, Wo(9, zo.bind(null, n, i, a, t), void 0, null), Vc === null) throw Error(r(349));
-			yo & 30 || Ro(n, t, a);
+			bo & 30 || Ro(n, t, a);
 		}
 		return a;
 	}
@@ -2869,10 +2869,10 @@ var h = /* @__PURE__ */ i(((e) => {
 		e.flags |= 16384, e = {
 			getSnapshot: t,
 			value: n
-		}, t = bo.updateQueue, t === null ? (t = {
+		}, t = xo.updateQueue, t === null ? (t = {
 			lastEffect: null,
 			stores: null
-		}, bo.updateQueue = t, t.stores = [e]) : (n = t.stores, n === null ? t.stores = [e] : n.push(e));
+		}, xo.updateQueue = t, t.stores = [e]) : (n = t.stores, n === null ? t.stores = [e] : n.push(e));
 	}
 	function zo(e, t, n, r) {
 		t.value = n, t.getSnapshot = r, Vo(t) && Ho(e);
@@ -2887,13 +2887,13 @@ var h = /* @__PURE__ */ i(((e) => {
 		e = e.value;
 		try {
 			var n = t();
-			return !br(e, n);
+			return !xr(e, n);
 		} catch {
 			return !0;
 		}
 	}
 	function Ho(e) {
-		var t = qa(e, 1);
+		var t = Ya(e, 1);
 		t !== null && ml(t, e, 1, -1);
 	}
 	function Uo(e) {
@@ -2905,7 +2905,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			dispatch: null,
 			lastRenderedReducer: No,
 			lastRenderedState: e
-		}, t.queue = e, e = e.dispatch = ss.bind(null, bo, e), [t.memoizedState, e];
+		}, t.queue = e, e = e.dispatch = ss.bind(null, xo, e), [t.memoizedState, e];
 	}
 	function Wo(e, t, n, r) {
 		return e = {
@@ -2914,30 +2914,30 @@ var h = /* @__PURE__ */ i(((e) => {
 			destroy: n,
 			deps: r,
 			next: null
-		}, t = bo.updateQueue, t === null ? (t = {
+		}, t = xo.updateQueue, t === null ? (t = {
 			lastEffect: null,
 			stores: null
-		}, bo.updateQueue = t, t.lastEffect = e.next = e) : (n = t.lastEffect, n === null ? t.lastEffect = e.next = e : (r = n.next, n.next = e, e.next = r, t.lastEffect = e)), e;
+		}, xo.updateQueue = t, t.lastEffect = e.next = e) : (n = t.lastEffect, n === null ? t.lastEffect = e.next = e : (r = n.next, n.next = e, e.next = r, t.lastEffect = e)), e;
 	}
 	function Go() {
 		return Mo().memoizedState;
 	}
 	function Ko(e, t, n, r) {
 		var i = jo();
-		bo.flags |= e, i.memoizedState = Wo(1 | t, n, void 0, r === void 0 ? null : r);
+		xo.flags |= e, i.memoizedState = Wo(1 | t, n, void 0, r === void 0 ? null : r);
 	}
 	function qo(e, t, n, r) {
 		var i = Mo();
 		r = r === void 0 ? null : r;
 		var a = void 0;
-		if (xo !== null) {
-			var o = xo.memoizedState;
+		if (So !== null) {
+			var o = So.memoizedState;
 			if (a = o.destroy, r !== null && Oo(r, o.deps)) {
 				i.memoizedState = Wo(t, n, a, r);
 				return;
 			}
 		}
-		bo.flags |= e, i.memoizedState = Wo(1 | t, n, a, r);
+		xo.flags |= e, i.memoizedState = Wo(1 | t, n, a, r);
 	}
 	function Jo(e, t) {
 		return Ko(8390656, 8, e, t);
@@ -2976,17 +2976,17 @@ var h = /* @__PURE__ */ i(((e) => {
 		return r !== null && t !== null && Oo(t, r[1]) ? r[0] : (e = e(), n.memoizedState = [e, t], e);
 	}
 	function rs(e, t, n) {
-		return yo & 21 ? (br(n, t) || (n = kt(), bo.lanes |= n, Jc |= n, e.baseState = !0), t) : (e.baseState && (e.baseState = !1, Ms = !0), e.memoizedState = n);
+		return bo & 21 ? (xr(n, t) || (n = At(), xo.lanes |= n, Jc |= n, e.baseState = !0), t) : (e.baseState && (e.baseState = !1, Ms = !0), e.memoizedState = n);
 	}
 	function is(e, t) {
-		var n = J;
-		J = n !== 0 && 4 > n ? n : 4, e(!0);
-		var r = vo.transition;
-		vo.transition = {};
+		var n = q;
+		q = n !== 0 && 4 > n ? n : 4, e(!0);
+		var r = yo.transition;
+		yo.transition = {};
 		try {
 			e(!1), t();
 		} finally {
-			J = n, vo.transition = r;
+			q = n, yo.transition = r;
 		}
 	}
 	function as() {
@@ -3001,7 +3001,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			eagerState: null,
 			next: null
 		}, cs(e)) ls(t, n);
-		else if (n = Ka(e, t, n, r), n !== null) {
+		else if (n = Ja(e, t, n, r), n !== null) {
 			var i = fl();
 			ml(n, e, r, i), us(n, t, r);
 		}
@@ -3019,55 +3019,55 @@ var h = /* @__PURE__ */ i(((e) => {
 			var a = e.alternate;
 			if (e.lanes === 0 && (a === null || a.lanes === 0) && (a = t.lastRenderedReducer, a !== null)) try {
 				var o = t.lastRenderedState, s = a(o, n);
-				if (i.hasEagerState = !0, i.eagerState = s, br(s, o)) {
+				if (i.hasEagerState = !0, i.eagerState = s, xr(s, o)) {
 					var c = t.interleaved;
-					c === null ? (i.next = i, Ga(t)) : (i.next = c.next, c.next = i), t.interleaved = i;
+					c === null ? (i.next = i, qa(t)) : (i.next = c.next, c.next = i), t.interleaved = i;
 					return;
 				}
 			} catch {}
-			n = Ka(e, t, i, r), n !== null && (i = fl(), ml(n, e, r, i), us(n, t, r));
+			n = Ja(e, t, i, r), n !== null && (i = fl(), ml(n, e, r, i), us(n, t, r));
 		}
 	}
 	function cs(e) {
 		var t = e.alternate;
-		return e === bo || t !== null && t === bo;
+		return e === xo || t !== null && t === xo;
 	}
 	function ls(e, t) {
-		wo = Co = !0;
+		To = wo = !0;
 		var n = e.pending;
 		n === null ? t.next = t : (t.next = n.next, n.next = t), e.pending = t;
 	}
 	function us(e, t, n) {
 		if (n & 4194240) {
 			var r = t.lanes;
-			r &= e.pendingLanes, n |= r, t.lanes = n, Nt(e, n);
+			r &= e.pendingLanes, n |= r, t.lanes = n, Pt(e, n);
 		}
 	}
 	var ds = {
-		readContext: Ua,
-		useCallback: Do,
-		useContext: Do,
-		useEffect: Do,
-		useImperativeHandle: Do,
-		useInsertionEffect: Do,
-		useLayoutEffect: Do,
-		useMemo: Do,
-		useReducer: Do,
-		useRef: Do,
-		useState: Do,
-		useDebugValue: Do,
-		useDeferredValue: Do,
-		useTransition: Do,
-		useMutableSource: Do,
-		useSyncExternalStore: Do,
-		useId: Do,
+		readContext: Ga,
+		useCallback: Z,
+		useContext: Z,
+		useEffect: Z,
+		useImperativeHandle: Z,
+		useInsertionEffect: Z,
+		useLayoutEffect: Z,
+		useMemo: Z,
+		useReducer: Z,
+		useRef: Z,
+		useState: Z,
+		useDebugValue: Z,
+		useDeferredValue: Z,
+		useTransition: Z,
+		useMutableSource: Z,
+		useSyncExternalStore: Z,
+		useId: Z,
 		unstable_isNewReconciler: !1
 	}, fs = {
-		readContext: Ua,
+		readContext: Ga,
 		useCallback: function(e, t) {
 			return jo().memoizedState = [e, t === void 0 ? null : t], e;
 		},
-		useContext: Ua,
+		useContext: Ga,
 		useEffect: Jo,
 		useImperativeHandle: function(e, t, n) {
 			return n = n == null ? null : n.concat([e]), Ko(4194308, 4, Qo.bind(null, t, e), n);
@@ -3091,7 +3091,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				dispatch: null,
 				lastRenderedReducer: e,
 				lastRenderedState: t
-			}, r.queue = e, e = e.dispatch = os.bind(null, bo, e), [r.memoizedState, e];
+			}, r.queue = e, e = e.dispatch = os.bind(null, xo, e), [r.memoizedState, e];
 		},
 		useRef: function(e) {
 			var t = jo();
@@ -3108,13 +3108,13 @@ var h = /* @__PURE__ */ i(((e) => {
 		},
 		useMutableSource: function() {},
 		useSyncExternalStore: function(e, t, n) {
-			var i = bo, a = jo();
-			if (_a) {
+			var i = xo, a = jo();
+			if (ya) {
 				if (n === void 0) throw Error(r(407));
 				n = n();
 			} else {
 				if (n = t(), Vc === null) throw Error(r(349));
-				yo & 30 || Ro(i, t, n);
+				bo & 30 || Ro(i, t, n);
 			}
 			a.memoizedState = n;
 			var o = {
@@ -3125,17 +3125,17 @@ var h = /* @__PURE__ */ i(((e) => {
 		},
 		useId: function() {
 			var e = jo(), t = Vc.identifierPrefix;
-			if (_a) {
-				var n = ua, r = la;
-				n = (r & ~(1 << 32 - vt(r) - 1)).toString(32) + n, t = ":" + t + "R" + n, n = To++, 0 < n && (t += "H" + n.toString(32)), t += ":";
-			} else n = Eo++, t = ":" + t + "r" + n.toString(32) + ":";
+			if (ya) {
+				var n = fa, r = da;
+				n = (r & ~(1 << 32 - yt(r) - 1)).toString(32) + n, t = ":" + t + "R" + n, n = Eo++, 0 < n && (t += "H" + n.toString(32)), t += ":";
+			} else n = Do++, t = ":" + t + "r" + n.toString(32) + ":";
 			return e.memoizedState = t;
 		},
 		unstable_isNewReconciler: !1
 	}, ps = {
-		readContext: Ua,
+		readContext: Ga,
 		useCallback: ts,
-		useContext: Ua,
+		useContext: Ga,
 		useEffect: Yo,
 		useImperativeHandle: $o,
 		useInsertionEffect: Xo,
@@ -3148,7 +3148,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		},
 		useDebugValue: es,
 		useDeferredValue: function(e) {
-			return rs(Mo(), xo.memoizedState, e);
+			return rs(Mo(), So.memoizedState, e);
 		},
 		useTransition: function() {
 			return [Po(No)[0], Mo().memoizedState];
@@ -3158,9 +3158,9 @@ var h = /* @__PURE__ */ i(((e) => {
 		useId: as,
 		unstable_isNewReconciler: !1
 	}, ms = {
-		readContext: Ua,
+		readContext: Ga,
 		useCallback: ts,
-		useContext: Ua,
+		useContext: Ga,
 		useEffect: Yo,
 		useImperativeHandle: $o,
 		useInsertionEffect: Xo,
@@ -3174,7 +3174,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		useDebugValue: es,
 		useDeferredValue: function(e) {
 			var t = Mo();
-			return xo === null ? t.memoizedState = e : rs(t, xo.memoizedState, e);
+			return So === null ? t.memoizedState = e : rs(t, So.memoizedState, e);
 		},
 		useTransition: function() {
 			return [Fo(No)[0], Mo().memoizedState];
@@ -3196,39 +3196,39 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	var _s = {
 		isMounted: function(e) {
-			return (e = e._reactInternals) ? Qe(e) === e : !1;
+			return (e = e._reactInternals) ? $e(e) === e : !1;
 		},
 		enqueueSetState: function(e, t, n) {
 			e = e._reactInternals;
-			var r = fl(), i = pl(e), a = Za(r, i);
-			a.payload = t, n != null && (a.callback = n), t = Qa(e, a, i), t !== null && (ml(t, e, i, r), $a(t, e, i));
+			var r = fl(), i = pl(e), a = $a(r, i);
+			a.payload = t, n != null && (a.callback = n), t = eo(e, a, i), t !== null && (ml(t, e, i, r), to(t, e, i));
 		},
 		enqueueReplaceState: function(e, t, n) {
 			e = e._reactInternals;
-			var r = fl(), i = pl(e), a = Za(r, i);
-			a.tag = 1, a.payload = t, n != null && (a.callback = n), t = Qa(e, a, i), t !== null && (ml(t, e, i, r), $a(t, e, i));
+			var r = fl(), i = pl(e), a = $a(r, i);
+			a.tag = 1, a.payload = t, n != null && (a.callback = n), t = eo(e, a, i), t !== null && (ml(t, e, i, r), to(t, e, i));
 		},
 		enqueueForceUpdate: function(e, t) {
 			e = e._reactInternals;
-			var n = fl(), r = pl(e), i = Za(n, r);
-			i.tag = 2, t != null && (i.callback = t), t = Qa(e, i, r), t !== null && (ml(t, e, r, n), $a(t, e, r));
+			var n = fl(), r = pl(e), i = $a(n, r);
+			i.tag = 2, t != null && (i.callback = t), t = eo(e, i, r), t !== null && (ml(t, e, r, n), to(t, e, r));
 		}
 	};
 	function vs(e, t, n, r, i, a, o) {
-		return e = e.stateNode, typeof e.shouldComponentUpdate == "function" ? e.shouldComponentUpdate(r, a, o) : t.prototype && t.prototype.isPureReactComponent ? !xr(n, r) || !xr(i, a) : !0;
+		return e = e.stateNode, typeof e.shouldComponentUpdate == "function" ? e.shouldComponentUpdate(r, a, o) : t.prototype && t.prototype.isPureReactComponent ? !Sr(n, r) || !Sr(i, a) : !0;
 	}
 	function ys(e, t, n) {
-		var r = !1, i = zi, a = t.contextType;
-		return typeof a == "object" && a ? a = Ua(a) : (i = Wi(t) ? Hi : Bi.current, r = t.contextTypes, a = (r = r != null) ? Ui(e, i) : zi), t = new t(n, a), e.memoizedState = t.state !== null && t.state !== void 0 ? t.state : null, t.updater = _s, e.stateNode = t, t._reactInternals = e, r && (e = e.stateNode, e.__reactInternalMemoizedUnmaskedChildContext = i, e.__reactInternalMemoizedMaskedChildContext = a), t;
+		var r = !1, i = Vi, a = t.contextType;
+		return typeof a == "object" && a ? a = Ga(a) : (i = Ki(t) ? Wi : Hi.current, r = t.contextTypes, a = (r = r != null) ? Gi(e, i) : Vi), t = new t(n, a), e.memoizedState = t.state !== null && t.state !== void 0 ? t.state : null, t.updater = _s, e.stateNode = t, t._reactInternals = e, r && (e = e.stateNode, e.__reactInternalMemoizedUnmaskedChildContext = i, e.__reactInternalMemoizedMaskedChildContext = a), t;
 	}
 	function bs(e, t, n, r) {
 		e = t.state, typeof t.componentWillReceiveProps == "function" && t.componentWillReceiveProps(n, r), typeof t.UNSAFE_componentWillReceiveProps == "function" && t.UNSAFE_componentWillReceiveProps(n, r), t.state !== e && _s.enqueueReplaceState(t, t.state, null);
 	}
 	function xs(e, t, n, r) {
 		var i = e.stateNode;
-		i.props = n, i.state = e.memoizedState, i.refs = {}, Ya(e);
+		i.props = n, i.state = e.memoizedState, i.refs = {}, Za(e);
 		var a = t.contextType;
-		typeof a == "object" && a ? i.context = Ua(a) : (a = Wi(t) ? Hi : Bi.current, i.context = Ui(e, a)), i.state = e.memoizedState, a = t.getDerivedStateFromProps, typeof a == "function" && (gs(e, t, a, n), i.state = e.memoizedState), typeof t.getDerivedStateFromProps == "function" || typeof i.getSnapshotBeforeUpdate == "function" || typeof i.UNSAFE_componentWillMount != "function" && typeof i.componentWillMount != "function" || (t = i.state, typeof i.componentWillMount == "function" && i.componentWillMount(), typeof i.UNSAFE_componentWillMount == "function" && i.UNSAFE_componentWillMount(), t !== i.state && _s.enqueueReplaceState(i, i.state, null), to(e, n, i, r), i.state = e.memoizedState), typeof i.componentDidMount == "function" && (e.flags |= 4194308);
+		typeof a == "object" && a ? i.context = Ga(a) : (a = Ki(t) ? Wi : Hi.current, i.context = Gi(e, a)), i.state = e.memoizedState, a = t.getDerivedStateFromProps, typeof a == "function" && (gs(e, t, a, n), i.state = e.memoizedState), typeof t.getDerivedStateFromProps == "function" || typeof i.getSnapshotBeforeUpdate == "function" || typeof i.UNSAFE_componentWillMount != "function" && typeof i.componentWillMount != "function" || (t = i.state, typeof i.componentWillMount == "function" && i.componentWillMount(), typeof i.UNSAFE_componentWillMount == "function" && i.UNSAFE_componentWillMount(), t !== i.state && _s.enqueueReplaceState(i, i.state, null), ro(e, n, i, r), i.state = e.memoizedState), typeof i.componentDidMount == "function" && (e.flags |= 4194308);
 	}
 	function Ss(e, t) {
 		try {
@@ -3266,14 +3266,14 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	var Ts = typeof WeakMap == "function" ? WeakMap : Map;
 	function Es(e, t, n) {
-		n = Za(-1, n), n.tag = 3, n.payload = { element: null };
+		n = $a(-1, n), n.tag = 3, n.payload = { element: null };
 		var r = t.value;
 		return n.callback = function() {
 			nl || (nl = !0, rl = r), ws(e, t);
 		}, n;
 	}
 	function Ds(e, t, n) {
-		n = Za(-1, n), n.tag = 3;
+		n = $a(-1, n), n.tag = 3;
 		var r = e.type.getDerivedStateFromError;
 		if (typeof r == "function") {
 			var i = t.value;
@@ -3308,16 +3308,16 @@ var h = /* @__PURE__ */ i(((e) => {
 		return null;
 	}
 	function As(e, t, n, r, i) {
-		return e.mode & 1 ? (e.flags |= 65536, e.lanes = i, e) : (e === t ? e.flags |= 65536 : (e.flags |= 128, n.flags |= 131072, n.flags &= -52805, n.tag === 1 && (n.alternate === null ? n.tag = 17 : (t = Za(-1, 1), t.tag = 2, Qa(n, t, 1))), n.lanes |= 1), e);
+		return e.mode & 1 ? (e.flags |= 65536, e.lanes = i, e) : (e === t ? e.flags |= 65536 : (e.flags |= 128, n.flags |= 131072, n.flags &= -52805, n.tag === 1 && (n.alternate === null ? n.tag = 17 : (t = $a(-1, 1), t.tag = 2, eo(n, t, 1))), n.lanes |= 1), e);
 	}
 	var js = C.ReactCurrentOwner, Ms = !1;
 	function Ns(e, t, n, r) {
-		t.child = e === null ? Pa(t, null, n, r) : Na(t, e.child, n, r);
+		t.child = e === null ? Ia(t, null, n, r) : Fa(t, e.child, n, r);
 	}
 	function Ps(e, t, n, r, i) {
 		n = n.render;
 		var a = t.ref;
-		return Ha(t, i), r = ko(e, t, n, r, a, i), n = Ao(), e !== null && !Ms ? (t.updateQueue = e.updateQueue, t.flags &= -2053, e.lanes &= ~i, ec(e, t, i)) : (_a && n && pa(t), t.flags |= 1, Ns(e, t, r, i), t.child);
+		return Wa(t, i), r = ko(e, t, n, r, a, i), n = Ao(), e !== null && !Ms ? (t.updateQueue = e.updateQueue, t.flags &= -2053, e.lanes &= ~i, ec(e, t, i)) : (ya && n && ha(t), t.flags |= 1, Ns(e, t, r, i), t.child);
 	}
 	function Fs(e, t, n, r, i) {
 		if (e === null) {
@@ -3326,14 +3326,14 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		if (a = e.child, (e.lanes & i) === 0) {
 			var o = a.memoizedProps;
-			if (n = n.compare, n = n === null ? xr : n, n(o, r) && e.ref === t.ref) return ec(e, t, i);
+			if (n = n.compare, n = n === null ? Sr : n, n(o, r) && e.ref === t.ref) return ec(e, t, i);
 		}
 		return t.flags |= 1, e = Yl(a, r), e.ref = t.ref, e.return = t, t.child = e;
 	}
 	function Is(e, t, n, r, i) {
 		if (e !== null) {
 			var a = e.memoizedProps;
-			if (xr(a, r) && e.ref === t.ref) if (Ms = !1, t.pendingProps = r = a, (e.lanes & i) !== 0) e.flags & 131072 && (Ms = !0);
+			if (Sr(a, r) && e.ref === t.ref) if (Ms = !1, t.pendingProps = r = a, (e.lanes & i) !== 0) e.flags & 131072 && (Ms = !0);
 			else return t.lanes = e.lanes, ec(e, t, i);
 		}
 		return zs(e, t, n, r, i);
@@ -3344,20 +3344,20 @@ var h = /* @__PURE__ */ i(((e) => {
 			baseLanes: 0,
 			cachePool: null,
 			transitions: null
-		}, Ri(Gc, Wc), Wc |= n;
+		}, Bi(Gc, Wc), Wc |= n;
 		else {
 			if (!(n & 1073741824)) return e = a === null ? n : a.baseLanes | n, t.lanes = t.childLanes = 1073741824, t.memoizedState = {
 				baseLanes: e,
 				cachePool: null,
 				transitions: null
-			}, t.updateQueue = null, Ri(Gc, Wc), Wc |= e, null;
+			}, t.updateQueue = null, Bi(Gc, Wc), Wc |= e, null;
 			t.memoizedState = {
 				baseLanes: 0,
 				cachePool: null,
 				transitions: null
-			}, r = a === null ? n : a.baseLanes, Ri(Gc, Wc), Wc |= r;
+			}, r = a === null ? n : a.baseLanes, Bi(Gc, Wc), Wc |= r;
 		}
-		else a === null ? r = n : (r = a.baseLanes | n, t.memoizedState = null), Ri(Gc, Wc), Wc |= r;
+		else a === null ? r = n : (r = a.baseLanes | n, t.memoizedState = null), Bi(Gc, Wc), Wc |= r;
 		return Ns(e, t, i, n), t.child;
 	}
 	function Rs(e, t) {
@@ -3365,47 +3365,47 @@ var h = /* @__PURE__ */ i(((e) => {
 		(e === null && n !== null || e !== null && e.ref !== n) && (t.flags |= 512, t.flags |= 2097152);
 	}
 	function zs(e, t, n, r, i) {
-		var a = Wi(n) ? Hi : Bi.current;
-		return a = Ui(t, a), Ha(t, i), n = ko(e, t, n, r, a, i), r = Ao(), e !== null && !Ms ? (t.updateQueue = e.updateQueue, t.flags &= -2053, e.lanes &= ~i, ec(e, t, i)) : (_a && r && pa(t), t.flags |= 1, Ns(e, t, n, i), t.child);
+		var a = Ki(n) ? Wi : Hi.current;
+		return a = Gi(t, a), Wa(t, i), n = ko(e, t, n, r, a, i), r = Ao(), e !== null && !Ms ? (t.updateQueue = e.updateQueue, t.flags &= -2053, e.lanes &= ~i, ec(e, t, i)) : (ya && r && ha(t), t.flags |= 1, Ns(e, t, n, i), t.child);
 	}
 	function Bs(e, t, n, r, i) {
-		if (Wi(n)) {
+		if (Ki(n)) {
 			var a = !0;
-			Ji(t);
+			Xi(t);
 		} else a = !1;
-		if (Ha(t, i), t.stateNode === null) $s(e, t), ys(t, n, r), xs(t, n, r, i), r = !0;
+		if (Wa(t, i), t.stateNode === null) $s(e, t), ys(t, n, r), xs(t, n, r, i), r = !0;
 		else if (e === null) {
 			var o = t.stateNode, s = t.memoizedProps;
 			o.props = s;
 			var c = o.context, l = n.contextType;
-			typeof l == "object" && l ? l = Ua(l) : (l = Wi(n) ? Hi : Bi.current, l = Ui(t, l));
+			typeof l == "object" && l ? l = Ga(l) : (l = Ki(n) ? Wi : Hi.current, l = Gi(t, l));
 			var u = n.getDerivedStateFromProps, d = typeof u == "function" || typeof o.getSnapshotBeforeUpdate == "function";
-			d || typeof o.UNSAFE_componentWillReceiveProps != "function" && typeof o.componentWillReceiveProps != "function" || (s !== r || c !== l) && bs(t, o, r, l), Ja = !1;
+			d || typeof o.UNSAFE_componentWillReceiveProps != "function" && typeof o.componentWillReceiveProps != "function" || (s !== r || c !== l) && bs(t, o, r, l), Xa = !1;
 			var f = t.memoizedState;
-			o.state = f, to(t, r, o, i), c = t.memoizedState, s !== r || f !== c || Vi.current || Ja ? (typeof u == "function" && (gs(t, n, u, r), c = t.memoizedState), (s = Ja || vs(t, n, s, r, f, c, l)) ? (d || typeof o.UNSAFE_componentWillMount != "function" && typeof o.componentWillMount != "function" || (typeof o.componentWillMount == "function" && o.componentWillMount(), typeof o.UNSAFE_componentWillMount == "function" && o.UNSAFE_componentWillMount()), typeof o.componentDidMount == "function" && (t.flags |= 4194308)) : (typeof o.componentDidMount == "function" && (t.flags |= 4194308), t.memoizedProps = r, t.memoizedState = c), o.props = r, o.state = c, o.context = l, r = s) : (typeof o.componentDidMount == "function" && (t.flags |= 4194308), r = !1);
+			o.state = f, ro(t, r, o, i), c = t.memoizedState, s !== r || f !== c || Ui.current || Xa ? (typeof u == "function" && (gs(t, n, u, r), c = t.memoizedState), (s = Xa || vs(t, n, s, r, f, c, l)) ? (d || typeof o.UNSAFE_componentWillMount != "function" && typeof o.componentWillMount != "function" || (typeof o.componentWillMount == "function" && o.componentWillMount(), typeof o.UNSAFE_componentWillMount == "function" && o.UNSAFE_componentWillMount()), typeof o.componentDidMount == "function" && (t.flags |= 4194308)) : (typeof o.componentDidMount == "function" && (t.flags |= 4194308), t.memoizedProps = r, t.memoizedState = c), o.props = r, o.state = c, o.context = l, r = s) : (typeof o.componentDidMount == "function" && (t.flags |= 4194308), r = !1);
 		} else {
-			o = t.stateNode, Xa(e, t), s = t.memoizedProps, l = t.type === t.elementType ? s : hs(t.type, s), o.props = l, d = t.pendingProps, f = o.context, c = n.contextType, typeof c == "object" && c ? c = Ua(c) : (c = Wi(n) ? Hi : Bi.current, c = Ui(t, c));
+			o = t.stateNode, Qa(e, t), s = t.memoizedProps, l = t.type === t.elementType ? s : hs(t.type, s), o.props = l, d = t.pendingProps, f = o.context, c = n.contextType, typeof c == "object" && c ? c = Ga(c) : (c = Ki(n) ? Wi : Hi.current, c = Gi(t, c));
 			var p = n.getDerivedStateFromProps;
-			(u = typeof p == "function" || typeof o.getSnapshotBeforeUpdate == "function") || typeof o.UNSAFE_componentWillReceiveProps != "function" && typeof o.componentWillReceiveProps != "function" || (s !== d || f !== c) && bs(t, o, r, c), Ja = !1, f = t.memoizedState, o.state = f, to(t, r, o, i);
+			(u = typeof p == "function" || typeof o.getSnapshotBeforeUpdate == "function") || typeof o.UNSAFE_componentWillReceiveProps != "function" && typeof o.componentWillReceiveProps != "function" || (s !== d || f !== c) && bs(t, o, r, c), Xa = !1, f = t.memoizedState, o.state = f, ro(t, r, o, i);
 			var m = t.memoizedState;
-			s !== d || f !== m || Vi.current || Ja ? (typeof p == "function" && (gs(t, n, p, r), m = t.memoizedState), (l = Ja || vs(t, n, l, r, f, m, c) || !1) ? (u || typeof o.UNSAFE_componentWillUpdate != "function" && typeof o.componentWillUpdate != "function" || (typeof o.componentWillUpdate == "function" && o.componentWillUpdate(r, m, c), typeof o.UNSAFE_componentWillUpdate == "function" && o.UNSAFE_componentWillUpdate(r, m, c)), typeof o.componentDidUpdate == "function" && (t.flags |= 4), typeof o.getSnapshotBeforeUpdate == "function" && (t.flags |= 1024)) : (typeof o.componentDidUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 4), typeof o.getSnapshotBeforeUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 1024), t.memoizedProps = r, t.memoizedState = m), o.props = r, o.state = m, o.context = c, r = l) : (typeof o.componentDidUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 4), typeof o.getSnapshotBeforeUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 1024), r = !1);
+			s !== d || f !== m || Ui.current || Xa ? (typeof p == "function" && (gs(t, n, p, r), m = t.memoizedState), (l = Xa || vs(t, n, l, r, f, m, c) || !1) ? (u || typeof o.UNSAFE_componentWillUpdate != "function" && typeof o.componentWillUpdate != "function" || (typeof o.componentWillUpdate == "function" && o.componentWillUpdate(r, m, c), typeof o.UNSAFE_componentWillUpdate == "function" && o.UNSAFE_componentWillUpdate(r, m, c)), typeof o.componentDidUpdate == "function" && (t.flags |= 4), typeof o.getSnapshotBeforeUpdate == "function" && (t.flags |= 1024)) : (typeof o.componentDidUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 4), typeof o.getSnapshotBeforeUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 1024), t.memoizedProps = r, t.memoizedState = m), o.props = r, o.state = m, o.context = c, r = l) : (typeof o.componentDidUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 4), typeof o.getSnapshotBeforeUpdate != "function" || s === e.memoizedProps && f === e.memoizedState || (t.flags |= 1024), r = !1);
 		}
 		return Vs(e, t, n, r, a, i);
 	}
 	function Vs(e, t, n, r, i, a) {
 		Rs(e, t);
 		var o = !!(t.flags & 128);
-		if (!r && !o) return i && Yi(t, n, !1), ec(e, t, a);
+		if (!r && !o) return i && Zi(t, n, !1), ec(e, t, a);
 		r = t.stateNode, js.current = t;
 		var s = o && typeof n.getDerivedStateFromError != "function" ? null : r.render();
-		return t.flags |= 1, e !== null && o ? (t.child = Na(t, e.child, null, a), t.child = Na(t, null, s, a)) : Ns(e, t, s, a), t.memoizedState = r.state, i && Yi(t, n, !0), t.child;
+		return t.flags |= 1, e !== null && o ? (t.child = Fa(t, e.child, null, a), t.child = Fa(t, null, s, a)) : Ns(e, t, s, a), t.memoizedState = r.state, i && Zi(t, n, !0), t.child;
 	}
 	function Hs(e) {
 		var t = e.stateNode;
-		t.pendingContext ? Ki(e, t.pendingContext, t.pendingContext !== t.context) : t.context && Ki(e, t.context, !1), co(e, t.containerInfo);
+		t.pendingContext ? Ji(e, t.pendingContext, t.pendingContext !== t.context) : t.context && Ji(e, t.context, !1), uo(e, t.containerInfo);
 	}
 	function Us(e, t, n, r, i) {
-		return Ea(), Da(i), t.flags |= 256, Ns(e, t, n, r), t.child;
+		return Oa(), ka(i), t.flags |= 256, Ns(e, t, n, r), t.child;
 	}
 	var Ws = {
 		dehydrated: null,
@@ -3420,8 +3420,8 @@ var h = /* @__PURE__ */ i(((e) => {
 		};
 	}
 	function Ks(e, t, n) {
-		var r = t.pendingProps, i = po.current, a = !1, o = !!(t.flags & 128), s;
-		if ((s = o) || (s = e !== null && e.memoizedState === null ? !1 : !!(i & 2)), s ? (a = !0, t.flags &= -129) : (e === null || e.memoizedState !== null) && (i |= 1), Ri(po, i & 1), e === null) return Sa(t), e = t.memoizedState, e !== null && (e = e.dehydrated, e !== null) ? (t.lanes = t.mode & 1 ? e.data === "$!" ? 8 : 1073741824 : 1, null) : (o = r.children, e = r.fallback, a ? (r = t.mode, a = t.child, o = {
+		var r = t.pendingProps, i = X.current, a = !1, o = !!(t.flags & 128), s;
+		if ((s = o) || (s = e !== null && e.memoizedState === null ? !1 : !!(i & 2)), s ? (a = !0, t.flags &= -129) : (e === null || e.memoizedState !== null) && (i |= 1), Bi(X, i & 1), e === null) return wa(t), e = t.memoizedState, e !== null && (e = e.dehydrated, e !== null) ? (t.lanes = t.mode & 1 ? e.data === "$!" ? 8 : 1073741824 : 1, null) : (o = r.children, e = r.fallback, a ? (r = t.mode, a = t.child, o = {
 			mode: "hidden",
 			children: o
 		}, !(r & 1) && a !== null ? (a.childLanes = 0, a.pendingProps = o) : a = Ql(o, r, 0, null), e = Zl(e, r, n, null), a.return = t, e.return = t, a.sibling = e, t.child = a, t.child.memoizedState = Gs(n), t.memoizedState = Ws, e) : qs(t, o));
@@ -3450,13 +3450,13 @@ var h = /* @__PURE__ */ i(((e) => {
 		}, e.mode, 0, null), t.return = e, e.child = t;
 	}
 	function Js(e, t, n, r) {
-		return r !== null && Da(r), Na(t, e.child, null, n), e = qs(t, t.pendingProps.children), e.flags |= 2, t.memoizedState = null, e;
+		return r !== null && ka(r), Fa(t, e.child, null, n), e = qs(t, t.pendingProps.children), e.flags |= 2, t.memoizedState = null, e;
 	}
 	function Ys(e, t, n, i, a, o, s) {
 		if (n) return t.flags & 256 ? (t.flags &= -257, i = Cs(Error(r(422))), Js(e, t, s, i)) : t.memoizedState === null ? (o = i.fallback, a = t.mode, i = Ql({
 			mode: "visible",
 			children: i.children
-		}, a, 0, null), o = Zl(o, a, s, null), o.flags |= 2, i.return = t, o.return = t, i.sibling = o, t.child = i, t.mode & 1 && Na(t, e.child, null, s), t.child.memoizedState = Gs(s), t.memoizedState = Ws, o) : (t.child = e.child, t.flags |= 128, null);
+		}, a, 0, null), o = Zl(o, a, s, null), o.flags |= 2, i.return = t, o.return = t, i.sibling = o, t.child = i, t.mode & 1 && Fa(t, e.child, null, s), t.child.memoizedState = Gs(s), t.memoizedState = Ws, o) : (t.child = e.child, t.flags |= 128, null);
 		if (!(t.mode & 1)) return Js(e, t, s, null);
 		if (a.data === "$!") {
 			if (i = a.nextSibling && a.nextSibling.dataset, i) var c = i.dgst;
@@ -3499,16 +3499,16 @@ var h = /* @__PURE__ */ i(((e) => {
 						break;
 					default: a = 0;
 				}
-				a = (a & (i.suspendedLanes | s)) === 0 ? a : 0, a !== 0 && a !== o.retryLane && (o.retryLane = a, qa(e, a), ml(i, e, a, -1));
+				a = (a & (i.suspendedLanes | s)) === 0 ? a : 0, a !== 0 && a !== o.retryLane && (o.retryLane = a, Ya(e, a), ml(i, e, a, -1));
 			}
 			return Ol(), i = Cs(Error(r(421))), Js(e, t, s, i);
 		}
-		return a.data === "$?" ? (t.flags |= 128, t.child = e.child, t = Vl.bind(null, e), a._reactRetry = t, null) : (e = o.treeContext, ga = Si(a.nextSibling), ha = t, _a = !0, va = null, e !== null && (oa[sa++] = la, oa[sa++] = ua, oa[sa++] = ca, la = e.id, ua = e.overflow, ca = t), t = qs(t, i.children), t.flags |= 4096, t);
+		return a.data === "$?" ? (t.flags |= 128, t.child = e.child, t = Vl.bind(null, e), a._reactRetry = t, null) : (e = o.treeContext, va = Ci(a.nextSibling), _a = t, ya = !0, ba = null, e !== null && (ca[la++] = da, ca[la++] = fa, ca[la++] = ua, da = e.id, fa = e.overflow, ua = t), t = qs(t, i.children), t.flags |= 4096, t);
 	}
 	function Xs(e, t, n) {
 		e.lanes |= t;
 		var r = e.alternate;
-		r !== null && (r.lanes |= t), Va(e.return, t, n);
+		r !== null && (r.lanes |= t), Ua(e.return, t, n);
 	}
 	function Zs(e, t, n, r, i) {
 		var a = e.memoizedState;
@@ -3523,7 +3523,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	function Qs(e, t, n) {
 		var r = t.pendingProps, i = r.revealOrder, a = r.tail;
-		if (Ns(e, t, r.children, n), r = po.current, r & 2) r = r & 1 | 2, t.flags |= 128;
+		if (Ns(e, t, r.children, n), r = X.current, r & 2) r = r & 1 | 2, t.flags |= 128;
 		else {
 			if (e !== null && e.flags & 128) a: for (e = t.child; e !== null;) {
 				if (e.tag === 13) e.memoizedState !== null && Xs(e, n, t);
@@ -3541,15 +3541,15 @@ var h = /* @__PURE__ */ i(((e) => {
 			}
 			r &= 1;
 		}
-		if (Ri(po, r), !(t.mode & 1)) t.memoizedState = null;
+		if (Bi(X, r), !(t.mode & 1)) t.memoizedState = null;
 		else switch (i) {
 			case "forwards":
-				for (n = t.child, i = null; n !== null;) e = n.alternate, e !== null && mo(e) === null && (i = n), n = n.sibling;
+				for (n = t.child, i = null; n !== null;) e = n.alternate, e !== null && ho(e) === null && (i = n), n = n.sibling;
 				n = i, n === null ? (i = t.child, t.child = null) : (i = n.sibling, n.sibling = null), Zs(t, !1, i, n, a);
 				break;
 			case "backwards":
 				for (n = null, i = t.child, t.child = null; i !== null;) {
-					if (e = i.alternate, e !== null && mo(e) === null) {
+					if (e = i.alternate, e !== null && ho(e) === null) {
 						t.child = i;
 						break;
 					}
@@ -3579,31 +3579,31 @@ var h = /* @__PURE__ */ i(((e) => {
 	function tc(e, t, n) {
 		switch (t.tag) {
 			case 3:
-				Hs(t), Ea();
+				Hs(t), Oa();
 				break;
 			case 5:
-				uo(t);
+				po(t);
 				break;
 			case 1:
-				Wi(t.type) && Ji(t);
+				Ki(t.type) && Xi(t);
 				break;
 			case 4:
-				co(t, t.stateNode.containerInfo);
+				uo(t, t.stateNode.containerInfo);
 				break;
 			case 10:
 				var r = t.type._context, i = t.memoizedProps.value;
-				Ri(Fa, r._currentValue), r._currentValue = i;
+				Bi(La, r._currentValue), r._currentValue = i;
 				break;
 			case 13:
-				if (r = t.memoizedState, r !== null) return r.dehydrated === null ? (n & t.child.childLanes) === 0 ? (Ri(po, po.current & 1), e = ec(e, t, n), e === null ? null : e.sibling) : Ks(e, t, n) : (Ri(po, po.current & 1), t.flags |= 128, null);
-				Ri(po, po.current & 1);
+				if (r = t.memoizedState, r !== null) return r.dehydrated === null ? (n & t.child.childLanes) === 0 ? (Bi(X, X.current & 1), e = ec(e, t, n), e === null ? null : e.sibling) : Ks(e, t, n) : (Bi(X, X.current & 1), t.flags |= 128, null);
+				Bi(X, X.current & 1);
 				break;
 			case 19:
 				if (r = (n & t.childLanes) !== 0, e.flags & 128) {
 					if (r) return Qs(e, t, n);
 					t.flags |= 128;
 				}
-				if (i = t.memoizedState, i !== null && (i.rendering = null, i.tail = null, i.lastEffect = null), Ri(po, po.current), r) break;
+				if (i = t.memoizedState, i !== null && (i.rendering = null, i.tail = null, i.lastEffect = null), Bi(X, X.current), r) break;
 				return null;
 			case 22:
 			case 23: return t.lanes = 0, Ls(e, t, n);
@@ -3627,21 +3627,21 @@ var h = /* @__PURE__ */ i(((e) => {
 	}, rc = function(e, t, n, r) {
 		var i = e.memoizedProps;
 		if (i !== r) {
-			e = t.stateNode, so(io.current);
+			e = t.stateNode, lo(oo.current);
 			var o = null;
 			switch (n) {
 				case "input":
-					i = ae(e, i), r = ae(e, r), o = [];
+					i = oe(e, i), r = oe(e, r), o = [];
 					break;
 				case "select":
 					i = z({}, i, { value: void 0 }), r = z({}, r, { value: void 0 }), o = [];
 					break;
 				case "textarea":
-					i = pe(e, i), r = pe(e, r), o = [];
+					i = me(e, i), r = me(e, r), o = [];
 					break;
-				default: typeof i.onClick != "function" && typeof r.onClick == "function" && (e.onclick = fi);
+				default: typeof i.onClick != "function" && typeof r.onClick == "function" && (e.onclick = pi);
 			}
-			De(n, r);
+			Oe(n, r);
 			var s;
 			for (u in n = null, i) if (!r.hasOwnProperty(u) && i.hasOwnProperty(u) && i[u] != null) if (u === "style") {
 				var c = i[u];
@@ -3653,7 +3653,7 @@ var h = /* @__PURE__ */ i(((e) => {
 					for (s in c) !c.hasOwnProperty(s) || l && l.hasOwnProperty(s) || (n ||= {}, n[s] = "");
 					for (s in l) l.hasOwnProperty(s) && c[s] !== l[s] && (n ||= {}, n[s] = l[s]);
 				} else n || (o ||= [], o.push(u, n)), n = l;
-				else u === "dangerouslySetInnerHTML" ? (l = l ? l.__html : void 0, c = c ? c.__html : void 0, l != null && c !== l && (o ||= []).push(u, l)) : u === "children" ? typeof l != "string" && typeof l != "number" || (o ||= []).push(u, "" + l) : u !== "suppressContentEditableWarning" && u !== "suppressHydrationWarning" && (a.hasOwnProperty(u) ? (l != null && u === "onScroll" && Qr("scroll", e), o || c === l || (o = [])) : (o ||= []).push(u, l));
+				else u === "dangerouslySetInnerHTML" ? (l = l ? l.__html : void 0, c = c ? c.__html : void 0, l != null && c !== l && (o ||= []).push(u, l)) : u === "children" ? typeof l != "string" && typeof l != "number" || (o ||= []).push(u, "" + l) : u !== "suppressContentEditableWarning" && u !== "suppressHydrationWarning" && (a.hasOwnProperty(u) ? (l != null && u === "onScroll" && $r("scroll", e), o || c === l || (o = [])) : (o ||= []).push(u, l));
 			}
 			n && (o ||= []).push("style", n);
 			var u = o;
@@ -3663,7 +3663,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		n !== r && (t.flags |= 4);
 	};
 	function ac(e, t) {
-		if (!_a) switch (e.tailMode) {
+		if (!ya) switch (e.tailMode) {
 			case "hidden":
 				t = e.tail;
 				for (var n = null; t !== null;) t.alternate !== null && (n = t), t = t.sibling;
@@ -3683,7 +3683,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	function sc(e, t, n) {
 		var i = t.pendingProps;
-		switch (ma(t), t.tag) {
+		switch (ga(t), t.tag) {
 			case 2:
 			case 16:
 			case 15:
@@ -3694,128 +3694,128 @@ var h = /* @__PURE__ */ i(((e) => {
 			case 12:
 			case 9:
 			case 14: return oc(t), null;
-			case 1: return Wi(t.type) && Gi(), oc(t), null;
-			case 3: return i = t.stateNode, lo(), Z(Vi), Z(Bi), go(), i.pendingContext && (i.context = i.pendingContext, i.pendingContext = null), (e === null || e.child === null) && (wa(t) ? t.flags |= 4 : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, va !== null && (vl(va), va = null))), oc(t), null;
+			case 1: return Ki(t.type) && qi(), oc(t), null;
+			case 3: return i = t.stateNode, fo(), zi(Ui), zi(Hi), _o(), i.pendingContext && (i.context = i.pendingContext, i.pendingContext = null), (e === null || e.child === null) && (Ea(t) ? t.flags |= 4 : e === null || e.memoizedState.isDehydrated && !(t.flags & 256) || (t.flags |= 1024, ba !== null && (vl(ba), ba = null))), oc(t), null;
 			case 5:
-				fo(t);
-				var o = so(oo.current);
+				mo(t);
+				var o = lo(co.current);
 				if (n = t.type, e !== null && t.stateNode != null) rc(e, t, n, i, o), e.ref !== t.ref && (t.flags |= 512, t.flags |= 2097152);
 				else {
 					if (!i) {
 						if (t.stateNode === null) throw Error(r(166));
 						return oc(t), null;
 					}
-					if (e = so(io.current), wa(t)) {
+					if (e = lo(oo.current), Ea(t)) {
 						i = t.stateNode, n = t.type;
 						var s = t.memoizedProps;
-						switch (i[Ti] = t, i[Ei] = s, e = !!(t.mode & 1), n) {
+						switch (i[Ei] = t, i[Di] = s, e = !!(t.mode & 1), n) {
 							case "dialog":
-								Qr("cancel", i), Qr("close", i);
+								$r("cancel", i), $r("close", i);
 								break;
 							case "iframe":
 							case "object":
 							case "embed":
-								Qr("load", i);
+								$r("load", i);
 								break;
 							case "video":
 							case "audio":
-								for (o = 0; o < Jr.length; o++) Qr(Jr[o], i);
+								for (o = 0; o < Yr.length; o++) $r(Yr[o], i);
 								break;
 							case "source":
-								Qr("error", i);
+								$r("error", i);
 								break;
 							case "img":
 							case "image":
 							case "link":
-								Qr("error", i), Qr("load", i);
+								$r("error", i), $r("load", i);
 								break;
 							case "details":
-								Qr("toggle", i);
+								$r("toggle", i);
 								break;
 							case "input":
-								oe(i, s), Qr("invalid", i);
+								se(i, s), $r("invalid", i);
 								break;
 							case "select":
-								i._wrapperState = { wasMultiple: !!s.multiple }, Qr("invalid", i);
+								i._wrapperState = { wasMultiple: !!s.multiple }, $r("invalid", i);
 								break;
-							case "textarea": me(i, s), Qr("invalid", i);
+							case "textarea": he(i, s), $r("invalid", i);
 						}
-						for (var c in De(n, s), o = null, s) if (s.hasOwnProperty(c)) {
+						for (var c in Oe(n, s), o = null, s) if (s.hasOwnProperty(c)) {
 							var l = s[c];
-							c === "children" ? typeof l == "string" ? i.textContent !== l && (!0 !== s.suppressHydrationWarning && di(i.textContent, l, e), o = ["children", l]) : typeof l == "number" && i.textContent !== "" + l && (!0 !== s.suppressHydrationWarning && di(i.textContent, l, e), o = ["children", "" + l]) : a.hasOwnProperty(c) && l != null && c === "onScroll" && Qr("scroll", i);
+							c === "children" ? typeof l == "string" ? i.textContent !== l && (!0 !== s.suppressHydrationWarning && fi(i.textContent, l, e), o = ["children", l]) : typeof l == "number" && i.textContent !== "" + l && (!0 !== s.suppressHydrationWarning && fi(i.textContent, l, e), o = ["children", "" + l]) : a.hasOwnProperty(c) && l != null && c === "onScroll" && $r("scroll", i);
 						}
 						switch (n) {
 							case "input":
-								ne(i), le(i, s, !0);
+								re(i), ue(i, s, !0);
 								break;
 							case "textarea":
-								ne(i), ge(i);
+								re(i), _e(i);
 								break;
 							case "select":
 							case "option": break;
-							default: typeof s.onClick == "function" && (i.onclick = fi);
+							default: typeof s.onClick == "function" && (i.onclick = pi);
 						}
 						i = o, t.updateQueue = i, i !== null && (t.flags |= 4);
 					} else {
-						c = o.nodeType === 9 ? o : o.ownerDocument, e === "http://www.w3.org/1999/xhtml" && (e = _e(n)), e === "http://www.w3.org/1999/xhtml" ? n === "script" ? (e = c.createElement("div"), e.innerHTML = "<script><\/script>", e = e.removeChild(e.firstChild)) : typeof i.is == "string" ? e = c.createElement(n, { is: i.is }) : (e = c.createElement(n), n === "select" && (c = e, i.multiple ? c.multiple = !0 : i.size && (c.size = i.size))) : e = c.createElementNS(e, n), e[Ti] = t, e[Ei] = i, nc(e, t, !1, !1), t.stateNode = e;
+						c = o.nodeType === 9 ? o : o.ownerDocument, e === "http://www.w3.org/1999/xhtml" && (e = ve(n)), e === "http://www.w3.org/1999/xhtml" ? n === "script" ? (e = c.createElement("div"), e.innerHTML = "<script><\/script>", e = e.removeChild(e.firstChild)) : typeof i.is == "string" ? e = c.createElement(n, { is: i.is }) : (e = c.createElement(n), n === "select" && (c = e, i.multiple ? c.multiple = !0 : i.size && (c.size = i.size))) : e = c.createElementNS(e, n), e[Ei] = t, e[Di] = i, nc(e, t, !1, !1), t.stateNode = e;
 						a: {
-							switch (c = Oe(n, i), n) {
+							switch (c = ke(n, i), n) {
 								case "dialog":
-									Qr("cancel", e), Qr("close", e), o = i;
+									$r("cancel", e), $r("close", e), o = i;
 									break;
 								case "iframe":
 								case "object":
 								case "embed":
-									Qr("load", e), o = i;
+									$r("load", e), o = i;
 									break;
 								case "video":
 								case "audio":
-									for (o = 0; o < Jr.length; o++) Qr(Jr[o], e);
+									for (o = 0; o < Yr.length; o++) $r(Yr[o], e);
 									o = i;
 									break;
 								case "source":
-									Qr("error", e), o = i;
+									$r("error", e), o = i;
 									break;
 								case "img":
 								case "image":
 								case "link":
-									Qr("error", e), Qr("load", e), o = i;
+									$r("error", e), $r("load", e), o = i;
 									break;
 								case "details":
-									Qr("toggle", e), o = i;
+									$r("toggle", e), o = i;
 									break;
 								case "input":
-									oe(e, i), o = ae(e, i), Qr("invalid", e);
+									se(e, i), o = oe(e, i), $r("invalid", e);
 									break;
 								case "option":
 									o = i;
 									break;
 								case "select":
-									e._wrapperState = { wasMultiple: !!i.multiple }, o = z({}, i, { value: void 0 }), Qr("invalid", e);
+									e._wrapperState = { wasMultiple: !!i.multiple }, o = z({}, i, { value: void 0 }), $r("invalid", e);
 									break;
 								case "textarea":
-									me(e, i), o = pe(e, i), Qr("invalid", e);
+									he(e, i), o = me(e, i), $r("invalid", e);
 									break;
 								default: o = i;
 							}
-							for (s in De(n, o), l = o, l) if (l.hasOwnProperty(s)) {
+							for (s in Oe(n, o), l = o, l) if (l.hasOwnProperty(s)) {
 								var u = l[s];
-								s === "style" ? Te(e, u) : s === "dangerouslySetInnerHTML" ? (u = u ? u.__html : void 0, u != null && be(e, u)) : s === "children" ? typeof u == "string" ? (n !== "textarea" || u !== "") && xe(e, u) : typeof u == "number" && xe(e, "" + u) : s !== "suppressContentEditableWarning" && s !== "suppressHydrationWarning" && s !== "autoFocus" && (a.hasOwnProperty(s) ? u != null && s === "onScroll" && Qr("scroll", e) : u != null && S(e, s, u, c));
+								s === "style" ? Ee(e, u) : s === "dangerouslySetInnerHTML" ? (u = u ? u.__html : void 0, u != null && xe(e, u)) : s === "children" ? typeof u == "string" ? (n !== "textarea" || u !== "") && Se(e, u) : typeof u == "number" && Se(e, "" + u) : s !== "suppressContentEditableWarning" && s !== "suppressHydrationWarning" && s !== "autoFocus" && (a.hasOwnProperty(s) ? u != null && s === "onScroll" && $r("scroll", e) : u != null && S(e, s, u, c));
 							}
 							switch (n) {
 								case "input":
-									ne(e), le(e, i, !1);
+									re(e), ue(e, i, !1);
 									break;
 								case "textarea":
-									ne(e), ge(e);
+									re(e), _e(e);
 									break;
 								case "option":
-									i.value != null && e.setAttribute("value", "" + q(i.value));
+									i.value != null && e.setAttribute("value", "" + K(i.value));
 									break;
 								case "select":
-									e.multiple = !!i.multiple, s = i.value, s == null ? i.defaultValue != null && fe(e, !!i.multiple, i.defaultValue, !0) : fe(e, !!i.multiple, s, !1);
+									e.multiple = !!i.multiple, s = i.value, s == null ? i.defaultValue != null && pe(e, !!i.multiple, i.defaultValue, !0) : pe(e, !!i.multiple, s, !1);
 									break;
-								default: typeof o.onClick == "function" && (e.onclick = fi);
+								default: typeof o.onClick == "function" && (e.onclick = pi);
 							}
 							switch (n) {
 								case "button":
@@ -3839,57 +3839,57 @@ var h = /* @__PURE__ */ i(((e) => {
 				if (e && t.stateNode != null) ic(e, t, e.memoizedProps, i);
 				else {
 					if (typeof i != "string" && t.stateNode === null) throw Error(r(166));
-					if (n = so(oo.current), so(io.current), wa(t)) {
-						if (i = t.stateNode, n = t.memoizedProps, i[Ti] = t, (s = i.nodeValue !== n) && (e = ha, e !== null)) switch (e.tag) {
+					if (n = lo(co.current), lo(oo.current), Ea(t)) {
+						if (i = t.stateNode, n = t.memoizedProps, i[Ei] = t, (s = i.nodeValue !== n) && (e = _a, e !== null)) switch (e.tag) {
 							case 3:
-								di(i.nodeValue, n, !!(e.mode & 1));
+								fi(i.nodeValue, n, !!(e.mode & 1));
 								break;
-							case 5: !0 !== e.memoizedProps.suppressHydrationWarning && di(i.nodeValue, n, !!(e.mode & 1));
+							case 5: !0 !== e.memoizedProps.suppressHydrationWarning && fi(i.nodeValue, n, !!(e.mode & 1));
 						}
 						s && (t.flags |= 4);
-					} else i = (n.nodeType === 9 ? n : n.ownerDocument).createTextNode(i), i[Ti] = t, t.stateNode = i;
+					} else i = (n.nodeType === 9 ? n : n.ownerDocument).createTextNode(i), i[Ei] = t, t.stateNode = i;
 				}
 				return oc(t), null;
 			case 13:
-				if (Z(po), i = t.memoizedState, e === null || e.memoizedState !== null && e.memoizedState.dehydrated !== null) {
-					if (_a && ga !== null && t.mode & 1 && !(t.flags & 128)) Ta(), Ea(), t.flags |= 98560, s = !1;
-					else if (s = wa(t), i !== null && i.dehydrated !== null) {
+				if (zi(X), i = t.memoizedState, e === null || e.memoizedState !== null && e.memoizedState.dehydrated !== null) {
+					if (ya && va !== null && t.mode & 1 && !(t.flags & 128)) Da(), Oa(), t.flags |= 98560, s = !1;
+					else if (s = Ea(t), i !== null && i.dehydrated !== null) {
 						if (e === null) {
 							if (!s) throw Error(r(318));
 							if (s = t.memoizedState, s = s === null ? null : s.dehydrated, !s) throw Error(r(317));
-							s[Ti] = t;
-						} else Ea(), !(t.flags & 128) && (t.memoizedState = null), t.flags |= 4;
+							s[Ei] = t;
+						} else Oa(), !(t.flags & 128) && (t.memoizedState = null), t.flags |= 4;
 						oc(t), s = !1;
-					} else va !== null && (vl(va), va = null), s = !0;
+					} else ba !== null && (vl(ba), ba = null), s = !0;
 					if (!s) return t.flags & 65536 ? t : null;
 				}
-				return t.flags & 128 ? (t.lanes = n, t) : (i = i !== null, i !== (e !== null && e.memoizedState !== null) && i && (t.child.flags |= 8192, t.mode & 1 && (e === null || po.current & 1 ? Kc === 0 && (Kc = 3) : Ol())), t.updateQueue !== null && (t.flags |= 4), oc(t), null);
-			case 4: return lo(), e === null && ti(t.stateNode.containerInfo), oc(t), null;
-			case 10: return Ba(t.type._context), oc(t), null;
-			case 17: return Wi(t.type) && Gi(), oc(t), null;
+				return t.flags & 128 ? (t.lanes = n, t) : (i = i !== null, i !== (e !== null && e.memoizedState !== null) && i && (t.child.flags |= 8192, t.mode & 1 && (e === null || X.current & 1 ? Kc === 0 && (Kc = 3) : Ol())), t.updateQueue !== null && (t.flags |= 4), oc(t), null);
+			case 4: return fo(), e === null && ni(t.stateNode.containerInfo), oc(t), null;
+			case 10: return Ha(t.type._context), oc(t), null;
+			case 17: return Ki(t.type) && qi(), oc(t), null;
 			case 19:
-				if (Z(po), s = t.memoizedState, s === null) return oc(t), null;
+				if (zi(X), s = t.memoizedState, s === null) return oc(t), null;
 				if (i = !!(t.flags & 128), c = s.rendering, c === null) if (i) ac(s, !1);
 				else {
 					if (Kc !== 0 || e !== null && e.flags & 128) for (e = t.child; e !== null;) {
-						if (c = mo(e), c !== null) {
+						if (c = ho(e), c !== null) {
 							for (t.flags |= 128, ac(s, !1), i = c.updateQueue, i !== null && (t.updateQueue = i, t.flags |= 4), t.subtreeFlags = 0, i = n, n = t.child; n !== null;) s = n, e = i, s.flags &= 14680066, c = s.alternate, c === null ? (s.childLanes = 0, s.lanes = e, s.child = null, s.subtreeFlags = 0, s.memoizedProps = null, s.memoizedState = null, s.updateQueue = null, s.dependencies = null, s.stateNode = null) : (s.childLanes = c.childLanes, s.lanes = c.lanes, s.child = c.child, s.subtreeFlags = 0, s.deletions = null, s.memoizedProps = c.memoizedProps, s.memoizedState = c.memoizedState, s.updateQueue = c.updateQueue, s.type = c.type, e = c.dependencies, s.dependencies = e === null ? null : {
 								lanes: e.lanes,
 								firstContext: e.firstContext
 							}), n = n.sibling;
-							return Ri(po, po.current & 1 | 2), t.child;
+							return Bi(X, X.current & 1 | 2), t.child;
 						}
 						e = e.sibling;
 					}
-					s.tail !== null && ct() > el && (t.flags |= 128, i = !0, ac(s, !1), t.lanes = 4194304);
+					s.tail !== null && lt() > el && (t.flags |= 128, i = !0, ac(s, !1), t.lanes = 4194304);
 				}
 				else {
-					if (!i) if (e = mo(c), e !== null) {
-						if (t.flags |= 128, i = !0, n = e.updateQueue, n !== null && (t.updateQueue = n, t.flags |= 4), ac(s, !0), s.tail === null && s.tailMode === "hidden" && !c.alternate && !_a) return oc(t), null;
-					} else 2 * ct() - s.renderingStartTime > el && n !== 1073741824 && (t.flags |= 128, i = !0, ac(s, !1), t.lanes = 4194304);
+					if (!i) if (e = ho(c), e !== null) {
+						if (t.flags |= 128, i = !0, n = e.updateQueue, n !== null && (t.updateQueue = n, t.flags |= 4), ac(s, !0), s.tail === null && s.tailMode === "hidden" && !c.alternate && !ya) return oc(t), null;
+					} else 2 * lt() - s.renderingStartTime > el && n !== 1073741824 && (t.flags |= 128, i = !0, ac(s, !1), t.lanes = 4194304);
 					s.isBackwards ? (c.sibling = t.child, t.child = c) : (n = s.last, n === null ? t.child = c : n.sibling = c, s.last = c);
 				}
-				return s.tail === null ? (oc(t), null) : (t = s.tail, s.rendering = t, s.tail = t.sibling, s.renderingStartTime = ct(), t.sibling = null, n = po.current, Ri(po, i ? n & 1 | 2 : n & 1), t);
+				return s.tail === null ? (oc(t), null) : (t = s.tail, s.rendering = t, s.tail = t.sibling, s.renderingStartTime = lt(), t.sibling = null, n = X.current, Bi(X, i ? n & 1 | 2 : n & 1), t);
 			case 22:
 			case 23: return wl(), i = t.memoizedState !== null, e !== null && e.memoizedState !== null !== i && (t.flags |= 8192), i && t.mode & 1 ? Wc & 1073741824 && (oc(t), t.subtreeFlags & 6 && (t.flags |= 8192)) : oc(t), null;
 			case 24: return null;
@@ -3898,19 +3898,19 @@ var h = /* @__PURE__ */ i(((e) => {
 		throw Error(r(156, t.tag));
 	}
 	function cc(e, t) {
-		switch (ma(t), t.tag) {
-			case 1: return Wi(t.type) && Gi(), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
-			case 3: return lo(), Z(Vi), Z(Bi), go(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
-			case 5: return fo(t), null;
+		switch (ga(t), t.tag) {
+			case 1: return Ki(t.type) && qi(), e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
+			case 3: return fo(), zi(Ui), zi(Hi), _o(), e = t.flags, e & 65536 && !(e & 128) ? (t.flags = e & -65537 | 128, t) : null;
+			case 5: return mo(t), null;
 			case 13:
-				if (Z(po), e = t.memoizedState, e !== null && e.dehydrated !== null) {
+				if (zi(X), e = t.memoizedState, e !== null && e.dehydrated !== null) {
 					if (t.alternate === null) throw Error(r(340));
-					Ea();
+					Oa();
 				}
 				return e = t.flags, e & 65536 ? (t.flags = e & -65537 | 128, t) : null;
-			case 19: return Z(po), null;
-			case 4: return lo(), null;
-			case 10: return Ba(t.type._context), null;
+			case 19: return zi(X), null;
+			case 4: return fo(), null;
+			case 10: return Ha(t.type._context), null;
 			case 22:
 			case 23: return wl(), null;
 			case 24: return null;
@@ -3936,7 +3936,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	var mc = !1;
 	function hc(e, t) {
-		if (pi = on, e = Tr(), Er(e)) {
+		if (mi = sn, e = Er(), Dr(e)) {
 			if ("selectionStart" in e) var n = {
 				start: e.selectionStart,
 				end: e.selectionEnd
@@ -3975,10 +3975,10 @@ var h = /* @__PURE__ */ i(((e) => {
 				end: 0
 			};
 		} else n = null;
-		for (mi = {
+		for (hi = {
 			focusedElem: e,
 			selectionRange: n
-		}, on = !1, Q = t; Q !== null;) if (t = Q, e = t.child, t.subtreeFlags & 1028 && e !== null) e.return = t, Q = e;
+		}, sn = !1, Q = t; Q !== null;) if (t = Q, e = t.child, t.subtreeFlags & 1028 && e !== null) e.return = t, Q = e;
 		else for (; Q !== null;) {
 			t = Q;
 			try {
@@ -4054,7 +4054,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	function yc(e) {
 		var t = e.alternate;
-		t !== null && (e.alternate = null, yc(t)), e.child = null, e.deletions = null, e.sibling = null, e.tag === 5 && (t = e.stateNode, t !== null && (delete t[Ti], delete t[Ei], delete t[Oi], delete t[ki], delete t[Ai])), e.stateNode = null, e.return = null, e.dependencies = null, e.memoizedProps = null, e.memoizedState = null, e.pendingProps = null, e.stateNode = null, e.updateQueue = null;
+		t !== null && (e.alternate = null, yc(t)), e.child = null, e.deletions = null, e.sibling = null, e.tag === 5 && (t = e.stateNode, t !== null && (delete t[Ei], delete t[Di], delete t[ki], delete t[Ai], delete t[ji])), e.stateNode = null, e.return = null, e.dependencies = null, e.memoizedProps = null, e.memoizedState = null, e.pendingProps = null, e.stateNode = null, e.updateQueue = null;
 	}
 	function bc(e) {
 		return e.tag === 5 || e.tag === 3 || e.tag === 4;
@@ -4074,7 +4074,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	function Sc(e, t, n) {
 		var r = e.tag;
-		if (r === 5 || r === 6) e = e.stateNode, t ? n.nodeType === 8 ? n.parentNode.insertBefore(e, t) : n.insertBefore(e, t) : (n.nodeType === 8 ? (t = n.parentNode, t.insertBefore(e, n)) : (t = n, t.appendChild(e)), n = n._reactRootContainer, n != null || t.onclick !== null || (t.onclick = fi));
+		if (r === 5 || r === 6) e = e.stateNode, t ? n.nodeType === 8 ? n.parentNode.insertBefore(e, t) : n.insertBefore(e, t) : (n.nodeType === 8 ? (t = n.parentNode, t.insertBefore(e, n)) : (t = n, t.appendChild(e)), n = n._reactRootContainer, n != null || t.onclick !== null || (t.onclick = pi));
 		else if (r !== 4 && (e = e.child, e !== null)) for (Sc(e, t, n), e = e.sibling; e !== null;) Sc(e, t, n), e = e.sibling;
 	}
 	function Cc(e, t, n) {
@@ -4087,8 +4087,8 @@ var h = /* @__PURE__ */ i(((e) => {
 		for (n = n.child; n !== null;) Dc(e, t, n), n = n.sibling;
 	}
 	function Dc(e, t, n) {
-		if (gt && typeof gt.onCommitFiberUnmount == "function") try {
-			gt.onCommitFiberUnmount(ht, n);
+		if (_t && typeof _t.onCommitFiberUnmount == "function") try {
+			_t.onCommitFiberUnmount(gt, n);
 		} catch {}
 		switch (n.tag) {
 			case 5: uc || fc(n, t);
@@ -4097,7 +4097,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				wc = null, Ec(e, t, n), wc = r, Tc = i, wc !== null && (Tc ? (e = wc, n = n.stateNode, e.nodeType === 8 ? e.parentNode.removeChild(n) : e.removeChild(n)) : wc.removeChild(n.stateNode));
 				break;
 			case 18:
-				wc !== null && (Tc ? (e = wc, n = n.stateNode, e.nodeType === 8 ? xi(e.parentNode, n) : e.nodeType === 1 && xi(e, n), rn(e)) : xi(wc, n.stateNode));
+				wc !== null && (Tc ? (e = wc, n = n.stateNode, e.nodeType === 8 ? Si(e.parentNode, n) : e.nodeType === 1 && Si(e, n), an(e)) : Si(wc, n.stateNode));
 				break;
 			case 4:
 				r = wc, i = Tc, wc = n.stateNode.containerInfo, Tc = !0, Ec(e, t, n), wc = r, Tc = i;
@@ -4200,7 +4200,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				if (kc(t, e), jc(e), i & 512 && n !== null && fc(n, n.return), e.flags & 32) {
 					var a = e.stateNode;
 					try {
-						xe(a, "");
+						Se(a, "");
 					} catch (t) {
 						Rl(e, e.return, t);
 					}
@@ -4208,26 +4208,26 @@ var h = /* @__PURE__ */ i(((e) => {
 				if (i & 4 && (a = e.stateNode, a != null)) {
 					var o = e.memoizedProps, s = n === null ? o : n.memoizedProps, c = e.type, l = e.updateQueue;
 					if (e.updateQueue = null, l !== null) try {
-						c === "input" && o.type === "radio" && o.name != null && se(a, o), Oe(c, s);
-						var u = Oe(c, o);
+						c === "input" && o.type === "radio" && o.name != null && ce(a, o), ke(c, s);
+						var u = ke(c, o);
 						for (s = 0; s < l.length; s += 2) {
 							var d = l[s], f = l[s + 1];
-							d === "style" ? Te(a, f) : d === "dangerouslySetInnerHTML" ? be(a, f) : d === "children" ? xe(a, f) : S(a, d, f, u);
+							d === "style" ? Ee(a, f) : d === "dangerouslySetInnerHTML" ? xe(a, f) : d === "children" ? Se(a, f) : S(a, d, f, u);
 						}
 						switch (c) {
 							case "input":
-								ce(a, o);
+								le(a, o);
 								break;
 							case "textarea":
-								he(a, o);
+								ge(a, o);
 								break;
 							case "select":
 								var p = a._wrapperState.wasMultiple;
 								a._wrapperState.wasMultiple = !!o.multiple;
 								var m = o.value;
-								m == null ? p !== !!o.multiple && (o.defaultValue == null ? fe(a, !!o.multiple, o.multiple ? [] : "", !1) : fe(a, !!o.multiple, o.defaultValue, !0)) : fe(a, !!o.multiple, m, !1);
+								m == null ? p !== !!o.multiple && (o.defaultValue == null ? pe(a, !!o.multiple, o.multiple ? [] : "", !1) : pe(a, !!o.multiple, o.defaultValue, !0)) : pe(a, !!o.multiple, m, !1);
 						}
-						a[Ei] = o;
+						a[Di] = o;
 					} catch (t) {
 						Rl(e, e.return, t);
 					}
@@ -4246,7 +4246,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				break;
 			case 3:
 				if (kc(t, e), jc(e), i & 4 && n !== null && n.memoizedState.isDehydrated) try {
-					rn(t.containerInfo);
+					an(t.containerInfo);
 				} catch (t) {
 					Rl(e, e.return, t);
 				}
@@ -4255,7 +4255,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				kc(t, e), jc(e);
 				break;
 			case 13:
-				kc(t, e), jc(e), a = e.child, a.flags & 8192 && (o = a.memoizedState !== null, a.stateNode.isHidden = o, !o || a.alternate !== null && a.alternate.memoizedState !== null || ($c = ct())), i & 4 && Oc(e);
+				kc(t, e), jc(e), a = e.child, a.flags & 8192 && (o = a.memoizedState !== null, a.stateNode.isHidden = o, !o || a.alternate !== null && a.alternate.memoizedState !== null || ($c = lt())), i & 4 && Oc(e);
 				break;
 			case 22:
 				if (d = n !== null && n.memoizedState !== null, e.mode & 1 ? (uc = (u = uc) || d, kc(t, e), uc = u) : kc(t, e), jc(e), i & 8192) {
@@ -4297,7 +4297,7 @@ var h = /* @__PURE__ */ i(((e) => {
 							if (d === null) {
 								d = f;
 								try {
-									a = f.stateNode, u ? (o = a.style, typeof o.setProperty == "function" ? o.setProperty("display", "none", "important") : o.display = "none") : (c = f.stateNode, l = f.memoizedProps.style, s = l != null && l.hasOwnProperty("display") ? l.display : null, c.style.display = we("display", s));
+									a = f.stateNode, u ? (o = a.style, typeof o.setProperty == "function" ? o.setProperty("display", "none", "important") : o.display = "none") : (c = f.stateNode, l = f.memoizedProps.style, s = l != null && l.hasOwnProperty("display") ? l.display : null, c.style.display = Te("display", s));
 								} catch (t) {
 									Rl(e, e.return, t);
 								}
@@ -4345,7 +4345,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				switch (i.tag) {
 					case 5:
 						var a = i.stateNode;
-						i.flags & 32 && (xe(a, ""), i.flags &= -33), Cc(e, xc(e), a);
+						i.flags & 32 && (Se(a, ""), i.flags &= -33), Cc(e, xc(e), a);
 						break;
 					case 3:
 					case 4:
@@ -4401,7 +4401,7 @@ var h = /* @__PURE__ */ i(((e) => {
 								i.componentDidUpdate(a, n.memoizedState, i.__reactInternalSnapshotBeforeUpdate);
 							}
 							var o = t.updateQueue;
-							o !== null && no(t, o, i);
+							o !== null && io(t, o, i);
 							break;
 						case 3:
 							var s = t.updateQueue;
@@ -4412,7 +4412,7 @@ var h = /* @__PURE__ */ i(((e) => {
 										break;
 									case 1: n = t.child.stateNode;
 								}
-								no(t, s, n);
+								io(t, s, n);
 							}
 							break;
 						case 5:
@@ -4441,7 +4441,7 @@ var h = /* @__PURE__ */ i(((e) => {
 									var d = u.memoizedState;
 									if (d !== null) {
 										var f = d.dehydrated;
-										f !== null && rn(f);
+										f !== null && an(f);
 									}
 								}
 							}
@@ -4540,41 +4540,41 @@ var h = /* @__PURE__ */ i(((e) => {
 			Q = t.return;
 		}
 	}
-	var Lc = Math.ceil, Rc = C.ReactCurrentDispatcher, zc = C.ReactCurrentOwner, Bc = C.ReactCurrentBatchConfig, $ = 0, Vc = null, Hc = null, Uc = 0, Wc = 0, Gc = Li(0), Kc = 0, qc = null, Jc = 0, Yc = 0, Xc = 0, Zc = null, Qc = null, $c = 0, el = Infinity, tl = null, nl = !1, rl = null, il = null, al = !1, ol = null, sl = 0, cl = 0, ll = null, ul = -1, dl = 0;
+	var Lc = Math.ceil, Rc = C.ReactCurrentDispatcher, zc = C.ReactCurrentOwner, Bc = C.ReactCurrentBatchConfig, $ = 0, Vc = null, Hc = null, Uc = 0, Wc = 0, Gc = Ri(0), Kc = 0, qc = null, Jc = 0, Yc = 0, Xc = 0, Zc = null, Qc = null, $c = 0, el = Infinity, tl = null, nl = !1, rl = null, il = null, al = !1, ol = null, sl = 0, cl = 0, ll = null, ul = -1, dl = 0;
 	function fl() {
-		return $ & 6 ? ct() : ul === -1 ? ul = ct() : ul;
+		return $ & 6 ? lt() : ul === -1 ? ul = lt() : ul;
 	}
 	function pl(e) {
-		return e.mode & 1 ? $ & 2 && Uc !== 0 ? Uc & -Uc : Oa.transition === null ? (e = J, e === 0 ? (e = window.event, e = e === void 0 ? 16 : fn(e.type), e) : e) : (dl === 0 && (dl = kt()), dl) : 1;
+		return e.mode & 1 ? $ & 2 && Uc !== 0 ? Uc & -Uc : Aa.transition === null ? (e = q, e === 0 ? (e = window.event, e = e === void 0 ? 16 : pn(e.type), e) : e) : (dl === 0 && (dl = At()), dl) : 1;
 	}
 	function ml(e, t, n, i) {
 		if (50 < cl) throw cl = 0, ll = null, Error(r(185));
-		jt(e, n, i), (!($ & 2) || e !== Vc) && (e === Vc && (!($ & 2) && (Yc |= n), Kc === 4 && bl(e, Uc)), hl(e, i), n === 1 && $ === 0 && !(t.mode & 1) && (el = ct() + 500, Zi && ta()));
+		Mt(e, n, i), (!($ & 2) || e !== Vc) && (e === Vc && (!($ & 2) && (Yc |= n), Kc === 4 && bl(e, Uc)), hl(e, i), n === 1 && $ === 0 && !(t.mode & 1) && (el = lt() + 500, $i && ra()));
 	}
 	function hl(e, t) {
 		var n = e.callbackNode;
-		Dt(e, t);
-		var r = Tt(e, e === Vc ? Uc : 0);
-		if (r === 0) n !== null && at(n), e.callbackNode = null, e.callbackPriority = 0;
+		Ot(e, t);
+		var r = Et(e, e === Vc ? Uc : 0);
+		if (r === 0) n !== null && ot(n), e.callbackNode = null, e.callbackPriority = 0;
 		else if (t = r & -r, e.callbackPriority !== t) {
-			if (n != null && at(n), t === 1) e.tag === 0 ? ea(xl.bind(null, e)) : $i(xl.bind(null, e)), yi(function() {
-				!($ & 6) && ta();
+			if (n != null && ot(n), t === 1) e.tag === 0 ? na(xl.bind(null, e)) : ta(xl.bind(null, e)), bi(function() {
+				!($ & 6) && ra();
 			}), n = null;
 			else {
-				switch (Pt(r)) {
+				switch (Ft(r)) {
 					case 1:
-						n = ut;
-						break;
-					case 4:
 						n = dt;
 						break;
-					case 16:
+					case 4:
 						n = ft;
 						break;
-					case 536870912:
-						n = mt;
+					case 16:
+						n = pt;
 						break;
-					default: n = ft;
+					case 536870912:
+						n = ht;
+						break;
+					default: n = pt;
 				}
 				n = Wl(n, gl.bind(null, e));
 			}
@@ -4585,7 +4585,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		if (ul = -1, dl = 0, $ & 6) throw Error(r(327));
 		var n = e.callbackNode;
 		if (Il() && e.callbackNode !== n) return null;
-		var i = Tt(e, e === Vc ? Uc : 0);
+		var i = Et(e, e === Vc ? Uc : 0);
 		if (i === 0) return null;
 		if (i & 30 || (i & e.expiredLanes) !== 0 || t) t = kl(e, i);
 		else {
@@ -4593,7 +4593,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			var a = $;
 			$ |= 2;
 			var o = Dl();
-			(Vc !== e || Uc !== t) && (tl = null, el = ct() + 500, Tl(e, t));
+			(Vc !== e || Uc !== t) && (tl = null, el = lt() + 500, Tl(e, t));
 			do
 				try {
 					jl();
@@ -4602,13 +4602,13 @@ var h = /* @__PURE__ */ i(((e) => {
 					El(e, t);
 				}
 			while (1);
-			za(), Rc.current = o, $ = a, Hc === null ? (Vc = null, Uc = 0, t = Kc) : t = 0;
+			Va(), Rc.current = o, $ = a, Hc === null ? (Vc = null, Uc = 0, t = Kc) : t = 0;
 		}
 		if (t !== 0) {
-			if (t === 2 && (a = Ot(e), a !== 0 && (i = a, t = _l(e, a))), t === 1) throw n = qc, Tl(e, 0), bl(e, i), hl(e, ct()), n;
+			if (t === 2 && (a = kt(e), a !== 0 && (i = a, t = _l(e, a))), t === 1) throw n = qc, Tl(e, 0), bl(e, i), hl(e, lt()), n;
 			if (t === 6) bl(e, i);
 			else {
-				if (a = e.current.alternate, !(i & 30) && !yl(a) && (t = kl(e, i), t === 2 && (o = Ot(e), o !== 0 && (i = o, t = _l(e, o))), t === 1)) throw n = qc, Tl(e, 0), bl(e, i), hl(e, ct()), n;
+				if (a = e.current.alternate, !(i & 30) && !yl(a) && (t = kl(e, i), t === 2 && (o = kt(e), o !== 0 && (i = o, t = _l(e, o))), t === 1)) throw n = qc, Tl(e, 0), bl(e, i), hl(e, lt()), n;
 				switch (e.finishedWork = a, e.finishedLanes = i, t) {
 					case 0:
 					case 1: throw Error(r(345));
@@ -4616,13 +4616,13 @@ var h = /* @__PURE__ */ i(((e) => {
 						Pl(e, Qc, tl);
 						break;
 					case 3:
-						if (bl(e, i), (i & 130023424) === i && (t = $c + 500 - ct(), 10 < t)) {
-							if (Tt(e, 0) !== 0) break;
+						if (bl(e, i), (i & 130023424) === i && (t = $c + 500 - lt(), 10 < t)) {
+							if (Et(e, 0) !== 0) break;
 							if (a = e.suspendedLanes, (a & i) !== i) {
 								fl(), e.pingedLanes |= e.suspendedLanes & a;
 								break;
 							}
-							e.timeoutHandle = gi(Pl.bind(null, e, Qc, tl), t);
+							e.timeoutHandle = _i(Pl.bind(null, e, Qc, tl), t);
 							break;
 						}
 						Pl(e, Qc, tl);
@@ -4630,11 +4630,11 @@ var h = /* @__PURE__ */ i(((e) => {
 					case 4:
 						if (bl(e, i), (i & 4194240) === i) break;
 						for (t = e.eventTimes, a = -1; 0 < i;) {
-							var s = 31 - vt(i);
+							var s = 31 - yt(i);
 							o = 1 << s, s = t[s], s > a && (a = s), i &= ~o;
 						}
-						if (i = a, i = ct() - i, i = (120 > i ? 120 : 480 > i ? 480 : 1080 > i ? 1080 : 1920 > i ? 1920 : 3e3 > i ? 3e3 : 4320 > i ? 4320 : 1960 * Lc(i / 1960)) - i, 10 < i) {
-							e.timeoutHandle = gi(Pl.bind(null, e, Qc, tl), i);
+						if (i = a, i = lt() - i, i = (120 > i ? 120 : 480 > i ? 480 : 1080 > i ? 1080 : 1920 > i ? 1920 : 3e3 > i ? 3e3 : 4320 > i ? 4320 : 1960 * Lc(i / 1960)) - i, 10 < i) {
+							e.timeoutHandle = _i(Pl.bind(null, e, Qc, tl), i);
 							break;
 						}
 						Pl(e, Qc, tl);
@@ -4646,7 +4646,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				}
 			}
 		}
-		return hl(e, ct()), e.callbackNode === n ? gl.bind(null, e) : null;
+		return hl(e, lt()), e.callbackNode === n ? gl.bind(null, e) : null;
 	}
 	function _l(e, t) {
 		var n = Zc;
@@ -4663,7 +4663,7 @@ var h = /* @__PURE__ */ i(((e) => {
 					var i = n[r], a = i.getSnapshot;
 					i = i.value;
 					try {
-						if (!br(a(), i)) return !1;
+						if (!xr(a(), i)) return !1;
 					} catch {
 						return !1;
 					}
@@ -4683,23 +4683,23 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	function bl(e, t) {
 		for (t &= ~Xc, t &= ~Yc, e.suspendedLanes |= t, e.pingedLanes &= ~t, e = e.expirationTimes; 0 < t;) {
-			var n = 31 - vt(t), r = 1 << n;
+			var n = 31 - yt(t), r = 1 << n;
 			e[n] = -1, t &= ~r;
 		}
 	}
 	function xl(e) {
 		if ($ & 6) throw Error(r(327));
 		Il();
-		var t = Tt(e, 0);
-		if (!(t & 1)) return hl(e, ct()), null;
+		var t = Et(e, 0);
+		if (!(t & 1)) return hl(e, lt()), null;
 		var n = kl(e, t);
 		if (e.tag !== 0 && n === 2) {
-			var i = Ot(e);
+			var i = kt(e);
 			i !== 0 && (t = i, n = _l(e, i));
 		}
-		if (n === 1) throw n = qc, Tl(e, 0), bl(e, t), hl(e, ct()), n;
+		if (n === 1) throw n = qc, Tl(e, 0), bl(e, t), hl(e, lt()), n;
 		if (n === 6) throw Error(r(345));
-		return e.finishedWork = e.current.alternate, e.finishedLanes = t, Pl(e, Qc, tl), hl(e, ct()), null;
+		return e.finishedWork = e.current.alternate, e.finishedLanes = t, Pl(e, Qc, tl), hl(e, lt()), null;
 	}
 	function Sl(e, t) {
 		var n = $;
@@ -4707,57 +4707,57 @@ var h = /* @__PURE__ */ i(((e) => {
 		try {
 			return e(t);
 		} finally {
-			$ = n, $ === 0 && (el = ct() + 500, Zi && ta());
+			$ = n, $ === 0 && (el = lt() + 500, $i && ra());
 		}
 	}
 	function Cl(e) {
 		ol !== null && ol.tag === 0 && !($ & 6) && Il();
 		var t = $;
 		$ |= 1;
-		var n = Bc.transition, r = J;
+		var n = Bc.transition, r = q;
 		try {
-			if (Bc.transition = null, J = 1, e) return e();
+			if (Bc.transition = null, q = 1, e) return e();
 		} finally {
-			J = r, Bc.transition = n, $ = t, !($ & 6) && ta();
+			q = r, Bc.transition = n, $ = t, !($ & 6) && ra();
 		}
 	}
 	function wl() {
-		Wc = Gc.current, Z(Gc);
+		Wc = Gc.current, zi(Gc);
 	}
 	function Tl(e, t) {
 		e.finishedWork = null, e.finishedLanes = 0;
 		var n = e.timeoutHandle;
-		if (n !== -1 && (e.timeoutHandle = -1, _i(n)), Hc !== null) for (n = Hc.return; n !== null;) {
+		if (n !== -1 && (e.timeoutHandle = -1, vi(n)), Hc !== null) for (n = Hc.return; n !== null;) {
 			var r = n;
-			switch (ma(r), r.tag) {
+			switch (ga(r), r.tag) {
 				case 1:
-					r = r.type.childContextTypes, r != null && Gi();
+					r = r.type.childContextTypes, r != null && qi();
 					break;
 				case 3:
-					lo(), Z(Vi), Z(Bi), go();
+					fo(), zi(Ui), zi(Hi), _o();
 					break;
 				case 5:
-					fo(r);
+					mo(r);
 					break;
 				case 4:
-					lo();
+					fo();
 					break;
 				case 13:
-					Z(po);
+					zi(X);
 					break;
 				case 19:
-					Z(po);
+					zi(X);
 					break;
 				case 10:
-					Ba(r.type._context);
+					Ha(r.type._context);
 					break;
 				case 22:
 				case 23: wl();
 			}
 			n = n.return;
 		}
-		if (Vc = e, Hc = e = Yl(e.current, null), Uc = Wc = t, Kc = 0, qc = null, Xc = Yc = Jc = 0, Qc = Zc = null, Wa !== null) {
-			for (t = 0; t < Wa.length; t++) if (n = Wa[t], r = n.interleaved, r !== null) {
+		if (Vc = e, Hc = e = Yl(e.current, null), Uc = Wc = t, Kc = 0, qc = null, Xc = Yc = Jc = 0, Qc = Zc = null, Ka !== null) {
+			for (t = 0; t < Ka.length; t++) if (n = Ka[t], r = n.interleaved, r !== null) {
 				n.interleaved = null;
 				var i = r.next, a = n.pending;
 				if (a !== null) {
@@ -4766,7 +4766,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				}
 				n.pending = r;
 			}
-			Wa = null;
+			Ka = null;
 		}
 		return e;
 	}
@@ -4774,14 +4774,14 @@ var h = /* @__PURE__ */ i(((e) => {
 		do {
 			var n = Hc;
 			try {
-				if (za(), _o.current = ds, Co) {
-					for (var i = bo.memoizedState; i !== null;) {
+				if (Va(), vo.current = ds, wo) {
+					for (var i = xo.memoizedState; i !== null;) {
 						var a = i.queue;
 						a !== null && (a.pending = null), i = i.next;
 					}
-					Co = !1;
+					wo = !1;
 				}
-				if (yo = 0, So = xo = bo = null, wo = !1, To = 0, zc.current = null, n === null || n.return === null) {
+				if (bo = 0, Co = So = xo = null, To = !1, Eo = 0, zc.current = null, n === null || n.return === null) {
 					Kc = 1, qc = t, Hc = null;
 					break;
 				}
@@ -4808,10 +4808,10 @@ var h = /* @__PURE__ */ i(((e) => {
 							break a;
 						}
 						l = Error(r(426));
-					} else if (_a && c.mode & 1) {
+					} else if (ya && c.mode & 1) {
 						var _ = ks(s);
 						if (_ !== null) {
-							!(_.flags & 65536) && (_.flags |= 256), As(_, s, c, o, t), Da(Ss(l, c));
+							!(_.flags & 65536) && (_.flags |= 256), As(_, s, c, o, t), ka(Ss(l, c));
 							break a;
 						}
 					}
@@ -4821,7 +4821,7 @@ var h = /* @__PURE__ */ i(((e) => {
 							case 3:
 								o.flags |= 65536, t &= -t, o.lanes |= t;
 								var v = Es(o, l, t);
-								eo(o, v);
+								no(o, v);
 								break a;
 							case 1:
 								c = l;
@@ -4829,7 +4829,7 @@ var h = /* @__PURE__ */ i(((e) => {
 								if (!(o.flags & 128) && (typeof y.getDerivedStateFromError == "function" || b !== null && typeof b.componentDidCatch == "function" && (il === null || !il.has(b)))) {
 									o.flags |= 65536, t &= -t, o.lanes |= t;
 									var x = Ds(o, c, t);
-									eo(o, x);
+									no(o, x);
 									break a;
 								}
 						}
@@ -4864,14 +4864,14 @@ var h = /* @__PURE__ */ i(((e) => {
 				El(e, t);
 			}
 		while (1);
-		if (za(), $ = n, Rc.current = i, Hc !== null) throw Error(r(261));
+		if (Va(), $ = n, Rc.current = i, Hc !== null) throw Error(r(261));
 		return Vc = null, Uc = 0, Kc;
 	}
 	function Al() {
 		for (; Hc !== null;) Ml(Hc);
 	}
 	function jl() {
-		for (; Hc !== null && !ot();) Ml(Hc);
+		for (; Hc !== null && !st();) Ml(Hc);
 	}
 	function Ml(e) {
 		var t = Ul(e.alternate, e, Wc);
@@ -4904,11 +4904,11 @@ var h = /* @__PURE__ */ i(((e) => {
 		Kc === 0 && (Kc = 5);
 	}
 	function Pl(e, t, n) {
-		var r = J, i = Bc.transition;
+		var r = q, i = Bc.transition;
 		try {
-			Bc.transition = null, J = 1, Fl(e, t, n, r);
+			Bc.transition = null, q = 1, Fl(e, t, n, r);
 		} finally {
-			Bc.transition = i, J = r;
+			Bc.transition = i, q = r;
 		}
 		return null;
 	}
@@ -4923,27 +4923,27 @@ var h = /* @__PURE__ */ i(((e) => {
 		if (e.finishedWork = null, e.finishedLanes = 0, n === e.current) throw Error(r(177));
 		e.callbackNode = null, e.callbackPriority = 0;
 		var o = n.lanes | n.childLanes;
-		if (Mt(e, o), e === Vc && (Hc = Vc = null, Uc = 0), !(n.subtreeFlags & 2064) && !(n.flags & 2064) || al || (al = !0, Wl(ft, function() {
+		if (Nt(e, o), e === Vc && (Hc = Vc = null, Uc = 0), !(n.subtreeFlags & 2064) && !(n.flags & 2064) || al || (al = !0, Wl(pt, function() {
 			return Il(), null;
 		})), o = !!(n.flags & 15990), n.subtreeFlags & 15990 || o) {
 			o = Bc.transition, Bc.transition = null;
-			var s = J;
-			J = 1;
+			var s = q;
+			q = 1;
 			var c = $;
-			$ |= 4, zc.current = null, hc(e, n), Ac(n, e), Dr(mi), on = !!pi, mi = pi = null, e.current = n, Mc(n, e, a), st(), $ = c, J = s, Bc.transition = o;
+			$ |= 4, zc.current = null, hc(e, n), Ac(n, e), Or(hi), sn = !!mi, hi = mi = null, e.current = n, Mc(n, e, a), ct(), $ = c, q = s, Bc.transition = o;
 		} else e.current = n;
-		if (al && (al = !1, ol = e, sl = a), o = e.pendingLanes, o === 0 && (il = null), _t(n.stateNode, i), hl(e, ct()), t !== null) for (i = e.onRecoverableError, n = 0; n < t.length; n++) a = t[n], i(a.value, {
+		if (al && (al = !1, ol = e, sl = a), o = e.pendingLanes, o === 0 && (il = null), vt(n.stateNode, i), hl(e, lt()), t !== null) for (i = e.onRecoverableError, n = 0; n < t.length; n++) a = t[n], i(a.value, {
 			componentStack: a.stack,
 			digest: a.digest
 		});
 		if (nl) throw nl = !1, e = rl, rl = null, e;
-		return sl & 1 && e.tag !== 0 && Il(), o = e.pendingLanes, o & 1 ? e === ll ? cl++ : (cl = 0, ll = e) : cl = 0, ta(), null;
+		return sl & 1 && e.tag !== 0 && Il(), o = e.pendingLanes, o & 1 ? e === ll ? cl++ : (cl = 0, ll = e) : cl = 0, ra(), null;
 	}
 	function Il() {
 		if (ol !== null) {
-			var e = Pt(sl), t = Bc.transition, n = J;
+			var e = Ft(sl), t = Bc.transition, n = q;
 			try {
-				if (Bc.transition = null, J = 16 > e ? 16 : e, ol === null) var i = !1;
+				if (Bc.transition = null, q = 16 > e ? 16 : e, ol === null) var i = !1;
 				else {
 					if (e = ol, ol = null, sl = 0, $ & 6) throw Error(r(331));
 					var a = $;
@@ -5034,20 +5034,20 @@ var h = /* @__PURE__ */ i(((e) => {
 							Q = c.return;
 						}
 					}
-					if ($ = a, ta(), gt && typeof gt.onPostCommitFiberRoot == "function") try {
-						gt.onPostCommitFiberRoot(ht, e);
+					if ($ = a, ra(), _t && typeof _t.onPostCommitFiberRoot == "function") try {
+						_t.onPostCommitFiberRoot(gt, e);
 					} catch {}
 					i = !0;
 				}
 				return i;
 			} finally {
-				J = n, Bc.transition = t;
+				q = n, Bc.transition = t;
 			}
 		}
 		return !1;
 	}
 	function Ll(e, t, n) {
-		t = Ss(n, t), t = Es(e, t, 1), e = Qa(e, t, 1), t = fl(), e !== null && (jt(e, 1, t), hl(e, t));
+		t = Ss(n, t), t = Es(e, t, 1), e = eo(e, t, 1), t = fl(), e !== null && (Mt(e, 1, t), hl(e, t));
 	}
 	function Rl(e, t, n) {
 		if (e.tag === 3) Ll(e, e, n);
@@ -5059,7 +5059,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			if (t.tag === 1) {
 				var r = t.stateNode;
 				if (typeof t.type.getDerivedStateFromError == "function" || typeof r.componentDidCatch == "function" && (il === null || !il.has(r))) {
-					e = Ss(n, e), e = Ds(t, e, 1), t = Qa(t, e, 1), e = fl(), t !== null && (jt(t, 1, e), hl(t, e));
+					e = Ss(n, e), e = Ds(t, e, 1), t = eo(t, e, 1), e = fl(), t !== null && (Mt(t, 1, e), hl(t, e));
 					break;
 				}
 			}
@@ -5068,12 +5068,12 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	function zl(e, t, n) {
 		var r = e.pingCache;
-		r !== null && r.delete(t), t = fl(), e.pingedLanes |= e.suspendedLanes & n, Vc === e && (Uc & n) === n && (Kc === 4 || Kc === 3 && (Uc & 130023424) === Uc && 500 > ct() - $c ? Tl(e, 0) : Xc |= n), hl(e, t);
+		r !== null && r.delete(t), t = fl(), e.pingedLanes |= e.suspendedLanes & n, Vc === e && (Uc & n) === n && (Kc === 4 || Kc === 3 && (Uc & 130023424) === Uc && 500 > lt() - $c ? Tl(e, 0) : Xc |= n), hl(e, t);
 	}
 	function Bl(e, t) {
-		t === 0 && (e.mode & 1 ? (t = Ct, Ct <<= 1, !(Ct & 130023424) && (Ct = 4194304)) : t = 1);
+		t === 0 && (e.mode & 1 ? (t = wt, wt <<= 1, !(wt & 130023424) && (wt = 4194304)) : t = 1);
 		var n = fl();
-		e = qa(e, t), e !== null && (jt(e, t, n), hl(e, n));
+		e = Ya(e, t), e !== null && (Mt(e, t, n), hl(e, n));
 	}
 	function Vl(e) {
 		var t = e.memoizedState, n = 0;
@@ -5094,20 +5094,20 @@ var h = /* @__PURE__ */ i(((e) => {
 		i !== null && i.delete(t), Bl(e, n);
 	}
 	var Ul = function(e, t, n) {
-		if (e !== null) if (e.memoizedProps !== t.pendingProps || Vi.current) Ms = !0;
+		if (e !== null) if (e.memoizedProps !== t.pendingProps || Ui.current) Ms = !0;
 		else {
 			if ((e.lanes & n) === 0 && !(t.flags & 128)) return Ms = !1, tc(e, t, n);
 			Ms = !!(e.flags & 131072);
 		}
-		else Ms = !1, _a && t.flags & 1048576 && fa(t, aa, t.index);
+		else Ms = !1, ya && t.flags & 1048576 && ma(t, sa, t.index);
 		switch (t.lanes = 0, t.tag) {
 			case 2:
 				var i = t.type;
 				$s(e, t), e = t.pendingProps;
-				var a = Ui(t, Bi.current);
-				Ha(t, n), a = ko(null, t, i, e, a, n);
+				var a = Gi(t, Hi.current);
+				Wa(t, n), a = ko(null, t, i, e, a, n);
 				var o = Ao();
-				return t.flags |= 1, typeof a == "object" && a && typeof a.render == "function" && a.$$typeof === void 0 ? (t.tag = 1, t.memoizedState = null, t.updateQueue = null, Wi(i) ? (o = !0, Ji(t)) : o = !1, t.memoizedState = a.state !== null && a.state !== void 0 ? a.state : null, Ya(t), a.updater = _s, t.stateNode = a, a._reactInternals = t, xs(t, i, e, n), t = Vs(null, t, i, !0, o, n)) : (t.tag = 0, _a && o && pa(t), Ns(null, t, a, n), t = t.child), t;
+				return t.flags |= 1, typeof a == "object" && a && typeof a.render == "function" && a.$$typeof === void 0 ? (t.tag = 1, t.memoizedState = null, t.updateQueue = null, Ki(i) ? (o = !0, Xi(t)) : o = !1, t.memoizedState = a.state !== null && a.state !== void 0 ? a.state : null, Za(t), a.updater = _s, t.stateNode = a, a._reactInternals = t, xs(t, i, e, n), t = Vs(null, t, i, !0, o, n)) : (t.tag = 0, ya && o && ha(t), Ns(null, t, a, n), t = t.child), t;
 			case 16:
 				i = t.elementType;
 				a: {
@@ -5133,7 +5133,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			case 3:
 				a: {
 					if (Hs(t), e === null) throw Error(r(387));
-					i = t.pendingProps, o = t.memoizedState, a = o.element, Xa(e, t), to(t, i, null, n);
+					i = t.pendingProps, o = t.memoizedState, a = o.element, Qa(e, t), ro(t, i, null, n);
 					var s = t.memoizedState;
 					if (i = s.element, o.isDehydrated) if (o = {
 						element: i,
@@ -5147,9 +5147,9 @@ var h = /* @__PURE__ */ i(((e) => {
 					} else if (i !== a) {
 						a = Ss(Error(r(424)), t), t = Us(e, t, i, n, a);
 						break a;
-					} else for (ga = Si(t.stateNode.containerInfo.firstChild), ha = t, _a = !0, va = null, n = Pa(t, null, i, n), t.child = n; n;) n.flags = n.flags & -3 | 4096, n = n.sibling;
+					} else for (va = Ci(t.stateNode.containerInfo.firstChild), _a = t, ya = !0, ba = null, n = Ia(t, null, i, n), t.child = n; n;) n.flags = n.flags & -3 | 4096, n = n.sibling;
 					else {
-						if (Ea(), i === a) {
+						if (Oa(), i === a) {
 							t = ec(e, t, n);
 							break a;
 						}
@@ -5158,18 +5158,18 @@ var h = /* @__PURE__ */ i(((e) => {
 					t = t.child;
 				}
 				return t;
-			case 5: return uo(t), e === null && Sa(t), i = t.type, a = t.pendingProps, o = e === null ? null : e.memoizedProps, s = a.children, hi(i, a) ? s = null : o !== null && hi(i, o) && (t.flags |= 32), Rs(e, t), Ns(e, t, s, n), t.child;
-			case 6: return e === null && Sa(t), null;
+			case 5: return po(t), e === null && wa(t), i = t.type, a = t.pendingProps, o = e === null ? null : e.memoizedProps, s = a.children, gi(i, a) ? s = null : o !== null && gi(i, o) && (t.flags |= 32), Rs(e, t), Ns(e, t, s, n), t.child;
+			case 6: return e === null && wa(t), null;
 			case 13: return Ks(e, t, n);
-			case 4: return co(t, t.stateNode.containerInfo), i = t.pendingProps, e === null ? t.child = Na(t, null, i, n) : Ns(e, t, i, n), t.child;
+			case 4: return uo(t, t.stateNode.containerInfo), i = t.pendingProps, e === null ? t.child = Fa(t, null, i, n) : Ns(e, t, i, n), t.child;
 			case 11: return i = t.type, a = t.pendingProps, a = t.elementType === i ? a : hs(i, a), Ps(e, t, i, a, n);
 			case 7: return Ns(e, t, t.pendingProps, n), t.child;
 			case 8: return Ns(e, t, t.pendingProps.children, n), t.child;
 			case 12: return Ns(e, t, t.pendingProps.children, n), t.child;
 			case 10:
 				a: {
-					if (i = t.type._context, a = t.pendingProps, o = t.memoizedProps, s = a.value, Ri(Fa, i._currentValue), i._currentValue = s, o !== null) if (br(o.value, s)) {
-						if (o.children === a.children && !Vi.current) {
+					if (i = t.type._context, a = t.pendingProps, o = t.memoizedProps, s = a.value, Bi(La, i._currentValue), i._currentValue = s, o !== null) if (xr(o.value, s)) {
+						if (o.children === a.children && !Ui.current) {
 							t = ec(e, t, n);
 							break a;
 						}
@@ -5180,7 +5180,7 @@ var h = /* @__PURE__ */ i(((e) => {
 							for (var l = c.firstContext; l !== null;) {
 								if (l.context === i) {
 									if (o.tag === 1) {
-										l = Za(-1, n & -n), l.tag = 2;
+										l = $a(-1, n & -n), l.tag = 2;
 										var u = o.updateQueue;
 										if (u !== null) {
 											u = u.shared;
@@ -5188,7 +5188,7 @@ var h = /* @__PURE__ */ i(((e) => {
 											d === null ? l.next = l : (l.next = d.next, d.next = l), u.pending = l;
 										}
 									}
-									o.lanes |= n, l = o.alternate, l !== null && (l.lanes |= n), Va(o.return, n, t), c.lanes |= n;
+									o.lanes |= n, l = o.alternate, l !== null && (l.lanes |= n), Ua(o.return, n, t), c.lanes |= n;
 									break;
 								}
 								l = l.next;
@@ -5196,7 +5196,7 @@ var h = /* @__PURE__ */ i(((e) => {
 						} else if (o.tag === 10) s = o.type === t.type ? null : o.child;
 						else if (o.tag === 18) {
 							if (s = o.return, s === null) throw Error(r(341));
-							s.lanes |= n, c = s.alternate, c !== null && (c.lanes |= n), Va(s, n, t), s = o.sibling;
+							s.lanes |= n, c = s.alternate, c !== null && (c.lanes |= n), Ua(s, n, t), s = o.sibling;
 						} else s = o.child;
 						if (s !== null) s.return = o;
 						else for (s = o; s !== null;) {
@@ -5215,17 +5215,17 @@ var h = /* @__PURE__ */ i(((e) => {
 					Ns(e, t, a.children, n), t = t.child;
 				}
 				return t;
-			case 9: return a = t.type, i = t.pendingProps.children, Ha(t, n), a = Ua(a), i = i(a), t.flags |= 1, Ns(e, t, i, n), t.child;
+			case 9: return a = t.type, i = t.pendingProps.children, Wa(t, n), a = Ga(a), i = i(a), t.flags |= 1, Ns(e, t, i, n), t.child;
 			case 14: return i = t.type, a = hs(i, t.pendingProps), a = hs(i.type, a), Fs(e, t, i, a, n);
 			case 15: return Is(e, t, t.type, t.pendingProps, n);
-			case 17: return i = t.type, a = t.pendingProps, a = t.elementType === i ? a : hs(i, a), $s(e, t), t.tag = 1, Wi(i) ? (e = !0, Ji(t)) : e = !1, Ha(t, n), ys(t, i, a), xs(t, i, a, n), Vs(null, t, i, !0, e, n);
+			case 17: return i = t.type, a = t.pendingProps, a = t.elementType === i ? a : hs(i, a), $s(e, t), t.tag = 1, Ki(i) ? (e = !0, Xi(t)) : e = !1, Wa(t, n), ys(t, i, a), xs(t, i, a, n), Vs(null, t, i, !0, e, n);
 			case 19: return Qs(e, t, n);
 			case 22: return Ls(e, t, n);
 		}
 		throw Error(r(156, t.tag));
 	};
 	function Wl(e, t) {
-		return it(e, t);
+		return at(e, t);
 	}
 	function Gl(e, t, n, r) {
 		this.tag = e, this.key = n, this.sibling = this.child = this.return = this.stateNode = this.type = this.elementType = null, this.index = 0, this.ref = null, this.pendingProps = t, this.dependencies = this.memoizedState = this.updateQueue = this.memoizedProps = null, this.mode = r, this.subtreeFlags = this.flags = 0, this.deletions = null, this.childLanes = this.lanes = 0, this.alternate = null;
@@ -5303,7 +5303,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		}, t;
 	}
 	function tu(e, t, n, r, i) {
-		this.tag = t, this.containerInfo = e, this.finishedWork = this.pingCache = this.current = this.pendingChildren = null, this.timeoutHandle = -1, this.callbackNode = this.pendingContext = this.context = null, this.callbackPriority = 0, this.eventTimes = At(0), this.expirationTimes = At(-1), this.entangledLanes = this.finishedLanes = this.mutableReadLanes = this.expiredLanes = this.pingedLanes = this.suspendedLanes = this.pendingLanes = 0, this.entanglements = At(0), this.identifierPrefix = r, this.onRecoverableError = i, this.mutableSourceEagerHydrationData = null;
+		this.tag = t, this.containerInfo = e, this.finishedWork = this.pingCache = this.current = this.pendingChildren = null, this.timeoutHandle = -1, this.callbackNode = this.pendingContext = this.context = null, this.callbackPriority = 0, this.eventTimes = jt(0), this.expirationTimes = jt(-1), this.entangledLanes = this.finishedLanes = this.mutableReadLanes = this.expiredLanes = this.pingedLanes = this.suspendedLanes = this.pendingLanes = 0, this.entanglements = jt(0), this.identifierPrefix = r, this.onRecoverableError = i, this.mutableSourceEagerHydrationData = null;
 	}
 	function nu(e, t, n, r, i, a, o, s, c) {
 		return e = new tu(e, t, n, s, c), t === 1 ? (t = 1, !0 === a && (t |= 8)) : t = 0, a = Kl(3, null, null, t), e.current = a, a.stateNode = e, a.memoizedState = {
@@ -5312,7 +5312,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			cache: null,
 			transitions: null,
 			pendingSuspenseBoundaries: null
-		}, Ya(a), e;
+		}, Za(a), e;
 	}
 	function ru(e, t, n) {
 		var r = 3 < arguments.length && arguments[3] !== void 0 ? arguments[3] : null;
@@ -5325,17 +5325,17 @@ var h = /* @__PURE__ */ i(((e) => {
 		};
 	}
 	function iu(e) {
-		if (!e) return zi;
+		if (!e) return Vi;
 		e = e._reactInternals;
 		a: {
-			if (Qe(e) !== e || e.tag !== 1) throw Error(r(170));
+			if ($e(e) !== e || e.tag !== 1) throw Error(r(170));
 			var t = e;
 			do {
 				switch (t.tag) {
 					case 3:
 						t = t.stateNode.context;
 						break a;
-					case 1: if (Wi(t.type)) {
+					case 1: if (Ki(t.type)) {
 						t = t.stateNode.__reactInternalMemoizedMergedChildContext;
 						break a;
 					}
@@ -5346,16 +5346,16 @@ var h = /* @__PURE__ */ i(((e) => {
 		}
 		if (e.tag === 1) {
 			var n = e.type;
-			if (Wi(n)) return qi(e, n, t);
+			if (Ki(n)) return Yi(e, n, t);
 		}
 		return t;
 	}
 	function au(e, t, n, r, i, a, o, s, c) {
-		return e = nu(n, r, !0, e, i, a, o, s, c), e.context = iu(null), n = e.current, r = fl(), i = pl(n), a = Za(r, i), a.callback = t ?? null, Qa(n, a, i), e.current.lanes = i, jt(e, i, r), hl(e, r), e;
+		return e = nu(n, r, !0, e, i, a, o, s, c), e.context = iu(null), n = e.current, r = fl(), i = pl(n), a = $a(r, i), a.callback = t ?? null, eo(n, a, i), e.current.lanes = i, Mt(e, i, r), hl(e, r), e;
 	}
 	function ou(e, t, n, r) {
 		var i = t.current, a = fl(), o = pl(i);
-		return n = iu(n), t.context === null ? t.context = n : t.pendingContext = n, t = Za(a, o), t.payload = { element: e }, r = r === void 0 ? null : r, r !== null && (t.callback = r), e = Qa(i, t, o), e !== null && (ml(e, i, o, a), $a(e, i, o)), o;
+		return n = iu(n), t.context === null ? t.context = n : t.pendingContext = n, t = $a(a, o), t.payload = { element: e }, r = r === void 0 ? null : r, r !== null && (t.callback = r), e = eo(i, t, o), e !== null && (ml(e, i, o, a), to(e, i, o)), o;
 	}
 	function su(e) {
 		if (e = e.current, !e.child) return null;
@@ -5393,7 +5393,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			var t = e.containerInfo;
 			Cl(function() {
 				ou(null, e, null, null);
-			}), t[Di] = null;
+			}), t[Oi] = null;
 		}
 	};
 	function pu(e) {
@@ -5401,14 +5401,14 @@ var h = /* @__PURE__ */ i(((e) => {
 	}
 	pu.prototype.unstable_scheduleHydration = function(e) {
 		if (e) {
-			var t = Rt();
+			var t = zt();
 			e = {
 				blockedOn: null,
 				target: e,
 				priority: t
 			};
-			for (var n = 0; n < qt.length && t !== 0 && t < qt[n].priority; n++);
-			qt.splice(n, 0, e), n === 0 && Qt(e);
+			for (var n = 0; n < Jt.length && t !== 0 && t < Jt[n].priority; n++);
+			Jt.splice(n, 0, e), n === 0 && $t(e);
 		}
 	};
 	function mu(e) {
@@ -5428,7 +5428,7 @@ var h = /* @__PURE__ */ i(((e) => {
 				};
 			}
 			var o = au(t, r, e, 0, null, !1, !1, "", gu);
-			return e._reactRootContainer = o, e[Di] = o.current, ti(e.nodeType === 8 ? e.parentNode : e), Cl(), o;
+			return e._reactRootContainer = o, e[Oi] = o.current, ni(e.nodeType === 8 ? e.parentNode : e), Cl(), o;
 		}
 		for (; i = e.lastChild;) e.removeChild(i);
 		if (typeof r == "function") {
@@ -5439,7 +5439,7 @@ var h = /* @__PURE__ */ i(((e) => {
 			};
 		}
 		var c = nu(e, 0, !1, null, null, !1, !1, "", gu);
-		return e._reactRootContainer = c, e[Di] = c.current, ti(e.nodeType === 8 ? e.parentNode : e), Cl(function() {
+		return e._reactRootContainer = c, e[Oi] = c.current, ni(e.nodeType === 8 ? e.parentNode : e), Cl(function() {
 			ou(t, c, n, r);
 		}), c;
 	}
@@ -5458,72 +5458,72 @@ var h = /* @__PURE__ */ i(((e) => {
 		} else o = _u(n, t, e, i, r);
 		return su(o);
 	}
-	Ft = function(e) {
+	It = function(e) {
 		switch (e.tag) {
 			case 3:
 				var t = e.stateNode;
 				if (t.current.memoizedState.isDehydrated) {
-					var n = wt(t.pendingLanes);
-					n !== 0 && (Nt(t, n | 1), hl(t, ct()), !($ & 6) && (el = ct() + 500, ta()));
+					var n = Tt(t.pendingLanes);
+					n !== 0 && (Pt(t, n | 1), hl(t, lt()), !($ & 6) && (el = lt() + 500, ra()));
 				}
 				break;
 			case 13: Cl(function() {
-				var t = qa(e, 1);
+				var t = Ya(e, 1);
 				t !== null && ml(t, e, 1, fl());
 			}), lu(e, 1);
 		}
-	}, It = function(e) {
-		if (e.tag === 13) {
-			var t = qa(e, 134217728);
-			t !== null && ml(t, e, 134217728, fl()), lu(e, 134217728);
-		}
 	}, Lt = function(e) {
 		if (e.tag === 13) {
-			var t = pl(e), n = qa(e, t);
+			var t = Ya(e, 134217728);
+			t !== null && ml(t, e, 134217728, fl()), lu(e, 134217728);
+		}
+	}, Rt = function(e) {
+		if (e.tag === 13) {
+			var t = pl(e), n = Ya(e, t);
 			n !== null && ml(n, e, t, fl()), lu(e, t);
 		}
-	}, Rt = function() {
-		return J;
-	}, zt = function(e, t) {
-		var n = J;
+	}, zt = function() {
+		return q;
+	}, Bt = function(e, t) {
+		var n = q;
 		try {
-			return J = e, t();
+			return q = e, t();
 		} finally {
-			J = n;
+			q = n;
 		}
-	}, je = function(e, t, n) {
+	}, Me = function(e, t, n) {
 		switch (t) {
 			case "input":
-				if (ce(e, n), t = n.name, n.type === "radio" && t != null) {
+				if (le(e, n), t = n.name, n.type === "radio" && t != null) {
 					for (n = e; n.parentNode;) n = n.parentNode;
 					for (n = n.querySelectorAll("input[name=" + JSON.stringify("" + t) + "][type=\"radio\"]"), t = 0; t < n.length; t++) {
 						var i = n[t];
 						if (i !== e && i.form === e.form) {
-							var a = Pi(i);
+							var a = Fi(i);
 							if (!a) throw Error(r(90));
-							re(i), ce(i, a);
+							ie(i), le(i, a);
 						}
 					}
 				}
 				break;
 			case "textarea":
-				he(e, n);
+				ge(e, n);
 				break;
-			case "select": t = n.value, t != null && fe(e, !!n.multiple, t, !1);
+			case "select": t = n.value, t != null && pe(e, !!n.multiple, t, !1);
 		}
-	}, Le = Sl, Re = Cl;
+	}, Re = Sl, ze = Cl;
 	var yu = {
 		usingClientEntryPoint: !1,
 		Events: [
-			Mi,
 			Ni,
 			Pi,
-			Fe,
+			Fi,
 			Ie,
+			Le,
 			Sl
 		]
 	}, bu = {
-		findFiberByHostInstance: ji,
+		findFiberByHostInstance: Mi,
 		bundleType: 0,
 		version: "18.3.1",
 		rendererPackageName: "react-dom"
@@ -5543,7 +5543,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		scheduleUpdate: null,
 		currentDispatcherRef: C.ReactCurrentDispatcher,
 		findHostInstanceByFiber: function(e) {
-			return e = nt(e), e === null ? null : e.stateNode;
+			return e = rt(e), e === null ? null : e.stateNode;
 		},
 		findFiberByHostInstance: bu.findFiberByHostInstance || uu,
 		findHostInstancesForRefresh: null,
@@ -5556,7 +5556,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ < "u") {
 		var Su = __REACT_DEVTOOLS_GLOBAL_HOOK__;
 		if (!Su.isDisabled && Su.supportsFiber) try {
-			ht = Su.inject(xu), gt = Su;
+			gt = Su.inject(xu), _t = Su;
 		} catch {}
 	}
 	e.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = yu, e.createPortal = function(e, t) {
@@ -5566,13 +5566,13 @@ var h = /* @__PURE__ */ i(((e) => {
 	}, e.createRoot = function(e, t) {
 		if (!mu(e)) throw Error(r(299));
 		var n = !1, i = "", a = du;
-		return t != null && (!0 === t.unstable_strictMode && (n = !0), t.identifierPrefix !== void 0 && (i = t.identifierPrefix), t.onRecoverableError !== void 0 && (a = t.onRecoverableError)), t = nu(e, 1, !1, null, null, n, !1, i, a), e[Di] = t.current, ti(e.nodeType === 8 ? e.parentNode : e), new fu(t);
+		return t != null && (!0 === t.unstable_strictMode && (n = !0), t.identifierPrefix !== void 0 && (i = t.identifierPrefix), t.onRecoverableError !== void 0 && (a = t.onRecoverableError)), t = nu(e, 1, !1, null, null, n, !1, i, a), e[Oi] = t.current, ni(e.nodeType === 8 ? e.parentNode : e), new fu(t);
 	}, e.findDOMNode = function(e) {
 		if (e == null) return null;
 		if (e.nodeType === 1) return e;
 		var t = e._reactInternals;
 		if (t === void 0) throw typeof e.render == "function" ? Error(r(188)) : (e = Object.keys(e).join(","), Error(r(268, e)));
-		return e = nt(t), e = e === null ? null : e.stateNode, e;
+		return e = rt(t), e = e === null ? null : e.stateNode, e;
 	}, e.flushSync = function(e) {
 		return Cl(e);
 	}, e.hydrate = function(e, t, n) {
@@ -5581,7 +5581,7 @@ var h = /* @__PURE__ */ i(((e) => {
 	}, e.hydrateRoot = function(e, t, n) {
 		if (!mu(e)) throw Error(r(405));
 		var i = n != null && n.hydratedSources || null, a = !1, o = "", s = du;
-		if (n != null && (!0 === n.unstable_strictMode && (a = !0), n.identifierPrefix !== void 0 && (o = n.identifierPrefix), n.onRecoverableError !== void 0 && (s = n.onRecoverableError)), t = au(t, null, e, 1, n ?? null, a, !1, o, s), e[Di] = t.current, ti(e), i) for (e = 0; e < i.length; e++) n = i[e], a = n._getVersion, a = a(n._source), t.mutableSourceEagerHydrationData == null ? t.mutableSourceEagerHydrationData = [n, a] : t.mutableSourceEagerHydrationData.push(n, a);
+		if (n != null && (!0 === n.unstable_strictMode && (a = !0), n.identifierPrefix !== void 0 && (o = n.identifierPrefix), n.onRecoverableError !== void 0 && (s = n.onRecoverableError)), t = au(t, null, e, 1, n ?? null, a, !1, o, s), e[Oi] = t.current, ni(e), i) for (e = 0; e < i.length; e++) n = i[e], a = n._getVersion, a = a(n._source), t.mutableSourceEagerHydrationData == null ? t.mutableSourceEagerHydrationData = [n, a] : t.mutableSourceEagerHydrationData.push(n, a);
 		return new pu(t);
 	}, e.render = function(e, t, n) {
 		if (!hu(t)) throw Error(r(200));
@@ -5590,7 +5590,7 @@ var h = /* @__PURE__ */ i(((e) => {
 		if (!hu(e)) throw Error(r(40));
 		return e._reactRootContainer ? (Cl(function() {
 			vu(null, null, e, !1, function() {
-				e._reactRootContainer = null, e[Di] = null;
+				e._reactRootContainer = null, e[Oi] = null;
 			});
 		}), !0) : !1;
 	}, e.unstable_batchedUpdates = Sl, e.unstable_renderSubtreeIntoContainer = function(e, t, n, i) {
@@ -5866,32 +5866,32 @@ function U() {
 function W(e) {
 	return typeof e == "object" && !!e && !Array.isArray(e);
 }
-function G(e, t) {
+function ee(e, t) {
 	if (!W(e)) return !1;
 	let n = Object.keys(e).sort();
 	return n.length === t.length && n.every((e, n) => e === t[n]);
 }
-function K(e) {
+function G(e) {
 	return typeof e == "string" && e.trim().length > 0;
 }
-function q(e) {
+function K(e) {
 	return typeof e == "string" && N.has(e);
 }
-function ee(e) {
+function te(e) {
 	return typeof e == "string" && P.has(e);
 }
-function te(e) {
+function ne(e) {
 	return typeof e == "string" && F.has(e);
 }
-function ne() {
+function re() {
 	return {
 		proposal: null,
 		proposalStatus: "",
 		notice: j
 	};
 }
-function re(e, t) {
-	return (!W(e) || e.schemaVersion !== 2 || e.id !== t || !z.test(t) || e.status !== "pending" && e.status !== "applying" || !ee(e.reportKind) || !K(e.reportId) || !te(e.marketScope) || typeof e.summary != "string" || typeof e.diff != "string") && U(), {
+function ie(e, t) {
+	return (!W(e) || e.schemaVersion !== 2 || e.id !== t || !z.test(t) || e.status !== "pending" && e.status !== "applying" || !te(e.reportKind) || !G(e.reportId) || !ne(e.marketScope) || typeof e.summary != "string" || typeof e.diff != "string") && U(), {
 		proposal: {
 			id: t,
 			summary: e.summary,
@@ -5904,49 +5904,49 @@ function re(e, t) {
 		notice: ""
 	};
 }
-async function ie(e, t = { get: (e) => l(e) }) {
+async function ae(e, t = { get: (e) => l(e) }) {
 	if (!W(e) || !("proposalId" in e) || e.proposalId === null || e.proposalId === "") return B;
-	if (typeof e.proposalId != "string" || !z.test(e.proposalId)) return ne();
+	if (typeof e.proposalId != "string" || !z.test(e.proposalId)) return re();
 	let n = e.proposalId;
 	try {
-		return re(await t.get(`/api/agent/proposals/${encodeURIComponent(n)}`), n);
+		return ie(await t.get(`/api/agent/proposals/${encodeURIComponent(n)}`), n);
 	} catch {
-		return ne();
+		return re();
 	}
 }
-function ae(e) {
-	return e === null ? null : ((!G(e, L) || typeof e.number != "number" || !Number.isInteger(e.number) || e.number < 1 || typeof e.hash != "string" || !R.test(e.hash)) && U(), {
+function oe(e) {
+	return e === null ? null : ((!ee(e, L) || typeof e.number != "number" || !Number.isInteger(e.number) || e.number < 1 || typeof e.hash != "string" || !R.test(e.hash)) && U(), {
 		number: e.number,
 		hash: e.hash
 	});
 }
-function oe(e, t) {
-	(!W(e) || !q(e.status) || !ee(e.reportKind) || !te(e.marketScope)) && U();
-	let n = K(e.proposalId) ? e.proposalId : t && K(e.id) ? e.id : U();
-	return K(e.reportId) || U(), {
+function se(e, t) {
+	(!W(e) || !K(e.status) || !te(e.reportKind) || !ne(e.marketScope)) && U();
+	let n = G(e.proposalId) ? e.proposalId : t && G(e.id) ? e.id : U();
+	return G(e.reportId) || U(), {
 		proposalId: n,
 		status: e.status,
 		reportKind: e.reportKind,
 		reportId: e.reportId,
 		marketScope: e.marketScope,
-		targetRevision: ae(e.targetRevision)
+		targetRevision: oe(e.targetRevision)
 	};
 }
-function se(e, t) {
-	G(e, I) || U();
-	let n = oe(e, !1), r = t === "approve" ? "applied" : t === "reject" ? "rejected" : U();
+function ce(e, t) {
+	ee(e, I) || U();
+	let n = se(e, !1), r = t === "approve" ? "applied" : t === "reject" ? "rejected" : U();
 	return n.status !== r && U(), n;
 }
-async function ce(e, t, n) {
-	(!K(e) || t !== "approve" && t !== "reject") && U();
+async function le(e, t, n) {
+	(!G(e) || t !== "approve" && t !== "reject") && U();
 	let r = `/api/agent/proposals/${encodeURIComponent(e)}`;
 	try {
-		return se(await n.post(r, { action: t }), t);
+		return ce(await n.post(r, { action: t }), t);
 	} catch (e) {
 		if (!(e instanceof c) || e.status >= 200 && e.status < 300) throw e;
 		let t;
 		try {
-			t = oe(await n.get(r), !0);
+			t = se(await n.get(r), !0);
 		} catch {
 			throw e;
 		}
@@ -5954,21 +5954,21 @@ async function ce(e, t, n) {
 		return t;
 	}
 }
-function le(e, t) {
-	return ce(e, t, {
+function ue(e, t) {
+	return le(e, t, {
 		post: (e, t) => o(e, t),
 		get: (e) => l(e)
 	});
 }
-function ue(e) {
+function de(e) {
 	window.dispatchEvent(new CustomEvent(O, { detail: e }));
 }
-function de(e, t) {
+function fe(e, t) {
 	return e.status !== "applied" || !t || t.reportKind !== e.reportKind || String(t.reportId || "") !== e.reportId ? !1 : e.reportKind !== "briefing" || String(t.marketScope || "") === e.marketScope;
 }
 //#endregion
 //#region src/app/agentWorkspace/AgentThread.tsx
-function fe({ workspace: e }) {
+function pe({ workspace: e }) {
 	return e.hasConversation ? /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "agent-home-thread agent-home-right",
 		"aria-label": "AI Agent 대화",
@@ -6056,33 +6056,33 @@ function fe({ workspace: e }) {
 }
 //#endregion
 //#region src/app/agentWorkspace/presenters.ts
-var pe = /* @__PURE__ */ new Set([
+var me = /* @__PURE__ */ new Set([
 	"codex",
 	"claude",
 	"antigravity"
 ]);
-function me(e) {
+function he(e) {
 	return e === "high" ? "높음" : e === "low" ? "낮음" : e === "max" ? "최대" : "중간";
 }
-function he(e) {
+function ge(e) {
 	return `${Math.max(1, Math.round((Date.now() - e) / 1e3))}초`;
 }
-function ge(e) {
-	let t = e?.provider && pe.has(e.provider) ? e.provider : e?.selectedAdapter || "";
+function _e(e) {
+	let t = e?.provider && me.has(e.provider) ? e.provider : e?.selectedAdapter || "";
 	return e?.adapters?.find((e) => e.id === t) || null;
 }
-function _e(e) {
+function ve(e) {
 	return e?.modelChoices || [];
 }
-function ve(e) {
-	let t = _e(e);
+function ye(e) {
+	let t = ve(e);
 	return t.length ? t.some((t) => t.value === e?.model) ? String(e?.model || "") : t[0].value : "";
 }
-function ye(e) {
+function be(e) {
 	let t = e;
 	return !!(t?.id && ["queued", "running"].includes(t.status));
 }
-function be(e) {
+function xe(e) {
 	let t = String(e.view || "").trim(), n = e.marketScope === "us" || e.marketScope === "kr" || e.marketScope === "both" ? e.marketScope : e.scope === "us" || e.scope === "kr" || e.scope === "both" ? e.scope : "both";
 	return t === "briefing" && /^\d{4}-\d{2}-\d{2}$/.test(String(e.date || "")) ? `#/briefing/${e.date}/${n}` : `#/${{
 		review: "dashboard",
@@ -6096,63 +6096,63 @@ function be(e) {
 		settings: "settings"
 	}[t] || "dashboard"}`;
 }
-function xe(e, t) {
+function Se(e, t) {
 	return `${e.view || "report"}-${e.date || ""}-${e.title || t}`;
 }
 //#endregion
 //#region src/app/agentContext.ts
-var Se = /* @__PURE__ */ new Map(), Ce = "";
-function we(e) {
+var Ce = /* @__PURE__ */ new Map(), we = "";
+function Te(e) {
 	let t = { ...e };
 	return window.FolioAgent = {
 		...window.FolioAgent || {},
 		currentContext: t
 	}, t;
 }
-function Te(e, t = {}) {
-	let n = { ...t };
-	return Se.set(e, n), Ce === e ? we(n) : n;
-}
 function Ee(e, t = {}) {
-	return Te(e, {
-		...Se.get(e) || {},
+	let n = { ...t };
+	return Ce.set(e, n), we === e ? Te(n) : n;
+}
+function De(e, t = {}) {
+	return Ee(e, {
+		...Ce.get(e) || {},
 		...t
 	});
 }
-function De(e) {
-	Se.delete(e), Ce === e && we({});
+function Oe(e) {
+	Ce.delete(e), we === e && Te({});
 }
-function Oe(e, t = {}) {
-	Ce = e, Se.has(e) || Se.set(e, { ...t });
-	let n = { ...Se.get(e) || {} };
-	return delete n.selectedText, delete n.visibleSection, Se.set(e, n), we(n);
+function ke(e, t = {}) {
+	we = e, Ce.has(e) || Ce.set(e, { ...t });
+	let n = { ...Ce.get(e) || {} };
+	return delete n.selectedText, delete n.visibleSection, Ce.set(e, n), Te(n);
 }
-function ke(e = {}) {
-	Ce ? Ee(Ce, e) : we(e), window.FolioBridge?.openAgentDock?.(e);
+function Ae(e = {}) {
+	we ? De(we, e) : Te(e), window.FolioBridge?.openAgentDock?.(e);
 }
 //#endregion
 //#region src/app/agentPolling.ts
-var Ae = 1e3, je = 12e4, Me = class extends Error {
+var je = 1e3, Me = 12e4, Ne = class extends Error {
 	job;
 	name = "AgentPollTimeout";
 	constructor(e) {
 		super("작업이 아직 실행 중입니다. 서버 작업은 계속되며 나중에 상태를 다시 확인할 수 있습니다."), this.job = e;
 	}
-}, Ne = class extends Error {
+}, Pe = class extends Error {
 	job;
 	name = "AgentJobTerminalError";
 	constructor(e) {
 		super(e.message || e.error || `Agent 작업이 ${e.status} 상태로 종료되었습니다.`), this.job = e;
 	}
 };
-function Pe(e, t, n) {
+function Fe(e, t, n) {
 	let r = e.get(t);
 	r !== n && r?.abort(), e.set(t, n);
 }
-function Fe(e, t, n) {
+function Ie(e, t, n) {
 	return e.get(t) === n && (e.delete(t), !0);
 }
-function Ie(e, t) {
+function Le(e, t) {
 	return new Promise((n, r) => {
 		if (t?.aborted) {
 			r(new DOMException("Polling aborted", "AbortError"));
@@ -6166,127 +6166,127 @@ function Ie(e, t) {
 		t?.addEventListener("abort", a, { once: !0 });
 	});
 }
-async function Le(e, t = {}) {
-	let { signal: n, timeoutMs: r = je, intervalMs: i = Ae } = t, a = Date.now() + r, o = e;
+async function Re(e, t = {}) {
+	let { signal: n, timeoutMs: r = Me, intervalMs: i = je } = t, a = Date.now() + r, o = e;
 	for (; f(o.status);) {
-		if (Date.now() >= a) throw new Me(o);
-		await Ie(i, n), o = await l(`/api/jobs/${encodeURIComponent(o.id)}`, { signal: n });
+		if (Date.now() >= a) throw new Ne(o);
+		await Le(i, n), o = await l(`/api/jobs/${encodeURIComponent(o.id)}`, { signal: n });
 	}
-	if (o.status !== "done") throw new Ne(o);
+	if (o.status !== "done") throw new Pe(o);
 	return o;
 }
-function Re(e, t = {}) {
-	return Le(e, {
+function ze(e, t = {}) {
+	return Re(e, {
 		...t,
 		timeoutMs: Infinity
 	});
 }
 //#endregion
 //#region src/app/agentWorkspace/storage.ts
-var ze = "folio.agentHome.thread.v1", Be = "folio.consultation.active.v1", Ve = "folio.consultation.legacyNotice.v1", He = {
+var Be = "folio.agentHome.thread.v1", Ve = "folio.consultation.active.v1", He = "folio.consultation.legacyNotice.v1", Ue = {
 	id: "welcome",
 	role: "assistant",
 	text: "무엇을 조사하거나 정리할까요? 질문으로 시작해도 되고, 보고서 수정 작업을 지시해도 됩니다.",
 	notice: "저장 변경은 proposal 승인 전에는 반영되지 않습니다."
 };
-function Ue(e) {
+function We(e) {
 	return e.filter((e) => e.id !== "welcome").map((e) => ({
 		...e,
 		pending: !1,
 		text: e.pending ? `${e.text}\n\n이전 세션에서 완료 여부를 확인하지 못했습니다.` : e.text
 	})).slice(-80);
 }
-function We() {
-	if (typeof window > "u") return [He];
+function Ge() {
+	if (typeof window > "u") return [Ue];
 	try {
-		let e = window.localStorage.getItem(ze);
-		if (!e) return [He];
+		let e = window.localStorage.getItem(Be);
+		if (!e) return [Ue];
 		let t = JSON.parse(e), n = Array.isArray(t?.messages) ? t.messages.filter((e) => e?.role === "user" || e?.role === "assistant") : [];
-		return n.length ? [He, ...n] : [He];
+		return n.length ? [Ue, ...n] : [Ue];
 	} catch {
-		return [He];
+		return [Ue];
 	}
 }
-var Ge = We(), Ke = JSON.stringify(Ue(Ge)), qe = /* @__PURE__ */ new Set();
-function Je() {
-	let e = [...Ge];
-	qe.forEach((t) => t(e));
-}
+var Ke = Ge(), qe = JSON.stringify(We(Ke)), Je = /* @__PURE__ */ new Set();
 function Ye() {
-	return [...Ge];
+	let e = [...Ke];
+	Je.forEach((t) => t(e));
 }
-function Xe(e) {
-	let t = Ue(e), n = JSON.stringify(t);
-	if (n !== Ke) {
-		if (Ge = e.length ? [...e] : [He], Ke = n, typeof window < "u") try {
-			t.length ? window.localStorage.setItem(ze, JSON.stringify({
+function Xe() {
+	return [...Ke];
+}
+function Ze(e) {
+	let t = We(e), n = JSON.stringify(t);
+	if (n !== qe) {
+		if (Ke = e.length ? [...e] : [Ue], qe = n, typeof window < "u") try {
+			t.length ? window.localStorage.setItem(Be, JSON.stringify({
 				version: 1,
 				updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
 				messages: t
-			})) : window.localStorage.removeItem(ze);
+			})) : window.localStorage.removeItem(Be);
 		} catch {}
-		Je();
+		Ye();
 	}
 }
-function Ze() {
-	if (Ge = [He], Ke = "[]", typeof window < "u") try {
-		window.localStorage.removeItem(ze);
+function Qe() {
+	if (Ke = [Ue], qe = "[]", typeof window < "u") try {
+		window.localStorage.removeItem(Be);
 	} catch {}
-	Je();
+	Ye();
 }
-function Qe(e) {
-	return qe.add(e), () => {
-		qe.delete(e);
+function $e(e) {
+	return Je.add(e), () => {
+		Je.delete(e);
 	};
 }
-function $e() {
+function et() {
 	return typeof window > "u" ? "" : window.localStorage.getItem("folio.consultation.active.v1") || "";
 }
-function et(e) {
-	typeof window > "u" || (e ? window.localStorage.setItem(Be, e) : window.localStorage.removeItem(Be));
-}
-function tt() {
-	return typeof window > "u" ? !1 : !!window.localStorage.getItem("folio.agentHome.thread.v1") && !window.localStorage.getItem("folio.consultation.legacyNotice.v1");
+function tt(e) {
+	typeof window > "u" || (e ? window.localStorage.setItem(Ve, e) : window.localStorage.removeItem(Ve));
 }
 function nt() {
-	typeof window < "u" && window.localStorage.setItem(Ve, "dismissed");
+	return typeof window > "u" ? !1 : !!window.localStorage.getItem("folio.agentHome.thread.v1") && !window.localStorage.getItem("folio.consultation.legacyNotice.v1");
+}
+function rt() {
+	typeof window < "u" && window.localStorage.setItem(He, "dismissed");
 }
 typeof window < "u" && window.addEventListener("storage", (e) => {
-	e.key === "folio.agentHome.thread.v1" && (Ge = We(), Ke = JSON.stringify(Ue(Ge)), Je());
+	e.key === "folio.agentHome.thread.v1" && (Ke = Ge(), qe = JSON.stringify(We(Ke)), Ye());
 });
 //#endregion
 //#region src/app/agentWorkspace/useAgentWorkspace.ts
-var rt = 3, it = 2e5, at = 4e3;
-function ot() {
+var it = 3, at = 2e5, ot = 4e3;
+function st() {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
-async function st(e) {
-	return Le(e);
-}
 async function ct(e) {
+	return Re(e);
+}
+async function lt(e) {
 	let t = e.type.startsWith("text/") || /\.(md|txt|csv|json)$/i.test(e.name) ? await e.text() : "";
 	return {
 		name: e.name.slice(0, 120),
 		size: e.size,
-		content: t.slice(0, at)
+		content: t.slice(0, ot)
 	};
 }
-function lt(e = "agent_home") {
-	let [t, n] = (0, b.useState)(() => Ye()), [r, i] = (0, b.useState)(""), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(null), [d, f] = (0, b.useState)(""), [p, m] = (0, b.useState)("medium"), [h, g] = (0, b.useState)([]), [_, v] = (0, b.useState)([]), [y, x] = (0, b.useState)(0), S = (0, b.useRef)(/* @__PURE__ */ new Map()), [C, w] = (0, b.useState)(""), [T, E] = (0, b.useState)(""), [D, O] = (0, b.useState)(!1), [k, A] = (0, b.useState)(""), j = tt();
+function ut(e = "agent_home") {
+	let [t, n] = (0, b.useState)(() => Xe()), [r, i] = (0, b.useState)(""), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(null), [d, f] = (0, b.useState)(""), [p, m] = (0, b.useState)("medium"), [h, g] = (0, b.useState)([]), [_, v] = (0, b.useState)([]), [y, x] = (0, b.useState)(0), S = (0, b.useRef)(/* @__PURE__ */ new Map()), [C, w] = (0, b.useState)(""), [T, E] = (0, b.useState)(""), [D, O] = (0, b.useState)(!1), [k, A] = (0, b.useState)(""), j = nt();
 	(0, b.useEffect)(() => {
 		let t = e === "agent_home" ? "home" : "office";
-		return Te(t, {
+		return Ee(t, {
 			surface: e,
 			viewId: t
-		}), () => De(t);
-	}, [e]), (0, b.useEffect)(() => Qe(n), []), (0, b.useEffect)(() => {
-		Xe(t);
+		}), () => Oe(t);
+	}, [e]), (0, b.useEffect)(() => $e(n), []), (0, b.useEffect)(() => {
+		Ze(t);
 	}, [t]);
 	let M = (0, b.useCallback)((e, t = !1) => {
-		let n = ge(e);
+		let n = _e(e);
 		u(e), f(e.message || ""), s((e) => {
-			let r = ve(n);
-			return t && _e(n).some((t) => t.value === e) ? e : r;
+			let r = ye(n);
+			return t && ve(n).some((t) => t.value === e) ? e : r;
 		});
 	}, []), N = (0, b.useCallback)(async (e = !1) => {
 		let t = await l(`/api/agent-bridge/settings${e ? "?refresh=true" : ""}`);
@@ -6324,19 +6324,19 @@ function lt(e = "agent_home") {
 	}, []);
 	let P = (0, b.useCallback)(() => x((e) => e + 1), []);
 	function F() {
-		Ze(), n(Ye()), i(""), g([]), A(""), E("");
+		Qe(), n(Xe()), i(""), g([]), A(""), E("");
 	}
 	async function I(t) {
 		t.preventDefault();
 		let s = r.trim();
 		if (!s || D) return;
 		let l = {
-			id: ot(),
+			id: st(),
 			role: "user",
 			text: s,
 			attachments: h.map((e) => e.name),
 			createdAt: (/* @__PURE__ */ new Date()).toISOString()
-		}, u = ot(), d = Date.now(), f = ge(c), m = f?.label || "Agent", _ = a || f?.model || "model";
+		}, u = st(), d = Date.now(), f = _e(c), m = f?.label || "Agent", _ = a || f?.model || "model";
 		n((e) => [
 			...e,
 			l,
@@ -6347,7 +6347,7 @@ function lt(e = "agent_home") {
 				pending: !0,
 				runState: "pending",
 				runTitle: `${m} 세션 시작`,
-				runMeta: `${_} · ${me(p)} · on-request`,
+				runMeta: `${_} · ${he(p)} · on-request`,
 				createdAt: new Date(d).toISOString()
 			}
 		]), i(""), A(""), O(!0);
@@ -6362,10 +6362,10 @@ function lt(e = "agent_home") {
 					attachments: h
 				}
 			});
-			v = new AbortController(), Pe(S.current, u, v);
-			let r = await Le(t, { signal: v.signal });
-			Fe(S.current, u, v);
-			let i = r.result || {}, c = await ie(i);
+			v = new AbortController(), Fe(S.current, u, v);
+			let r = await Re(t, { signal: v.signal });
+			Ie(S.current, u, v);
+			let i = r.result || {}, c = await ae(i);
 			P(), n((e) => e.map((e) => e.id === u ? {
 				...e,
 				text: i.reply || r.message || "Agent가 응답을 반환하지 않았습니다.",
@@ -6375,17 +6375,17 @@ function lt(e = "agent_home") {
 				proposalStatus: c.proposalStatus,
 				runState: "done",
 				runTitle: `${m} 응답`,
-				runMeta: `${_} · ${me(p)} · ${he(d)}`
+				runMeta: `${_} · ${he(p)} · ${ge(d)}`
 			} : e)), g([]);
 		} catch (e) {
-			if (v && Fe(S.current, u, v), e instanceof Me) {
+			if (v && Ie(S.current, u, v), e instanceof Ne) {
 				n((t) => t.map((t) => t.id === u ? {
 					...t,
 					text: e.message,
 					pending: !1,
 					runState: "still-running",
 					runTitle: `${m} 계속 실행 중`,
-					runMeta: `${_} · ${me(p)} · ${he(d)}`,
+					runMeta: `${_} · ${he(p)} · ${ge(d)}`,
 					jobId: e.job.id
 				} : t));
 				return;
@@ -6397,7 +6397,7 @@ function lt(e = "agent_home") {
 				pending: !1,
 				runState: "error",
 				runTitle: `${m} 오류`,
-				runMeta: `${_} · ${me(p)}`
+				runMeta: `${_} · ${he(p)}`
 			} : e));
 		} finally {
 			O(!1);
@@ -6413,7 +6413,7 @@ function lt(e = "agent_home") {
 			if (e === "rss") {
 				E("RSS 수집을 시작했습니다.");
 				let e = await o("/api/rssarchive/import", {});
-				ye(e) && await st(e), P(), E("RSS 수집이 끝났습니다."), window.location.hash = "#/rss";
+				be(e) && await ct(e), P(), E("RSS 수집이 끝났습니다."), window.location.hash = "#/rss";
 				return;
 			}
 			E("오늘 브리핑을 생성하는 중입니다.");
@@ -6421,8 +6421,8 @@ function lt(e = "agent_home") {
 				marketScope: "both",
 				briefingType: "default"
 			}), n = "";
-			if (ye(t)) {
-				let e = await st(t);
+			if (be(t)) {
+				let e = await ct(t);
 				n = e.result?.date || e.result?.artifactId || "";
 			} else n = t.date || "";
 			P(), E(n ? "오늘 브리핑을 생성했습니다." : "브리핑 생성이 끝났습니다."), window.location.hash = n ? `#/briefing/${n}/both` : "#/briefing";
@@ -6438,28 +6438,28 @@ function lt(e = "agent_home") {
 		A("");
 		let t = [...h];
 		for (let n of Array.from(e)) {
-			if (t.length >= rt) {
-				A(`첨부는 최대 ${rt}개까지 가능합니다.`);
+			if (t.length >= it) {
+				A(`첨부는 최대 ${it}개까지 가능합니다.`);
 				break;
 			}
-			if (n.size > it) {
+			if (n.size > at) {
 				A(`${n.name}은 200KB를 초과해 제외했습니다.`);
 				continue;
 			}
-			t.push(await ct(n));
+			t.push(await lt(n));
 		}
 		g(t);
 	}
 	async function z(e, t) {
 		let r = new AbortController();
-		Pe(S.current, e, r), n((t) => t.map((t) => t.id === e ? {
+		Fe(S.current, e, r), n((t) => t.map((t) => t.id === e ? {
 			...t,
 			pending: !0,
 			runState: "pending",
 			runTitle: "Agent 상태 다시 확인 중"
 		} : t));
 		try {
-			let i = await Le(await l(`/api/jobs/${encodeURIComponent(t)}`, { signal: r.signal }), { signal: r.signal }), a = i.result || {}, o = await ie(a);
+			let i = await Re(await l(`/api/jobs/${encodeURIComponent(t)}`, { signal: r.signal }), { signal: r.signal }), a = i.result || {}, o = await ae(a);
 			P(), n((t) => t.map((t) => t.id === e ? {
 				...t,
 				text: a.reply || i.message || "Agent가 응답을 반환하지 않았습니다.",
@@ -6472,7 +6472,7 @@ function lt(e = "agent_home") {
 				jobId: void 0
 			} : t));
 		} catch (t) {
-			t instanceof Me ? n((n) => n.map((n) => n.id === e ? {
+			t instanceof Ne ? n((n) => n.map((n) => n.id === e ? {
 				...n,
 				text: t.message,
 				pending: !1,
@@ -6487,22 +6487,22 @@ function lt(e = "agent_home") {
 				runTitle: "Agent 오류"
 			} : n));
 		} finally {
-			Fe(S.current, e, r);
+			Ie(S.current, e, r);
 		}
 	}
 	async function B(e, t, r) {
 		A("");
 		try {
-			let i = await le(t, r);
+			let i = await ue(t, r);
 			n((t) => t.map((t) => t.id === e ? {
 				...t,
 				proposalStatus: i.status
-			} : t)), ue(i), P();
+			} : t)), de(i), P();
 		} catch (e) {
 			A(e instanceof Error ? e.message : "제안 처리에 실패했습니다.");
 		}
 	}
-	let V = ge(c), H = _e(V), U = t.some((e) => e.id !== "welcome");
+	let V = _e(c), H = ve(V), U = t.some((e) => e.id !== "welcome");
 	async function W(e) {
 		if (s(e), !(!V?.id || !e)) try {
 			let t = Object.fromEntries((c?.adapters || []).map((e) => [e.id, e.model || ""]));
@@ -6547,7 +6547,7 @@ function lt(e = "agent_home") {
 }
 //#endregion
 //#region src/app/workLogCopy.ts
-var ut = {
+var dt = {
 	companion: "Agent와 대화",
 	briefing: "일일 브리핑 생성",
 	company_analysis: "기업 분석 생성",
@@ -6562,7 +6562,7 @@ var ut = {
 	index: "자료 인덱스 갱신",
 	rss: "RSS 수집",
 	setup: "초기 설정"
-}, dt = {
+}, ft = {
 	queued: "대기 중",
 	running: "진행 중",
 	committing: "저장 중",
@@ -6574,19 +6574,19 @@ var ut = {
 	failed_commit: "저장 실패",
 	failed_restart: "재시작 중 중단",
 	failed_commit_recovery: "저장 복구 실패"
-}, ft = {
+}, pt = {
 	queued: "waiting",
 	running: "running",
 	committing: "running",
 	cancel_requested: "waiting",
 	done: "done",
 	cancelled: "cancelled"
-}, pt = {
+}, mt = {
 	llm_api: "AI 직접 호출",
 	llm_cli: "AI CLI",
 	rules: "규칙 기반",
 	none: "실행 없음"
-}, mt = {
+}, ht = {
 	auto: "자동 선택",
 	codex: "Codex",
 	claude: "Claude",
@@ -6596,7 +6596,7 @@ var ut = {
 	claude_api: "Claude API",
 	rules: "규칙 기반",
 	none: "없음"
-}, ht = {
+}, gt = {
 	briefing: "브리핑",
 	company_analysis: "기업 분석",
 	topic_report: "딥 리서치",
@@ -6604,11 +6604,11 @@ var ut = {
 	market_state: "시장 상태",
 	investment_review: "투자 리뷰",
 	thesis_delta: "투자 논거 변화"
-}, gt = {
+}, _t = {
 	engine_unavailable: "선택한 AI를 쓸 수 없어 다른 방법으로 실행했습니다.",
 	engine_failed: "AI 실행이 실패해 다른 방법으로 대체했습니다.",
 	confirmed_zero_evidence: "근거가 없는 상태를 확인하고 규칙 기반으로 실행했습니다."
-}, _t = {
+}, vt = {
 	adapter_unavailable: "연결된 AI 도구를 찾지 못했습니다.",
 	adapter_failed: "AI 도구 실행이 실패했습니다.",
 	validation_failed: "요청 값이 올바르지 않아 중단했습니다.",
@@ -6619,7 +6619,7 @@ var ut = {
 	private_cleanup_failed: "임시 파일 정리에 실패했습니다.",
 	store_unavailable: "작업 저장소를 읽지 못했습니다.",
 	internal_error: "예기치 못한 오류가 발생했습니다."
-}, vt = {
+}, yt = {
 	pending: "승인 대기 중인 수정 제안이 있습니다.",
 	applying: "수정 제안을 반영하는 중입니다.",
 	applied: "수정 제안을 반영했습니다.",
@@ -6629,48 +6629,48 @@ var ut = {
 	failed_apply: "수정 제안 반영에 실패했습니다.",
 	unavailable: "수정 제안을 열 수 없습니다."
 };
-function yt(e) {
+function bt(e) {
 	return e ? e.split("_").join(" ") : "";
 }
-function bt(e) {
-	return ft[e.status] || (e.status.startsWith("failed") ? "failed" : "running");
-}
 function xt(e) {
-	if (!e.artifactCount) return "";
-	let t = e.artifactTypes.map((e) => ht[e] || yt(e)).filter(Boolean);
-	return t.length ? `${t.join(", ")} ${e.artifactCount}건 저장` : `산출물 ${e.artifactCount}건 저장`;
+	return pt[e.status] || (e.status.startsWith("failed") ? "failed" : "running");
 }
 function St(e) {
-	let t = ut[e.taskType] || yt(e.taskType) || "Agent 작업", n = dt[e.status] || yt(e.status), r = bt(e), i = xt(e), a = r === "running" || r === "waiting" ? e.progress > 0 ? `${e.progress}% 진행` : "시작을 기다리는 중" : r === "cancelled" ? "사용자가 중단했습니다." : r === "failed" ? _t[e.errorCode || ""] || "작업을 끝내지 못했습니다." : i || (e.taskType === "companion" ? "답변을 마쳤습니다." : "저장한 산출물 없이 끝났습니다."), o = [], s = pt[e.generationMode], c = mt[e.adapter];
-	return s && e.generationMode !== "none" && o.push(c && e.adapter !== "none" ? `${s} · ${c}` : s), e.fallbackReason && o.push(gt[e.fallbackReason] || yt(e.fallbackReason)), r === "done" && i && a !== i && o.push(i), {
+	if (!e.artifactCount) return "";
+	let t = e.artifactTypes.map((e) => gt[e] || bt(e)).filter(Boolean);
+	return t.length ? `${t.join(", ")} ${e.artifactCount}건 저장` : `산출물 ${e.artifactCount}건 저장`;
+}
+function Ct(e) {
+	let t = dt[e.taskType] || bt(e.taskType) || "Agent 작업", n = ft[e.status] || bt(e.status), r = xt(e), i = St(e), a = r === "running" || r === "waiting" ? e.progress > 0 ? `${e.progress}% 진행` : "시작을 기다리는 중" : r === "cancelled" ? "사용자가 중단했습니다." : r === "failed" ? vt[e.errorCode || ""] || "작업을 끝내지 못했습니다." : i || (e.taskType === "companion" ? "답변을 마쳤습니다." : "저장한 산출물 없이 끝났습니다."), o = [], s = mt[e.generationMode], c = ht[e.adapter];
+	return s && e.generationMode !== "none" && o.push(c && e.adapter !== "none" ? `${s} · ${c}` : s), e.fallbackReason && o.push(_t[e.fallbackReason] || bt(e.fallbackReason)), r === "done" && i && a !== i && o.push(i), {
 		title: t,
 		statusLabel: n,
 		tone: r,
 		outcome: a,
 		details: o,
-		attention: e.proposalStatus ? vt[e.proposalStatus] || yt(e.proposalStatus) : ""
+		attention: e.proposalStatus ? yt[e.proposalStatus] || bt(e.proposalStatus) : ""
 	};
 }
-function Ct(e, t) {
+function wt(e, t) {
 	if (t && !e) return "확인 중";
 	if (!e) return "최근 작업 없음";
-	let n = St(e);
+	let n = Ct(e);
 	return `최근: ${n.title} · ${n.statusLabel}`;
 }
 //#endregion
 //#region src/app/AgentWorkLog.tsx
-function wt(e) {
+function Tt(e) {
 	return e instanceof c ? e.code || `http_${e.status}` : e instanceof Error && /^[a-z0-9_]+$/.test(e.message) ? e.message : "request_failed";
 }
-function Tt(e) {
+function Et(e) {
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? "시간 확인 불가" : new Intl.DateTimeFormat("ko-KR", {
 		dateStyle: "short",
 		timeStyle: "short"
 	}).format(t);
 }
-function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey: i = 0, collapsible: s = !1 }) {
-	let [c, u] = (0, b.useState)(r), [d, f] = (0, b.useState)(0), [p, m] = (0, b.useState)(null), [h, g] = (0, b.useState)(!0), [_, v] = (0, b.useState)(""), [y, S] = (0, b.useState)(null), [C, w] = (0, b.useState)(null), [T, E] = (0, b.useState)(!1), [D, k] = (0, b.useState)(""), [A, j] = (0, b.useState)(""), [M, N] = (0, b.useState)(null), [P, F] = (0, b.useState)(""), [I, L] = (0, b.useState)(""), R = (0, b.useRef)(0), z = (0, b.useRef)(null), B = (0, b.useRef)(!1), U = (0, b.useRef)(!1), W = (0, b.useRef)(null), G = (0, b.useRef)(null), K = (0, b.useCallback)(async () => {
+function Dt({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey: i = 0, collapsible: s = !1 }) {
+	let [c, u] = (0, b.useState)(r), [d, f] = (0, b.useState)(0), [p, m] = (0, b.useState)(null), [h, g] = (0, b.useState)(!0), [_, v] = (0, b.useState)(""), [y, S] = (0, b.useState)(null), [C, w] = (0, b.useState)(null), [T, E] = (0, b.useState)(!1), [D, k] = (0, b.useState)(""), [A, j] = (0, b.useState)(""), [M, N] = (0, b.useState)(null), [P, F] = (0, b.useState)(""), [I, L] = (0, b.useState)(""), R = (0, b.useRef)(0), z = (0, b.useRef)(null), B = (0, b.useRef)(!1), U = (0, b.useRef)(!1), W = (0, b.useRef)(null), ee = (0, b.useRef)(null), G = (0, b.useCallback)(async () => {
 		let e = ++R.current;
 		z.current?.abort();
 		let r = new AbortController();
@@ -6681,7 +6681,7 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 			m(a);
 		} catch (t) {
 			if (r.signal.aborted || e !== R.current) return;
-			v(wt(t));
+			v(Tt(t));
 		} finally {
 			e === R.current && g(!1);
 		}
@@ -6690,16 +6690,16 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 		d,
 		n
 	]);
-	(0, b.useEffect)(() => (K(), () => z.current?.abort()), [K, i]), (0, b.useEffect)(() => {
+	(0, b.useEffect)(() => (G(), () => z.current?.abort()), [G, i]), (0, b.useEffect)(() => {
 		let e = () => {
-			N(null), K();
+			N(null), G();
 		};
 		return window.addEventListener(O, e), () => window.removeEventListener(O, e);
-	}, [K]), (0, b.useEffect)(() => {
+	}, [G]), (0, b.useEffect)(() => {
 		if (!y) return;
 		W.current?.querySelector("button:not([disabled]), input:not([disabled])")?.focus();
 		let e = (e) => {
-			if (e.key === "Escape" && q(), e.key !== "Tab" || !W.current) return;
+			if (e.key === "Escape" && K(), e.key !== "Tab" || !W.current) return;
 			let t = Array.from(W.current.querySelectorAll("button:not([disabled]), input:not([disabled])"));
 			if (!t.length) return;
 			let n = t[0], r = t[t.length - 1];
@@ -6707,26 +6707,26 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 		};
 		return document.addEventListener("keydown", e), () => document.removeEventListener("keydown", e);
 	}, [y]);
-	function q() {
-		S(null), w(null), k(""), window.setTimeout(() => G.current?.focus(), 0);
+	function K() {
+		S(null), w(null), k(""), window.setTimeout(() => ee.current?.focus(), 0);
 	}
-	function ee(e) {
+	function te(e) {
 		u(e), f(0), N(null), L("");
 	}
-	async function te(e) {
+	async function ne(e) {
 		if (!B.current) {
-			B.current = !0, G.current = e, E(!0), k(""), j("");
+			B.current = !0, ee.current = e, E(!0), k(""), j("");
 			try {
 				let e = await o("/api/agent/work-log/clear-preview", { scope: c });
 				w(e), S("clear");
 			} catch (e) {
-				k(wt(e));
+				k(Tt(e));
 			} finally {
 				B.current = !1, E(!1);
 			}
 		}
 	}
-	async function ne() {
+	async function re() {
 		if (!(!C || B.current)) {
 			B.current = !0, E(!0), k("");
 			try {
@@ -6734,15 +6734,15 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 					scope: C.scope,
 					previewToken: C.previewToken
 				});
-				j(`${e.hiddenCount}건을 목록에서 숨겼습니다.`), q(), f(0), await K();
+				j(`${e.hiddenCount}건을 목록에서 숨겼습니다.`), K(), f(0), await G();
 			} catch (e) {
-				w(null), k(wt(e));
+				w(null), k(Tt(e));
 			} finally {
 				B.current = !1, E(!1);
 			}
 		}
 	}
-	async function re(e) {
+	async function ie(e) {
 		if (!(!e.proposalId || U.current)) {
 			U.current = !0, F(e.proposalId), L(""), N(null);
 			try {
@@ -6751,13 +6751,13 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 				if (t.status !== "pending" && t.status !== "applying") throw Error("proposal_not_active");
 				N(t);
 			} catch (e) {
-				L(wt(e)), await K();
+				L(Tt(e)), await G();
 			} finally {
 				U.current = !1, F("");
 			}
 		}
 	}
-	let ie = p?.entries || [], ae = !!(p && d + n < p.total), oe = Ct(ie[0], h && !p), se = c !== "all" || (p?.total ?? 0) > 1, ce = !!(p && p.total > n), le = /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
+	let ae = p?.entries || [], oe = !!(p && d + n < p.total), se = wt(ae[0], h && !p), ce = c !== "all" || (p?.total ?? 0) > 1, le = !!(p && p.total > n), ue = /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
 		!s && /* @__PURE__ */ (0, x.jsx)("header", {
 			className: "work-log-head",
 			children: /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("p", {
@@ -6767,7 +6767,7 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 		}),
 		/* @__PURE__ */ (0, x.jsxs)("div", {
 			className: "work-log-toolbar",
-			children: [se ? /* @__PURE__ */ (0, x.jsx)("div", {
+			children: [ce ? /* @__PURE__ */ (0, x.jsx)("div", {
 				className: "work-log-filters",
 				"data-qa": "work-log-filter",
 				"aria-label": "작업 범주",
@@ -6780,7 +6780,7 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 					className: `filter-btn${c === e ? " active" : ""}`,
 					"data-qa": `work-log-filter-${e}`,
 					"aria-pressed": c === e,
-					onClick: () => ee(e),
+					onClick: () => te(e),
 					children: e === "all" ? "전체" : e === "companion" ? "대화" : "작업"
 				}, e))
 			}) : /* @__PURE__ */ (0, x.jsx)("span", {}), /* @__PURE__ */ (0, x.jsx)("button", {
@@ -6788,7 +6788,7 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 				type: "button",
 				"data-qa": "work-log-refresh",
 				disabled: h,
-				onClick: () => void K(),
+				onClick: () => void G(),
 				"aria-label": "작업 기록 새로고침",
 				"data-tooltip": "새로고침",
 				children: /* @__PURE__ */ (0, x.jsxs)("svg", {
@@ -6847,16 +6847,16 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 				")"
 			]
 		}),
-		!h && !_ && ie.length === 0 && /* @__PURE__ */ (0, x.jsx)("p", {
+		!h && !_ && ae.length === 0 && /* @__PURE__ */ (0, x.jsx)("p", {
 			className: "work-log-empty",
 			"data-qa": "work-log-empty",
 			children: "표시할 Agent 작업 기록이 없습니다."
 		}),
-		ie.length > 0 && /* @__PURE__ */ (0, x.jsx)("div", {
+		ae.length > 0 && /* @__PURE__ */ (0, x.jsx)("div", {
 			className: "work-log-list",
 			"data-qa": "work-log-list",
-			children: ie.map((e) => {
-				let t = St(e);
+			children: ae.map((e) => {
+				let t = Ct(e);
 				return /* @__PURE__ */ (0, x.jsxs)("article", {
 					className: `work-log-item status-${e.status} tone-${t.tone}`,
 					"data-qa": "work-log-item",
@@ -6897,13 +6897,13 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 						children: [/* @__PURE__ */ (0, x.jsx)("time", {
 							"data-qa": "work-log-time",
 							dateTime: e.updatedAt,
-							children: Tt(e.finishedAt || e.updatedAt)
+							children: Et(e.finishedAt || e.updatedAt)
 						}), e.proposalId && (e.proposalStatus === "pending" || e.proposalStatus === "applying") && /* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
 							className: "filter-btn clear",
 							"data-qa": "work-log-proposal-open",
 							disabled: P === e.proposalId,
-							onClick: () => void re(e),
+							onClick: () => void ie(e),
 							children: P === e.proposalId ? /* @__PURE__ */ (0, x.jsx)("span", {
 								"data-qa": "work-log-proposal-loading",
 								children: "불러오는 중"
@@ -6929,7 +6929,7 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 				}), /* @__PURE__ */ (0, x.jsx)("p", { children: "작업 내용 원문이나 개인 자료 없이 진행 상태 요약만 표시합니다." })]
 			}), /* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "work-log-footer-actions",
-				children: [ce && /* @__PURE__ */ (0, x.jsxs)("div", {
+				children: [le && /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "work-log-pagination",
 					children: [
 						/* @__PURE__ */ (0, x.jsx)("span", {
@@ -6946,17 +6946,17 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
 							"data-qa": "work-log-page-next",
-							disabled: !ae || h,
+							disabled: !oe || h,
 							onClick: () => f(d + n),
 							children: "다음"
 						})
 					]
-				}), ie.length > 0 && /* @__PURE__ */ (0, x.jsx)("button", {
+				}), ae.length > 0 && /* @__PURE__ */ (0, x.jsx)("button", {
 					className: "work-log-quiet-btn",
 					type: "button",
 					"data-qa": "work-log-clear-preview",
 					disabled: T,
-					onClick: (e) => void te(e.currentTarget),
+					onClick: (e) => void ne(e.currentTarget),
 					children: "기록 숨기기"
 				})]
 			})]
@@ -6990,12 +6990,12 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 							type: "button",
 							"data-qa": "work-log-clear-confirm",
 							disabled: T,
-							onClick: () => void ne(),
+							onClick: () => void re(),
 							children: "숨기기 확인"
 						}), /* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
 							"data-qa": "work-log-clear-cancel",
-							onClick: q,
+							onClick: K,
 							children: "취소"
 						})]
 					})
@@ -7040,15 +7040,15 @@ function Et({ surface: e, pageSize: n = 20, defaultFilter: r = "all", refreshKey
 				/* @__PURE__ */ (0, x.jsx)("span", {
 					className: "work-log-latest",
 					"data-qa": "work-log-latest",
-					children: oe
+					children: se
 				})
-			] }), le]
-		}) : le
+			] }), ue]
+		}) : ue
 	});
 }
 //#endregion
 //#region src/app/FolioWordmark.tsx
-function Dt({ variant: e = "chrome" }) {
+function Ot({ variant: e = "chrome" }) {
 	return /* @__PURE__ */ (0, x.jsxs)("span", {
 		className: "folio-wordmark",
 		"data-variant": e,
@@ -7076,10 +7076,10 @@ function Dt({ variant: e = "chrome" }) {
 }
 //#endregion
 //#region src/app/InvestmentContextCard.tsx
-var Ot = "folio.investmentContext.dismissed.v1", kt = {
+var kt = "folio.investmentContext.dismissed.v1", At = {
 	layer: "hypothesis",
 	reuseAsEvidence: !1
-}, At = {
+}, jt = {
 	home: {
 		title: "내 리서치 연결",
 		description: "관심 종목과 확인 일정을 현재 리서치 화면에만 연결합니다."
@@ -7097,21 +7097,21 @@ var Ot = "folio.investmentContext.dismissed.v1", kt = {
 		description: "선택한 종목만 추가 컨텍스트에 hypothesis로 복사할 수 있습니다."
 	}
 };
-function jt(e) {
+function Mt(e) {
 	return e === "both" ? "포트폴리오 · 워치리스트" : e === "portfolio" ? "포트폴리오" : "워치리스트";
 }
-function Mt(e, t, n) {
+function Nt(e, t, n) {
 	return t === "collection" ? e.watchContexts.filter((e) => e.collections.some((e) => e.id === n)) : e.watchContexts;
 }
-function Nt(e) {
+function Pt(e) {
 	let t = e.marketDrivers.map((e) => e.label).slice(0, 2);
 	return [
-		jt(e.source),
+		Mt(e.source),
 		...t,
 		e.dueCheckpoints.length ? `확인 예정 ${e.dueCheckpoints.length}` : ""
 	].filter(Boolean).join(" · ");
 }
-function J({ reply: e }) {
+function q({ reply: e }) {
 	let t = e.split(/\r?\n/).map((e) => e.trim()).filter(Boolean);
 	return /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "investment-context-explanation-body",
@@ -7121,19 +7121,19 @@ function J({ reply: e }) {
 		}, `${t}:${e}`) : /* @__PURE__ */ (0, x.jsx)("p", { children: e }, `${t}:${e}`))
 	});
 }
-function Pt({ mode: e, summary: t, collectionId: n, dismissible: r = !1, onDismiss: i, onReference: a, onExplain: o, explainingTicker: s = "", explanation: c = null, explanationError: l = "" }) {
-	let u = (0, b.useMemo)(() => t ? Mt(t, e, n).slice(0, e === "home" ? 4 : 3) : [], [
+function Ft({ mode: e, summary: t, collectionId: n, dismissible: r = !1, onDismiss: i, onReference: a, onExplain: o, explainingTicker: s = "", explanation: c = null, explanationError: l = "" }) {
+	let u = (0, b.useMemo)(() => t ? Nt(t, e, n).slice(0, e === "home" ? 4 : 3) : [], [
 		n,
 		e,
 		t
-	]), d = At[e];
+	]), d = jt[e];
 	if (!t || !u.length) return null;
 	let f = u.reduce((e, t) => e + t.dueCheckpoints.length, 0);
 	return /* @__PURE__ */ (0, x.jsxs)("aside", {
 		className: `investment-context-card mode-${e}`,
 		"data-qa": `investment-context-${e}`,
-		"data-layer": kt.layer,
-		"data-reuse-as-evidence": String(kt.reuseAsEvidence),
+		"data-layer": At.layer,
+		"data-reuse-as-evidence": String(At.reuseAsEvidence),
 		children: [
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "investment-context-head",
@@ -7156,7 +7156,7 @@ function Pt({ mode: e, summary: t, collectionId: n, dismissible: r = !1, onDismi
 			}),
 			/* @__PURE__ */ (0, x.jsx)("ul", {
 				className: "investment-context-ledger",
-				children: u.map((t) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.ticker }), /* @__PURE__ */ (0, x.jsx)("small", { children: Nt(t) })] }), /* @__PURE__ */ (0, x.jsxs)("div", {
+				children: u.map((t) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.ticker }), /* @__PURE__ */ (0, x.jsx)("small", { children: Pt(t) })] }), /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "investment-context-row-actions",
 					children: [e === "deep-research" && a ? /* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
@@ -7176,7 +7176,7 @@ function Pt({ mode: e, summary: t, collectionId: n, dismissible: r = !1, onDismi
 			c ? /* @__PURE__ */ (0, x.jsxs)("section", {
 				className: "investment-context-explanation",
 				"aria-live": "polite",
-				children: [/* @__PURE__ */ (0, x.jsxs)("strong", { children: [c.ticker, " · Agent 설명"] }), /* @__PURE__ */ (0, x.jsx)(J, { reply: c.reply })]
+				children: [/* @__PURE__ */ (0, x.jsxs)("strong", { children: [c.ticker, " · Agent 설명"] }), /* @__PURE__ */ (0, x.jsx)(q, { reply: c.reply })]
 			}) : null,
 			l ? /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "investment-context-error",
@@ -7201,10 +7201,10 @@ function Pt({ mode: e, summary: t, collectionId: n, dismissible: r = !1, onDismi
 		]
 	});
 }
-function Ft(e) {
+function It(e) {
 	let [t, n] = (0, b.useState)(null), [r, i] = (0, b.useState)(() => {
 		try {
-			return window.localStorage.getItem(Ot) === "1";
+			return window.localStorage.getItem(kt) === "1";
 		} catch {
 			return !1;
 		}
@@ -7218,7 +7218,7 @@ function Ft(e) {
 		let t = new AbortController();
 		p.current = t, s(e.ticker), u(null), f("");
 		try {
-			let n = (await Le(await o("/api/agent/investment-context/explain", { tickers: [e.ticker] }, { signal: t.signal }), { signal: t.signal })).result?.reply?.trim() || "";
+			let n = (await Re(await o("/api/agent/investment-context/explain", { tickers: [e.ticker] }, { signal: t.signal }), { signal: t.signal })).result?.reply?.trim() || "";
 			if (!n) throw Error("설명 결과가 비어 있습니다.");
 			u({
 				ticker: e.ticker,
@@ -7231,13 +7231,13 @@ function Ft(e) {
 			p.current === t && (p.current = null, s(""));
 		}
 	}
-	return r ? null : /* @__PURE__ */ (0, x.jsx)(Pt, {
+	return r ? null : /* @__PURE__ */ (0, x.jsx)(Ft, {
 		...e,
 		summary: t,
 		onDismiss: e.dismissible ? () => {
 			i(!0);
 			try {
-				window.localStorage.setItem(Ot, "1");
+				window.localStorage.setItem(kt, "1");
 			} catch {}
 		} : void 0,
 		onExplain: m,
@@ -7248,8 +7248,8 @@ function Ft(e) {
 }
 //#endregion
 //#region src/app/AgentHome.tsx
-function It() {
-	let e = lt("agent_home");
+function Lt() {
+	let e = ut("agent_home");
 	return /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "react-home-route",
 		"data-agent-home": !0,
@@ -7264,7 +7264,7 @@ function It() {
 							children: [/* @__PURE__ */ (0, x.jsx)("p", {
 								className: "eyebrow",
 								children: "Local Investment Research Workspace"
-							}), /* @__PURE__ */ (0, x.jsx)("h1", { children: /* @__PURE__ */ (0, x.jsx)(Dt, { variant: "hero" }) })]
+							}), /* @__PURE__ */ (0, x.jsx)("h1", { children: /* @__PURE__ */ (0, x.jsx)(Ot, { variant: "hero" }) })]
 						}),
 						/* @__PURE__ */ (0, x.jsx)(S, { workspace: e }),
 						/* @__PURE__ */ (0, x.jsxs)("div", {
@@ -7301,7 +7301,7 @@ function It() {
 								})
 							]
 						}),
-						/* @__PURE__ */ (0, x.jsx)(Ft, {
+						/* @__PURE__ */ (0, x.jsx)(It, {
 							mode: "home",
 							dismissible: !0
 						}),
@@ -7317,7 +7317,7 @@ function It() {
 									type: "button",
 									"data-tooltip": `${e.title || "보고서"}${e.date ? ` · ${e.date}` : ""}`,
 									onClick: () => {
-										window.location.hash = be(e);
+										window.location.hash = xe(e);
 									},
 									children: [/* @__PURE__ */ (0, x.jsx)("span", {
 										className: "rv-rc-k",
@@ -7326,13 +7326,13 @@ function It() {
 										className: "rv-rc-t",
 										children: e.title || "제목 없음"
 									})]
-								}, xe(e, t)))
+								}, Se(e, t)))
 							})]
 						})
 					]
 				}),
-				/* @__PURE__ */ (0, x.jsx)(fe, { workspace: e }),
-				/* @__PURE__ */ (0, x.jsx)(Et, {
+				/* @__PURE__ */ (0, x.jsx)(pe, { workspace: e }),
+				/* @__PURE__ */ (0, x.jsx)(Dt, {
 					surface: "home",
 					pageSize: 20,
 					refreshKey: e.workLogRefreshKey,
@@ -7344,12 +7344,12 @@ function It() {
 }
 //#endregion
 //#region src/app/legacyBridge.ts
-function Lt() {
+function Rt() {
 	return window.FolioBridge ?? {};
 }
 //#endregion
 //#region src/app/reportReader/ReaderActions.tsx
-function Rt({ title: e, children: t }) {
+function zt({ title: e, children: t }) {
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "report-reader-rail-group",
 		"aria-label": e,
@@ -7362,15 +7362,15 @@ function Rt({ title: e, children: t }) {
 		})]
 	});
 }
-function zt({ icon: e, children: t, ...n }) {
+function Bt({ icon: e, children: t, ...n }) {
 	return /* @__PURE__ */ (0, x.jsxs)("button", {
 		className: "report-action-btn",
 		type: "button",
 		...n,
-		children: [/* @__PURE__ */ (0, x.jsx)(Bt, { name: e }), /* @__PURE__ */ (0, x.jsx)("span", { children: t })]
+		children: [/* @__PURE__ */ (0, x.jsx)(Vt, { name: e }), /* @__PURE__ */ (0, x.jsx)("span", { children: t })]
 	});
 }
-function Bt({ name: e }) {
+function Vt({ name: e }) {
 	return e === "agent" ? /* @__PURE__ */ (0, x.jsx)("svg", {
 		className: "report-action-icon",
 		viewBox: "0 0 24 24",
@@ -7423,7 +7423,7 @@ function Bt({ name: e }) {
 }
 //#endregion
 //#region src/app/reportReader/MarkdownRenderer.tsx
-function Vt(e) {
+function Ht(e) {
 	let t = [], n = /(\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\((https?:\/\/[^)\s]+)\))/g, r = 0;
 	for (let i of e.matchAll(n)) i.index !== void 0 && (i.index > r && t.push({
 		type: "text",
@@ -7444,59 +7444,59 @@ function Vt(e) {
 		value: e.slice(r)
 	}), t;
 }
-function Ht(e) {
-	return Vt(e).map((e, t) => e.type === "strong" ? /* @__PURE__ */ (0, x.jsx)("strong", { children: e.value }, t) : e.type === "code" ? /* @__PURE__ */ (0, x.jsx)("code", { children: e.value }, t) : e.type === "link" ? /* @__PURE__ */ (0, x.jsx)("a", {
+function Ut(e) {
+	return Ht(e).map((e, t) => e.type === "strong" ? /* @__PURE__ */ (0, x.jsx)("strong", { children: e.value }, t) : e.type === "code" ? /* @__PURE__ */ (0, x.jsx)("code", { children: e.value }, t) : e.type === "link" ? /* @__PURE__ */ (0, x.jsx)("a", {
 		href: e.href,
 		target: "_blank",
 		rel: "noreferrer",
 		children: e.label
 	}, t) : /* @__PURE__ */ (0, x.jsx)("span", { children: e.value }, t));
 }
-function Ut(e, t) {
-	e.length &&= (t.push(/* @__PURE__ */ (0, x.jsx)("p", { children: Ht(e.join(" ")) }, `p-${t.length}`)), 0);
+function Wt(e, t) {
+	e.length &&= (t.push(/* @__PURE__ */ (0, x.jsx)("p", { children: Ut(e.join(" ")) }, `p-${t.length}`)), 0);
 }
-function Wt({ markdown: e = "" }) {
+function Gt({ markdown: e = "" }) {
 	let t = [], n = [], r = e.replace(/\r\n/g, "\n").split("\n"), i = [];
 	function a() {
-		i.length && (t.push(/* @__PURE__ */ (0, x.jsx)("ul", { children: i.map((e, t) => /* @__PURE__ */ (0, x.jsx)("li", { children: Ht(e) }, t)) }, `ul-${t.length}`)), i = []);
+		i.length && (t.push(/* @__PURE__ */ (0, x.jsx)("ul", { children: i.map((e, t) => /* @__PURE__ */ (0, x.jsx)("li", { children: Ut(e) }, t)) }, `ul-${t.length}`)), i = []);
 	}
 	for (let e of r) {
 		let r = e.trimEnd().trim();
 		if (!r) {
-			Ut(n, t), a();
+			Wt(n, t), a();
 			continue;
 		}
 		let o = r.match(/^(#{2,4})\s+(.+)$/);
 		if (o) {
-			Ut(n, t), a();
-			let e = o[1].length, r = Ht(o[2]);
+			Wt(n, t), a();
+			let e = o[1].length, r = Ut(o[2]);
 			e === 2 ? t.push(/* @__PURE__ */ (0, x.jsx)("h2", { children: r }, `h-${t.length}`)) : e === 3 ? t.push(/* @__PURE__ */ (0, x.jsx)("h3", { children: r }, `h-${t.length}`)) : t.push(/* @__PURE__ */ (0, x.jsx)("h4", { children: r }, `h-${t.length}`));
 			continue;
 		}
 		let s = r.match(/^[-*]\s+(.+)$/);
 		if (s) {
-			Ut(n, t), i.push(s[1]);
+			Wt(n, t), i.push(s[1]);
 			continue;
 		}
 		n.push(r);
 	}
-	return Ut(n, t), a(), /* @__PURE__ */ (0, x.jsx)("div", {
+	return Wt(n, t), a(), /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "react-markdown markdown-brief report-body",
 		children: t
 	});
 }
 //#endregion
 //#region src/app/reportReader/ReportBody.tsx
-function Gt(e = "") {
+function Kt(e = "") {
 	let t = e.replace(/\r\n/g, "\n"), n = /^#{1,3}\s*(?:참고\s*자료|참고자료|Sources Used|Sources)\s*$/gim.exec(t);
 	return !n || n.index === void 0 ? e : t.slice(0, n.index).trim();
 }
-function Kt({ markdown: e = "", marketScope: t = "both", briefing: n, sourcePanelHtml: r = "" }) {
-	let i = (0, b.useRef)(null), a = Lt(), o = Gt(e), s = a.renderMarkdown?.(o);
+function qt({ markdown: e = "", marketScope: t = "both", briefing: n, sourcePanelHtml: r = "" }) {
+	let i = (0, b.useRef)(null), a = Rt(), o = Kt(e), s = a.renderMarkdown?.(o);
 	return (0, b.useEffect)(() => {
 		let e = i.current;
 		if (!(!e || !n || !a.renderBriefingVisuals)) return a.renderBriefingVisuals(e, n), () => a.cleanupBriefingVisuals?.();
-	}, [o, n]), s === void 0 ? /* @__PURE__ */ (0, x.jsx)(Wt, { markdown: o }) : /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("article", {
+	}, [o, n]), s === void 0 ? /* @__PURE__ */ (0, x.jsx)(Gt, { markdown: o }) : /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("article", {
 		ref: i,
 		className: "markdown-brief report-body",
 		"data-market-scope": t,
@@ -7505,28 +7505,28 @@ function Kt({ markdown: e = "", marketScope: t = "both", briefing: n, sourcePane
 }
 //#endregion
 //#region src/app/reportReader/HypothesisReviewCard.tsx
-var qt = {
+var Jt = {
 	fresh: "최신",
 	due: "검토 예정",
 	stale: "검토 지연",
 	unknown: "검토 이력 없음"
 };
-function Jt(e) {
+function Yt(e) {
 	return e ? e.slice(0, 10) : "—";
 }
-function Yt(e) {
+function Xt(e) {
 	return new Promise((t) => window.setTimeout(t, e));
 }
-function Xt(e) {
+function Zt(e) {
 	return "id" in e && "status" in e;
 }
-async function Zt(e) {
+async function Qt(e) {
 	let t = e;
-	for (; f(t.status);) await Yt(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
+	for (; f(t.status);) await Xt(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
 	if (t.status !== "done") throw Error(t.message || t.error || "가설 검토 작업에 실패했습니다.");
 	return t;
 }
-function Qt({ identity: t, noteExists: i, refreshKey: a, agentAvailable: o = !0, onRequestAgent: s }) {
+function $t({ identity: t, noteExists: i, refreshKey: a, agentAvailable: o = !0, onRequestAgent: s }) {
 	let [c, l] = (0, b.useState)(null), [u, d] = (0, b.useState)(""), [f, p] = (0, b.useState)(!1);
 	(0, b.useEffect)(() => {
 		if (l(null), !i || !t.ticker) return;
@@ -7566,7 +7566,7 @@ function Qt({ identity: t, noteExists: i, refreshKey: a, agentAvailable: o = !0,
 			p(!0), d("최신 외부 근거로 가설을 검토하는 중...");
 			try {
 				let r = await n(t.ticker);
-				Xt(r) && await Zt(r);
+				Zt(r) && await Qt(r);
 				let i = await e(t.id);
 				l(i), d("최신 근거 검토를 완료했습니다.");
 			} catch (e) {
@@ -7588,7 +7588,7 @@ function Qt({ identity: t, noteExists: i, refreshKey: a, agentAvailable: o = !0,
 					children: "Hypothesis Review"
 				}), /* @__PURE__ */ (0, x.jsx)("strong", { children: "가설 검토 상태" })] }), c && /* @__PURE__ */ (0, x.jsx)("span", {
 					className: `hypothesis-freshness is-${c.reviewState.freshness}`,
-					children: qt[c.reviewState.freshness]
+					children: Jt[c.reviewState.freshness]
 				})]
 			}),
 			_ ? /* @__PURE__ */ (0, x.jsx)("p", {
@@ -7606,8 +7606,8 @@ function Qt({ identity: t, noteExists: i, refreshKey: a, agentAvailable: o = !0,
 				/* @__PURE__ */ (0, x.jsxs)("dl", {
 					className: "hypothesis-review-metrics",
 					children: [
-						/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "최근 검토" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: Jt(c.reviewState.lastReviewedAt) })] }),
-						/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "다음 검토" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: Jt(c.reviewState.nextReviewAt) })] }),
+						/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "최근 검토" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: Yt(c.reviewState.lastReviewedAt) })] }),
+						/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "다음 검토" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: Yt(c.reviewState.nextReviewAt) })] }),
 						/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "반대 근거" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: c.latestDelta?.counterEvidenceCount ?? 0 })] }),
 						/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "예정 체크" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: c.checkpointCounts.due + c.checkpointCounts.open })] })
 					]
@@ -7656,10 +7656,10 @@ function Qt({ identity: t, noteExists: i, refreshKey: a, agentAvailable: o = !0,
 }
 //#endregion
 //#region src/app/reportReader/PersonalOverlayView.tsx
-function $t(e) {
+function en(e) {
 	return e.length ? /* @__PURE__ */ (0, x.jsx)("ul", { children: e.map((e, t) => /* @__PURE__ */ (0, x.jsx)("li", { children: e }, `${e}-${t}`)) }) : /* @__PURE__ */ (0, x.jsx)("p", { children: "기록 없음" });
 }
-function en({ overlay: e, staleQa: t }) {
+function tn({ overlay: e, staleQa: t }) {
 	return e ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-personal-overlay",
 		"data-personal-overlay-state": e.revisionState,
@@ -7674,14 +7674,14 @@ function en({ overlay: e, staleQa: t }) {
 				className: "topicrpt-layer-note",
 				children: "생성 기준 revision을 확인할 수 없는 레거시 Overlay입니다."
 			}),
-			e.markdown ? /* @__PURE__ */ (0, x.jsx)(Kt, { markdown: e.markdown }) : /* @__PURE__ */ (0, x.jsx)("p", {
+			e.markdown ? /* @__PURE__ */ (0, x.jsx)(qt, { markdown: e.markdown }) : /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "report-note-empty",
 				children: "저장된 개인 해석 본문이 없습니다."
 			}),
 			/* @__PURE__ */ (0, x.jsx)("h4", { children: "반대 근거와 충돌" }),
-			$t([...e.counterEvidence, ...e.contradictions]),
+			en([...e.counterEvidence, ...e.contradictions]),
 			/* @__PURE__ */ (0, x.jsx)("h4", { children: "불확실성과 다음 질문" }),
-			$t([...e.uncertainties, ...e.personalQuestions])
+			en([...e.uncertainties, ...e.personalQuestions])
 		]
 	}) : /* @__PURE__ */ (0, x.jsx)("p", {
 		className: "report-note-empty",
@@ -7690,7 +7690,7 @@ function en({ overlay: e, staleQa: t }) {
 }
 //#endregion
 //#region src/app/reportReader/FolioNotePanel.tsx
-var tn = [
+var nn = [
 	"## 현재 관점",
 	"",
 	"## 왜 중요한가",
@@ -7703,23 +7703,23 @@ var tn = [
 	"",
 	"## 결정/업데이트 로그",
 	""
-].join("\n"), nn = [
+].join("\n"), rn = [
 	"떠오르는 생각을 자유롭게 정리해보세요. 막연한 느낌이나 궁금증 한 줄만 작성해도 됩니다.",
 	"",
 	"예시: \"이 주식은 앞으로 받을 수혜가 커 보여서 관심 있음\"",
 	"예시: \"가격이 너무 오른 것 같은데 그래도 들고 갈 만한가?\""
-].join("\n"), rn = "[대화]", an = "[투자 노트]";
-function on(e) {
+].join("\n"), an = "[대화]", on = "[투자 노트]";
+function sn(e) {
 	return new Promise((t) => window.setTimeout(t, e));
 }
-async function sn(e) {
+async function cn(e) {
 	let t = e;
-	for (; f(t.status);) await on(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
+	for (; f(t.status);) await sn(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
 	if (t.status !== "done") throw Error(t.message || t.error || "Agent 작업에 실패했습니다.");
 	return t;
 }
-function cn(e) {
-	let t = String(e || ""), n = t.indexOf(an), r = (e) => e.replace(/^\s*\[대화\]\s*/, "").trim();
+function ln(e) {
+	let t = String(e || ""), n = t.indexOf(on), r = (e) => e.replace(/^\s*\[대화\]\s*/, "").trim();
 	return n < 0 ? {
 		message: r(t),
 		note: ""
@@ -7728,7 +7728,7 @@ function cn(e) {
 		note: t.slice(n + 7).trim()
 	};
 }
-function ln(e, t) {
+function un(e, t) {
 	let n = t.trim();
 	if (!n) return e;
 	let r = e[e.length - 1];
@@ -7738,7 +7738,7 @@ function ln(e, t) {
 		createdAt: (/* @__PURE__ */ new Date()).toISOString()
 	}];
 }
-function un(e, t, n = "") {
+function dn(e, t, n = "") {
 	return [...e, {
 		role: "agent",
 		body: t,
@@ -7746,9 +7746,9 @@ function un(e, t, n = "") {
 		createdAt: (/* @__PURE__ */ new Date()).toISOString()
 	}];
 }
-function dn(e, t, n, r, i = [], a = []) {
+function fn(e, t, n, r, i = [], a = []) {
 	let o = i.slice(-8).map((e, t) => `${t + 1}. ${e.body}`).join("\n"), s = a.slice(-8).map((e, t) => {
-		let { message: n, note: r } = cn(e.body);
+		let { message: n, note: r } = ln(e.body);
 		return `${t + 1}. ${e.summary || "Agent"}: ${n || (r ? "(투자 노트 전체를 업데이트함)" : "")}`;
 	}).join("\n\n");
 	return [
@@ -7758,11 +7758,11 @@ function dn(e, t, n, r, i = [], a = []) {
 		"사용자 판단과 Agent가 제안하는 해석을 구분하고, 반대 근거와 다음 체크포인트를 포함해줘.",
 		"사용자가 `>`로 인용한 문장이 있으면 그 문장에 대한 질문/첨삭 요청으로 이해하고 해당 부분을 중심으로 답해줘.",
 		"응답 형식을 반드시 지켜줘:",
-		`1) ${rn} 아래에 사용자에게 하는 짧은 대화 답변(무엇을 반영/수정했는지, 확인하고 싶은 점)을 2~5문장으로 써줘.`,
-		`2) 노트를 새로 만들거나 수정할 내용이 있으면 ${an} 아래에 투자 노트 전체 Markdown을 써줘. 단순 질문에 답만 하는 경우에는 ${an} 부분을 생략하고 기존 노트를 유지해줘.`,
+		`1) ${an} 아래에 사용자에게 하는 짧은 대화 답변(무엇을 반영/수정했는지, 확인하고 싶은 점)을 2~5문장으로 써줘.`,
+		`2) 노트를 새로 만들거나 수정할 내용이 있으면 ${on} 아래에 투자 노트 전체 Markdown을 써줘. 단순 질문에 답만 하는 경우에는 ${on} 부분을 생략하고 기존 노트를 유지해줘.`,
 		"기존 정리본이 있으면 전체를 갈아엎기보다 필요한 부분을 업데이트하고, 결정/업데이트 로그에 변경 이유를 남겨줘.",
 		"투자 노트는 아래 큰 구조를 유지하되, 각 섹션은 초보 투자자가 바로 이해할 수 있게 짧고 명확하게 작성해줘.",
-		tn,
+		nn,
 		`노트 제목: ${e.title}`,
 		`연결 문서: ${r || e.linkedReports?.[0] || e.title}`,
 		`보고서 종류: ${e.reportKind || e.noteType || "report"}`,
@@ -7775,12 +7775,12 @@ function dn(e, t, n, r, i = [], a = []) {
 		t.trim() ? `현재 정리된 투자 노트:\n${t.trim()}` : ""
 	].filter(Boolean).join("\n\n");
 }
-function fn(e, t) {
+function pn(e, t) {
 	let n = String(t || e || "note"), r = 2166136261;
 	for (let e = 0; e < n.length; e += 1) r ^= n.charCodeAt(e), r = Math.imul(r, 16777619) >>> 0;
 	return `${e}-${r.toString(36)}`;
 }
-function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
+function mn({ identity: e, linkedTitle: t, overlay: n = null }) {
 	let [r, i] = (0, b.useState)(""), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(""), [d, f] = (0, b.useState)([]), [p, m] = (0, b.useState)([]), [h, g] = (0, b.useState)(""), [_, v] = (0, b.useState)("chat"), [y, S] = (0, b.useState)([]), [C, w] = (0, b.useState)(!1), [T, E] = (0, b.useState)([]), [D, O] = (0, b.useState)(null), [k, A] = (0, b.useState)(0), j = (0, b.useRef)(null), M = T.includes("agent_assisted"), N = (0, b.useMemo)(() => [...d, ...p].sort((e, t) => String(e.createdAt || "").localeCompare(String(t.createdAt || ""))), [d, p]);
 	(0, b.useEffect)(() => {
 		let t = !0;
@@ -7842,7 +7842,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 		if (e) {
 			g("저장 중...");
 			try {
-				let t = ln(d, e), n = await P(r, t, p);
+				let t = un(d, e), n = await P(r, t, p);
 				f(n.rawThoughts || t), m(n.interactionLog || p), s(""), u(""), g("생각을 기록했습니다. Agent 정리는 나중에 요청할 수 있습니다.");
 			} catch (e) {
 				g(e instanceof Error ? `저장 실패: ${e.message}` : "저장 실패");
@@ -7853,11 +7853,11 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 		let n = F();
 		if (!n || C) return;
 		w(!0), g("Agent가 응답을 준비하는 중...");
-		let a = ln(d, n);
+		let a = un(d, n);
 		f(a), s(""), u("");
 		try {
-			let s = await sn(await o("/api/agent/chat", {
-				message: dn(e, r, n, t, a, p),
+			let s = await cn(await o("/api/agent/chat", {
+				message: fn(e, r, n, t, a, p),
 				context: {
 					surface: "folio_note",
 					viewId: "investment_note",
@@ -7870,7 +7870,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 				options: { effort: "high" }
 			})), c = s.result || {}, l = String(c.reply || "").trim();
 			if (!l) throw Error(s.message || "Agent가 응답을 반환하지 않았습니다.");
-			let { note: u } = cn(l), d = un(p, l, c.notice || (u ? "투자 노트 업데이트" : "Agent 답변")), h = u || r, _ = await P(h, a, d, u ? Array.from(/* @__PURE__ */ new Set([...T, "agent_assisted"])) : T);
+			let { note: u } = ln(l), d = dn(p, l, c.notice || (u ? "투자 노트 업데이트" : "Agent 답변")), h = u || r, _ = await P(h, a, d, u ? Array.from(/* @__PURE__ */ new Set([...T, "agent_assisted"])) : T);
 			i(_.body || h), f(_.rawThoughts || a), m(_.interactionLog || d), g(u ? "Agent가 투자 노트를 업데이트했습니다. 완성본은 연결 자료 탭에서 확인하세요." : "Agent가 답변했습니다. 노트 본문은 그대로 유지했습니다.");
 		} catch (e) {
 			try {
@@ -7906,7 +7906,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 					}, e))
 				})]
 			}),
-			/* @__PURE__ */ (0, x.jsx)(Qt, {
+			/* @__PURE__ */ (0, x.jsx)($t, {
 				identity: e,
 				noteExists: D,
 				refreshKey: k,
@@ -7922,7 +7922,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 					ref: j,
 					onMouseUp: I,
 					children: N.map((e, t) => {
-						let n = e.role === "agent", { message: r, note: i } = n ? cn(e.body) : {
+						let n = e.role === "agent", { message: r, note: i } = n ? ln(e.body) : {
 							message: e.body,
 							note: ""
 						};
@@ -7946,7 +7946,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 									children: [/* @__PURE__ */ (0, x.jsx)("span", {
 										className: "report-note-chat-note-label",
 										children: "완성된 투자 노트"
-									}), /* @__PURE__ */ (0, x.jsx)(Kt, { markdown: i })]
+									}), /* @__PURE__ */ (0, x.jsx)(qt, { markdown: i })]
 								})
 							]
 						}, `${e.role}-${e.createdAt || t}-${t}`);
@@ -7975,7 +7975,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 							value: a,
 							onChange: (e) => s(e.currentTarget.value),
 							rows: 3,
-							placeholder: nn,
+							placeholder: rn,
 							"aria-label": `${e.title} 사용자의 생각`
 						}),
 						/* @__PURE__ */ (0, x.jsxs)("div", {
@@ -8011,7 +8011,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 							children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: "정리된 투자 노트" }), /* @__PURE__ */ (0, x.jsx)("span", { children: r.trim() ? `읽기 전용 완성본입니다. 수정은 작성 탭에서 Agent와 대화로 진행하세요.${M ? " (Agent 정리본)" : ""}` : "작성 탭에서 Agent와 정리하면 여기에 완성본이 표시됩니다." })]
 						}), r.trim() ? /* @__PURE__ */ (0, x.jsx)("div", {
 							className: "report-note-final-body",
-							children: /* @__PURE__ */ (0, x.jsx)(Kt, { markdown: r })
+							children: /* @__PURE__ */ (0, x.jsx)(qt, { markdown: r })
 						}) : /* @__PURE__ */ (0, x.jsx)("p", {
 							className: "report-note-empty",
 							children: "아직 완성된 투자 노트가 없습니다."
@@ -8039,7 +8039,7 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 						children: [/* @__PURE__ */ (0, x.jsx)("p", {
 							className: "section-kicker",
 							children: "참고 해석"
-						}), /* @__PURE__ */ (0, x.jsx)(en, { overlay: n })]
+						}), /* @__PURE__ */ (0, x.jsx)(tn, { overlay: n })]
 					})
 				]
 			}),
@@ -8055,8 +8055,8 @@ function pn({ identity: e, linkedTitle: t, overlay: n = null }) {
 }
 //#endregion
 //#region src/app/reportReader/ReportReaderShell.tsx
-function mn({ eyebrow: e, title: t, meta: n, breadcrumb: r, actionSlot: i, noteSlot: a, noteIdentity: o, noteLinkedTitle: s, noteOverlay: c, agentContext: l, onClose: u, children: d }) {
-	let [f, p] = (0, b.useState)(!1), m = (0, b.useRef)(null), h = (0, b.useRef)(null), g = (0, b.useRef)(null), _ = (0, b.useRef)(null), v = (0, b.useId)(), y = a ?? (o ? /* @__PURE__ */ (0, x.jsx)(pn, {
+function hn({ eyebrow: e, title: t, meta: n, breadcrumb: r, actionSlot: i, noteSlot: a, noteIdentity: o, noteLinkedTitle: s, noteOverlay: c, agentContext: l, onClose: u, children: d }) {
+	let [f, p] = (0, b.useState)(!1), m = (0, b.useRef)(null), h = (0, b.useRef)(null), g = (0, b.useRef)(null), _ = (0, b.useRef)(null), v = (0, b.useId)(), y = a ?? (o ? /* @__PURE__ */ (0, x.jsx)(mn, {
 		identity: o,
 		linkedTitle: s || t,
 		overlay: c || null
@@ -8069,7 +8069,7 @@ function mn({ eyebrow: e, title: t, meta: n, breadcrumb: r, actionSlot: i, noteS
 	(0, b.useEffect)(() => {
 		if (!S || !l) return;
 		let e = String(l.viewId || ""), t = e === "topicrpt" ? "deep-research" : e;
-		t && Te(t, l);
+		t && Ee(t, l);
 	}, [l, S]), (0, b.useEffect)(() => {
 		m.current?.focus({ preventScroll: !0 });
 	}, [t]);
@@ -8186,7 +8186,7 @@ function mn({ eyebrow: e, title: t, meta: n, breadcrumb: r, actionSlot: i, noteS
 }
 //#endregion
 //#region src/app/RouteHero.tsx
-function hn({ eyebrow: e, title: t, description: n, actions: r }) {
+function gn({ eyebrow: e, title: t, description: n, actions: r }) {
 	return /* @__PURE__ */ (0, x.jsxs)("header", {
 		className: "react-route-hero",
 		children: [/* @__PURE__ */ (0, x.jsxs)("div", {
@@ -8210,14 +8210,14 @@ function hn({ eyebrow: e, title: t, description: n, actions: r }) {
 }
 //#endregion
 //#region src/app/deepResearchPayload.ts
-var gn = /^sc_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-function _n(e) {
+var _n = /^sc_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+function vn(e) {
 	return `#/deep-research/collections/${encodeURIComponent(e)}`;
 }
-function vn(e) {
+function yn(e) {
 	return `#/deep-research/${encodeURIComponent(e)}`;
 }
-function yn(e) {
+function bn(e) {
 	let t = e.replace(/^#\/?/, "");
 	if (t === "deep-research" || t === "deep-research/") return {
 		kind: "list",
@@ -8227,7 +8227,7 @@ function yn(e) {
 	let n = t.match(/^deep-research\/collections\/(.+)$/);
 	if (n) try {
 		let e = decodeURIComponent(n[1]);
-		return gn.test(e) ? {
+		return _n.test(e) ? {
 			kind: "collection",
 			id: e,
 			malformed: !1
@@ -8268,19 +8268,19 @@ function yn(e) {
 		};
 	}
 }
-function Y(e) {
+function J(e) {
 	return typeof e == "object" && !!e && !Array.isArray(e);
 }
-function X(e) {
+function Y(e) {
 	return typeof e == "string" ? e : "";
 }
-function bn(e) {
+function xn(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : null;
 }
-function xn(e) {
+function Sn(e) {
 	return Array.isArray(e) ? e.filter((e) => typeof e == "string") : [];
 }
-function Sn(e) {
+function Cn(e) {
 	if (typeof e != "string" || !e.trim()) return "";
 	try {
 		let t = new URL(e);
@@ -8289,56 +8289,56 @@ function Sn(e) {
 		return "";
 	}
 }
-function Cn(e) {
-	return X(e).trim().toLowerCase().replace(/[\s_-]+/g, "");
-}
 function wn(e) {
-	if (!Y(e)) return null;
-	let t = bn(e.number), n = X(e.hash);
+	return Y(e).trim().toLowerCase().replace(/[\s_-]+/g, "");
+}
+function Tn(e) {
+	if (!J(e)) return null;
+	let t = xn(e.number), n = Y(e.hash);
 	return t !== null || n ? {
 		number: t,
 		hash: n
 	} : null;
 }
-function Tn(e) {
-	return Y(e) ? Object.fromEntries(Object.entries(e).filter((e) => typeof e[1] == "number" && Number.isFinite(e[1]))) : {};
+function En(e) {
+	return J(e) ? Object.fromEntries(Object.entries(e).filter((e) => typeof e[1] == "number" && Number.isFinite(e[1]))) : {};
 }
-function En(e, t = !1) {
-	if (!Y(e)) return {};
+function Dn(e, t = !1) {
+	if (!J(e)) return {};
 	let n = {};
-	for (let [r, i] of Object.entries(e)) Y(i) && (n[r] = {
-		label: X(i.label),
-		question: t ? X(i.question) : "",
-		count: bn(i.count) ?? 0,
-		level: X(i.level)
+	for (let [r, i] of Object.entries(e)) J(i) && (n[r] = {
+		label: Y(i.label),
+		question: t ? Y(i.question) : "",
+		count: xn(i.count) ?? 0,
+		level: Y(i.level)
 	});
 	return n;
 }
-function Dn(e) {
-	if (!Y(e)) return null;
-	let t = Y(e.deepResearch) ? e.deepResearch : {}, n = Array.isArray(e.analysisAxes) ? e.analysisAxes.filter(Y).map((e) => ({
-		key: X(e.key),
-		label: X(e.label),
-		questions: xn(e.questions)
+function On(e) {
+	if (!J(e)) return null;
+	let t = J(e.deepResearch) ? e.deepResearch : {}, n = Array.isArray(e.analysisAxes) ? e.analysisAxes.filter(J).map((e) => ({
+		key: Y(e.key),
+		label: Y(e.label),
+		questions: Sn(e.questions)
 	})).filter((e) => e.key || e.label) : [];
 	return {
-		topic: X(e.topic),
-		reportType: X(e.reportType),
-		userIntent: X(e.userIntent),
-		researchQuestions: xn(e.researchQuestions),
+		topic: Y(e.topic),
+		reportType: Y(e.reportType),
+		userIntent: Y(e.userIntent),
+		researchQuestions: Sn(e.researchQuestions),
 		analysisAxes: n,
-		searchQueries: xn(e.searchQueries),
-		expectedSections: xn(e.expectedSections),
-		dataGapsLikely: xn(e.dataGapsLikely),
-		falsificationTriggers: xn(t.falsificationTriggers)
+		searchQueries: Sn(e.searchQueries),
+		expectedSections: Sn(e.expectedSections),
+		dataGapsLikely: Sn(e.dataGapsLikely),
+		falsificationTriggers: Sn(t.falsificationTriggers)
 	};
 }
-function On(e) {
-	if (!Y(e)) return null;
-	let t = En(e.axisCoverage), n = En(e.questionCoverage, !0);
+function kn(e) {
+	if (!J(e)) return null;
+	let t = Dn(e.axisCoverage), n = Dn(e.questionCoverage, !0);
 	return {
-		totalDocs: bn(e.totalDocs) ?? 0,
-		roleCounts: Tn(e.roleCounts),
+		totalDocs: xn(e.totalDocs) ?? 0,
+		roleCounts: En(e.roleCounts),
 		axisCoverage: Object.fromEntries(Object.entries(t).map(([e, t]) => [e, {
 			label: t.label,
 			count: t.count,
@@ -8349,89 +8349,89 @@ function On(e) {
 			count: t.count,
 			level: t.level
 		}])),
-		dataGaps: xn(e.dataGaps),
-		memoryCount: bn(e.memoryCount) ?? 0
+		dataGaps: Sn(e.dataGaps),
+		memoryCount: xn(e.memoryCount) ?? 0
 	};
 }
-function kn(e) {
-	return Array.isArray(e) ? e.filter(Y).map((e) => ({
-		id: X(e.id),
-		title: X(e.title),
-		source: X(e.source),
-		date: X(e.date),
-		role: X(e.role),
-		axis: X(e.axis),
-		confidence: X(e.confidence),
-		url: Sn(e.url)
+function An(e) {
+	return Array.isArray(e) ? e.filter(J).map((e) => ({
+		id: Y(e.id),
+		title: Y(e.title),
+		source: Y(e.source),
+		date: Y(e.date),
+		role: Y(e.role),
+		axis: Y(e.axis),
+		confidence: Y(e.confidence),
+		url: Cn(e.url)
 	})).filter((e) => !!(e.id && (e.title || e.source))) : [];
 }
-function An(e) {
-	return Array.isArray(e) ? e.filter(Y).filter((e) => {
-		let t = X(e.artifactType).toLowerCase(), n = X(e.type).toLowerCase(), r = X(e.evidenceRole).toLowerCase(), i = X(e.sourceLayer ?? e.source_layer).toLowerCase(), a = Cn(e.generatedBy ?? e.generated_by);
+function jn(e) {
+	return Array.isArray(e) ? e.filter(J).filter((e) => {
+		let t = Y(e.artifactType).toLowerCase(), n = Y(e.type).toLowerCase(), r = Y(e.evidenceRole).toLowerCase(), i = Y(e.sourceLayer ?? e.source_layer).toLowerCase(), a = wn(e.generatedBy ?? e.generated_by);
 		return t !== "user_note" && n !== "user_note" && r !== "hypothesis" && i !== "hypothesis" && i !== "primary_processed" && a !== "folioos";
 	}).map((e) => ({
-		sourceId: X(e.sourceId),
-		title: X(e.title),
-		source: X(e.source),
-		date: X(e.date),
-		evidenceRole: X(e.evidenceRole),
-		reliability: X(e.reliability),
-		usedInSections: xn(e.usedInSections),
-		url: Sn(e.url),
-		artifactType: X(e.artifactType),
-		artifactId: X(e.artifactId),
-		path: X(e.path),
-		axisKey: X(e.axisKey),
-		researchQuestionId: X(e.researchQuestionId),
-		researchRound: bn(e.researchRound)
+		sourceId: Y(e.sourceId),
+		title: Y(e.title),
+		source: Y(e.source),
+		date: Y(e.date),
+		evidenceRole: Y(e.evidenceRole),
+		reliability: Y(e.reliability),
+		usedInSections: Sn(e.usedInSections),
+		url: Cn(e.url),
+		artifactType: Y(e.artifactType),
+		artifactId: Y(e.artifactId),
+		path: Y(e.path),
+		axisKey: Y(e.axisKey),
+		researchQuestionId: Y(e.researchQuestionId),
+		researchRound: xn(e.researchRound)
 	})).filter((e) => !!(e.sourceId && (e.title || e.source))) : [];
 }
-function jn(e) {
-	return Array.isArray(e) ? e.filter(Y).map((e) => ({
-		id: X(e.id),
-		severity: X(e.severity),
-		description: X(e.description),
-		suggestedAction: X(e.suggestedAction),
+function Mn(e) {
+	return Array.isArray(e) ? e.filter(J).map((e) => ({
+		id: Y(e.id),
+		severity: Y(e.severity),
+		description: Y(e.description),
+		suggestedAction: Y(e.suggestedAction),
 		resolved: e.resolved === !0
 	})).filter((e) => !!(e.id && e.description)) : [];
 }
-function Mn(e) {
-	return !Y(e) || ![
+function Nn(e) {
+	return !J(e) || ![
 		"score",
 		"grade",
 		"status",
 		"warnings",
 		"suggestedFixes"
 	].some((t) => t in e) ? null : {
-		score: bn(e.score),
-		grade: X(e.grade),
-		status: X(e.status),
-		warnings: xn(e.warnings),
-		suggestedFixes: xn(e.suggestedFixes)
+		score: xn(e.score),
+		grade: Y(e.grade),
+		status: Y(e.status),
+		warnings: Sn(e.warnings),
+		suggestedFixes: Sn(e.suggestedFixes)
 	};
 }
-function Nn(e) {
-	if (!Y(e) || !Y(e.resolution)) return null;
-	let t = e.resolution, n = Y(e.zeroEvidence) ? e.zeroEvidence : {}, r = Y(t.providerGenerations) ? t.providerGenerations : {}, i = Array.isArray(t.unusableCandidates) ? t.unusableCandidates.filter(Y).map((e) => ({
-		candidateId: X(e.candidateId),
-		reason: X(e.reason)
+function Pn(e) {
+	if (!J(e) || !J(e.resolution)) return null;
+	let t = e.resolution, n = J(e.zeroEvidence) ? e.zeroEvidence : {}, r = J(t.providerGenerations) ? t.providerGenerations : {}, i = Array.isArray(t.unusableCandidates) ? t.unusableCandidates.filter(J).map((e) => ({
+		candidateId: Y(e.candidateId),
+		reason: Y(e.reason)
 	})).filter((e) => e.candidateId) : [];
 	return {
-		schemaVersion: bn(t.schemaVersion),
-		collectionId: X(t.collectionId),
-		collectionRevision: bn(t.collectionRevision),
-		collectionDefinitionHash: X(t.collectionDefinitionHash),
-		eligibleTotal: bn(t.eligibleTotal),
-		candidateCap: bn(t.candidateCap),
-		resolvedCandidateIds: xn(t.resolvedCandidateIds),
-		executionUniverseIds: xn(t.executionUniverseIds),
-		selectedEvidenceIds: xn(t.selectedEvidenceIds),
+		schemaVersion: xn(t.schemaVersion),
+		collectionId: Y(t.collectionId),
+		collectionRevision: xn(t.collectionRevision),
+		collectionDefinitionHash: Y(t.collectionDefinitionHash),
+		eligibleTotal: xn(t.eligibleTotal),
+		candidateCap: xn(t.candidateCap),
+		resolvedCandidateIds: Sn(t.resolvedCandidateIds),
+		executionUniverseIds: Sn(t.executionUniverseIds),
+		selectedEvidenceIds: Sn(t.selectedEvidenceIds),
 		unusableCandidates: i,
 		truncated: t.truncated === !0,
-		resolvedAt: X(e.resolvedAt),
+		resolvedAt: Y(e.resolvedAt),
 		zeroEvidenceRequired: n.required === !0,
-		zeroEvidenceReason: X(n.reasonCode),
-		resolutionFingerprint: X(n.resolutionFingerprint),
+		zeroEvidenceReason: Y(n.reasonCode),
+		resolutionFingerprint: Y(n.resolutionFingerprint),
 		providerGenerations: {
 			indexGeneration: typeof r.indexGeneration == "string" ? r.indexGeneration : null,
 			rssGeneration: typeof r.rssGeneration == "string" ? r.rssGeneration : null
@@ -8439,20 +8439,20 @@ function Nn(e) {
 		inputWatermark: typeof t.inputWatermark == "string" ? t.inputWatermark : null
 	};
 }
-function Pn(e) {
+function Fn(e) {
 	return e === null ? null : typeof e == "string" ? e : void 0;
 }
-function Fn(e) {
-	if (!Y(e) || typeof e.reason != "string" || typeof e.injected != "boolean") return;
+function In(e) {
+	if (!J(e) || typeof e.reason != "string" || typeof e.injected != "boolean") return;
 	let t = {
-		policy: X(e.policy),
-		requestedScope: X(e.requestedScope),
-		resolvedScope: X(e.resolvedScope),
+		policy: Y(e.policy),
+		requestedScope: Y(e.requestedScope),
+		resolvedScope: Y(e.resolvedScope),
 		injected: e.injected,
 		reason: e.reason
 	};
-	if (!Y(e.ref)) return e.injected ? void 0 : t;
-	let n = e.ref, r = Pn(n.snapshotId), i = Pn(n.asOf), a = Pn(n.inputWatermark), o = Pn(n.relevantEvidenceWatermark);
+	if (!J(e.ref)) return e.injected ? void 0 : t;
+	let n = e.ref, r = Fn(n.snapshotId), i = Fn(n.asOf), a = Fn(n.inputWatermark), o = Fn(n.relevantEvidenceWatermark);
 	if (!(r === void 0 || i === void 0 || a === void 0 || o === void 0 || typeof n.sourceKind != "string" || typeof n.scope != "string" || typeof n.status != "string" || typeof n.freshnessReason != "string" || typeof n.invalidWatermarkRows != "number" || !Number.isFinite(n.invalidWatermarkRows) || typeof n.resolvedAt != "string" || n.layer !== "source-grounded")) return {
 		...t,
 		ref: {
@@ -8470,22 +8470,22 @@ function Fn(e) {
 		}
 	};
 }
-function In(e) {
-	return !Y(e) || typeof e.approvalId != "string" || typeof e.executedAt != "string" ? null : {
-		schemaVersion: bn(e.schemaVersion),
+function Ln(e) {
+	return !J(e) || typeof e.approvalId != "string" || typeof e.executedAt != "string" ? null : {
+		schemaVersion: xn(e.schemaVersion),
 		approvalId: e.approvalId,
-		planHash: X(e.planHash),
-		requestedMode: X(e.requestedMode),
-		attemptedEngine: X(e.attemptedEngine),
-		finalEngine: X(e.finalEngine),
-		fallbackReason: e.fallbackReason === null ? null : X(e.fallbackReason),
-		adapter: X(e.adapter),
+		planHash: Y(e.planHash),
+		requestedMode: Y(e.requestedMode),
+		attemptedEngine: Y(e.attemptedEngine),
+		finalEngine: Y(e.finalEngine),
+		fallbackReason: e.fallbackReason === null ? null : Y(e.fallbackReason),
+		adapter: Y(e.adapter),
 		executedAt: e.executedAt
 	};
 }
-function Ln(e, t) {
-	if (!Y(e)) return null;
-	let n = wn(t);
+function Rn(e, t) {
+	if (!J(e)) return null;
+	let n = Tn(t);
 	if (![
 		"markdown",
 		"stale",
@@ -8497,36 +8497,36 @@ function Ln(e, t) {
 		"uncertainties",
 		"personalQuestions"
 	].some((t) => t in e)) return null;
-	let r = wn(e.canonicalRevision), i = !!(n && r && (n.number !== null && r.number !== null && n.number !== r.number || n.hash && r.hash && n.hash !== r.hash)), a = Array.isArray(e.linkedNotes) ? e.linkedNotes.filter(Y).map((e) => ({
-		title: X(e.title),
-		type: X(e.type),
-		ticker: X(e.ticker)
+	let r = Tn(e.canonicalRevision), i = !!(n && r && (n.number !== null && r.number !== null && n.number !== r.number || n.hash && r.hash && n.hash !== r.hash)), a = Array.isArray(e.linkedNotes) ? e.linkedNotes.filter(J).map((e) => ({
+		title: Y(e.title),
+		type: Y(e.type),
+		ticker: Y(e.ticker)
 	})).filter((e) => e.title) : [], o = e.stale === !0 || e.staleReason === "canonical_revision_changed" || i;
 	return {
-		markdown: X(e.markdown),
+		markdown: Y(e.markdown),
 		stale: o,
-		staleReason: X(e.staleReason),
+		staleReason: Y(e.staleReason),
 		canonicalRevision: r,
 		linkedNotes: a,
-		counterEvidence: xn(e.counterEvidence),
-		contradictions: xn(e.contradictions),
-		uncertainties: xn(e.uncertainties),
-		personalQuestions: xn(e.personalQuestions),
+		counterEvidence: Sn(e.counterEvidence),
+		contradictions: Sn(e.contradictions),
+		uncertainties: Sn(e.uncertainties),
+		personalQuestions: Sn(e.personalQuestions),
 		revisionState: o ? "stale" : r && n ? "current" : "legacy_unknown"
 	};
 }
-function Rn(e, t, n) {
-	return !(t in e) || e[t] === void 0 ? !1 : n === "array" ? !Array.isArray(e[t]) : !Y(e[t]);
+function zn(e, t, n) {
+	return !(t in e) || e[t] === void 0 ? !1 : n === "array" ? !Array.isArray(e[t]) : !J(e[t]);
 }
-function zn(e) {
-	if (!Y(e) || typeof e.id != "string" || !e.id.trim() || typeof e.markdown != "string") throw Error("topic_report_contract_invalid");
+function Bn(e) {
+	if (!J(e) || typeof e.id != "string" || !e.id.trim() || typeof e.markdown != "string") throw Error("topic_report_contract_invalid");
 	let t = [];
 	for (let n of [
 		"evidenceItems",
 		"sourceLedger",
 		"dataGaps",
 		"checkpoints"
-	]) Rn(e, n, "array") && t.push(n + "_invalid");
+	]) zn(e, n, "array") && t.push(n + "_invalid");
 	for (let n of [
 		"topicPlan",
 		"evidencePackSummary",
@@ -8537,10 +8537,10 @@ function zn(e) {
 		"executionProvenance",
 		"marketTape",
 		"marketStateResolution"
-	]) Rn(e, n, "record") && t.push(n + "_invalid");
-	let n = kn(e.evidenceItems), r = An(e.sourceLedger), i = jn(e.dataGaps), a = Dn(e.topicPlan), o = On(e.evidencePackSummary), s = Mn(e.quality), c = Nn(e.researchResolution), l = Fn(e.marketStateResolution), u = In(e.executionProvenance);
+	]) zn(e, n, "record") && t.push(n + "_invalid");
+	let n = An(e.evidenceItems), r = jn(e.sourceLedger), i = Mn(e.dataGaps), a = On(e.topicPlan), o = kn(e.evidencePackSummary), s = Nn(e.quality), c = Pn(e.researchResolution), l = In(e.marketStateResolution), u = Ln(e.executionProvenance);
 	Array.isArray(e.evidenceItems) && n.length < e.evidenceItems.length && t.push("evidenceItems_rows_invalid"), Array.isArray(e.sourceLedger) && r.length < e.sourceLedger.length && t.push("sourceLedger_rows_invalid"), Array.isArray(e.dataGaps) && i.length < e.dataGaps.length && t.push("dataGaps_rows_invalid"), e.marketStateResolution !== void 0 && !l && !t.includes("marketStateResolution_invalid") && t.push("marketStateResolution_invalid"), e.executionProvenance !== void 0 && !u && !t.includes("executionProvenance_invalid") && t.push("executionProvenance_invalid");
-	let d = wn(e.canonicalRevision), f = Ln(e.personalOverlay, d);
+	let d = Tn(e.canonicalRevision), f = Rn(e.personalOverlay, d);
 	for (let [n, r] of [
 		["topicPlan", a],
 		["evidencePackSummary", o],
@@ -8548,28 +8548,28 @@ function zn(e) {
 		["researchResolution", c],
 		["personalOverlay", f]
 	]) n in e && e[n] !== void 0 && r === null && !t.includes(n + "_invalid") && t.push(n + "_invalid");
-	let p = Y(e.generation) ? {
-		message: X(e.generation.message),
-		mode: X(e.generation.mode),
-		generatedAt: X(e.generation.generatedAt)
-	} : null, m = Array.isArray(e.sources) ? e.sources.filter(Y).map((e) => ({
-		source: X(e.source),
-		date: X(e.date),
-		title: X(e.title),
-		url: Sn(e.url),
-		path: X(e.path)
+	let p = J(e.generation) ? {
+		message: Y(e.generation.message),
+		mode: Y(e.generation.mode),
+		generatedAt: Y(e.generation.generatedAt)
+	} : null, m = Array.isArray(e.sources) ? e.sources.filter(J).map((e) => ({
+		source: Y(e.source),
+		date: Y(e.date),
+		title: Y(e.title),
+		url: Cn(e.url),
+		path: Y(e.path)
 	})).filter((e) => e.title || e.source || e.url || e.path) : [];
 	return {
 		id: e.id,
-		topicKey: X(e.topicKey),
-		topicLabel: X(e.topicLabel),
-		date: X(e.date),
-		generatedAt: X(e.generatedAt),
-		mode: X(e.mode),
+		topicKey: Y(e.topicKey),
+		topicLabel: Y(e.topicLabel),
+		date: Y(e.date),
+		generatedAt: Y(e.generatedAt),
+		mode: Y(e.mode),
 		saved: e.saved === !0,
 		markdown: e.markdown,
-		docCount: bn(e.docCount) ?? 0,
-		memoryCount: bn(e.memoryCount) ?? 0,
+		docCount: xn(e.docCount) ?? 0,
+		memoryCount: xn(e.memoryCount) ?? 0,
 		userContext: typeof e.userContext == "string" || typeof e.userContext == "boolean" ? e.userContext : !1,
 		generation: p,
 		sources: m,
@@ -8581,95 +8581,95 @@ function zn(e) {
 		quality: s,
 		researchResolution: c,
 		marketStateResolution: l,
-		qualityPreflight: Y(e.qualityPreflight) ? e.qualityPreflight : null,
+		qualityPreflight: J(e.qualityPreflight) ? e.qualityPreflight : null,
 		executionProvenance: u,
-		checkpoints: Array.isArray(e.checkpoints) ? e.checkpoints.filter(Y) : [],
-		marketTape: Y(e.marketTape) ? e.marketTape : null,
+		checkpoints: Array.isArray(e.checkpoints) ? e.checkpoints.filter(J) : [],
+		marketTape: J(e.marketTape) ? e.marketTape : null,
 		canonicalRevision: d,
 		personalOverlay: f,
 		contractWarnings: t
 	};
 }
-function Bn(e) {
-	return Array.isArray(e) ? e.filter(Y).map((e) => ({
-		id: X(e.id),
-		topicKey: X(e.topicKey),
-		topicLabel: X(e.topicLabel),
-		date: X(e.date),
-		generatedAt: X(e.generatedAt),
-		mode: X(e.mode),
+function Vn(e) {
+	return Array.isArray(e) ? e.filter(J).map((e) => ({
+		id: Y(e.id),
+		topicKey: Y(e.topicKey),
+		topicLabel: Y(e.topicLabel),
+		date: Y(e.date),
+		generatedAt: Y(e.generatedAt),
+		mode: Y(e.mode),
 		saved: e.saved === !0
 	})).filter((e) => !!e.id) : [];
 }
 //#endregion
 //#region src/app/watchlist/ChangeHistory.tsx
-var Vn = {
+var Hn = {
 	added: "새로 등장",
 	removed: "사라짐",
 	changed: "내용 변화"
-}, Hn = {
+}, Un = {
 	market_driver: "시장 동인",
 	issue_coverage: "이슈 보도",
 	market_metric: "지표"
 };
-function Un(e) {
+function Wn(e) {
 	let t = Number(e);
 	return Number.isFinite(t) ? t.toLocaleString(void 0, { maximumFractionDigits: 2 }) : String(e ?? "");
 }
-function Wn(e) {
+function Gn(e) {
 	let t = e || {}, n = Number(t.rank), r = Number(t.share), i = [];
 	return Number.isFinite(n) && n > 0 && i.push(`${n}순위`), Number.isFinite(r) && r > 0 && i.push(`비중 ${Math.round(r * 100)}%`), i.join(" · ");
 }
-function Gn(e, t) {
+function Kn(e, t) {
 	if (t == null) return "";
-	if (e.kind === "market_metric" || typeof t != "object") return Un(t);
-	let n = Wn(t);
+	if (e.kind === "market_metric" || typeof t != "object") return Wn(t);
+	let n = Gn(t);
 	if (n) return n;
 	let r = t, i = [];
 	return r.market && i.push(String(r.market)), r.impact && i.push(String(r.impact)), !i.length && Number(r.docCount) > 0 && i.push(`기사 ${Number(r.docCount)}건`), i.join(" · ");
 }
-function Kn(e) {
+function qn(e) {
 	let t = e.currentValue || {}, n = e.previousValue || {}, r = Number(t.rank), i = Number(n.rank), a = Number(t.share), o = [];
 	return Number.isFinite(r) && r > 0 && o.push(Number.isFinite(i) && i > 0 && i !== r ? `${i}순위 → ${r}순위` : `${r}순위`), Number.isFinite(a) && a > 0 && o.push(`비중 ${Math.round(a * 100)}%`), o.join(" · ");
 }
-function qn(e) {
+function Jn(e) {
 	let t = e.currentValue;
-	if (e.kind === "market_metric") return e.previousValue != null && t != null ? `${Un(e.previousValue)} → ${Un(t)}` : t == null ? "" : Un(t);
-	if (e.kind === "market_driver") return Kn(e);
+	if (e.kind === "market_metric") return e.previousValue != null && t != null ? `${Wn(e.previousValue)} → ${Wn(t)}` : t == null ? "" : Wn(t);
+	if (e.kind === "market_driver") return qn(e);
 	if (t && typeof t == "object") {
 		let e = t, n = [];
 		return Array.isArray(e.markets) && e.markets.length ? n.push(e.markets.join(", ")) : e.market && n.push(String(e.market)), Number(e.docCount) > 0 && n.push(`기사 ${Number(e.docCount)}건`), e.impact && n.push(String(e.impact)), n.join(" · ");
 	}
 	return "";
 }
-function Jn(e) {
+function Yn(e) {
 	let t = e.changedItems || [];
 	if (!t.length) return "";
-	let n = t[0], r = Vn[String(n.change || "")] || "변화", i = Hn[String(n.kind || "")], a = i ? `${i} ${r}` : r, o = t.length > 1 ? `외 ${t.length - 1}건` : "";
+	let n = t[0], r = Hn[String(n.change || "")] || "변화", i = Un[String(n.kind || "")], a = i ? `${i} ${r}` : r, o = t.length > 1 ? `외 ${t.length - 1}건` : "";
 	return [
 		a,
-		qn(n),
+		Jn(n),
 		o
 	].filter(Boolean).join(" · ");
 }
-function Yn(e) {
+function Xn(e) {
 	let t = e.baselineRef?.id;
 	return t ? `${t} 대비` : "";
 }
-var Xn = {
+var Zn = {
 	major_change: "중대한 변화",
 	developing_signal: "발전 중인 신호",
 	conflicting_uncertain: "충돌·불확실",
 	no_material_change: "중대한 변화 없음",
 	baseline_created: "기준선 생성",
 	insufficient_basis: "비교 근거 부족"
-}, Zn = {
+}, Qn = {
 	briefing: "브리핑",
 	company_analysis: "기업 분석",
 	topic_report: "딥 리서치",
 	market_memory: "시장 내러티브"
 };
-function Qn({ events: e }) {
+function $n({ events: e }) {
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "evidence-rail evidence-rail--confirmed",
 		"aria-labelledby": "change-history-title",
@@ -8697,15 +8697,15 @@ function Qn({ events: e }) {
 					/* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "evidence-rail__meta",
 						children: [
-							/* @__PURE__ */ (0, x.jsx)("span", { children: Zn[e.artifactKind || ""] || e.artifactKind }),
-							/* @__PURE__ */ (0, x.jsx)("span", { children: Xn[e.status || ""] || e.status }),
+							/* @__PURE__ */ (0, x.jsx)("span", { children: Qn[e.artifactKind || ""] || e.artifactKind }),
+							/* @__PURE__ */ (0, x.jsx)("span", { children: Zn[e.status || ""] || e.status }),
 							/* @__PURE__ */ (0, x.jsx)("time", { children: e.generatedAt ? new Date(e.generatedAt).toLocaleString("ko-KR") : "" })
 						]
 					}),
-					/* @__PURE__ */ (0, x.jsx)("strong", { children: e.changedItems?.[0]?.subject || Xn[e.status || ""] || "변화 평가" }),
-					Jn(e) ? /* @__PURE__ */ (0, x.jsx)("em", {
+					/* @__PURE__ */ (0, x.jsx)("strong", { children: e.changedItems?.[0]?.subject || Zn[e.status || ""] || "변화 평가" }),
+					Yn(e) ? /* @__PURE__ */ (0, x.jsx)("em", {
 						className: "cockpit-change-reason",
-						children: Jn(e)
+						children: Yn(e)
 					}) : null,
 					/* @__PURE__ */ (0, x.jsxs)("small", { children: [
 						"중요도 ",
@@ -8723,16 +8723,16 @@ function Qn({ events: e }) {
 }
 //#endregion
 //#region src/app/dashboard/StoryShare.tsx
-var $n = [
+var er = [
 	"blue",
 	"teal",
 	"gold",
 	"purple"
 ];
-function er(e, t) {
-	return e.isOther ? "other" : $n[t] || "other";
+function tr(e, t) {
+	return e.isOther ? "other" : er[t] || "other";
 }
-function tr(e) {
+function nr(e) {
 	let t = e.deltaPp;
 	return t == null || !Number.isFinite(t) ? {
 		text: "",
@@ -8748,7 +8748,7 @@ function tr(e) {
 		tone: "down"
 	};
 }
-function nr({ market: e }) {
+function rr({ market: e }) {
 	let [t, n] = (0, b.useState)(null), [r, i] = (0, b.useState)("");
 	if ((0, b.useEffect)(() => {
 		let t = !0;
@@ -8790,20 +8790,20 @@ function nr({ market: e }) {
 				role: "img",
 				"aria-label": `이야기 비중: ${a.map((e) => `${e.label} ${Math.round(e.share * 100)}%`).join(", ")}`,
 				children: a.map((e, t) => /* @__PURE__ */ (0, x.jsx)("span", {
-					"data-tone": er(e, t),
+					"data-tone": tr(e, t),
 					style: { width: `${Math.max(e.share * 100, 1)}%` }
 				}, e.label))
 			}),
 			/* @__PURE__ */ (0, x.jsx)("ul", {
 				className: "story-share__legend",
 				children: a.map((e, t) => {
-					let n = tr(e);
+					let n = nr(e);
 					return /* @__PURE__ */ (0, x.jsxs)("li", {
 						"data-other": e.isOther ? "true" : void 0,
 						children: [
 							/* @__PURE__ */ (0, x.jsx)("span", {
 								className: "story-share__dot",
-								"data-tone": er(e, t),
+								"data-tone": tr(e, t),
 								"aria-hidden": "true"
 							}),
 							/* @__PURE__ */ (0, x.jsx)("span", {
@@ -8839,14 +8839,14 @@ function nr({ market: e }) {
 }
 //#endregion
 //#region src/app/dashboard/ChangeFeed.tsx
-var rr = {
+var ir = {
 	major_change: "중대한 변화",
 	developing_signal: "발전 중",
 	conflicting_uncertain: "충돌·불확실",
 	no_material_change: "중대한 변화 없음",
 	baseline_created: "기준선 생성",
 	insufficient_basis: "근거 부족"
-}, ir = {
+}, ar = {
 	new_information: {
 		label: "새 정보",
 		tone: "burgundy"
@@ -8871,7 +8871,7 @@ var rr = {
 		label: "내용 미평가",
 		tone: "muted"
 	}
-}, ar = [
+}, or = [
 	"new_information",
 	"reversal",
 	"trend_development",
@@ -8879,7 +8879,7 @@ var rr = {
 	"no_new_information",
 	"not_evaluated"
 ];
-function or(e) {
+function sr(e) {
 	let t = String(e.artifactKind || ""), n = String(e.artifactId || "");
 	if (t === "briefing") {
 		let t = n.slice(0, 10);
@@ -8891,38 +8891,38 @@ function or(e) {
 	}
 	return t === "company_analysis" ? "#/analysis" : t === "topic_report" ? "#/deep-research" : t === "market_memory" ? "#/market-memory" : "#/dashboard";
 }
-function sr(e) {
+function cr(e) {
 	if (String(e.artifactKind || "") !== "briefing") return "";
 	let t = String(e.baselineRef?.id || ""), n = t.slice(0, 10);
 	return /^\d{4}-\d{2}-\d{2}$/.test(n) ? `#/briefing/${n}/${t.endsWith(".us") ? "us" : t.endsWith(".kr") ? "kr" : /^briefing:(us|kr)$/.exec(String(e.lineageId || ""))?.[1] || "both"}` : "";
 }
-function cr(e) {
+function lr(e) {
 	let t = e.changedItems || [];
-	for (let e of ar) {
+	for (let e of or) {
 		let n = t.find((t) => t.semanticVerdict === e);
 		if (n) return n;
 	}
 	return t[0];
 }
-function lr(e) {
-	let t = cr(e), n = [`${Zn[e.artifactKind || ""] || "보고서"} 변화에 대해 물어볼게. 주제: ${t?.subject || "변화 항목"}`], r = t ? Gn(t, t.previousValue) : "", i = t ? Gn(t, t.currentValue) : "";
+function ur(e) {
+	let t = lr(e), n = [`${Qn[e.artifactKind || ""] || "보고서"} 변화에 대해 물어볼게. 주제: ${t?.subject || "변화 항목"}`], r = t ? Kn(t, t.previousValue) : "", i = t ? Kn(t, t.currentValue) : "";
 	(r || i) && n.push(`변화: ${r || "기준 없음"} → ${i || "현재 없음"}`);
-	let a = ir[String(t?.semanticVerdict || "")];
+	let a = ar[String(t?.semanticVerdict || "")];
 	a && n.push(`의미 분류: ${a.label}`), t?.semanticNote && n.push(`분류 근거: ${t.semanticNote}`);
 	let o = [...(t?.previousContextDocs || []).map((e) => `직전: ${e}`), ...(t?.contextDocs || []).map((e) => `현재: ${e}`)];
 	return o.length && n.push(`대표 기사:\n${o.map((e) => `- ${e}`).join("\n")}`), e.baselineRef?.id && n.push(`비교 기준: ${e.baselineRef.id}`), n.push("이 변화가 실제로 얼마나 중요한지, 투자 관점에서 무엇을 확인해야 하는지 설명해줘."), n.join("\n");
 }
-function ur(e) {
-	return Zn[e.artifactKind || ""] || e.artifactKind || "보고서";
-}
 function dr(e) {
-	return `${e.artifactKind}-${e.artifactId}-${e.generatedAt}`;
+	return Qn[e.artifactKind || ""] || e.artifactKind || "보고서";
 }
 function fr(e) {
+	return `${e.artifactKind}-${e.artifactId}-${e.generatedAt}`;
+}
+function pr(e) {
 	return e.semanticVerdict || e.semanticNote || (e.contextDocs || []).length || (e.previousContextDocs || []).length ? !0 : !/^[0-9a-f]{12,}$/i.test(String(e.subject || ""));
 }
-function pr({ item: e }) {
-	let t = Gn(e, e.previousValue), n = Gn(e, e.currentValue), r = e.previousContextDocs || [], i = e.contextDocs || [], a = ir[String(e.semanticVerdict || "")];
+function mr({ item: e }) {
+	let t = Kn(e, e.previousValue), n = Kn(e, e.currentValue), r = e.previousContextDocs || [], i = e.contextDocs || [], a = ar[String(e.semanticVerdict || "")];
 	return /* @__PURE__ */ (0, x.jsxs)("li", {
 		className: "change-contrast",
 		children: [
@@ -8965,12 +8965,12 @@ function pr({ item: e }) {
 		]
 	});
 }
-function mr({ event: e }) {
+function hr({ event: e }) {
 	let [t, n] = (0, b.useState)(!1);
 	(0, b.useEffect)(() => {
-		Lt().applyAgentBranding?.();
+		Rt().applyAgentBranding?.();
 	}, []);
-	let r = cr(e), i = ir[String(r?.semanticVerdict || "")], a = e.changedItems || [], o = a.filter(fr), s = a.length - o.length, c = r?.semanticNote || Jn(e), l = or(e), u = sr(e);
+	let r = lr(e), i = ar[String(r?.semanticVerdict || "")], a = e.changedItems || [], o = a.filter(pr), s = a.length - o.length, c = r?.semanticNote || Yn(e), l = sr(e), u = cr(e);
 	return /* @__PURE__ */ (0, x.jsx)("li", {
 		"data-status": e.status,
 		"data-tone": i?.tone || "",
@@ -8982,7 +8982,7 @@ function mr({ event: e }) {
 					children: [
 						/* @__PURE__ */ (0, x.jsx)("span", {
 							className: "status-chip",
-							children: rr[e.status || ""] || e.status
+							children: ir[e.status || ""] || e.status
 						}),
 						i ? /* @__PURE__ */ (0, x.jsx)("span", {
 							className: "change-verdict-chip",
@@ -8992,14 +8992,14 @@ function mr({ event: e }) {
 						/* @__PURE__ */ (0, x.jsx)("time", { children: e.generatedAt ? new Date(e.generatedAt).toLocaleString("ko-KR") : "" })
 					]
 				}),
-				/* @__PURE__ */ (0, x.jsx)("strong", { children: r?.subject || ur(e) }),
+				/* @__PURE__ */ (0, x.jsx)("strong", { children: r?.subject || dr(e) }),
 				c ? /* @__PURE__ */ (0, x.jsx)("em", {
 					className: "cockpit-change-reason",
 					children: c
 				}) : null,
 				/* @__PURE__ */ (0, x.jsxs)("small", { children: [
-					ur(e),
-					Yn(e) ? /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [" · ", Yn(e)] }) : null,
+					dr(e),
+					Xn(e) ? /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [" · ", Xn(e)] }) : null,
 					Number(e.materiality || 0) > 0 ? /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [" · 중요도 ", Math.round(Number(e.materiality) * 100)] }) : null,
 					Number(e.reliability || 0) > 0 ? /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [" · 신뢰도 ", Math.round(Number(e.reliability) * 100)] }) : null
 				] }),
@@ -9035,7 +9035,7 @@ function mr({ event: e }) {
 							"data-tooltip": "Agent에게 묻기",
 							"data-tooltip-pos": "left",
 							"aria-label": "Agent에게 묻기",
-							onClick: () => ke({ message: lr(e) }),
+							onClick: () => Ae({ message: ur(e) }),
 							children: /* @__PURE__ */ (0, x.jsx)("span", {
 								className: "agent-logo-slot",
 								"aria-hidden": "true"
@@ -9045,7 +9045,7 @@ function mr({ event: e }) {
 				}),
 				t ? /* @__PURE__ */ (0, x.jsxs)("ol", {
 					className: "change-contrast-list",
-					children: [o.map((e) => /* @__PURE__ */ (0, x.jsx)(pr, { item: e }, e.id || e.subject)), s > 0 ? /* @__PURE__ */ (0, x.jsxs)("li", {
+					children: [o.map((e) => /* @__PURE__ */ (0, x.jsx)(mr, { item: e }, e.id || e.subject)), s > 0 ? /* @__PURE__ */ (0, x.jsxs)("li", {
 						className: "change-contrast-list__hidden",
 						children: [
 							"제목이 남지 않은 이전 형식 항목 ",
@@ -9058,7 +9058,7 @@ function mr({ event: e }) {
 		})
 	});
 }
-function hr({ events: e, quiet: t }) {
+function gr({ events: e, quiet: t }) {
 	let [n, r] = (0, b.useState)("us");
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "cockpit-panel cockpit-change-feed",
@@ -9082,12 +9082,12 @@ function hr({ events: e, quiet: t }) {
 					}, e))
 				})]
 			}),
-			/* @__PURE__ */ (0, x.jsx)(nr, { market: n }),
+			/* @__PURE__ */ (0, x.jsx)(rr, { market: n }),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "cockpit-change-feed__subhead",
 				children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "내용의 변화" }), /* @__PURE__ */ (0, x.jsxs)("b", { children: [e.length, "건"] })]
 			}),
-			e.length ? /* @__PURE__ */ (0, x.jsx)("ol", { children: e.map((e) => /* @__PURE__ */ (0, x.jsx)(mr, { event: e }, dr(e))) }) : /* @__PURE__ */ (0, x.jsx)("p", {
+			e.length ? /* @__PURE__ */ (0, x.jsx)("ol", { children: e.map((e) => /* @__PURE__ */ (0, x.jsx)(hr, { event: e }, fr(e))) }) : /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "cockpit-empty",
 				children: "아직 확인된 중요한 변화가 없습니다. 새 브리핑·기업 분석·딥 리서치를 만들면 직전 보고서와 비교한 결과가 여기에 표시됩니다."
 			}),
@@ -9098,17 +9098,17 @@ function hr({ events: e, quiet: t }) {
 					t.length,
 					"건 보기"
 				] }), /* @__PURE__ */ (0, x.jsx)("ol", { children: t.map((e) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [
-					/* @__PURE__ */ (0, x.jsx)("span", { children: rr[e.status || ""] || e.status }),
-					/* @__PURE__ */ (0, x.jsxs)("em", { children: [ur(e), e.artifactId ? ` · ${String(e.artifactId).slice(0, 24)}` : ""] }),
+					/* @__PURE__ */ (0, x.jsx)("span", { children: ir[e.status || ""] || e.status }),
+					/* @__PURE__ */ (0, x.jsxs)("em", { children: [dr(e), e.artifactId ? ` · ${String(e.artifactId).slice(0, 24)}` : ""] }),
 					/* @__PURE__ */ (0, x.jsx)("time", { children: e.generatedAt ? new Date(e.generatedAt).toLocaleDateString("ko-KR") : "" })
-				] }, dr(e))) })]
+				] }, fr(e))) })]
 			}) : null
 		]
 	});
 }
 //#endregion
 //#region src/app/briefing/BriefingChangeStrip.tsx
-function gr({ summary: e }) {
+function _r({ summary: e }) {
 	if (!e || !e.status) return null;
 	let t = (e.changedItems || []).filter((e) => e.semanticVerdict || e.semanticNote || e.subject);
 	if (!t.length || ["baseline_created", "insufficient_basis"].includes(String(e.status))) return null;
@@ -9127,14 +9127,14 @@ function gr({ summary: e }) {
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("span", {
 						className: "status-chip",
-						children: rr[e.status] || e.status
+						children: ir[e.status] || e.status
 					}),
 					/* @__PURE__ */ (0, x.jsx)("strong", { children: "이 브리핑에서 달라진 것" }),
 					i ? /* @__PURE__ */ (0, x.jsx)("em", { children: i }) : null
 				]
 			}),
 			/* @__PURE__ */ (0, x.jsx)("ul", { children: r.map((e) => {
-				let t = ir[String(e.semanticVerdict || "")];
+				let t = ar[String(e.semanticVerdict || "")];
 				return /* @__PURE__ */ (0, x.jsxs)("li", { children: [
 					/* @__PURE__ */ (0, x.jsx)("span", {
 						className: "briefing-change-strip__subject",
@@ -9153,89 +9153,104 @@ function gr({ summary: e }) {
 			}) }),
 			n.length ? null : /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "briefing-change-strip__fallback",
-				children: Jn(e)
+				children: Yn(e)
 			})
 		]
 	});
 }
 //#endregion
 //#region src/app/BriefingRoute.tsx
-var _r = [
+var vr = [
 	"us",
 	"kr",
 	"europe",
-	"jp",
+	"jp"
+], yr = {
+	us: "미국장",
+	kr: "한국장",
+	europe: "유럽장",
+	jp: "일본장"
+};
+function br(e) {
+	return e.length === 1 ? e[0] : e.length === vr.length ? "all" : e.length === 2 && e.includes("us") && e.includes("kr") ? "both" : "multi";
+}
+var xr = [
+	...vr,
 	"all",
-	"both"
-], vr = {
+	"both",
+	"multi"
+], Sr = {
 	us: "미국",
 	kr: "한국",
 	europe: "유럽",
 	jp: "일본",
 	all: "통합",
-	both: "통합"
-}, yr = {
+	both: "통합",
+	multi: "선택 시장"
+}, Cr = {
 	us: "US",
 	kr: "KR",
 	europe: "EU",
 	jp: "JP",
 	all: "ALL",
-	both: "US/KR"
-}, br = /* @__PURE__ */ new Set([
+	both: "US/KR",
+	multi: "MULTI"
+}, wr = /* @__PURE__ */ new Set([
 	"미국장",
 	"한국장",
 	"유럽장",
 	"일본장",
-	"종합"
-]), xr = {
+	"종합",
+	"선택 시장"
+]), Tr = {
 	default: "기본",
 	market_focused: "시황 중심",
 	concise: "요약"
-}, Sr = 20;
-function Cr(e) {
+}, Er = 20;
+function Dr(e) {
 	return String(e || "").replace(/^(\d{4})-(\d{2})-(\d{2})$/, "$1.$2.$3");
 }
-function wr(e) {
+function Or(e) {
 	let t = String(e || "").match(/^(\d{4})-(\d{2})/);
 	return t ? `${t[1]}.${t[2]}` : "월 미상";
 }
-function Tr() {
+function kr() {
 	let e = /* @__PURE__ */ new Date(), t = e.getTimezoneOffset() * 6e4;
 	return new Date(e.getTime() - t).toISOString().slice(0, 10);
 }
-function Er(e) {
+function Ar(e) {
 	return String(e || "").replace(/\s+[—–-]\s+\d{4}[.-]\d{2}[.-]\d{2}\s*$/, "").trim();
 }
-function Dr(e) {
-	let t = Pr(e), n = Fr(e), r = n === "us" ? "US Market Briefing" : n === "kr" ? "KR Market Briefing" : Er(e.title || "Daily Market Briefing"), i = Cr(t);
+function jr(e) {
+	let t = Rr(e), n = zr(e), r = n === "us" ? "US Market Briefing" : n === "kr" ? "KR Market Briefing" : Ar(e.title || "Daily Market Briefing"), i = Dr(t);
 	return {
 		date: t,
 		scope: n,
 		title: e.title || (i ? `${r} — ${i}` : r),
-		chips: (e.tags || []).filter((e) => !br.has(String(e || "").trim())),
+		chips: (e.tags || []).filter((e) => !wr.has(String(e || "").trim())),
 		foot: `${i ? `${i} KST 발행` : "발행일 미상"} · ${e.generatedAt ? new Date(e.generatedAt).toLocaleString("ko-KR") : "생성 시각 미상"}`
 	};
 }
-function Or(e) {
+function Mr(e) {
 	return new Promise((t) => window.setTimeout(t, e));
 }
-function kr(e) {
-	return _r.includes(e) ? e : "both";
+function Nr(e) {
+	return xr.includes(e) ? e : "both";
 }
-function Ar() {
+function Pr() {
 	let e = window.location.hash.match(/^#\/?briefing\/(\d{4}-\d{2}-\d{2})(?:\/(us|kr|europe|jp|all|both))?$/);
 	return e ? {
 		date: e[1],
-		scope: kr(e[2])
+		scope: Nr(e[2])
 	} : null;
 }
-function jr() {
+function Fr() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "briefing";
 }
-function Mr(e, t = "both") {
+function Ir(e, t = "both") {
 	window.location.hash = e ? `#/briefing/${e}/${t}` : "#/briefing";
 }
-function Nr(e = "", t = "시장 브리핑") {
+function Lr(e = "", t = "시장 브리핑") {
 	let n = e.replace(/\r\n/g, "\n").split("\n"), r = n.findIndex((e) => e.trim());
 	if (r < 0) return {
 		title: t,
@@ -9250,23 +9265,23 @@ function Nr(e = "", t = "시장 브리핑") {
 		body: e
 	};
 }
-function Pr(e) {
+function Rr(e) {
 	return e.reportDate || e.date || "";
 }
-function Fr(e) {
-	return kr(e.marketScope || e.scope);
+function zr(e) {
+	return Nr(e.marketScope || e.scope);
 }
-function Ir(e) {
+function Br(e) {
 	return String(e || "").trim().toLowerCase();
 }
-function Lr(e, t) {
+function Vr(e, t) {
 	let n = String(t || e || "note"), r = 2166136261;
 	for (let e = 0; e < n.length; e += 1) r ^= n.charCodeAt(e), r = Math.imul(r, 16777619) >>> 0;
 	return `${e}-${r.toString(36)}`;
 }
-function Rr(e, t) {
+function Hr(e, t) {
 	return {
-		id: Lr("brief", `${e}:${t}`),
+		id: Vr("brief", `${e}:${t}`),
 		noteType: "market_memo",
 		title: e ? `브리핑 ${e} 투자 노트` : "브리핑 투자 노트",
 		label: e ? `브리핑 ${e}` : "브리핑",
@@ -9276,30 +9291,37 @@ function Rr(e, t) {
 		linkedReports: [e ? `Daily Market Briefing — ${e}` : ""].filter(Boolean)
 	};
 }
-function zr(e) {
+function Ur(e) {
 	let t = e;
 	return !!(t?.id && f(t.status));
 }
-async function Br(e) {
+async function Wr(e) {
 	let t = e;
-	for (; f(t.status);) await Or(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
+	for (; f(t.status);) await Mr(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
 	if (t.status !== "done") throw Error(t.message || t.error || "브리핑 생성에 실패했습니다.");
 	return t;
 }
-function Vr() {
-	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)(() => Ar()), [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(!1), [u, d] = (0, b.useState)(!1), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)(""), [v, y] = (0, b.useState)("us"), [S, C] = (0, b.useState)("default"), [w, T] = (0, b.useState)(() => Tr()), [E, D] = (0, b.useState)(""), [k, A] = (0, b.useState)("all"), [j, M] = (0, b.useState)("all"), [N, P] = (0, b.useState)(""), [F, I] = (0, b.useState)(""), [L, R] = (0, b.useState)("recent"), [z, B] = (0, b.useState)(0), V = (0, b.useCallback)(async () => {
+function Gr() {
+	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)(() => Pr()), [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(!1), [u, d] = (0, b.useState)(!1), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)(""), [v, y] = (0, b.useState)(["us"]), S = br(v);
+	function C(e) {
+		y((t) => {
+			let n = t.includes(e) ? t.filter((t) => t !== e) : [...t, e];
+			return n.length ? vr.filter((e) => n.includes(e)) : t;
+		});
+	}
+	let [w, T] = (0, b.useState)("default"), [E, D] = (0, b.useState)(() => kr()), [k, A] = (0, b.useState)(""), [j, M] = (0, b.useState)("all"), [N, P] = (0, b.useState)("all"), [F, I] = (0, b.useState)(""), [L, R] = (0, b.useState)(""), [z, B] = (0, b.useState)("recent"), [V, H] = (0, b.useState)(0), U = (0, b.useCallback)(async () => {
 		c(!0), p("");
 		try {
 			let e = new URLSearchParams({
 				offset: "0",
 				limit: "100",
-				q: E,
-				marketScope: k,
-				briefingType: j,
-				dateFrom: N,
-				dateTo: F
+				q: k,
+				marketScope: j,
+				briefingType: N,
+				dateFrom: F,
+				dateTo: L
 			}), n = await l(`/api/briefings/index?${e}`);
-			t(n), Te("briefing", {
+			t(n), Ee("briefing", {
 				surface: "briefing",
 				viewId: "briefing",
 				reportKind: "",
@@ -9311,23 +9333,23 @@ function Vr() {
 			c(!1);
 		}
 	}, [
-		F,
+		L,
+		j,
 		k,
-		E,
-		N,
-		j
+		F,
+		N
 	]);
 	(0, b.useEffect)(() => {
-		V();
-	}, [V]), (0, b.useEffect)(() => {
+		U();
+	}, [U]), (0, b.useEffect)(() => {
 		let e = () => {
-			jr() && r(Ar());
+			Fr() && r(Pr());
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), (0, b.useEffect)(() => {
 		let e = (e) => {
 			let t = e.detail;
-			de(t, window.FolioAgent?.currentContext) && B((e) => e + 1);
+			fe(t, window.FolioAgent?.currentContext) && H((e) => e + 1);
 		};
 		return window.addEventListener(O, e), () => window.removeEventListener(O, e);
 	}, []), (0, b.useEffect)(() => {
@@ -9337,7 +9359,7 @@ function Vr() {
 			try {
 				let r = await l(`/api/briefings/${encodeURIComponent(t)}?includePersonal=true&marketScope=${encodeURIComponent(n)}`);
 				if (!e) return;
-				a(r), Te("briefing", {
+				a(r), Ee("briefing", {
 					surface: "briefing_reader",
 					viewId: "briefing",
 					reportKind: "briefing",
@@ -9351,7 +9373,7 @@ function Vr() {
 				e && c(!1);
 			}
 		}
-		return n ? t(n.date, n.scope) : (a(null), Te("briefing", {
+		return n ? t(n.date, n.scope) : (a(null), Ee("briefing", {
 			surface: "briefing",
 			viewId: "briefing",
 			reportKind: "",
@@ -9359,9 +9381,9 @@ function Vr() {
 		})), () => {
 			e = !1;
 		};
-	}, [n, z]);
-	async function H(e) {
-		let t = i?.date || n?.date || "", r = kr(i?.marketScope || n?.scope);
+	}, [n, V]);
+	async function W(e) {
+		let t = i?.date || n?.date || "", r = Nr(i?.marketScope || n?.scope);
 		if (t) {
 			_(e), h(e === "notion" ? "Notion에 내보내는 중..." : "Obsidian에 내보내는 중...");
 			try {
@@ -9374,13 +9396,13 @@ function Vr() {
 			}
 		}
 	}
-	async function U() {
-		let e = i?.date || n?.date || "", t = kr(i?.marketScope || n?.scope);
+	async function ee() {
+		let e = i?.date || n?.date || "", t = Nr(i?.marketScope || n?.scope);
 		if (e) {
 			_("overlay"), h("개인 해석을 생성하는 중...");
 			try {
 				let n = await o(`/api/briefings/${encodeURIComponent(e)}/personal-overlay?marketScope=${encodeURIComponent(t)}`, { marketScope: t });
-				zr(n) && await Br(n);
+				Ur(n) && await Wr(n);
 				let r = await l(`/api/briefings/${encodeURIComponent(e)}?includePersonal=true&marketScope=${encodeURIComponent(t)}`);
 				a(r), h("개인 해석을 생성했습니다.");
 			} catch (e) {
@@ -9390,12 +9412,12 @@ function Vr() {
 			}
 		}
 	}
-	async function W(e, t) {
-		if (e && window.confirm(`${e} ${vr[t]} 브리핑을 삭제할까요?`)) {
+	async function G(e, t) {
+		if (e && window.confirm(`${e} ${Sr[t]} 브리핑을 삭제할까요?`)) {
 			_(`delete-${e}-${t}`);
 			try {
 				let n = t === "both" || t === "all" ? "" : `?market=${encodeURIComponent(t)}`;
-				await fetch(`/api/briefings/${encodeURIComponent(e)}${n}`, { method: "DELETE" }), await V();
+				await fetch(`/api/briefings/${encodeURIComponent(e)}${n}`, { method: "DELETE" }), await U();
 			} catch (e) {
 				p(e instanceof Error ? e.message : "브리핑 삭제에 실패했습니다.");
 			} finally {
@@ -9403,36 +9425,36 @@ function Vr() {
 			}
 		}
 	}
-	async function G(e) {
+	async function K(e) {
 		d(!0), p("");
 		try {
 			let t = await o("/api/briefings", {
 				date: e || void 0,
 				strictDate: !!e,
-				marketScope: v,
-				briefingType: S
+				markets: v,
+				briefingType: w
 			});
-			if (zr(t)) {
-				let n = await Br(t), r = n.result?.date || n.result?.artifactId || e || "";
-				await V(), r && Mr(r, v);
+			if (Ur(t)) {
+				let n = await Wr(t), r = n.result?.date || n.result?.artifactId || e || "";
+				await U(), r && Ir(r, S);
 				return;
 			}
 			let n = t.date || e || "";
-			await V(), n && Mr(n, kr(t.marketScope || v));
+			await U(), n && Ir(n, Nr(t.marketScope || S));
 		} catch (e) {
 			p(e instanceof Error ? e.message : "브리핑 생성에 실패했습니다.");
 		} finally {
 			d(!1);
 		}
 	}
-	let K = e?.items || [], q = (0, b.useMemo)(() => {
-		let e = Ir(E);
-		return K.filter((t) => {
-			let n = Pr(t), r = Fr(t), i = t.briefingType || "default";
-			if (k === "aggregate") {
+	let te = e?.items || [], ne = (0, b.useMemo)(() => {
+		let e = Br(k);
+		return te.filter((t) => {
+			let n = Rr(t), r = zr(t), i = t.briefingType || "default";
+			if (j === "aggregate") {
 				if (r !== "all" && r !== "both") return !1;
-			} else if (k !== "all" && r !== k) return !1;
-			return j !== "all" && i !== j || N && n && n < N || F && n && n > F ? !1 : !e || Ir([
+			} else if (j !== "all" && r !== j) return !1;
+			return N !== "all" && i !== N || F && n && n < F || L && n && n > L ? !1 : !e || Br([
 				t.title,
 				n,
 				t.sessionDate,
@@ -9442,22 +9464,22 @@ function Vr() {
 			].filter(Boolean).join(" ")).includes(e);
 		});
 	}, [
-		F,
-		k,
-		E,
-		N,
+		L,
 		j,
-		K
-	]), ee = (0, b.useMemo)(() => {
-		let e = [...q].sort((e, t) => String(Pr(t) || t.generatedAt || "").localeCompare(String(Pr(e) || e.generatedAt || "")));
-		if (L === "recent") return e.length ? [{
-			label: `최근 브리핑 ${Math.min(e.length, Sr)}건`,
-			rows: e.slice(0, Sr)
+		k,
+		F,
+		N,
+		te
+	]), re = (0, b.useMemo)(() => {
+		let e = [...ne].sort((e, t) => String(Rr(t) || t.generatedAt || "").localeCompare(String(Rr(e) || e.generatedAt || "")));
+		if (z === "recent") return e.length ? [{
+			label: `최근 브리핑 ${Math.min(e.length, Er)}건`,
+			rows: e.slice(0, Er)
 		}] : [];
-		if (L === "month") {
+		if (z === "month") {
 			let t = /* @__PURE__ */ new Map();
 			for (let n of e) {
-				let e = wr(Pr(n));
+				let e = Or(Rr(n));
 				t.has(e) || t.set(e, []), t.get(e)?.push(n);
 			}
 			return Array.from(t.entries()).map(([e, t]) => ({
@@ -9470,69 +9492,69 @@ function Vr() {
 			"kr",
 			"both"
 		].map((t) => ({
-			label: `${vr[t]} 시장`,
-			rows: e.filter((e) => Fr(e) === t)
+			label: `${Sr[t]} 시장`,
+			rows: e.filter((e) => zr(e) === t)
 		})).filter((e) => e.rows.length > 0);
-	}, [L, q]), te = (0, b.useMemo)(() => Nr(i?.markdown || "", i?.title || "시장 브리핑"), [i?.markdown, i?.title]), ne = i?.title || te.title, re = i?.publicationDate || i?.date || n?.date || "";
+	}, [z, ne]), ie = (0, b.useMemo)(() => Lr(i?.markdown || "", i?.title || "시장 브리핑"), [i?.markdown, i?.title]), ae = i?.title || ie.title, oe = i?.publicationDate || i?.date || n?.date || "";
 	return n && i ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-briefing-route",
 		"data-briefing-route": !0,
 		children: [f && /* @__PURE__ */ (0, x.jsx)("p", {
 			className: "react-dashboard-error",
 			children: f
-		}), /* @__PURE__ */ (0, x.jsxs)(mn, {
+		}), /* @__PURE__ */ (0, x.jsxs)(hn, {
 			eyebrow: "DAILY BRIEFING",
-			title: ne,
-			meta: `${Cr(re)} KST 발행`,
+			title: ae,
+			meta: `${Dr(oe)} KST 발행`,
 			agentContext: {
 				surface: "briefing_reader",
 				viewId: "briefing",
 				reportKind: "briefing",
 				reportId: i.date || n.date,
-				marketScope: kr(i.marketScope || n.scope)
+				marketScope: Nr(i.marketScope || n.scope)
 			},
 			breadcrumb: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
-				onClick: () => Mr(),
+				onClick: () => Ir(),
 				children: "브리핑"
-			}), /* @__PURE__ */ (0, x.jsx)("span", { children: ne })] }),
-			onClose: () => Mr(),
+			}), /* @__PURE__ */ (0, x.jsx)("span", { children: ae })] }),
+			onClose: () => Ir(),
 			actionSlot: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
-				/* @__PURE__ */ (0, x.jsx)(Rt, {
+				/* @__PURE__ */ (0, x.jsx)(zt, {
 					title: "AI",
-					children: /* @__PURE__ */ (0, x.jsx)(zt, {
+					children: /* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "agent",
-						onClick: () => ke({
+						onClick: () => Ae({
 							surface: "briefing_reader",
 							reportKind: "briefing",
 							reportId: i.date || n.date,
-							marketScope: kr(i.marketScope || n.scope),
-							message: `${ne}의 핵심과 투자 판단 체크포인트를 요약해줘.`,
+							marketScope: Nr(i.marketScope || n.scope),
+							message: `${ae}의 핵심과 투자 판단 체크포인트를 요약해줘.`,
 							autoSubmit: !0
 						}),
 						children: "Agent에게 묻기"
 					})
 				}),
-				/* @__PURE__ */ (0, x.jsx)(Rt, {
+				/* @__PURE__ */ (0, x.jsx)(zt, {
 					title: "노트",
-					children: /* @__PURE__ */ (0, x.jsx)(zt, {
+					children: /* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "link",
 						disabled: g === "overlay",
-						onClick: U,
+						onClick: ee,
 						children: g === "overlay" ? "생성 중" : "내 노트와 연결"
 					})
 				}),
-				/* @__PURE__ */ (0, x.jsxs)(Rt, {
+				/* @__PURE__ */ (0, x.jsxs)(zt, {
 					title: "내보내기",
-					children: [/* @__PURE__ */ (0, x.jsx)(zt, {
+					children: [/* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "notion",
 						disabled: g === "notion",
-						onClick: () => H("notion"),
+						onClick: () => W("notion"),
 						children: g === "notion" ? "내보내는 중" : "Notion으로 내보내기"
-					}), /* @__PURE__ */ (0, x.jsx)(zt, {
+					}), /* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "obsidian",
 						disabled: g === "obsidian",
-						onClick: () => H("obsidian"),
+						onClick: () => W("obsidian"),
 						children: g === "obsidian" ? "내보내는 중" : "Obsidian으로 내보내기"
 					})]
 				}),
@@ -9541,21 +9563,21 @@ function Vr() {
 					children: m
 				})
 			] }),
-			noteIdentity: Rr(i.date || n.date, kr(i.marketScope || n.scope)),
-			noteLinkedTitle: ne,
-			noteOverlay: Ln(i.personalOverlay, i.canonicalRevision),
-			children: [/* @__PURE__ */ (0, x.jsx)(gr, { summary: i.changeSummary }), /* @__PURE__ */ (0, x.jsx)(Kt, {
-				markdown: te.body || i.markdown || "",
-				marketScope: kr(i.marketScope || n.scope),
+			noteIdentity: Hr(i.date || n.date, Nr(i.marketScope || n.scope)),
+			noteLinkedTitle: ae,
+			noteOverlay: Rn(i.personalOverlay, i.canonicalRevision),
+			children: [/* @__PURE__ */ (0, x.jsx)(_r, { summary: i.changeSummary }), /* @__PURE__ */ (0, x.jsx)(qt, {
+				markdown: ie.body || i.markdown || "",
+				marketScope: Nr(i.marketScope || n.scope),
 				briefing: i,
-				sourcePanelHtml: Lt().briefingSourcePanelHtml?.(i) || ""
+				sourcePanelHtml: Rt().briefingSourcePanelHtml?.(i) || ""
 			})]
 		})]
 	}) : /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-briefing-route",
 		"data-briefing-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Briefing",
 				title: "브리핑",
 				description: "수집된 최신 뉴스와 시장 데이터를 바탕으로 미국장과 한국장 흐름을 요약합니다."
@@ -9576,32 +9598,26 @@ function Vr() {
 								className: "brief-gen-field brief-gen-market-field",
 								children: /* @__PURE__ */ (0, x.jsxs)("div", {
 									className: "brief-market-segment",
-									role: "radiogroup",
-									"aria-label": "시장 범위",
-									"data-scope": v,
+									role: "group",
+									"aria-label": "생성할 시장",
+									"data-scope": S,
 									children: [/* @__PURE__ */ (0, x.jsx)("span", {
 										className: "brief-market-segment-title",
 										children: "시장"
-									}), [
-										["all", "종합"],
-										["us", "미국장"],
-										["kr", "한국장"],
-										["europe", "유럽장"],
-										["jp", "일본장"]
-									].map(([e, t]) => /* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("input", {
-										type: "radio",
-										name: "reactBriefingMarketScope",
+									}), vr.map((e) => /* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("input", {
+										type: "checkbox",
+										name: "reactBriefingMarkets",
 										value: e,
-										checked: v === e,
-										onChange: () => y(e)
-									}), /* @__PURE__ */ (0, x.jsx)("span", { children: t })] }, e))]
+										checked: v.includes(e),
+										onChange: () => C(e)
+									}), /* @__PURE__ */ (0, x.jsx)("span", { children: yr[e] })] }, e))]
 								})
 							}), /* @__PURE__ */ (0, x.jsxs)("label", {
 								className: "gen-option quality-option",
 								children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "유형" }), /* @__PURE__ */ (0, x.jsx)("select", {
-									value: S,
-									onChange: (e) => C(e.currentTarget.value),
-									children: Object.entries(xr).map(([e, t]) => /* @__PURE__ */ (0, x.jsx)("option", {
+									value: w,
+									onChange: (e) => T(e.currentTarget.value),
+									children: Object.entries(Tr).map(([e, t]) => /* @__PURE__ */ (0, x.jsx)("option", {
 										value: e,
 										children: t
 									}, e))
@@ -9614,7 +9630,7 @@ function Vr() {
 								/* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn clear icon-btn",
 									type: "button",
-									onClick: V,
+									onClick: U,
 									disabled: s,
 									"aria-label": "새로고침",
 									"data-tooltip": "새로고침",
@@ -9623,7 +9639,7 @@ function Vr() {
 								/* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: () => G(),
+									onClick: () => K(),
 									disabled: u,
 									children: u ? "생성 중" : "오늘 브리핑 생성"
 								}),
@@ -9633,15 +9649,15 @@ function Vr() {
 								}),
 								/* @__PURE__ */ (0, x.jsx)("input", {
 									type: "date",
-									value: w,
-									onChange: (e) => T(e.currentTarget.value),
+									value: E,
+									onChange: (e) => D(e.currentTarget.value),
 									"aria-label": "생성할 브리핑 날짜"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn clear",
 									type: "button",
-									onClick: () => G(w),
-									disabled: u || !w,
+									onClick: () => K(E),
+									disabled: u || !E,
 									children: "이 날짜로 생성"
 								})
 							]
@@ -9661,34 +9677,34 @@ function Vr() {
 					children: [
 						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "검색" }), /* @__PURE__ */ (0, x.jsx)("input", {
 							type: "search",
-							value: E,
-							onChange: (e) => D(e.currentTarget.value),
+							value: k,
+							onChange: (e) => A(e.currentTarget.value),
 							placeholder: "제목·요약·본문 검색"
 						})] }),
 						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "시작일" }), /* @__PURE__ */ (0, x.jsx)("input", {
 							type: "date",
-							value: N,
-							onChange: (e) => P(e.currentTarget.value)
+							value: F,
+							onChange: (e) => I(e.currentTarget.value)
 						})] }),
 						/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "종료일" }), /* @__PURE__ */ (0, x.jsx)("input", {
 							type: "date",
-							value: F,
-							onChange: (e) => I(e.currentTarget.value)
+							value: L,
+							onChange: (e) => R(e.currentTarget.value)
 						})] }),
 						/* @__PURE__ */ (0, x.jsx)("button", {
 							className: "filter-btn clear",
 							type: "button",
 							onClick: () => {
-								D(""), A("all"), M("all"), P(""), I(""), R("recent");
+								A(""), M("all"), P("all"), I(""), R(""), B("recent");
 							},
 							children: "초기화"
 						})
 					]
 				}), /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "briefing-archive-summary",
-					children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [q.length, "건"] }), /* @__PURE__ */ (0, x.jsx)("span", {
+					children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [ne.length, "건"] }), /* @__PURE__ */ (0, x.jsx)("span", {
 						"aria-live": "polite",
-						children: s ? "불러오는 중..." : E ? "검색 결과" : ""
+						children: s ? "불러오는 중..." : k ? "검색 결과" : ""
 					})]
 				})]
 			}),
@@ -9703,8 +9719,8 @@ function Vr() {
 							className: "report-feed-view-pill",
 							children: /* @__PURE__ */ (0, x.jsxs)("select", {
 								"aria-label": "브리핑 시장",
-								value: k,
-								onChange: (e) => A(e.currentTarget.value),
+								value: j,
+								onChange: (e) => M(e.currentTarget.value),
 								children: [
 									/* @__PURE__ */ (0, x.jsx)("option", {
 										value: "all",
@@ -9738,12 +9754,12 @@ function Vr() {
 							className: "report-feed-view-pill",
 							children: /* @__PURE__ */ (0, x.jsxs)("select", {
 								"aria-label": "브리핑 유형",
-								value: j,
-								onChange: (e) => M(e.currentTarget.value),
+								value: N,
+								onChange: (e) => P(e.currentTarget.value),
 								children: [/* @__PURE__ */ (0, x.jsx)("option", {
 									value: "all",
 									children: "전체"
-								}), Object.entries(xr).map(([e, t]) => /* @__PURE__ */ (0, x.jsx)("option", {
+								}), Object.entries(Tr).map(([e, t]) => /* @__PURE__ */ (0, x.jsx)("option", {
 									value: e,
 									children: t
 								}, e))]
@@ -9754,8 +9770,8 @@ function Vr() {
 							className: "report-feed-view-pill",
 							children: /* @__PURE__ */ (0, x.jsxs)("select", {
 								"aria-label": "브리핑 보기 방식",
-								value: L,
-								onChange: (e) => R(e.currentTarget.value),
+								value: z,
+								onChange: (e) => B(e.currentTarget.value),
 								children: [
 									/* @__PURE__ */ (0, x.jsx)("option", {
 										value: "recent",
@@ -9778,22 +9794,22 @@ function Vr() {
 			/* @__PURE__ */ (0, x.jsx)("section", {
 				className: "briefing-archive-feed",
 				"aria-label": "저장 브리핑",
-				children: ee.length ? ee.map((e) => /* @__PURE__ */ (0, x.jsxs)("div", {
+				children: re.length ? re.map((e) => /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "briefing-archive-date-group",
 					children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: e.label }), e.rows.map((e) => {
-						let t = Dr(e), n = g === `delete-${t.date}-${t.scope}`;
+						let t = jr(e), n = g === `delete-${t.date}-${t.scope}`;
 						return /* @__PURE__ */ (0, x.jsxs)("div", {
 							className: "briefing-archive-card-wrap",
 							children: [/* @__PURE__ */ (0, x.jsxs)("button", {
 								type: "button",
 								className: `briefing-archive-card is-${t.scope}`,
-								onClick: () => t.date && Mr(t.date, t.scope),
+								onClick: () => t.date && Ir(t.date, t.scope),
 								children: [
 									/* @__PURE__ */ (0, x.jsxs)("span", {
 										className: "briefing-archive-card-meta",
 										children: [/* @__PURE__ */ (0, x.jsx)("span", {
 											className: "briefing-archive-market",
-											children: yr[t.scope]
+											children: Cr[t.scope]
 										}), t.chips.map((e) => /* @__PURE__ */ (0, x.jsx)("span", {
 											className: "briefing-archive-chip",
 											children: e
@@ -9809,7 +9825,7 @@ function Vr() {
 								type: "button",
 								className: "briefing-archive-card-delete",
 								disabled: n,
-								onClick: () => W(t.date, t.scope),
+								onClick: () => G(t.date, t.scope),
 								"aria-label": `${t.date} 브리핑 삭제`,
 								"data-tooltip": "삭제",
 								"data-tooltip-pos": "bottom",
@@ -9838,7 +9854,7 @@ function Vr() {
 }
 //#endregion
 //#region src/app/routes.ts
-var Hr = [
+var Kr = [
 	{
 		id: "home",
 		label: "홈",
@@ -9889,23 +9905,23 @@ var Hr = [
 		label: "설정",
 		group: "system"
 	}
-], Ur = Hr.filter((e) => e.visibleInNav !== !1), Wr = "home";
-function Gr(e) {
+], qr = Kr.filter((e) => e.visibleInNav !== !1), Jr = "home";
+function Yr(e) {
 	let t = e.replace(/^#\/?/, "").split("/")[0];
-	return Hr.some((e) => e.id === t) ? t : Wr;
+	return Kr.some((e) => e.id === t) ? t : Jr;
 }
-function Kr(e) {
+function Xr(e) {
 	return `#/${e}`;
 }
-function qr(e) {
-	return Hr.find((t) => t.id === e) ?? Hr[0];
+function Zr(e) {
+	return Kr.find((t) => t.id === e) ?? Kr[0];
 }
 //#endregion
 //#region src/app/CommandPalette.tsx
-function Jr(e) {
+function Qr(e) {
 	return e === "home" ? "Agent Home" : e === "dashboard" ? "위젯과 하단 대시보드" : e === "briefing" ? "저장 브리핑과 생성" : e === "rss" ? "RSS 수집 자료" : e === "market-memory" ? "중기 시장 내러티브" : e === "analysis" ? "기업 분석 보고서" : e === "deep-research" ? "딥 리서치 보고서" : e === "watchlist" ? "워치리스트" : "설정";
 }
-var Yr = [
+var $r = [
 	"us",
 	"kr",
 	"europe",
@@ -9913,13 +9929,13 @@ var Yr = [
 	"all",
 	"both"
 ];
-function Xr(e) {
-	return e && Yr.includes(e) ? e : "both";
+function ei(e) {
+	return e && $r.includes(e) ? e : "both";
 }
-function Zr(e) {
+function ti(e) {
 	return e.reportDate || e.date || "";
 }
-function Qr() {
+function ni() {
 	let [e, t] = (0, b.useState)(!1), [n, r] = (0, b.useState)(""), [i, a] = (0, b.useState)(0), [o, s] = (0, b.useState)(null), c = (0, b.useRef)(null), u = (0, b.useRef)(null), d = (0, b.useRef)(null);
 	(0, b.useEffect)(() => {
 		if (!e || o) return;
@@ -9939,17 +9955,17 @@ function Qr() {
 		};
 	}, [e]);
 	let f = (0, b.useMemo)(() => {
-		let e = Ur.map((e) => ({
+		let e = qr.map((e) => ({
 			id: `route:${e.id}`,
 			title: e.label,
-			subtitle: Jr(e.id),
+			subtitle: Qr(e.id),
 			type: "화면",
 			qa: e.id === "deep-research" ? "command-deep-research" : void 0,
 			run: () => {
-				window.location.hash = Kr(e.id);
+				window.location.hash = Xr(e.id);
 			}
 		})), t = (o?.briefings || []).slice(0, 12).map((e) => {
-			let t = Zr(e), n = Xr(e.marketScope || e.scope);
+			let t = ti(e), n = ei(e.marketScope || e.scope);
 			return {
 				id: `briefing:${t}:${n}`,
 				title: e.title || `${t} 시장 브리핑`,
@@ -9966,7 +9982,7 @@ function Qr() {
 				title: "AI Agent 열기",
 				subtitle: "현재 화면 컨텍스트로 Agent Dock을 엽니다.",
 				type: "액션",
-				run: () => ke({ surface: "command_palette" })
+				run: () => Ae({ surface: "command_palette" })
 			},
 			...e,
 			...t
@@ -10100,13 +10116,13 @@ function Qr() {
 }
 //#endregion
 //#region src/app/reportReader/AnalysisCharts.tsx
-var $r = [
+var ri = [
 	"var(--folio-chart-1)",
 	"var(--folio-chart-2)",
 	"var(--folio-chart-3)",
 	"var(--folio-chart-4)",
 	"var(--folio-chart-5)"
-], ei = {
+], ii = {
 	revenue: "Revenue",
 	grossProfit: "Gross Profit",
 	operatingIncome: "Operating Income",
@@ -10119,26 +10135,26 @@ var $r = [
 	netMargin: "Net Margin",
 	fcfMargin: "FCF Margin"
 };
-function ti(e) {
+function ai(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : null;
 }
-function ni(e) {
-	return Array.isArray(e) ? e.map(ti) : [];
+function oi(e) {
+	return Array.isArray(e) ? e.map(ai) : [];
 }
-function ri(e) {
+function si(e) {
 	let t = String(e || "USD").toUpperCase();
 	return t === "KRW" || t === "KRX" ? "₩" : t === "JPY" ? "¥" : t === "EUR" ? "€" : t === "GBP" ? "£" : "$";
 }
-function ii(e, t = "plain", n) {
+function ci(e, t = "plain", n) {
 	if (e === null) return "-";
 	if (t === "percent") return `${(e * 100).toFixed(1)}%`;
 	if (t === "money") {
-		let t = ri(n), r = Math.abs(e);
+		let t = si(n), r = Math.abs(e);
 		return r >= 0xe8d4a51000 ? `${t}${(e / 0xe8d4a51000).toFixed(1)}T` : r >= 1e9 ? `${t}${(e / 1e9).toFixed(1)}B` : r >= 1e6 ? `${t}${(e / 1e6).toFixed(1)}M` : `${t}${e.toLocaleString(void 0, { maximumFractionDigits: 2 })}`;
 	}
 	return e.toFixed(Math.abs(e) >= 100 ? 0 : 1);
 }
-function ai(e) {
+function li(e) {
 	return ({
 		performance: [
 			["revenue", "money"],
@@ -10157,12 +10173,12 @@ function ai(e) {
 		]
 	}[String(e.kind || e.id || "")] || []).map(([t, n]) => ({
 		key: t,
-		label: ei[t] || t,
-		values: ni(e[t]),
+		label: ii[t] || t,
+		values: oi(e[t]),
 		kind: n
 	})).filter((e) => e.values.some((e) => e !== null));
 }
-function oi(e) {
+function ui(e) {
 	let t = e.filter((e) => e !== null);
 	if (!t.length) return {
 		min: 0,
@@ -10177,11 +10193,11 @@ function oi(e) {
 		max: r
 	};
 }
-function si(e, t, n, r = 16, i = 150) {
+function di(e, t, n, r = 16, i = 150) {
 	return r + (1 - (e - t) / (n - t)) * i;
 }
-function ci({ chart: e, series: t, onPoint: n, onLeave: r }) {
-	let i = Array.isArray(e.years) ? e.years : [], { min: a, max: o } = oi(t.flatMap((e) => e.values)), s = 464 / Math.max(1, i.length), c = Math.max(5, Math.min(18, (s - 10) / Math.max(1, t.length))), l = si(0, a, o, 18, 148);
+function fi({ chart: e, series: t, onPoint: n, onLeave: r }) {
+	let i = Array.isArray(e.years) ? e.years : [], { min: a, max: o } = ui(t.flatMap((e) => e.values)), s = 464 / Math.max(1, i.length), c = Math.max(5, Math.min(18, (s - 10) / Math.max(1, t.length))), l = di(0, a, o, 18, 148);
 	return /* @__PURE__ */ (0, x.jsxs)("svg", {
 		className: "analysis-chart-svg",
 		viewBox: "0 0 520 220",
@@ -10199,10 +10215,10 @@ function ci({ chart: e, series: t, onPoint: n, onLeave: r }) {
 			i.map((i, u) => /* @__PURE__ */ (0, x.jsxs)("g", { children: [t.map((t, d) => {
 				let f = t.values[u];
 				if (f === null) return null;
-				let p = si(f, a, o, 18, 148), m = Math.max(2, Math.abs(l - p)), h = 36 + u * s + 8 + d * c, g = {
+				let p = di(f, a, o, 18, 148), m = Math.max(2, Math.abs(l - p)), h = 36 + u * s + 8 + d * c, g = {
 					label: i,
 					series: t.label,
-					value: ii(f, t.kind, e.currency),
+					value: ci(f, t.kind, e.currency),
 					x: h + c / 2,
 					y: Math.min(p, l)
 				};
@@ -10218,7 +10234,7 @@ function ci({ chart: e, series: t, onPoint: n, onLeave: r }) {
 					width: c - 2,
 					height: m,
 					rx: "2",
-					fill: $r[d % $r.length]
+					fill: ri[d % ri.length]
 				}, `${t.key}-${i}`);
 			}), /* @__PURE__ */ (0, x.jsx)("text", {
 				x: 36 + u * s + s / 2,
@@ -10229,18 +10245,18 @@ function ci({ chart: e, series: t, onPoint: n, onLeave: r }) {
 			/* @__PURE__ */ (0, x.jsx)("text", {
 				x: 36,
 				y: 14,
-				children: ii(o, t[0]?.kind, e.currency)
+				children: ci(o, t[0]?.kind, e.currency)
 			}),
 			/* @__PURE__ */ (0, x.jsx)("text", {
 				x: 36,
 				y: 180,
-				children: ii(a, t[0]?.kind, e.currency)
+				children: ci(a, t[0]?.kind, e.currency)
 			})
 		]
 	});
 }
-function li({ chart: e, series: t, onPoint: n, onLeave: r }) {
-	let i = Array.isArray(e.years) ? e.years : [], { min: a, max: o } = oi(t.flatMap((e) => e.values)), s = 452 / Math.max(1, i.length - 1);
+function pi({ chart: e, series: t, onPoint: n, onLeave: r }) {
+	let i = Array.isArray(e.years) ? e.years : [], { min: a, max: o } = ui(t.flatMap((e) => e.values)), s = 452 / Math.max(1, i.length - 1);
 	return /* @__PURE__ */ (0, x.jsxs)("svg", {
 		className: "analysis-chart-svg",
 		viewBox: "0 0 520 220",
@@ -10263,20 +10279,20 @@ function li({ chart: e, series: t, onPoint: n, onLeave: r }) {
 				}, e);
 			}),
 			t.map((t, c) => {
-				let l = t.values.map((e, t) => e === null ? null : `${36 + t * s},${si(e, a, o, 18, 148)}`).filter(Boolean).join(" ");
+				let l = t.values.map((e, t) => e === null ? null : `${36 + t * s},${di(e, a, o, 18, 148)}`).filter(Boolean).join(" ");
 				return /* @__PURE__ */ (0, x.jsxs)("g", { children: [/* @__PURE__ */ (0, x.jsx)("polyline", {
 					points: l,
 					fill: "none",
-					stroke: $r[c % $r.length],
+					stroke: ri[c % ri.length],
 					strokeWidth: "3",
 					strokeLinejoin: "round",
 					strokeLinecap: "round"
 				}), t.values.map((l, u) => {
 					if (l === null) return null;
-					let d = 36 + u * s, f = si(l, a, o, 18, 148), p = i[u] || `${u + 1}`, m = {
+					let d = 36 + u * s, f = di(l, a, o, 18, 148), p = i[u] || `${u + 1}`, m = {
 						label: p,
 						series: t.label,
-						value: ii(l, t.kind, e.currency),
+						value: ci(l, t.kind, e.currency),
 						x: d,
 						y: f
 					};
@@ -10284,7 +10300,7 @@ function li({ chart: e, series: t, onPoint: n, onLeave: r }) {
 						"aria-label": `${p} ${t.label} ${m.value}`,
 						cx: d,
 						cy: f,
-						fill: $r[c % $r.length],
+						fill: ri[c % ri.length],
 						onBlur: r,
 						onFocus: () => n(m),
 						onMouseEnter: () => n(m),
@@ -10303,22 +10319,22 @@ function li({ chart: e, series: t, onPoint: n, onLeave: r }) {
 			/* @__PURE__ */ (0, x.jsx)("text", {
 				x: 36,
 				y: 14,
-				children: ii(o, t[0]?.kind || "percent", e.currency)
+				children: ci(o, t[0]?.kind || "percent", e.currency)
 			}),
 			/* @__PURE__ */ (0, x.jsx)("text", {
 				x: 36,
 				y: 180,
-				children: ii(a, t[0]?.kind || "percent", e.currency)
+				children: ci(a, t[0]?.kind || "percent", e.currency)
 			})
 		]
 	});
 }
-function ui({ chart: e, onPoint: t, onLeave: n }) {
-	let r = Array.isArray(e.scenarios) ? e.scenarios : [], { max: i } = oi(r.map((e) => ti(e.perShare ?? e.price))), a = ti(e.currentPrice);
+function mi({ chart: e, onPoint: t, onLeave: n }) {
+	let r = Array.isArray(e.scenarios) ? e.scenarios : [], { max: i } = ui(r.map((e) => ai(e.perShare ?? e.price))), a = ai(e.currentPrice);
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "analysis-scenario-bars",
 		children: [r.map((r, a) => {
-			let o = ti(r.perShare ?? r.price), s = o === null || i <= 0 ? 0 : Math.max(4, Math.min(100, o / i * 100)), c = String(r.name || r.label || `Scenario ${a + 1}`), l = ii(o, "money", e.currency);
+			let o = ai(r.perShare ?? r.price), s = o === null || i <= 0 ? 0 : Math.max(4, Math.min(100, o / i * 100)), c = String(r.name || r.label || `Scenario ${a + 1}`), l = ci(o, "money", e.currency);
 			return /* @__PURE__ */ (0, x.jsxs)("div", {
 				"aria-label": `${c} ${l}`,
 				className: "analysis-scenario-row",
@@ -10337,25 +10353,25 @@ function ui({ chart: e, onPoint: t, onLeave: n }) {
 					/* @__PURE__ */ (0, x.jsx)("span", { children: c }),
 					/* @__PURE__ */ (0, x.jsx)("div", { children: /* @__PURE__ */ (0, x.jsx)("i", { style: {
 						width: `${s}%`,
-						background: $r[a % $r.length]
+						background: ri[a % ri.length]
 					} }) }),
 					/* @__PURE__ */ (0, x.jsx)("strong", { children: l })
 				]
 			}, c);
 		}), a !== null && /* @__PURE__ */ (0, x.jsxs)("p", {
 			className: "analysis-chart-note",
-			children: ["현재가: ", ii(a, "money", e.currency)]
+			children: ["현재가: ", ci(a, "money", e.currency)]
 		})]
 	});
 }
-function di({ chart: e, onPoint: t, onLeave: n }) {
+function hi({ chart: e, onPoint: t, onLeave: n }) {
 	let r = Array.isArray(e.labels) ? e.labels : [], i = Object.entries(e.series || {}).map(([e, t]) => ({
 		key: e,
 		label: e,
 		values: Array.isArray(t) ? t.map((e) => typeof e == "number" ? e / 100 : null) : [],
 		kind: "percent"
 	}));
-	return /* @__PURE__ */ (0, x.jsx)(li, {
+	return /* @__PURE__ */ (0, x.jsx)(pi, {
 		chart: {
 			...e,
 			years: r
@@ -10365,14 +10381,14 @@ function di({ chart: e, onPoint: t, onLeave: n }) {
 		onLeave: n
 	});
 }
-function fi(e) {
+function gi(e) {
 	return /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "analysis-chart-legend",
-		children: e.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("span", { children: [/* @__PURE__ */ (0, x.jsx)("i", { style: { background: $r[t % $r.length] } }), e.label] }, e.key))
+		children: e.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("span", { children: [/* @__PURE__ */ (0, x.jsx)("i", { style: { background: ri[t % ri.length] } }), e.label] }, e.key))
 	});
 }
-function pi({ chart: e }) {
-	let [t, n] = (0, b.useState)(null), r = ai(e), i = String(e.kind || e.id || ""), a = t?.x === void 0 ? void 0 : {
+function _i({ chart: e }) {
+	let [t, n] = (0, b.useState)(null), r = li(e), i = String(e.kind || e.id || ""), a = t?.x === void 0 ? void 0 : {
 		left: `${Math.max(7, Math.min(93, t.x / 520 * 100))}%`,
 		top: `${Math.max(10, t.y || 10)}px`
 	};
@@ -10386,24 +10402,24 @@ function pi({ chart: e }) {
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "analysis-chart-plot",
 				children: [
-					i === "margins" && r.length ? /* @__PURE__ */ (0, x.jsx)(li, {
+					i === "margins" && r.length ? /* @__PURE__ */ (0, x.jsx)(pi, {
 						chart: e,
 						series: r,
 						onPoint: n,
 						onLeave: () => n(null)
 					}) : null,
-					(i === "performance" || i === "cashflow") && r.length ? /* @__PURE__ */ (0, x.jsx)(ci, {
+					(i === "performance" || i === "cashflow") && r.length ? /* @__PURE__ */ (0, x.jsx)(fi, {
 						chart: e,
 						series: r,
 						onPoint: n,
 						onLeave: () => n(null)
 					}) : null,
-					i === "dcf" || i === "scenario_price" ? /* @__PURE__ */ (0, x.jsx)(ui, {
+					i === "dcf" || i === "scenario_price" ? /* @__PURE__ */ (0, x.jsx)(mi, {
 						chart: e,
 						onPoint: n,
 						onLeave: () => n(null)
 					}) : null,
-					i === "price_return" ? /* @__PURE__ */ (0, x.jsx)(di, {
+					i === "price_return" ? /* @__PURE__ */ (0, x.jsx)(hi, {
 						chart: e,
 						onPoint: n,
 						onLeave: () => n(null)
@@ -10427,11 +10443,11 @@ function pi({ chart: e }) {
 					})
 				]
 			}),
-			r.length > 0 && fi(r)
+			r.length > 0 && gi(r)
 		]
 	});
 }
-function mi({ payload: e, chartIds: t, heading: n = "기업 분석 시각화", intro: r = "저장된 공식 재무 데이터와 시장 데이터를 기반으로 생성된 참고 차트입니다.", compact: i = !1 }) {
+function vi({ payload: e, chartIds: t, heading: n = "기업 분석 시각화", intro: r = "저장된 공식 재무 데이터와 시장 데이터를 기반으로 생성된 참고 차트입니다.", compact: i = !1 }) {
 	let a = t ? new Set(t) : null, o = (Array.isArray(e?.charts) ? e.charts : []).filter((e) => !a || a.has(String(e.id || e.kind || "")));
 	return !e?.available || !o.length ? null : /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: `analysis-charts-panel analysis-charts-inline${i ? " compact" : ""}`,
@@ -10448,13 +10464,13 @@ function mi({ payload: e, chartIds: t, heading: n = "기업 분석 시각화", i
 			] })
 		}), /* @__PURE__ */ (0, x.jsx)("div", {
 			className: "analysis-chart-grid",
-			children: o.map((e, t) => /* @__PURE__ */ (0, x.jsx)(pi, { chart: e }, e.id || `${e.title || "chart"}-${t}`))
+			children: o.map((e, t) => /* @__PURE__ */ (0, x.jsx)(_i, { chart: e }, e.id || `${e.title || "chart"}-${t}`))
 		})]
 	});
 }
 //#endregion
 //#region src/app/reportReader/CompanyAnalysisBody.tsx
-var hi = [
+var yi = [
 	{
 		ids: ["performance", "margins"],
 		patterns: [/실적|재무|수익성|숫자|손익/i],
@@ -10476,7 +10492,7 @@ var hi = [
 		fallbackIndex: 0
 	}
 ];
-function gi(e = "") {
+function bi(e = "") {
 	let t = e.replace(/\r\n/g, "\n").trim();
 	if (!t) return [];
 	let n = Array.from(t.matchAll(/^##\s+(.+)$/gm));
@@ -10503,24 +10519,24 @@ function gi(e = "") {
 		});
 	}), r;
 }
-function _i(e) {
+function xi(e) {
 	return new Set((Array.isArray(e?.charts) ? e.charts : []).map((e) => String(e?.id || e?.kind || "")).filter(Boolean));
 }
-function vi(e, t, n, r = /* @__PURE__ */ new Set()) {
-	let i = _i(n), a = e.title, o = [];
-	for (let e of hi) if (e.patterns.some((e) => e.test(a)) || e.fallbackIndex === t) for (let t of e.ids) i.has(t) && !r.has(t) && o.push(t);
+function Si(e, t, n, r = /* @__PURE__ */ new Set()) {
+	let i = xi(n), a = e.title, o = [];
+	for (let e of yi) if (e.patterns.some((e) => e.test(a)) || e.fallbackIndex === t) for (let t of e.ids) i.has(t) && !r.has(t) && o.push(t);
 	return o;
 }
-function yi(e, t = /* @__PURE__ */ new Set()) {
-	return Array.from(_i(e)).filter((e) => !t.has(e));
+function Ci(e, t = /* @__PURE__ */ new Set()) {
+	return Array.from(xi(e)).filter((e) => !t.has(e));
 }
-function bi({ markdown: e, charts: t }) {
-	let n = gi(e), r = /* @__PURE__ */ new Set();
+function wi({ markdown: e, charts: t }) {
+	let n = bi(e), r = /* @__PURE__ */ new Set();
 	return n.length ? /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [n.map((e, n) => {
-		let i = vi(e, n, t, r);
+		let i = Si(e, n, t, r);
 		return i.forEach((e) => r.add(e)), /* @__PURE__ */ (0, x.jsxs)("div", {
 			className: "company-analysis-section",
-			children: [/* @__PURE__ */ (0, x.jsx)(Kt, { markdown: e.markdown }), i.length > 0 && /* @__PURE__ */ (0, x.jsx)(mi, {
+			children: [/* @__PURE__ */ (0, x.jsx)(qt, { markdown: e.markdown }), i.length > 0 && /* @__PURE__ */ (0, x.jsx)(vi, {
 				payload: t,
 				chartIds: i,
 				heading: "관련 시각화",
@@ -10528,17 +10544,17 @@ function bi({ markdown: e, charts: t }) {
 				compact: !0
 			})]
 		}, e.key);
-	}), yi(t, r).length > 0 && /* @__PURE__ */ (0, x.jsx)(mi, {
+	}), Ci(t, r).length > 0 && /* @__PURE__ */ (0, x.jsx)(vi, {
 		payload: t,
-		chartIds: yi(t, r),
+		chartIds: Ci(t, r),
 		heading: "추가 시각화",
 		intro: "본문 섹션에 직접 매칭되지 않은 보조 차트입니다.",
 		compact: !0
-	})] }) : /* @__PURE__ */ (0, x.jsx)(mi, { payload: t });
+	})] }) : /* @__PURE__ */ (0, x.jsx)(vi, { payload: t });
 }
 //#endregion
 //#region src/app/CompanyAnalysisRoute.tsx
-var xi = [{
+var Ti = [{
 	value: "beginner",
 	label: "기본",
 	description: "쉽게 설명"
@@ -10546,21 +10562,21 @@ var xi = [{
 	value: "advanced",
 	label: "심화",
 	description: "정밀 분석"
-}], Si = 20;
-function Ci(e) {
+}], Ei = 20;
+function Di(e) {
 	return new Promise((t) => window.setTimeout(t, e));
 }
-function wi(e) {
+function Oi(e) {
 	let t = e;
 	return !!(t?.id && f(t.status));
 }
-async function Ti(e) {
+async function ki(e) {
 	let t = e;
-	for (; f(t.status);) await Ci(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
+	for (; f(t.status);) await Di(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
 	if (t.status !== "done") throw Error(t.message || t.error || "기업 분석 생성에 실패했습니다.");
 	return t;
 }
-function Ei(e = "", t = "기업 분석") {
+function Ai(e = "", t = "기업 분석") {
 	let n = e.replace(/\r\n/g, "\n").split("\n"), r = n.findIndex((e) => e.trim());
 	if (r < 0) return {
 		title: t,
@@ -10575,94 +10591,94 @@ function Ei(e = "", t = "기업 분석") {
 		body: e
 	};
 }
-function Di(e) {
+function ji(e) {
 	return String(e.company?.ticker || e.query || e.company?.name || "").trim().toUpperCase();
 }
-function Oi(e) {
-	return String(e.company?.name || e.query || Di(e) || "").trim();
+function Mi(e) {
+	return String(e.company?.name || e.query || ji(e) || "").trim();
 }
-function ki(e) {
-	let t = Di(e), n = Oi(e);
+function Ni(e) {
+	let t = ji(e), n = Mi(e);
 	return t && n && t !== n ? `${t} · ${n}` : n || t || "기업 분석";
 }
-function Ai(e) {
-	return Ei(String(e.markdown || ""), "").title.trim() || String(e.headline || "").trim() || ki(e);
+function Pi(e) {
+	return Ai(String(e.markdown || ""), "").title.trim() || String(e.headline || "").trim() || Ni(e);
 }
-function ji(e) {
+function Fi(e) {
 	if (!e) return "미상";
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? e : t.toLocaleDateString("ko-KR");
 }
-function Mi(e) {
-	return xi.find((t) => t.value === e)?.label || "";
+function Ii(e) {
+	return Ti.find((t) => t.value === e)?.label || "";
 }
-function Ni(e) {
+function Li(e) {
 	return e === "high" ? "높음" : e === "medium" ? "중간" : e === "low" ? "낮음" : e || "확인 필요";
 }
-function Pi(e) {
+function Ri(e) {
 	let t = e?.dataGaps;
 	return t ? Array.isArray(t) ? t : Array.isArray(t.gaps) ? t.gaps : [] : [];
 }
-function Fi(e) {
+function zi(e) {
 	let t = /* @__PURE__ */ new Set();
 	return e.filter((e) => {
 		let n = [
-			Z(e.field),
-			Z(e.label),
-			Z(e.category),
-			Z(e.message || e.suggestedAction)
+			Hi(e.field),
+			Hi(e.label),
+			Hi(e.category),
+			Hi(e.message || e.suggestedAction)
 		].join("|");
 		return !t.has(n) && (t.add(n), !0);
 	});
 }
-function Ii(e) {
+function Bi(e) {
 	let t = {
 		high: 0,
 		medium: 1,
 		low: 2
 	};
-	return Fi(Pi(e).filter((e) => e.status !== "resolved").sort((e, n) => (t[e.severity || ""] ?? 9) - (t[n.severity || ""] ?? 9)));
+	return zi(Ri(e).filter((e) => e.status !== "resolved").sort((e, n) => (t[e.severity || ""] ?? 9) - (t[n.severity || ""] ?? 9)));
 }
-function Li(e) {
+function Vi(e) {
 	if (!e) return "월 미상";
 	let t = new Date(e);
 	if (!Number.isNaN(t.getTime())) return `${t.getFullYear()}.${String(t.getMonth() + 1).padStart(2, "0")}`;
 	let n = String(e).match(/^(\d{4})[-.](\d{1,2})/);
 	return n ? `${n[1]}.${String(n[2]).padStart(2, "0")}` : "월 미상";
 }
-function Z(e) {
+function Hi(e) {
 	return String(e || "").trim().toLowerCase();
 }
-function Ri(e) {
+function Ui(e) {
 	return [
 		e.source,
 		e.date,
 		e.type
 	].filter(Boolean).join(" · ");
 }
-function zi(e) {
+function Wi(e) {
 	return e.title || e.url || e.path || "자료";
 }
-function Bi(e) {
+function Gi(e) {
 	let t = String(e.markdown || "");
 	return e.generation?.webSearch ? t.trim() : t.split(/\n(?=#{1,3}\s*(?:8\.\s*)?(?:Sources Used|사용 자료)\b)/i)[0].trim();
 }
-function Vi(e) {
+function Ki(e) {
 	window.location.hash = e ? `#/analysis/${encodeURIComponent(e)}` : "#/analysis";
 }
-function Hi() {
+function qi() {
 	let e = window.location.hash.match(/^#\/?analysis\/(.+)$/);
 	return e ? decodeURIComponent(e[1]) : "";
 }
-function Ui() {
+function Ji() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "analysis";
 }
-function Wi() {
-	let [e, t] = (0, b.useState)([]), [n, r] = (0, b.useState)(null), [i, a] = (0, b.useState)(() => Hi()), [s, c] = (0, b.useState)(""), [u, d] = (0, b.useState)("beginner"), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)("recent"), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), [E, D] = (0, b.useState)(""), [k, A] = (0, b.useState)(0), j = (0, b.useCallback)(async () => {
+function Yi() {
+	let [e, t] = (0, b.useState)([]), [n, r] = (0, b.useState)(null), [i, a] = (0, b.useState)(() => qi()), [s, c] = (0, b.useState)(""), [u, d] = (0, b.useState)("beginner"), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)("recent"), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), [E, D] = (0, b.useState)(""), [k, A] = (0, b.useState)(0), j = (0, b.useCallback)(async () => {
 		_(!0), T("");
 		try {
 			let e = await l("/api/analysis-reports");
-			t(Array.isArray(e) ? e : []), Te("analysis", {
+			t(Array.isArray(e) ? e : []), Ee("analysis", {
 				surface: "analysis",
 				viewId: "analysis",
 				reportKind: "",
@@ -10678,13 +10694,13 @@ function Wi() {
 		j();
 	}, [j]), (0, b.useEffect)(() => {
 		let e = () => {
-			Ui() && a(Hi());
+			Ji() && a(qi());
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), (0, b.useEffect)(() => {
 		let e = (e) => {
 			let t = e.detail;
-			de(t, window.FolioAgent?.currentContext) && A((e) => e + 1);
+			fe(t, window.FolioAgent?.currentContext) && A((e) => e + 1);
 		};
 		return window.addEventListener(O, e), () => window.removeEventListener(O, e);
 	}, []), (0, b.useEffect)(() => {
@@ -10694,12 +10710,12 @@ function Wi() {
 			try {
 				let n = await l(`/api/analysis-reports/${encodeURIComponent(t)}?includePersonal=true`);
 				if (!e) return;
-				r(n), Te("analysis", {
+				r(n), Ee("analysis", {
 					surface: "analysis_reader",
 					viewId: "analysis",
 					reportKind: "company_analysis",
 					reportId: n.id || t,
-					ticker: Di(n)
+					ticker: ji(n)
 				});
 			} catch (t) {
 				if (!e) return;
@@ -10708,7 +10724,7 @@ function Wi() {
 				e && _(!1);
 			}
 		}
-		return i ? t(i) : (r(null), Te("analysis", {
+		return i ? t(i) : (r(null), Ee("analysis", {
 			surface: "analysis",
 			viewId: "analysis",
 			reportKind: "",
@@ -10727,12 +10743,12 @@ function Wi() {
 					q: t,
 					analysisStyle: u
 				}), n = await l(`/api/analyze?${e.toString()}`), i;
-				if (wi(n)) {
-					let e = await Ti(n), t = e.result?.reportId || e.result?.artifactId || "";
+				if (Oi(n)) {
+					let e = await ki(n), t = e.result?.reportId || e.result?.artifactId || "";
 					if (!t) throw Error("생성된 보고서 ID를 확인하지 못했습니다.");
 					i = await l(`/api/analysis-reports/${encodeURIComponent(t)}?includePersonal=true`);
 				} else i = n;
-				await j(), D("기업 분석 보고서를 생성하고 자동 저장했습니다."), r(i), i.id && Vi(i.id);
+				await j(), D("기업 분석 보고서를 생성하고 자동 저장했습니다."), r(i), i.id && Ki(i.id);
 			} catch (e) {
 				T(e instanceof Error ? e.message : "기업 분석 생성에 실패했습니다."), D("");
 			} finally {
@@ -10741,15 +10757,15 @@ function Wi() {
 		}
 	}
 	async function N(e) {
-		e && Vi(e);
+		e && Ki(e);
 	}
 	async function P(e) {
-		if (e.id && window.confirm(`${ki(e)} 보고서를 삭제할까요?`)) {
+		if (e.id && window.confirm(`${Ni(e)} 보고서를 삭제할까요?`)) {
 			C(`delete-${e.id}`), T("");
 			try {
 				let t = await fetch(`/api/analysis-reports/${encodeURIComponent(e.id)}`, { method: "DELETE" });
 				if (!t.ok) throw Error(`삭제 실패: ${t.status}`);
-				n?.id === e.id && Vi(), await j(), D("저장된 기업 분석 보고서를 삭제했습니다.");
+				n?.id === e.id && Ki(), await j(), D("저장된 기업 분석 보고서를 삭제했습니다.");
 			} catch (e) {
 				T(e instanceof Error ? e.message : "보고서 삭제에 실패했습니다.");
 			} finally {
@@ -10775,7 +10791,7 @@ function Wi() {
 			C("overlay"), D("내 노트와 연결하는 중...");
 			try {
 				let e = await o(`/api/analysis-reports/${encodeURIComponent(n.id)}/personal-overlay`, {});
-				wi(e) && await Ti(e);
+				Oi(e) && await ki(e);
 				let t = await l(`/api/analysis-reports/${encodeURIComponent(n.id)}?includePersonal=true`);
 				r(t), D("내 노트와 연결했습니다.");
 			} catch (e) {
@@ -10786,27 +10802,27 @@ function Wi() {
 		}
 	}
 	let L = (0, b.useMemo)(() => {
-		let t = Z(f);
-		return t ? e.filter((e) => Z([
-			Di(e),
-			Oi(e),
-			ki(e),
+		let t = Hi(f);
+		return t ? e.filter((e) => Hi([
+			ji(e),
+			Mi(e),
+			Ni(e),
 			e.headline,
 			e.mode,
 			e.generatedAt,
-			ji(e.generatedAt)
+			Fi(e.generatedAt)
 		].filter(Boolean).join(" ")).includes(t)) : e;
 	}, [f, e]), R = (0, b.useMemo)(() => {
 		let e = [...L].sort((e, t) => String(t.generatedAt || "").localeCompare(String(e.generatedAt || "")));
 		if (m === "recent") return e.length ? [{
 			key: "recent",
-			label: `최근 보고서 ${Math.min(e.length, Si)}건`,
-			rows: e.slice(0, Si)
+			label: `최근 보고서 ${Math.min(e.length, Ei)}건`,
+			rows: e.slice(0, Ei)
 		}] : [];
 		if (m === "month") {
 			let t = /* @__PURE__ */ new Map();
 			for (let n of e) {
-				let e = Li(n.generatedAt);
+				let e = Vi(n.generatedAt);
 				t.has(e) || t.set(e, []), t.get(e)?.push(n);
 			}
 			return Array.from(t.entries()).map(([e, t]) => ({
@@ -10817,85 +10833,85 @@ function Wi() {
 		}
 		let t = /* @__PURE__ */ new Map();
 		for (let n of e) {
-			let e = Di(n) || Ai(n);
+			let e = ji(n) || Pi(n);
 			t.has(e) || t.set(e, []), t.get(e)?.push(n);
 		}
 		return Array.from(t.entries()).map(([e, t]) => ({
 			key: e,
-			label: Ai(t[0] || {}),
+			label: Pi(t[0] || {}),
 			rows: t.sort((e, t) => String(t.generatedAt || "").localeCompare(String(e.generatedAt || "")))
 		})).sort((e, t) => String(t.rows[0]?.generatedAt || "").localeCompare(String(e.rows[0]?.generatedAt || "")));
-	}, [L, m]), z = Bi(n || {}), B = Ei(z, n?.headline || ki(n || {})), V = n?.sources || [], H = Ii(n);
+	}, [L, m]), z = Gi(n || {}), B = Ai(z, n?.headline || Ni(n || {})), V = n?.sources || [], H = Bi(n);
 	return n ? /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-company-analysis-route",
 		"data-company-analysis-route": !0,
 		children: [w && /* @__PURE__ */ (0, x.jsx)("p", {
 			className: "react-dashboard-error",
 			children: w
-		}), /* @__PURE__ */ (0, x.jsxs)(mn, {
-			eyebrow: `COMPANY ANALYSIS${Di(n) ? ` · ${Di(n)}` : ""}`,
+		}), /* @__PURE__ */ (0, x.jsxs)(hn, {
+			eyebrow: `COMPANY ANALYSIS${ji(n) ? ` · ${ji(n)}` : ""}`,
 			title: B.title,
-			meta: [n.generatedAt ? `생성일 ${ji(n.generatedAt)}` : "", Mi(n.analysisStyle)].filter(Boolean).join(" · "),
+			meta: [n.generatedAt ? `생성일 ${Fi(n.generatedAt)}` : "", Ii(n.analysisStyle)].filter(Boolean).join(" · "),
 			agentContext: {
 				surface: "analysis_reader",
 				viewId: "analysis",
 				reportKind: "company_analysis",
 				reportId: n.id || "",
-				ticker: Di(n)
+				ticker: ji(n)
 			},
 			breadcrumb: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("button", {
 				type: "button",
-				onClick: () => Vi(),
+				onClick: () => Ki(),
 				children: "기업 분석"
 			}), /* @__PURE__ */ (0, x.jsx)("span", { children: B.title })] }),
-			onClose: () => Vi(),
+			onClose: () => Ki(),
 			actionSlot: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
-				/* @__PURE__ */ (0, x.jsx)(Rt, {
+				/* @__PURE__ */ (0, x.jsx)(zt, {
 					title: "AI",
-					children: /* @__PURE__ */ (0, x.jsx)(zt, {
+					children: /* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "agent",
-						onClick: () => ke({
+						onClick: () => Ae({
 							surface: "analysis_reader",
 							reportKind: "company_analysis",
 							reportId: n.id || "",
-							ticker: Di(n),
+							ticker: ji(n),
 							message: `${B.title}에서 투자 판단에 중요한 핵심, 리스크, 추가 확인 질문을 정리해줘.`,
 							autoSubmit: !0
 						}),
 						children: "Agent에게 묻기"
 					})
 				}),
-				/* @__PURE__ */ (0, x.jsx)(Rt, {
+				/* @__PURE__ */ (0, x.jsx)(zt, {
 					title: "노트",
-					children: /* @__PURE__ */ (0, x.jsx)(zt, {
+					children: /* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "link",
 						disabled: S === "overlay" || !n.id,
 						onClick: I,
 						children: S === "overlay" ? "연결 중" : "내 노트와 연결"
 					})
 				}),
-				/* @__PURE__ */ (0, x.jsxs)(Rt, {
+				/* @__PURE__ */ (0, x.jsxs)(zt, {
 					title: "내보내기",
-					children: [/* @__PURE__ */ (0, x.jsx)(zt, {
+					children: [/* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "notion",
 						disabled: S === "notion",
 						onClick: () => F("notion"),
 						children: S === "notion" ? "내보내는 중" : "Notion으로 내보내기"
-					}), /* @__PURE__ */ (0, x.jsx)(zt, {
+					}), /* @__PURE__ */ (0, x.jsx)(Bt, {
 						icon: "obsidian",
 						disabled: S === "obsidian",
 						onClick: () => F("obsidian"),
 						children: S === "obsidian" ? "내보내는 중" : "Obsidian으로 내보내기"
 					})]
 				}),
-				H.length > 0 && /* @__PURE__ */ (0, x.jsx)(Rt, {
+				H.length > 0 && /* @__PURE__ */ (0, x.jsx)(zt, {
 					title: "자료 한계",
 					children: /* @__PURE__ */ (0, x.jsx)("div", {
 						className: "react-reader-gap-list",
 						children: H.slice(0, 3).map((e, t) => /* @__PURE__ */ (0, x.jsxs)("div", {
 							className: "react-reader-gap",
 							children: [
-								/* @__PURE__ */ (0, x.jsx)("span", { children: Ni(e.severity) }),
+								/* @__PURE__ */ (0, x.jsx)("span", { children: Li(e.severity) }),
 								/* @__PURE__ */ (0, x.jsx)("strong", { children: e.label || e.category || "추가 확인 필요" }),
 								/* @__PURE__ */ (0, x.jsx)("p", { children: e.message || e.suggestedAction || "보고서 해석 시 확인이 필요한 자료 한계입니다." })
 							]
@@ -10912,19 +10928,19 @@ function Wi() {
 				})
 			] }),
 			noteIdentity: {
-				id: fn("company", Di(n) || n.headline || "company"),
+				id: pn("company", ji(n) || n.headline || "company"),
 				noteType: "company_thesis",
-				title: Di(n) ? `${Di(n)} 투자 노트` : "기업 투자 노트",
-				ticker: Di(n),
+				title: ji(n) ? `${ji(n)} 투자 노트` : "기업 투자 노트",
+				ticker: ji(n),
 				company: n.company?.name || "",
-				label: Di(n),
+				label: ji(n),
 				reportKind: "company_analysis",
-				reportId: Di(n),
+				reportId: ji(n),
 				linkedReports: [B.title].filter(Boolean)
 			},
 			noteLinkedTitle: B.title,
-			noteOverlay: Ln(n.personalOverlay, n.canonicalRevision),
-			children: [/* @__PURE__ */ (0, x.jsx)(bi, {
+			noteOverlay: Rn(n.personalOverlay, n.canonicalRevision),
+			children: [/* @__PURE__ */ (0, x.jsx)(wi, {
 				markdown: B.body || z,
 				charts: n.analysisCharts
 			}), V.length > 0 && /* @__PURE__ */ (0, x.jsxs)("section", {
@@ -10933,13 +10949,13 @@ function Wi() {
 					className: "sources",
 					children: V.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "meta",
-						children: [/* @__PURE__ */ (0, x.jsx)("span", { children: Ri(e) }), e.url ? /* @__PURE__ */ (0, x.jsx)("a", {
+						children: [/* @__PURE__ */ (0, x.jsx)("span", { children: Ui(e) }), e.url ? /* @__PURE__ */ (0, x.jsx)("a", {
 							href: e.url,
 							target: "_blank",
 							rel: "noopener noreferrer",
-							children: zi(e)
-						}) : /* @__PURE__ */ (0, x.jsx)("span", { children: zi(e) })]
-					}, `${zi(e)}-${t}`))
+							children: Wi(e)
+						}) : /* @__PURE__ */ (0, x.jsx)("span", { children: Wi(e) })]
+					}, `${Wi(e)}-${t}`))
 				})]
 			})]
 		})]
@@ -10947,7 +10963,7 @@ function Wi() {
 		className: "react-company-analysis-route",
 		"data-company-analysis-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Company Analysis",
 				title: "기업 분석",
 				description: "SEC, DART, 시장 데이터와 로컬 자료를 활용해 기업 분석 보고서를 생성합니다.",
@@ -10981,7 +10997,7 @@ function Wi() {
 						children: [/* @__PURE__ */ (0, x.jsx)("legend", { children: "보고서 모드" }), /* @__PURE__ */ (0, x.jsx)("div", {
 							className: "react-analysis-style-toggle",
 							"data-style": u,
-							children: xi.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
+							children: Ti.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 								type: "button",
 								className: u === e.value ? "active" : "",
 								"aria-pressed": u === e.value,
@@ -11082,7 +11098,7 @@ function Wi() {
 							children: [
 								e.rows.length,
 								"건 · 최근 ",
-								ji(e.rows[0]?.generatedAt)
+								Fi(e.rows[0]?.generatedAt)
 							]
 						})]
 					}), /* @__PURE__ */ (0, x.jsx)("div", {
@@ -11103,13 +11119,13 @@ function Wi() {
 												children: String(e.mode).toUpperCase()
 											}), e.analysisStyle && /* @__PURE__ */ (0, x.jsx)("span", {
 												className: "report-feed-badge",
-												children: Mi(e.analysisStyle) || String(e.analysisStyle).toUpperCase()
+												children: Ii(e.analysisStyle) || String(e.analysisStyle).toUpperCase()
 											})]
 										}),
-										/* @__PURE__ */ (0, x.jsx)("strong", { children: Ai(e) }),
+										/* @__PURE__ */ (0, x.jsx)("strong", { children: Pi(e) }),
 										/* @__PURE__ */ (0, x.jsxs)("span", {
 											className: "report-feed-card-foot",
-											children: ["생성일 ", ji(e.generatedAt)]
+											children: ["생성일 ", Fi(e.generatedAt)]
 										})
 									]
 								}), /* @__PURE__ */ (0, x.jsx)("button", {
@@ -11117,7 +11133,7 @@ function Wi() {
 									className: "report-feed-card-delete",
 									disabled: t,
 									onClick: () => P(e),
-									"aria-label": `${ki(e)} 삭제`,
+									"aria-label": `${Ni(e)} 삭제`,
 									"data-tooltip": "삭제",
 									"data-tooltip-pos": "bottom",
 									children: /* @__PURE__ */ (0, x.jsx)("svg", {
@@ -11133,7 +11149,7 @@ function Wi() {
 										children: /* @__PURE__ */ (0, x.jsx)("path", { d: "M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" })
 									})
 								})]
-							}, e.id || `${Ai(e)}-${e.generatedAt}`);
+							}, e.id || `${Pi(e)}-${e.generatedAt}`);
 						})
 					})]
 				}, e.key)) : /* @__PURE__ */ (0, x.jsxs)("article", {
@@ -11146,25 +11162,25 @@ function Wi() {
 }
 //#endregion
 //#region src/app/marketStateContext.ts
-var Gi = [
+var Xi = [
 	"current",
 	"stale",
 	"empty",
 	"fallback"
 ];
-function Ki(e) {
+function Zi(e) {
 	return typeof e == "object" && e && !Array.isArray(e) ? e : null;
 }
-function qi(e, t) {
+function Qi(e, t) {
 	return Object.prototype.hasOwnProperty.call(e, t);
 }
-function Ji(e) {
+function $i(e) {
 	return typeof e == "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(e) && Number.isFinite(new Date(e).getTime());
 }
-function Yi(e) {
+function ea(e) {
 	return typeof e == "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(e) && Number.isFinite(new Date(e).getTime());
 }
-var Xi = /* @__PURE__ */ new Set([
+var ta = /* @__PURE__ */ new Set([
 	"invalid_as_of",
 	"future_as_of",
 	"missing_input_watermark",
@@ -11172,9 +11188,9 @@ var Xi = /* @__PURE__ */ new Set([
 	"new_relevant_evidence",
 	"update_failed"
 ]);
-function Zi(e) {
-	let t = Ki(e), n = Ki(t?.marketStateRef) || Ki(Ki(t?.marketStateResolution)?.ref) || Ki(t?.ref);
-	if (!n || !Gi.includes(n.status) || [
+function na(e) {
+	let t = Zi(e), n = Zi(t?.marketStateRef) || Zi(Zi(t?.marketStateResolution)?.ref) || Zi(t?.ref);
+	if (!n || !Xi.includes(n.status) || [
 		"snapshotId",
 		"sourceKind",
 		"scope",
@@ -11186,7 +11202,7 @@ function Zi(e) {
 		"invalidWatermarkRows",
 		"resolvedAt",
 		"layer"
-	].some((e) => !qi(n, e))) return null;
+	].some((e) => !Qi(n, e))) return null;
 	let r = n.sourceKind, i = n.scope;
 	if (![
 		"snapshot",
@@ -11196,9 +11212,9 @@ function Zi(e) {
 		"GLOBAL",
 		"US",
 		"KR"
-	].includes(i) || n.layer !== "source-grounded" || !Ji(n.resolvedAt) || !Number.isInteger(n.invalidWatermarkRows) || Number(n.invalidWatermarkRows) < 0 || n.inputWatermark !== null && typeof n.inputWatermark != "string" || n.relevantEvidenceWatermark !== null && typeof n.relevantEvidenceWatermark != "string" || n.relevantEvidenceWatermark !== null && !Ji(n.relevantEvidenceWatermark)) return null;
+	].includes(i) || n.layer !== "source-grounded" || !$i(n.resolvedAt) || !Number.isInteger(n.invalidWatermarkRows) || Number(n.invalidWatermarkRows) < 0 || n.inputWatermark !== null && typeof n.inputWatermark != "string" || n.relevantEvidenceWatermark !== null && typeof n.relevantEvidenceWatermark != "string" || n.relevantEvidenceWatermark !== null && !$i(n.relevantEvidenceWatermark)) return null;
 	let a = n.status, o = n.freshnessReason;
-	return typeof o != "string" || a === "current" && (r !== "snapshot" || typeof n.snapshotId != "string" || !n.snapshotId || !Yi(n.asOf) || o !== "within_window") || a === "current" && n.inputWatermark !== null && !Ji(n.inputWatermark) || a === "current" && n.inputWatermark === null != (n.relevantEvidenceWatermark === null) || a === "stale" && (r !== "snapshot" || typeof n.snapshotId != "string" || !n.snapshotId || !Xi.has(o)) || a === "stale" && o !== "invalid_as_of" && !Yi(n.asOf) || a === "fallback" && (r !== "state_fallback" || n.snapshotId !== null || n.asOf !== null && !Yi(n.asOf) || o !== "state_fallback" || n.inputWatermark !== null) || a === "empty" && (r !== "none" || n.snapshotId !== null || n.asOf !== null || o !== "no_state" || n.inputWatermark !== null || n.relevantEvidenceWatermark !== null) ? null : {
+	return typeof o != "string" || a === "current" && (r !== "snapshot" || typeof n.snapshotId != "string" || !n.snapshotId || !ea(n.asOf) || o !== "within_window") || a === "current" && n.inputWatermark !== null && !$i(n.inputWatermark) || a === "current" && n.inputWatermark === null != (n.relevantEvidenceWatermark === null) || a === "stale" && (r !== "snapshot" || typeof n.snapshotId != "string" || !n.snapshotId || !ta.has(o)) || a === "stale" && o !== "invalid_as_of" && !ea(n.asOf) || a === "fallback" && (r !== "state_fallback" || n.snapshotId !== null || n.asOf !== null && !ea(n.asOf) || o !== "state_fallback" || n.inputWatermark !== null) || a === "empty" && (r !== "none" || n.snapshotId !== null || n.asOf !== null || o !== "no_state" || n.inputWatermark !== null || n.relevantEvidenceWatermark !== null) ? null : {
 		snapshotId: typeof n.snapshotId == "string" ? n.snapshotId : null,
 		sourceKind: r,
 		scope: i,
@@ -11212,8 +11228,8 @@ function Zi(e) {
 		layer: "source-grounded"
 	};
 }
-function Qi(e) {
-	let t = Zi(e);
+function ra(e) {
+	let t = na(e);
 	return t ? {
 		status: t.status,
 		asOf: t.asOf,
@@ -11225,23 +11241,23 @@ function Qi(e) {
 }
 //#endregion
 //#region src/islands/MarketStateDashboard.tsx
-var $i = {
+var ia = {
 	high: "높음",
 	medium: "보통",
 	low: "낮음"
-}, ea = {
+}, aa = {
 	overall: "종합",
 	us: "미국장",
 	kr: "한국장"
 };
-function ta(e) {
+function oa(e) {
 	let t = String(e || "").replace(/\s+/g, " ").trim(), n = t.match(/[^.!?。]+[.!?。]?/g)?.map((e) => e.trim()).filter(Boolean) || [];
 	return {
 		lead: n[0] || t,
 		support: n.slice(1, 3).join(" ")
 	};
 }
-function na(e) {
+function sa(e) {
 	if (!e) return "";
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? e : t.toLocaleString("ko-KR", {
@@ -11249,7 +11265,7 @@ function na(e) {
 		timeStyle: "short"
 	});
 }
-function ra(e) {
+function ca(e) {
 	let t = String(e.directionLabel || "").trim();
 	if (t === "중립") return "neutral";
 	if (t === "혼재" || t === "변동성") return "warning";
@@ -11258,11 +11274,11 @@ function ra(e) {
 	let n = `${e.directionLabel || ""} ${e.directionTone || ""}`.toLowerCase();
 	return /neutral|중립/.test(n) ? "neutral" : /mixed|conflicted|혼재|변동성/.test(n) ? "warning" : /support|positive|완화|호재|긍정|지지|강화|도움/.test(n) ? "positive" : /risk|negative|부담|악화|위험|하방/.test(n) ? "negative" : "neutral";
 }
-function ia(e) {
+function la(e) {
 	let t = String(e.directionLabel || "").trim();
 	return !t || t === "도움" ? "긍정 요인" : t === "부담" ? "부담 가중" : t === "변동성" ? "변동성 증가" : t;
 }
-function aa(e) {
+function ua(e) {
 	let t = (e) => String(e || "").replace(/marketTape와 macroSnapshot가 비어 있어 가격 검증이 약하다\.?/g, "가격·거시 데이터가 아직 충분하지 않아 뉴스 흐름을 숫자로 검증하기 어렵습니다.").replace(/marketTape/g, "가격 데이터").replace(/macroSnapshot/g, "거시 데이터").trim();
 	if (typeof e != "string") return {
 		title: t(e.title || ""),
@@ -11280,11 +11296,11 @@ function aa(e) {
 		sourceRefs: []
 	};
 }
-function oa({ items: e }) {
+function da({ items: e }) {
 	return /* @__PURE__ */ (0, x.jsx)("ul", {
 		className: "market-state-check-list",
 		children: e.slice(0, 5).map((e, t) => {
-			let n = aa(e);
+			let n = ua(e);
 			return /* @__PURE__ */ (0, x.jsxs)("li", {
 				className: "market-state-check-item",
 				children: [
@@ -11296,8 +11312,8 @@ function oa({ items: e }) {
 		})
 	});
 }
-function sa({ driver: e }) {
-	let t = $i[e.confidence] || e.confidence || "보통", n = e.interpretation, r = e.marketImpact || e.interpretation, i = e.evidenceSummary || e.whyItMatters || e.rationale, a = e.nextMemoryCheck || e.whatToWatch || e.nextCheckpoint, o = [
+function fa({ driver: e }) {
+	let t = ia[e.confidence] || e.confidence || "보통", n = e.interpretation, r = e.marketImpact || e.interpretation, i = e.evidenceSummary || e.whyItMatters || e.rationale, a = e.nextMemoryCheck || e.whatToWatch || e.nextCheckpoint, o = [
 		i ? {
 			label: "근거 요약",
 			value: i
@@ -11319,8 +11335,8 @@ function sa({ driver: e }) {
 				children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, x.jsx)("div", {
 					className: "market-driver-chip-row",
 					children: e.directionLabel && /* @__PURE__ */ (0, x.jsx)("span", {
-						className: `market-direction-chip direction-${ra(e)}`,
-						children: ia(e)
+						className: `market-direction-chip direction-${ca(e)}`,
+						children: la(e)
 					})
 				})]
 			}),
@@ -11353,16 +11369,16 @@ function sa({ driver: e }) {
 		]
 	});
 }
-var ca = {
+var pa = {
 	current: "현재",
 	stale: "업데이트 필요",
 	fallback: "참고용 대체 상태",
 	empty: "상태 없음"
-}, la = {
+}, ma = {
 	snapshot: "Market State 스냅샷",
 	state_fallback: "기존 중기 내러티브 참고값",
 	none: "사용 가능한 상태 없음"
-}, ua = {
+}, ha = {
 	within_window: "최신 자료 기준과 생성 시각이 유효 범위 안에 있습니다.",
 	new_relevant_evidence: "스냅샷 이후 새 외부 자료가 들어왔습니다. 갱신 전 판단은 현재 투자 자세로 사용하지 않습니다.",
 	age_exceeded: "생성 후 72시간이 지나 최신성이 만료됐습니다.",
@@ -11373,7 +11389,7 @@ var ca = {
 	state_fallback: "정식 스냅샷이 없어 기존 중기 내러티브를 참고용으로만 보여줍니다.",
 	no_state: "아직 생성된 시장 상태가 없습니다."
 };
-function da(e) {
+function ga(e) {
 	if (!e?.asOf || !e.resolvedAt) return "계산 불가";
 	let t = new Date(e.asOf).getTime(), n = new Date(e.resolvedAt).getTime();
 	if (!Number.isFinite(t) || !Number.isFinite(n) || n < t) return "계산 불가";
@@ -11382,8 +11398,8 @@ function da(e) {
 	let i = Math.floor(r / 60);
 	return i < 48 ? `${i}시간` : `${Math.floor(i / 24)}일 ${i % 24}시간`;
 }
-function fa({ stateRef: e }) {
-	let t = e?.freshnessReason === "age_exceeded" ? "만료" : e ? ca[e.status] : "확인 불가";
+function _a({ stateRef: e }) {
+	let t = e?.freshnessReason === "age_exceeded" ? "만료" : e ? pa[e.status] : "확인 불가";
 	return /* @__PURE__ */ (0, x.jsxs)("dl", {
 		className: "market-state-meta",
 		"aria-label": "시장 상태 기준 정보",
@@ -11391,19 +11407,19 @@ function fa({ stateRef: e }) {
 			/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "상태" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: t })] }),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				"data-qa": "market-state-asof",
-				children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "기준 시각" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: na(e?.asOf || void 0) || "없음" })]
+				children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "기준 시각" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: sa(e?.asOf || void 0) || "없음" })]
 			}),
-			/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "경과" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: da(e) })] }),
+			/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "경과" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: ga(e) })] }),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				"data-qa": "market-state-source",
-				children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "출처" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: e ? la[e.sourceKind] : "응답 검증 실패" })]
+				children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "출처" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: e ? ma[e.sourceKind] : "응답 검증 실패" })]
 			}),
 			e ? /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "범위" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: e.scope })] }) : null
 		]
 	});
 }
-function pa({ stateRef: e }) {
-	let t = e.freshnessReason === "age_exceeded", n = e.freshnessReason === "new_relevant_evidence" ? "새 외부 자료가 들어왔습니다." : ua[e.freshnessReason] || "최신성을 다시 확인해야 합니다.", r = e.freshnessReason === "new_relevant_evidence" ? na(e.relevantEvidenceWatermark || void 0) : "";
+function va({ stateRef: e }) {
+	let t = e.freshnessReason === "age_exceeded", n = e.freshnessReason === "new_relevant_evidence" ? "새 외부 자료가 들어왔습니다." : ha[e.freshnessReason] || "최신성을 다시 확인해야 합니다.", r = e.freshnessReason === "new_relevant_evidence" ? sa(e.relevantEvidenceWatermark || void 0) : "";
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "market-state-stale-notice",
 		"data-qa": "market-state-stale-notice",
@@ -11419,13 +11435,13 @@ function pa({ stateRef: e }) {
 		]
 	});
 }
-function ma({ state: e, stateRef: t, error: n, drivers: r }) {
-	let i = e === "fallback" ? "참고용 내러티브만 있습니다" : "아직 생성된 시장 상태가 없습니다", a = n ? `시장 상태 응답을 사용할 수 없습니다: ${n}` : ua[t?.freshnessReason || ""] || "현재 상태를 검증할 수 없습니다. 업데이트 후 다시 확인하세요.";
+function ya({ state: e, stateRef: t, error: n, drivers: r }) {
+	let i = e === "fallback" ? "참고용 내러티브만 있습니다" : "아직 생성된 시장 상태가 없습니다", a = n ? `시장 상태 응답을 사용할 수 없습니다: ${n}` : ha[t?.freshnessReason || ""] || "현재 상태를 검증할 수 없습니다. 업데이트 후 다시 확인하세요.";
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: `market-state-gap state-${e}`,
 		role: "status",
 		children: [
-			/* @__PURE__ */ (0, x.jsx)("span", { children: ca[e] }),
+			/* @__PURE__ */ (0, x.jsx)("span", { children: pa[e] }),
 			/* @__PURE__ */ (0, x.jsx)("h3", { children: i }),
 			/* @__PURE__ */ (0, x.jsx)("p", { children: a }),
 			e === "fallback" && r.length ? /* @__PURE__ */ (0, x.jsxs)("p", { children: [
@@ -11436,12 +11452,12 @@ function ma({ state: e, stateRef: t, error: n, drivers: r }) {
 		]
 	});
 }
-function ha({ payload: e, selectedMarket: t = "overall", loading: n = !1, updating: r = !1, updateDisabled: i = !1, error: a = "", onSelectMarket: o, onUpdate: s, onReload: c }) {
-	let l = Zi(e), u = l?.status || "empty", d = e?.marketViews || {}, f = [
+function ba({ payload: e, selectedMarket: t = "overall", loading: n = !1, updating: r = !1, updateDisabled: i = !1, error: a = "", onSelectMarket: o, onUpdate: s, onReload: c }) {
+	let l = na(e), u = l?.status || "empty", d = e?.marketViews || {}, f = [
 		"overall",
 		"us",
 		"kr"
-	].filter((e) => e === "overall" || !!d[e]), p = f.includes(t) ? t : "overall", m = p === "overall" ? d.overall || e : d[p] || e, h = m?.drivers ?? [], g = m?.plainConclusion || m?.summary || "", _ = m?.reasonSummary || m?.sourceSummary || m?.stance || "", v = ta(_), y = u === "current" || u === "stale", b = m?.briefs?.length ? m.briefs : [
+	].filter((e) => e === "overall" || !!d[e]), p = f.includes(t) ? t : "overall", m = p === "overall" ? d.overall || e : d[p] || e, h = m?.drivers ?? [], g = m?.plainConclusion || m?.summary || "", _ = m?.reasonSummary || m?.sourceSummary || m?.stance || "", v = oa(_), y = u === "current" || u === "stale", b = m?.briefs?.length ? m.briefs : [
 		{
 			label: "현재 판단",
 			value: g
@@ -11486,8 +11502,8 @@ function ha({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 					})]
 				})]
 			}),
-			/* @__PURE__ */ (0, x.jsx)(fa, { stateRef: l }),
-			u === "stale" && l ? /* @__PURE__ */ (0, x.jsx)(pa, { stateRef: l }) : null,
+			/* @__PURE__ */ (0, x.jsx)(_a, { stateRef: l }),
+			u === "stale" && l ? /* @__PURE__ */ (0, x.jsx)(va, { stateRef: l }) : null,
 			y && f.length > 1 ? /* @__PURE__ */ (0, x.jsx)("div", {
 				className: "market-scope-tabs",
 				role: "tablist",
@@ -11500,13 +11516,13 @@ function ha({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 					"aria-selected": p === e,
 					className: p === e ? "active" : "",
 					onClick: () => o?.(e),
-					children: ea[e]
+					children: aa[e]
 				}, e))
 			}) : null,
 			y ? /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
 				u === "current" ? /* @__PURE__ */ (0, x.jsx)("p", {
 					className: "market-state-current-note",
-					children: ua[l?.freshnessReason || "within_window"]
+					children: ha[l?.freshnessReason || "within_window"]
 				}) : null,
 				/* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "market-state-overview",
@@ -11547,17 +11563,17 @@ function ha({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 				/* @__PURE__ */ (0, x.jsx)("div", {
 					className: "market-state-drivers",
 					"data-qa": "market-state-drivers",
-					children: h.map((e, t) => /* @__PURE__ */ (0, x.jsx)(sa, { driver: e }, e.id || t))
+					children: h.map((e, t) => /* @__PURE__ */ (0, x.jsx)(fa, { driver: e }, e.id || t))
 				}),
 				m && ((m.counterEvidence?.length || 0) > 0 || (m.uncertainties?.length || 0) > 0) ? /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "market-state-checks",
 					"aria-label": "반대 근거와 불확실성",
 					children: [m.counterEvidence?.length ? /* @__PURE__ */ (0, x.jsxs)("section", {
 						"data-qa": "market-state-counter-evidence",
-						children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "반대 근거" }), /* @__PURE__ */ (0, x.jsx)(oa, { items: m.counterEvidence })]
+						children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "반대 근거" }), /* @__PURE__ */ (0, x.jsx)(da, { items: m.counterEvidence })]
 					}) : null, m.uncertainties?.length ? /* @__PURE__ */ (0, x.jsxs)("section", {
 						"data-qa": "market-state-uncertainties",
-						children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "불확실성" }), /* @__PURE__ */ (0, x.jsx)(oa, { items: m.uncertainties })]
+						children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "불확실성" }), /* @__PURE__ */ (0, x.jsx)(da, { items: m.uncertainties })]
 					}) : null]
 				}) : null,
 				m?.watchItems?.length || b[3]?.value ? /* @__PURE__ */ (0, x.jsxs)("section", {
@@ -11565,7 +11581,7 @@ function ha({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 					"data-qa": "market-state-next-checks",
 					children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "다음 확인" }), /* @__PURE__ */ (0, x.jsx)("ul", { children: (m?.watchItems || [b[3]?.value]).filter(Boolean).slice(0, 5).map((e) => /* @__PURE__ */ (0, x.jsx)("li", { children: e }, e)) })]
 				}) : null
-			] }) : /* @__PURE__ */ (0, x.jsx)(ma, {
+			] }) : /* @__PURE__ */ (0, x.jsx)(ya, {
 				state: u,
 				stateRef: l,
 				error: a,
@@ -11587,14 +11603,14 @@ function ha({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 		]
 	});
 }
-function ga({ onUpdate: e, updating: t = !1, updateDisabled: n = !1, onContext: r } = {}) {
+function xa({ onUpdate: e, updating: t = !1, updateDisabled: n = !1, onContext: r } = {}) {
 	let [i, a] = (0, b.useState)(null), [o, s] = (0, b.useState)("overall"), [c, u] = (0, b.useState)(""), [d, f] = (0, b.useState)(!1), p = (0, b.useCallback)(async () => {
 		f(!0), u("");
 		try {
 			let e = await l("/api/memory/state-dashboard?limit=5");
 			a(e);
-			let t = Qi(e);
-			Lt().updateAgentContext?.({
+			let t = ra(e);
+			Rt().updateAgentContext?.({
 				surface: "market_state",
 				viewId: "memory",
 				reportKind: "",
@@ -11610,8 +11626,8 @@ function ga({ onUpdate: e, updating: t = !1, updateDisabled: n = !1, onContext: 
 	return (0, b.useEffect)(() => {
 		p();
 	}, [p]), (0, b.useEffect)(() => {
-		Lt().applyAgentBranding?.();
-	}, [i]), /* @__PURE__ */ (0, x.jsx)(ha, {
+		Rt().applyAgentBranding?.();
+	}, [i]), /* @__PURE__ */ (0, x.jsx)(ba, {
 		payload: i,
 		selectedMarket: o,
 		loading: d,
@@ -11625,25 +11641,25 @@ function ga({ onUpdate: e, updating: t = !1, updateDisabled: n = !1, onContext: 
 }
 //#endregion
 //#region src/app/agentWorkspace/ConsultationPanel.tsx
-function _a() {
+function Sa() {
 	return `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
-function va(e = {}) {
+function Ca(e = {}) {
 	window.dispatchEvent(new CustomEvent("folio:open-consultation", { detail: e }));
 }
-function ya() {
-	let [e, t] = (0, b.useState)(!1), [n, r] = (0, b.useState)([]), [i, s] = (0, b.useState)(null), [c, u] = (0, b.useState)(""), [d, f] = (0, b.useState)(""), [p, m] = (0, b.useState)({}), [h, g] = (0, b.useState)(!1), [_, v] = (0, b.useState)(""), [y, S] = (0, b.useState)(tt()), [C, w] = (0, b.useState)(null), T = (0, b.useRef)(null), E = (0, b.useRef)(null), D = (0, b.useRef)(null), O = (0, b.useCallback)(async () => {
+function wa() {
+	let [e, t] = (0, b.useState)(!1), [n, r] = (0, b.useState)([]), [i, s] = (0, b.useState)(null), [c, u] = (0, b.useState)(""), [d, f] = (0, b.useState)(""), [p, m] = (0, b.useState)({}), [h, g] = (0, b.useState)(!1), [_, v] = (0, b.useState)(""), [y, S] = (0, b.useState)(nt()), [C, w] = (0, b.useState)(null), T = (0, b.useRef)(null), E = (0, b.useRef)(null), D = (0, b.useRef)(null), O = (0, b.useCallback)(async () => {
 		let e = await l("/api/agent/consultations?limit=60");
 		return r(e.items || []), e.items || [];
 	}, []), k = (0, b.useCallback)(async (e) => {
 		let t = await l(`/api/agent/consultations/${encodeURIComponent(e)}`);
-		return s(t), f(t.title || ""), et(t.id), t;
+		return s(t), f(t.title || ""), tt(t.id), t;
 	}, []), A = (0, b.useCallback)(async (e = {}) => {
 		let t = await o("/api/agent/consultations", {
 			title: e.title || "새 투자 상담",
 			scope: e.scope || { kind: "portfolio" }
 		});
-		return s(t), f(t.title), et(t.id), u(e.initialMessage || ""), await O(), t;
+		return s(t), f(t.title), tt(t.id), u(e.initialMessage || ""), await O(), t;
 	}, [O]);
 	(0, b.useEffect)(() => {
 		let e = (e) => {
@@ -11652,7 +11668,7 @@ function ya() {
 		return window.addEventListener("folio:open-consultation", e), () => window.removeEventListener("folio:open-consultation", e);
 	}, []), (0, b.useEffect)(() => {
 		e && (v(""), O().then(async (e) => {
-			let t = p, n = $e(), r = e.find((e) => e.status === "active" && t.scope?.kind === e.scope.kind && (!t.scope?.id || t.scope.id === e.scope.id))?.id || (n && e.some((e) => e.id === n) ? n : "");
+			let t = p, n = et(), r = e.find((e) => e.status === "active" && t.scope?.kind === e.scope.kind && (!t.scope?.id || t.scope.id === e.scope.id))?.id || (n && e.some((e) => e.id === n) ? n : "");
 			r ? (await k(r), t.initialMessage && u(t.initialMessage)) : await A(t);
 		}).catch((e) => v(e instanceof Error ? e.message : "상담을 불러오지 못했습니다.")));
 	}, [
@@ -11688,9 +11704,9 @@ function ya() {
 		try {
 			let e = await o(`/api/agent/consultations/${encodeURIComponent(i.id)}/messages`, {
 				message: t,
-				operationId: _a()
+				operationId: Sa()
 			});
-			n = !0, await k(e.sessionId), await Re(e.job), await k(e.sessionId), await O();
+			n = !0, await k(e.sessionId), await ze(e.job), await k(e.sessionId), await O();
 		} catch (e) {
 			n || u(t), v(e instanceof Error ? e.message : "상담 답변을 가져오지 못했습니다. 저장된 질문은 다시 시도할 수 있습니다."), i && await k(i.id).catch(() => void 0);
 		} finally {
@@ -11703,10 +11719,10 @@ function ya() {
 		s(e), await O();
 	}
 	async function N() {
-		i && (await o(`/api/agent/consultations/${encodeURIComponent(i.id)}/archive`, {}), s(null), et(""), await O());
+		i && (await o(`/api/agent/consultations/${encodeURIComponent(i.id)}/archive`, {}), s(null), tt(""), await O());
 	}
 	async function P() {
-		!i || !window.confirm("이 상담 내역을 삭제할까요? 삭제 후 복구할 수 없습니다.") || (await a(`/api/agent/consultations/${encodeURIComponent(i.id)}`, { confirm: !0 }), s(null), et(""), await O());
+		!i || !window.confirm("이 상담 내역을 삭제할까요? 삭제 후 복구할 수 없습니다.") || (await a(`/api/agent/consultations/${encodeURIComponent(i.id)}`, { confirm: !0 }), s(null), tt(""), await O());
 	}
 	function F() {
 		if (!i) return;
@@ -11734,9 +11750,9 @@ function ya() {
 			try {
 				let e = await o(`/api/agent/consultations/${encodeURIComponent(i.id)}/messages`, {
 					retryMessageId: R.id,
-					operationId: _a()
+					operationId: Sa()
 				});
-				await Re(e.job), await k(e.sessionId);
+				await ze(e.job), await k(e.sessionId);
 			} catch (e) {
 				v(e instanceof Error ? e.message : "재시도에 실패했습니다.");
 			} finally {
@@ -11768,7 +11784,7 @@ function ya() {
 						className: "filter-btn clear",
 						type: "button",
 						onClick: () => {
-							nt(), S(!1);
+							rt(), S(!1);
 						},
 						children: "확인"
 					})
@@ -11943,7 +11959,7 @@ function ya() {
 }
 //#endregion
 //#region src/app/dashboard/InvestmentImplications.tsx
-function ba({ items: e, portfolioState: t }) {
+function Ta({ items: e, portfolioState: t }) {
 	let n = t === "empty";
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "cockpit-panel cockpit-implications",
@@ -11958,7 +11974,7 @@ function ba({ items: e, portfolioState: t }) {
 			}),
 			e.length ? /* @__PURE__ */ (0, x.jsx)("ul", { children: e.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.tickers?.join(", ") }), /* @__PURE__ */ (0, x.jsxs)("span", {
 				className: "cockpit-implication-meta",
-				children: [/* @__PURE__ */ (0, x.jsx)("em", { children: e.source === "watchlist" ? "관심" : "보유" }), rr[e.status || ""] || e.status]
+				children: [/* @__PURE__ */ (0, x.jsx)("em", { children: e.source === "watchlist" ? "관심" : "보유" }), ir[e.status || ""] || e.status]
 			})] }, `${e.tickers?.join("-")}-${t}`)) }) : /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "cockpit-empty",
 				children: n ? "포트폴리오가 비어 있어 보유 종목과의 연결을 표시하지 못합니다." : "최근 변화와 직접 연결된 보유·관심 종목이 없습니다."
@@ -11975,7 +11991,7 @@ function ba({ items: e, portfolioState: t }) {
 				}), /* @__PURE__ */ (0, x.jsx)("button", {
 					className: "filter-btn",
 					type: "button",
-					onClick: () => va({ scope: { kind: "portfolio" } }),
+					onClick: () => Ca({ scope: { kind: "portfolio" } }),
 					children: "Agent와 검토"
 				})]
 			})
@@ -11984,19 +12000,19 @@ function ba({ items: e, portfolioState: t }) {
 }
 //#endregion
 //#region src/app/dashboard/MarketCalendar.tsx
-var xa = {
+var Ea = {
 	macro: "경제지표",
 	central_bank: "중앙은행",
 	holiday: "휴장",
 	earnings: "실적",
 	filing: "공시",
 	dividend: "배당"
-}, Sa = {
+}, Da = {
 	confirmed: "확정",
 	estimated: "추정",
 	tentative: "미정",
 	actual: "발표됨"
-}, Ca = [
+}, Oa = [
 	{
 		value: "all",
 		label: "전체"
@@ -12025,18 +12041,18 @@ var xa = {
 		value: "dividend",
 		label: "배당"
 	}
-], wa = {
+], ka = {
 	US: "미국",
 	KR: "한국",
 	EUROPE: "유럽",
 	JP: "일본"
-}, Ta = [
+}, Aa = [
 	"all",
 	"US",
 	"KR",
 	"EUROPE",
 	"JP"
-], Ea = {
+], ja = {
 	nyse: "NYSE",
 	krx: "KRX",
 	lse: "런던",
@@ -12045,7 +12061,7 @@ var xa = {
 	borsa_italiana: "밀라노",
 	bme: "마드리드",
 	jpx: "도쿄"
-}, Da = [
+}, Ma = [
 	"월",
 	"화",
 	"수",
@@ -12053,11 +12069,11 @@ var xa = {
 	"금",
 	"토",
 	"일"
-], Oa = 864e5;
-function ka(e) {
+], Na = 864e5;
+function Pa(e) {
 	return `${e.getFullYear()}-${String(e.getMonth() + 1).padStart(2, "0")}-${String(e.getDate()).padStart(2, "0")}`;
 }
-function Aa(e) {
+function Fa(e) {
 	if (e.allDay || /^\d{4}-\d{2}-\d{2}$/.test(e.startsAt)) return e.startsAt.slice(0, 10);
 	let t = new Date(e.startsAt);
 	return Number.isNaN(t.getTime()) ? e.startsAt.slice(0, 10) : new Intl.DateTimeFormat("sv-SE", {
@@ -12067,7 +12083,7 @@ function Aa(e) {
 		day: "2-digit"
 	}).format(t);
 }
-function ja(e) {
+function Ia(e) {
 	if (e.allDay || /^\d{4}-\d{2}-\d{2}$/.test(e.startsAt)) return "종일";
 	let t = new Date(e.startsAt);
 	if (Number.isNaN(t.getTime())) return "—";
@@ -12089,21 +12105,21 @@ function ja(e) {
 		hour12: !1
 	}).format(t);
 }
-function Ma(e) {
+function La(e) {
 	let t = new Date(e.getFullYear(), e.getMonth(), e.getDate()), n = (t.getDay() + 6) % 7;
-	return /* @__PURE__ */ new Date(t.getTime() - n * Oa);
+	return /* @__PURE__ */ new Date(t.getTime() - n * Na);
 }
-function Na(e) {
-	if (e.kind === "earnings" && e.tickers?.length) return `${e.tickers[0]} · ${ja(e)}`;
+function Ra(e) {
+	if (e.kind === "earnings" && e.tickers?.length) return `${e.tickers[0]} · ${Ia(e)}`;
 	if (e.kind === "holiday") {
-		let t = Ea[e.provider || ""];
+		let t = ja[e.provider || ""];
 		return t ? `휴장 · ${t}` : e.title.slice(0, 22);
 	}
 	return e.title.slice(0, 22);
 }
-function Pa({ focusSymbols: e }) {
-	let [t, n] = (0, b.useState)([]), [r, i] = (0, b.useState)("week"), [a, s] = (0, b.useState)("all"), [c, u] = (0, b.useState)("all"), [d, f] = (0, b.useState)(!1), [p, m] = (0, b.useState)(() => /* @__PURE__ */ new Date()), [h, g] = (0, b.useState)(() => ka(/* @__PURE__ */ new Date())), [_, v] = (0, b.useState)(!1), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)(""), T = (0, b.useCallback)(async () => {
-		let e = /* @__PURE__ */ new Date(p.getTime() - 40 * Oa), t = new Date(p.getTime() + 70 * Oa);
+function za({ focusSymbols: e }) {
+	let [t, n] = (0, b.useState)([]), [r, i] = (0, b.useState)("week"), [a, s] = (0, b.useState)("all"), [c, u] = (0, b.useState)("all"), [d, f] = (0, b.useState)(!1), [p, m] = (0, b.useState)(() => /* @__PURE__ */ new Date()), [h, g] = (0, b.useState)(() => Pa(/* @__PURE__ */ new Date())), [_, v] = (0, b.useState)(!1), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)(""), T = (0, b.useCallback)(async () => {
+		let e = /* @__PURE__ */ new Date(p.getTime() - 40 * Na), t = new Date(p.getTime() + 70 * Na);
 		try {
 			let r = await l(`/api/market-calendar?start=${encodeURIComponent(e.toISOString())}&end=${encodeURIComponent(t.toISOString())}&limit=500`);
 			n(r.events || []), w("");
@@ -12130,27 +12146,27 @@ function Pa({ focusSymbols: e }) {
 	]), k = (0, b.useMemo)(() => {
 		let e = /* @__PURE__ */ new Map();
 		for (let t of O) {
-			let n = Aa(t);
+			let n = Fa(t);
 			e.set(n, [...e.get(n) || [], t]);
 		}
 		for (let t of e.values()) t.sort((e, t) => (t.importance || 0) - (e.importance || 0) || e.startsAt.localeCompare(t.startsAt));
 		return e;
-	}, [O]), A = Ma(p), j = Array.from({ length: 7 }, (e, t) => new Date(A.getTime() + t * Oa)), M = new Date(p.getFullYear(), p.getMonth(), 1), N = (0, b.useMemo)(() => {
-		let e = Ma(M), t = [];
-		for (let n = 0; n < 42; n += 1) t.push(new Date(e.getTime() + n * Oa));
+	}, [O]), A = La(p), j = Array.from({ length: 7 }, (e, t) => new Date(A.getTime() + t * Na)), M = new Date(p.getFullYear(), p.getMonth(), 1), N = (0, b.useMemo)(() => {
+		let e = La(M), t = [];
+		for (let n = 0; n < 42; n += 1) t.push(new Date(e.getTime() + n * Na));
 		for (; t.length > 7 && t[t.length - 7].getMonth() !== p.getMonth();) t.splice(-7, 7);
 		return t;
-	}, [p, M]), P = ka(/* @__PURE__ */ new Date()), F = k.get(h) || [], I = (/* @__PURE__ */ new Date(`${h}T00:00:00`)).toLocaleDateString("ko-KR", {
+	}, [p, M]), P = Pa(/* @__PURE__ */ new Date()), F = k.get(h) || [], I = (/* @__PURE__ */ new Date(`${h}T00:00:00`)).toLocaleDateString("ko-KR", {
 		month: "long",
 		day: "numeric",
 		weekday: "long"
 	}), L = (0, b.useMemo)(() => {
 		let e = /* @__PURE__ */ new Map();
 		for (let t of F) e.set(t.kind, (e.get(t.kind) || 0) + 1);
-		return [...e.entries()].map(([e, t]) => `${xa[e] || e} ${t}`).join(" · ");
+		return [...e.entries()].map(([e, t]) => `${Ea[e] || e} ${t}`).join(" · ");
 	}, [F]);
 	function R(e) {
-		let t = r === "week" ? 7 * Oa : 0;
+		let t = r === "week" ? 7 * Na : 0;
 		m(r === "week" ? (n) => new Date(n.getTime() + e * t) : (t) => new Date(t.getFullYear(), t.getMonth() + e, 1));
 	}
 	async function z() {
@@ -12210,7 +12226,7 @@ function Pa({ focusSymbols: e }) {
 							type: "button",
 							onClick: () => {
 								let e = /* @__PURE__ */ new Date();
-								m(e), g(ka(e));
+								m(e), g(Pa(e));
 							},
 							children: "오늘"
 						}),
@@ -12236,7 +12252,7 @@ function Pa({ focusSymbols: e }) {
 				role: "group",
 				"aria-label": "일정 필터",
 				children: [
-					Ca.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
+					Oa.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
 						className: "cal-filter",
 						"aria-pressed": a === e.value,
@@ -12249,14 +12265,14 @@ function Pa({ focusSymbols: e }) {
 						className: "cal-filter-sep",
 						"aria-hidden": "true"
 					}),
-					Ta.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
+					Aa.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
 						className: "cal-filter",
 						"aria-pressed": c === e,
 						onClick: () => {
 							u(e), E({ calendarMarket: e });
 						},
-						children: e === "all" ? "전체 시장" : wa[e] || e
+						children: e === "all" ? "전체 시장" : ka[e] || e
 					}, e)),
 					/* @__PURE__ */ (0, x.jsxs)("label", {
 						className: "cal-watch-toggle",
@@ -12284,7 +12300,7 @@ function Pa({ focusSymbols: e }) {
 				role: "tablist",
 				"aria-label": "이번 주",
 				children: j.map((e, t) => {
-					let n = ka(e), r = k.get(n) || [], i = [...new Set(r.map((e) => e.kind))].slice(0, 3);
+					let n = Pa(e), r = k.get(n) || [], i = [...new Set(r.map((e) => e.kind))].slice(0, 3);
 					return /* @__PURE__ */ (0, x.jsxs)("button", {
 						type: "button",
 						role: "tab",
@@ -12292,7 +12308,7 @@ function Pa({ focusSymbols: e }) {
 						className: `cal-day${n === h ? " cal-day--active" : ""}${t >= 5 ? " cal-day--dim" : ""}${n === P ? " cal-day--today" : ""}`,
 						onClick: () => g(n),
 						children: [
-							/* @__PURE__ */ (0, x.jsxs)("span", { children: [Da[t], n === P ? " · 오늘" : ""] }),
+							/* @__PURE__ */ (0, x.jsxs)("span", { children: [Ma[t], n === P ? " · 오늘" : ""] }),
 							/* @__PURE__ */ (0, x.jsxs)("b", { children: [
 								e.getMonth() + 1,
 								".",
@@ -12306,11 +12322,11 @@ function Pa({ focusSymbols: e }) {
 			}) : /* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "cal-month-grid",
 				"aria-label": `${p.getFullYear()}년 ${p.getMonth() + 1}월`,
-				children: [Da.map((e, t) => /* @__PURE__ */ (0, x.jsx)("span", {
+				children: [Ma.map((e, t) => /* @__PURE__ */ (0, x.jsx)("span", {
 					className: `cal-dow${t >= 5 ? " cal-dow--dim" : ""}`,
 					children: e
 				}, e)), N.map((e) => {
-					let t = ka(e), n = k.get(t) || [], r = e.getMonth() !== p.getMonth();
+					let t = Pa(e), n = k.get(t) || [], r = e.getMonth() !== p.getMonth();
 					return /* @__PURE__ */ (0, x.jsxs)("button", {
 						type: "button",
 						className: `cal-cell${t === P ? " cal-cell--today" : ""}${r ? " cal-cell--dim" : ""}${t === h ? " cal-cell--active" : ""}`,
@@ -12324,7 +12340,7 @@ function Pa({ focusSymbols: e }) {
 							n.slice(0, 3).map((e) => /* @__PURE__ */ (0, x.jsx)("span", {
 								className: "ev",
 								"data-kind": e.kind,
-								children: Na(e)
+								children: Ra(e)
 							}, e.id)),
 							n.length > 3 ? /* @__PURE__ */ (0, x.jsxs)("em", { children: [
 								"+",
@@ -12370,10 +12386,10 @@ function Pa({ focusSymbols: e }) {
 							children: "확정도"
 						})
 					] }) }), /* @__PURE__ */ (0, x.jsx)("tbody", { children: F.map((e) => /* @__PURE__ */ (0, x.jsxs)("tr", { children: [
-						/* @__PURE__ */ (0, x.jsx)("td", { children: ja(e) }),
+						/* @__PURE__ */ (0, x.jsx)("td", { children: Ia(e) }),
 						/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
 							className: "mkt-chip",
-							children: wa[e.market || ""] || e.market || "—"
+							children: ka[e.market || ""] || e.market || "—"
 						}) }),
 						/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
 							className: "imp",
@@ -12389,10 +12405,10 @@ function Pa({ focusSymbols: e }) {
 							target: "_blank",
 							rel: "noopener noreferrer",
 							children: /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title })
-						}) : /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title }), /* @__PURE__ */ (0, x.jsxs)("small", { children: [xa[e.kind] || e.kind, e.source ? ` · ${e.source}` : ""] })] }),
+						}) : /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title }), /* @__PURE__ */ (0, x.jsxs)("small", { children: [Ea[e.kind] || e.kind, e.source ? ` · ${e.source}` : ""] })] }),
 						/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("span", {
 							className: `certainty-badge certainty-badge--${e.status}`,
-							children: Sa[e.status] || e.status
+							children: Da[e.status] || e.status
 						}) })
 					] }, e.id)) })]
 				})
@@ -12405,7 +12421,7 @@ function Pa({ focusSymbols: e }) {
 }
 //#endregion
 //#region src/app/dashboard/NativeMarketChart.tsx
-var Fa = {
+var Ba = {
 	snapshot: "스냅샷",
 	current: "최신",
 	fresh: "최신",
@@ -12413,13 +12429,13 @@ var Fa = {
 	delayed: "지연",
 	stale: "오래됨",
 	unavailable: "불러올 수 없음"
-}, Ia = [
+}, Va = [
 	"1m",
 	"3m",
 	"6m",
 	"1y",
 	"5y"
-], La = [
+], Ha = [
 	{
 		symbol: "^GSPC",
 		label: "S&P 500"
@@ -12445,26 +12461,26 @@ var Fa = {
 		label: "USD/KRW"
 	}
 ];
-function Ra(e) {
+function Ua(e) {
 	return e.startsWith("^") || e.includes("=");
 }
-function za(e) {
+function Wa(e) {
 	let t = new Date(e.startsAt), n = Number.isNaN(t.getTime()) ? e.startsAt.slice(0, 10) : t.toLocaleDateString("ko-KR", {
 		timeZone: "Asia/Seoul",
 		month: "numeric",
 		day: "numeric",
 		weekday: "short"
-	}), r = xa[e.kind] || e.kind, i = e.kind === "earnings" ? ja(e) : "";
+	}), r = Ea[e.kind] || e.kind, i = e.kind === "earnings" ? Ia(e) : "";
 	return `${n} ${r} 예정${i && i !== "종일" ? ` · ${i}` : ""}`;
 }
-function Ba({ symbols: e }) {
-	let t = e.filter((e) => e.source !== "fallback" && !La.some((t) => t.symbol === e.symbol)), [n, r] = (0, b.useState)(La[0].symbol), [i, a] = (0, b.useState)("3m"), [s, c] = (0, b.useState)("line"), [u, d] = (0, b.useState)(null), [f, p] = (0, b.useState)(null), [m, h] = (0, b.useState)(""), g = (0, b.useRef)(null), _ = (0, b.useRef)(!1);
+function Ga({ symbols: e }) {
+	let t = e.filter((e) => e.source !== "fallback" && !Ha.some((t) => t.symbol === e.symbol)), [n, r] = (0, b.useState)(Ha[0].symbol), [i, a] = (0, b.useState)("3m"), [s, c] = (0, b.useState)("line"), [u, d] = (0, b.useState)(null), [f, p] = (0, b.useState)(null), [m, h] = (0, b.useState)(""), g = (0, b.useRef)(null), _ = (0, b.useRef)(!1);
 	(0, b.useEffect)(() => {
 		_.current || (_.current = !0, l("/api/dashboard/settings").then((e) => {
-			e.chartRange && Ia.includes(e.chartRange) && a(e.chartRange), e.chartSymbol && r(e.chartSymbol), (e.chartStyle === "line" || e.chartStyle === "candle") && c(e.chartStyle);
+			e.chartRange && Va.includes(e.chartRange) && a(e.chartRange), e.chartSymbol && r(e.chartSymbol), (e.chartStyle === "line" || e.chartStyle === "candle") && c(e.chartStyle);
 		}).catch(() => void 0));
 	}, []), (0, b.useEffect)(() => {
-		La.some((e) => e.symbol === n) || t.some((e) => e.symbol === n) || r(La[0].symbol);
+		Ha.some((e) => e.symbol === n) || t.some((e) => e.symbol === n) || r(Ha[0].symbol);
 	}, [t, n]);
 	function v(e) {
 		r(e), o("/api/dashboard/settings", { chartSymbol: e }).catch(() => void 0);
@@ -12486,7 +12502,7 @@ function Ba({ symbols: e }) {
 		};
 	}, [n, i]), (0, b.useEffect)(() => {
 		let e = !0;
-		if (p(null), !n || Ra(n)) return;
+		if (p(null), !n || Ua(n)) return;
 		let t = /* @__PURE__ */ new Date(), r = new Date(t.getTime() + 7776e6);
 		return l(`/api/market-calendar?start=${encodeURIComponent(t.toISOString())}&end=${encodeURIComponent(r.toISOString())}&ticker=${encodeURIComponent(n)}&limit=20`).then((t) => {
 			if (!e) return;
@@ -12611,7 +12627,7 @@ function Ba({ symbols: e }) {
 		C,
 		s
 	]);
-	let T = u?.series || [], E = T.length ? T[T.length - 1].close : null, D = T.length > 1 ? T[T.length - 2].close : null, O = E != null && D ? (E - D) / D * 100 : null, k = Fa[u?.freshness || ""] || (u ? u.freshness : "불러오는 중");
+	let T = u?.series || [], E = T.length ? T[T.length - 1].close : null, D = T.length > 1 ? T[T.length - 2].close : null, O = E != null && D ? (E - D) / D * 100 : null, k = Ba[u?.freshness || ""] || (u ? u.freshness : "불러오는 중");
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "cockpit-panel cockpit-chart",
 		"aria-labelledby": "native-chart-title",
@@ -12640,7 +12656,7 @@ function Ba({ symbols: e }) {
 					}), /* @__PURE__ */ (0, x.jsx)("div", {
 						role: "group",
 						"aria-label": "차트 기간",
-						children: Ia.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
+						children: Va.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 							type: "button",
 							"aria-pressed": i === e,
 							onClick: () => y(e),
@@ -12656,7 +12672,7 @@ function Ba({ symbols: e }) {
 				children: [/* @__PURE__ */ (0, x.jsx)("span", {
 					className: "chart-symbols__label",
 					children: "지수"
-				}), La.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
+				}), Ha.map((e) => /* @__PURE__ */ (0, x.jsx)("button", {
 					type: "button",
 					className: `sym-chip${e.symbol === n ? " sym-chip--active" : ""}`,
 					"aria-pressed": e.symbol === n,
@@ -12683,7 +12699,7 @@ function Ba({ symbols: e }) {
 			/* @__PURE__ */ (0, x.jsxs)("p", {
 				className: "chart-quote",
 				children: [
-					/* @__PURE__ */ (0, x.jsx)("strong", { children: La.find((e) => e.symbol === n)?.label || n }),
+					/* @__PURE__ */ (0, x.jsx)("strong", { children: Ha.find((e) => e.symbol === n)?.label || n }),
 					E == null ? null : /* @__PURE__ */ (0, x.jsx)("b", { children: E.toLocaleString(void 0, { maximumFractionDigits: 2 }) }),
 					O == null ? null : /* @__PURE__ */ (0, x.jsxs)("span", {
 						className: O > 0 ? "up" : O < 0 ? "down" : "flat",
@@ -12712,10 +12728,10 @@ function Ba({ symbols: e }) {
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("span", {
 						className: `certainty-badge certainty-badge--${f.status}`,
-						children: Sa[f.status] || f.status
+						children: Da[f.status] || f.status
 					}),
 					"다음 일정 — ",
-					/* @__PURE__ */ (0, x.jsx)("b", { children: za(f) }),
+					/* @__PURE__ */ (0, x.jsx)("b", { children: Wa(f) }),
 					/* @__PURE__ */ (0, x.jsx)("small", { children: "시장 캘린더 연동" })
 				]
 			}),
@@ -12729,7 +12745,7 @@ function Ba({ symbols: e }) {
 }
 //#endregion
 //#region src/app/dashboard/ResearchCockpit.tsx
-function Va() {
+function Ka() {
 	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)(""), i = (0, b.useCallback)(() => l("/api/dashboard/cockpit").then(t).catch((e) => r(e instanceof Error ? e.message : "대시보드를 불러오지 못했습니다.")), []);
 	if ((0, b.useEffect)(() => {
 		i();
@@ -12780,54 +12796,54 @@ function Va() {
 					}, e.provider))
 				]
 			}),
-			/* @__PURE__ */ (0, x.jsx)(hr, {
+			/* @__PURE__ */ (0, x.jsx)(gr, {
 				events: e.changes || [],
 				quiet: e.quietChanges || []
 			}),
-			/* @__PURE__ */ (0, x.jsx)(ba, {
+			/* @__PURE__ */ (0, x.jsx)(Ta, {
 				items: e.implications || [],
 				portfolioState: e.portfolioState
 			}),
-			/* @__PURE__ */ (0, x.jsx)(Ba, { symbols: s }),
-			/* @__PURE__ */ (0, x.jsx)(Pa, { focusSymbols: s })
+			/* @__PURE__ */ (0, x.jsx)(Ga, { symbols: s }),
+			/* @__PURE__ */ (0, x.jsx)(za, { focusSymbols: s })
 		]
 	});
 }
 //#endregion
 //#region src/app/Dashboard.tsx
-var Ha = (0, b.lazy)(() => import("./LegacyMarketWidgetBoard-BfnLQ_Lu.js")), Ua = {
+var qa = (0, b.lazy)(() => import("./LegacyMarketWidgetBoard-BfnLQ_Lu.js")), Ja = {
 	positive: "긍정",
 	watch: "주의",
 	negative: "부정",
 	neutral: "중립"
 };
-function Wa(e) {
+function Ya(e) {
 	return new Promise((t) => window.setTimeout(t, e));
 }
-function Ga(e) {
+function Xa(e) {
 	let t = e;
 	return !!(t?.id && t?.kind === "agent_bridge" && f(t.status));
 }
-async function Ka(e) {
+async function Za(e) {
 	let t = e;
-	for (; f(t.status);) await Wa(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
+	for (; f(t.status);) await Ya(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
 	if (t.status !== "done") throw Error(t.message || t.error || "투자 리뷰 생성에 실패했습니다.");
 	return t;
 }
-function qa(e) {
+function Qa(e) {
 	return typeof e == "number" && Number.isFinite(e) ? e : 0;
 }
-function Ja(e, t) {
+function $a(e, t) {
 	for (let n of t) {
-		let t = qa(e?.[n]);
+		let t = Qa(e?.[n]);
 		if (t) return t;
 	}
 	return 0;
 }
-function Ya(e) {
+function eo(e) {
 	return e.name || e.ticker || "포지션";
 }
-function Xa() {
+function to() {
 	let [e, t] = (0, b.useState)(() => localStorage.getItem("folio.dashboardMode") === "legacy" ? "legacy" : "cockpit"), [n, r] = (0, b.useState)({
 		dashboard: null,
 		review: null
@@ -12848,7 +12864,7 @@ function Xa() {
 			r({
 				dashboard: e,
 				review: t
-			}), Te("dashboard", {
+			}), Ee("dashboard", {
 				surface: "dashboard",
 				viewId: "dashboard",
 				reportKind: "",
@@ -12873,15 +12889,15 @@ function Xa() {
 		c(!0), d("");
 		try {
 			let e = await o("/api/investment-review/generate", { forceRefresh: !0 }), t;
-			if (Ga(e)) {
-				let n = await Ka(e), r = n.result?.date || n.result?.artifactId || "";
+			if (Xa(e)) {
+				let n = await Za(e), r = n.result?.date || n.result?.artifactId || "";
 				t = r ? await l(`/api/investment-review/${encodeURIComponent(r)}`) : await l("/api/investment-review");
 			} else t = e;
 			let n = await l("/api/dashboard");
 			r({
 				dashboard: n,
 				review: t
-			}), Te("dashboard", {
+			}), Ee("dashboard", {
 				surface: "dashboard",
 				viewId: "dashboard",
 				reportKind: "investment_review",
@@ -12912,7 +12928,7 @@ function Xa() {
 		{
 			label: "포지션 영향",
 			value: n.review?.portfolioImpacts?.length ?? 0,
-			detail: `${Ja(h, ["positive", "positiveImpacts"])} positive`
+			detail: `${$a(h, ["positive", "positiveImpacts"])} positive`
 		}
 	], [
 		n.dashboard?.briefings?.length,
@@ -12927,7 +12943,7 @@ function Xa() {
 		className: "react-dashboard",
 		"data-react-dashboard": !0,
 		"data-dashboard-mode": "cockpit",
-		children: [/* @__PURE__ */ (0, x.jsx)(hn, {
+		children: [/* @__PURE__ */ (0, x.jsx)(gn, {
 			eyebrow: "Research Cockpit",
 			title: "대시보드",
 			description: "새 보고서에서 확인된 변화, 집중 차트, 시장 일정을 한 화면에서 점검합니다.",
@@ -12946,12 +12962,12 @@ function Xa() {
 					children: "Legacy"
 				})]
 			})
-		}), /* @__PURE__ */ (0, x.jsx)(Va, {})]
+		}), /* @__PURE__ */ (0, x.jsx)(Ka, {})]
 	}) : /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-dashboard",
 		"data-react-dashboard": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Investment Review",
 				title: "대시보드",
 				description: "시장 상태와 투자 체크포인트를 한 화면에서 점검합니다.",
@@ -13005,7 +13021,7 @@ function Xa() {
 							className: "market-widget-panel",
 							children: /* @__PURE__ */ (0, x.jsx)("p", { children: "Legacy 시장 위젯을 불러오는 중입니다." })
 						}),
-						children: /* @__PURE__ */ (0, x.jsx)(Ha, {})
+						children: /* @__PURE__ */ (0, x.jsx)(qa, {})
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("article", {
 						className: "react-dashboard-panel wide",
@@ -13069,12 +13085,12 @@ function Xa() {
 								}), /* @__PURE__ */ (0, x.jsx)("span", { children: v.length })]
 							}),
 							/* @__PURE__ */ (0, x.jsx)("h2", { children: "포트폴리오 영향" }),
-							/* @__PURE__ */ (0, x.jsx)("ul", { children: v.length ? v.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: Ya(e) }), /* @__PURE__ */ (0, x.jsx)("span", { children: Ua[e.impact || ""] || e.impact || "중립" })] }, `${Ya(e)}-${t}`)) : /* @__PURE__ */ (0, x.jsx)("li", { children: "포트폴리오 영향 항목이 없습니다." }) })
+							/* @__PURE__ */ (0, x.jsx)("ul", { children: v.length ? v.map((e, t) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: eo(e) }), /* @__PURE__ */ (0, x.jsx)("span", { children: Ja[e.impact || ""] || e.impact || "중립" })] }, `${eo(e)}-${t}`)) : /* @__PURE__ */ (0, x.jsx)("li", { children: "포트폴리오 영향 항목이 없습니다." }) })
 						]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("article", {
 						className: "react-dashboard-panel wide",
-						children: /* @__PURE__ */ (0, x.jsx)(ga, {})
+						children: /* @__PURE__ */ (0, x.jsx)(xa, {})
 					})
 				]
 			})
@@ -13083,7 +13099,7 @@ function Xa() {
 }
 //#endregion
 //#region src/app/SmartCollectionEditor.tsx
-var Za = {
+var no = {
 	name: "",
 	query: "",
 	market: "ALL",
@@ -13091,21 +13107,21 @@ var Za = {
 	tickers: "",
 	tags: ""
 };
-function Qa(e, t = !1) {
+function ro(e, t = !1) {
 	let n = e.split(",").map((e) => e.normalize("NFKC").trim()).filter(Boolean).map((e) => t ? e.toUpperCase() : e.toLowerCase());
 	return Array.from(new Set(n)).sort();
 }
-function $a(e) {
+function io(e) {
 	return {
 		name: e.name.normalize("NFKC").trim(),
 		query: e.query.normalize("NFKC").trim(),
 		market: e.market,
-		sources: Qa(e.sources),
-		tickers: Qa(e.tickers, !0),
-		tags: Qa(e.tags)
+		sources: ro(e.sources),
+		tickers: ro(e.tickers, !0),
+		tags: ro(e.tags)
 	};
 }
-function eo(e) {
+function ao(e) {
 	return {
 		name: e.name,
 		query: e.query,
@@ -13115,7 +13131,7 @@ function eo(e) {
 		tags: e.tags.join(", ")
 	};
 }
-function to({ mode: e, revision: t, draft: n, busy: r, onChange: i, onCancel: a, onSave: o }) {
+function oo({ mode: e, revision: t, draft: n, busy: r, onChange: i, onCancel: a, onSave: o }) {
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "topicrpt-collection-editor",
 		children: [
@@ -13224,7 +13240,7 @@ function to({ mode: e, revision: t, draft: n, busy: r, onChange: i, onCancel: a,
 }
 //#endregion
 //#region src/app/SmartCollectionWorkspace.tsx
-function no(e) {
+function so(e) {
 	return [
 		e.query && `query: ${e.query}`,
 		e.market !== "ALL" && `market: ${e.market}`,
@@ -13233,19 +13249,19 @@ function no(e) {
 		e.tags.length && `tags: ${e.tags.join(", ")}`
 	].filter(Boolean).join(" · ") || "필터 없음";
 }
-function ro(e) {
+function co(e) {
 	return e instanceof c ? e.code === "validation_error" ? "필터 형식을 확인하세요. 이름과 하나 이상의 검색 조건이 필요하며 각 목록은 최대 20개입니다." : e.code === "collection_store_unavailable" ? "저장된 컬렉션을 읽을 수 없습니다. 저장소 상태를 확인한 뒤 다시 불러오세요." : e.code === "collection_snapshot_unavailable" ? "최근 새로고침 기록을 읽을 수 없습니다. 저장 상태를 확인한 뒤 다시 시도하세요." : e.code === "collection_source_unavailable" ? "현재 외부 자료 인덱스를 읽을 수 없습니다. 자료 상태를 확인한 뒤 다시 시도하세요." : e.code === "collection_not_found" ? "컬렉션이 더 이상 존재하지 않습니다. 목록으로 돌아가세요." : `컬렉션 요청을 완료하지 못했습니다 (${e.code || "request_failed"}).` : "컬렉션 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요.";
 }
-function io(e) {
+function lo(e) {
 	let t = e.payload?.currentRevision;
 	return typeof t == "number" && Number.isInteger(t) && t >= 1 ? t : null;
 }
-function ao(e) {
+function uo(e) {
 	if (!e) return "아직 새로고침하지 않음";
 	let t = e.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
 	return t ? `${t[1]} ${t[2]} UTC` : e;
 }
-function oo(e) {
+function fo(e) {
 	return {
 		baseline_missing: "비교할 이전 스냅샷 없음",
 		definition_changed: "필터 정의 변경",
@@ -13261,8 +13277,8 @@ function oo(e) {
 		healthy: "현재 입력 정상"
 	}[e] || e;
 }
-function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r, disabled: i }) {
-	let [s, u] = (0, b.useState)([]), [d, f] = (0, b.useState)(0), [p, h] = (0, b.useState)(!0), [g, _] = (0, b.useState)(null), [v, y] = (0, b.useState)(""), [S, C] = (0, b.useState)(null), [w, T] = (0, b.useState)(Za), [E, D] = (0, b.useState)(null), [O, k] = (0, b.useState)(!1), [A, j] = (0, b.useState)(!1), [M, N] = (0, b.useState)(""), [P, F] = (0, b.useState)(null), I = (0, b.useRef)(0), L = (0, b.useRef)(0), R = (0, b.useRef)(null), z = (0, b.useRef)(null);
+function po({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r, disabled: i }) {
+	let [s, u] = (0, b.useState)([]), [d, f] = (0, b.useState)(0), [p, h] = (0, b.useState)(!0), [g, _] = (0, b.useState)(null), [v, y] = (0, b.useState)(""), [S, C] = (0, b.useState)(null), [w, T] = (0, b.useState)(no), [E, D] = (0, b.useState)(null), [O, k] = (0, b.useState)(!1), [A, j] = (0, b.useState)(!1), [M, N] = (0, b.useState)(""), [P, F] = (0, b.useState)(null), I = (0, b.useRef)(0), L = (0, b.useRef)(0), R = (0, b.useRef)(null), z = (0, b.useRef)(null);
 	function B(e, t) {
 		T((n) => ({
 			...n,
@@ -13300,7 +13316,7 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 			}
 		} catch (e) {
 			if (e instanceof DOMException && e.name === "AbortError" || i !== I.current) return;
-			N(ro(e));
+			N(co(e));
 		} finally {
 			!r.signal.aborted && i === I.current && h(!1);
 		}
@@ -13329,8 +13345,8 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 			if (e instanceof DOMException && e.name === "AbortError" || r !== L.current) return;
 			e instanceof c && e.status === 409 && (e.code === "revision_conflict" || e.code === "duplicate_name") ? (F({
 				code: e.code,
-				currentRevision: io(e)
-			}), t(null)) : N(ro(e));
+				currentRevision: lo(e)
+			}), t(null)) : N(co(e));
 		} finally {
 			!n.signal.aborted && r === L.current && k(!1);
 		}
@@ -13339,11 +13355,11 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 		R.current?.abort(), z.current?.abort();
 	}), []);
 	let W = () => {
-		_("create"), y(""), C(null), T(Za), F(null), N("");
-	}, G = () => {
-		V && (_("edit"), y(V.id), C(V.revision), T(eo(V)), F(null), N(""));
-	}, K = async () => {
-		let e = $a(w);
+		_("create"), y(""), C(null), T(no), F(null), N("");
+	}, ee = () => {
+		V && (_("edit"), y(V.id), C(V.revision), T(ao(V)), F(null), N(""));
+	}, G = async () => {
+		let e = io(w);
 		if (!e.name || !e.query && e.market === "ALL" && !e.sources.length && !e.tickers.length && !e.tags.length || e.sources.length > 20 || e.tickers.length > 20 || e.tags.length > 20) {
 			N("이름과 하나 이상의 검색 조건을 입력하세요. 쉼표 목록은 각각 최대 20개입니다.");
 			return;
@@ -13362,12 +13378,12 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 		} catch (e) {
 			e instanceof c && e.status === 409 && (e.code === "revision_conflict" || e.code === "duplicate_name") ? (F({
 				code: e.code,
-				currentRevision: io(e)
-			}), e.code === "revision_conflict" && t(null)) : N(ro(e));
+				currentRevision: lo(e)
+			}), e.code === "revision_conflict" && t(null)) : N(co(e));
 		} finally {
 			j(!1);
 		}
-	}, q = async () => {
+	}, K = async () => {
 		if (!V || !window.confirm(`“${V.name}” 컬렉션을 삭제할까요?`)) return;
 		j(!0), N(""), F(null);
 		let e = { expectedRevision: V.revision };
@@ -13376,8 +13392,8 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 		} catch (e) {
 			e instanceof c && e.status === 409 && (e.code === "revision_conflict" || e.code === "duplicate_name") ? (F({
 				code: e.code,
-				currentRevision: io(e)
-			}), t(null)) : N(ro(e));
+				currentRevision: lo(e)
+			}), t(null)) : N(co(e));
 		} finally {
 			j(!1);
 		}
@@ -13474,7 +13490,7 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 									"aria-pressed": n,
 									disabled: A || i,
 									onClick: () => void U(t),
-									children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.name }), /* @__PURE__ */ (0, x.jsxs)("small", { children: ["버전 ", t.revision] })] }), /* @__PURE__ */ (0, x.jsx)("small", { children: no(t) })]
+									children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.name }), /* @__PURE__ */ (0, x.jsxs)("small", { children: ["버전 ", t.revision] })] }), /* @__PURE__ */ (0, x.jsx)("small", { children: so(t) })]
 								}, t.id);
 							})]
 						}),
@@ -13504,7 +13520,7 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 									type: "button",
 									"data-qa": "collection-edit",
 									disabled: A || i,
-									onClick: G,
+									onClick: ee,
 									children: "선택 규칙 편집"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
@@ -13512,7 +13528,7 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 									type: "button",
 									"data-qa": "collection-delete",
 									disabled: A || i,
-									onClick: () => void q(),
+									onClick: () => void K(),
 									children: "삭제"
 								}),
 								/* @__PURE__ */ (0, x.jsx)("button", {
@@ -13570,7 +13586,7 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 					]
 				})]
 			}),
-			g && /* @__PURE__ */ (0, x.jsx)(to, {
+			g && /* @__PURE__ */ (0, x.jsx)(oo, {
 				mode: g,
 				revision: S,
 				draft: w,
@@ -13579,12 +13595,12 @@ function so({ selectedRef: e, onSelectedRef: t, onBusyChange: n, onOpenDetail: r
 				onCancel: () => {
 					_(null), F(null), N("");
 				},
-				onSave: () => void K()
+				onSave: () => void G()
 			})
 		]
 	});
 }
-function co({ collectionId: e, onBack: t, onStartResearch: n }) {
+function mo({ collectionId: e, onBack: t, onStartResearch: n }) {
 	let [r, i] = (0, b.useState)(null), [a, s] = (0, b.useState)(null), [u, d] = (0, b.useState)(!0), [f, p] = (0, b.useState)(!1), [m, h] = (0, b.useState)(null), [g, _] = (0, b.useState)(""), v = (0, b.useRef)(null), y = (0, b.useCallback)(async ({ preserveMessage: t = !1 } = {}) => {
 		v.current?.abort();
 		let n = new AbortController();
@@ -13595,7 +13611,7 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 			i(r), s(a);
 		} catch (e) {
 			if (e instanceof DOMException && e.name === "AbortError") return;
-			e instanceof c && e.code === "collection_not_found" ? h("deleted") : e instanceof c && e.code === "collection_source_unavailable" ? h("source") : h("other"), _(ro(e));
+			e instanceof c && e.code === "collection_not_found" ? h("deleted") : e instanceof c && e.code === "collection_source_unavailable" ? h("source") : h("other"), _(co(e));
 		} finally {
 			n.signal.aborted || d(!1);
 		}
@@ -13608,12 +13624,12 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 		try {
 			await o(`/api/smart-collections/${encodeURIComponent(e)}/refresh`, t), await y();
 		} catch (e) {
-			e instanceof c && e.status === 409 ? (_("다른 탭에서 정의가 변경되었습니다. 최신 revision을 다시 불러왔습니다."), await y({ preserveMessage: !0 })) : e instanceof c && e.code === "collection_not_found" ? (h("deleted"), _(ro(e))) : (e instanceof c && e.code === "collection_source_unavailable" && h("source"), _(ro(e)));
+			e instanceof c && e.status === 409 ? (_("다른 탭에서 정의가 변경되었습니다. 최신 revision을 다시 불러왔습니다."), await y({ preserveMessage: !0 })) : e instanceof c && e.code === "collection_not_found" ? (h("deleted"), _(co(e))) : (e instanceof c && e.code === "collection_source_unavailable" && h("source"), _(co(e)));
 		} finally {
 			p(!1);
 		}
 	}, C = () => {
-		r && ke({
+		r && Ae({
 			surface: "smart_collection_workspace",
 			viewId: "topicrpt",
 			collectionId: r.collection.id,
@@ -13751,7 +13767,7 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 					/* @__PURE__ */ (0, x.jsx)("h1", { children: r.collection.name }),
 					/* @__PURE__ */ (0, x.jsx)("p", { children: "저장된 검색 규칙이며 외부 근거 자체가 아닙니다. 새 리서치를 시작하면 이 규칙의 ID와 버전으로 자료를 다시 확인합니다." }),
 					/* @__PURE__ */ (0, x.jsxs)("small", { children: [
-						no(r.collection),
+						so(r.collection),
 						" · 버전 ",
 						r.collection.revision
 					] })
@@ -13787,11 +13803,11 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 					/* @__PURE__ */ (0, x.jsxs)("div", { children: [
 						/* @__PURE__ */ (0, x.jsx)("span", { children: "상태" }),
 						/* @__PURE__ */ (0, x.jsx)("strong", { children: w }),
-						/* @__PURE__ */ (0, x.jsx)("small", { children: r.healthReasonCodes.map(oo).join(" · ") })
+						/* @__PURE__ */ (0, x.jsx)("small", { children: r.healthReasonCodes.map(fo).join(" · ") })
 					] }),
 					/* @__PURE__ */ (0, x.jsxs)("div", { children: [
 						/* @__PURE__ */ (0, x.jsx)("span", { children: "마지막 새로고침" }),
-						/* @__PURE__ */ (0, x.jsx)("strong", { children: ao(r.lastRefresh) }),
+						/* @__PURE__ */ (0, x.jsx)("strong", { children: uo(r.lastRefresh) }),
 						/* @__PURE__ */ (0, x.jsx)("small", { children: r.current.truncated ? "표시 상한 적용" : "현재 범위 확인" })
 					] }),
 					/* @__PURE__ */ (0, x.jsxs)("div", { children: [
@@ -13819,7 +13835,7 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 					] })
 				]
 			}),
-			/* @__PURE__ */ (0, x.jsx)(Ft, {
+			/* @__PURE__ */ (0, x.jsx)(It, {
 				mode: "collection",
 				collectionId: r.collection.id
 			}),
@@ -13864,7 +13880,7 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 							children: [/* @__PURE__ */ (0, x.jsx)("strong", {
 								id: "collection-change-heading",
 								children: "스냅샷 변경"
-							}), /* @__PURE__ */ (0, x.jsx)("span", { children: a?.observedAt ? ao(a.observedAt) : "확인 전" })]
+							}), /* @__PURE__ */ (0, x.jsx)("span", { children: a?.observedAt ? uo(a.observedAt) : "확인 전" })]
 						}),
 						/* @__PURE__ */ (0, x.jsxs)("dl", { children: [
 							/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "추가" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: a?.counts.added ?? r.changeCounts.added })] }),
@@ -13886,14 +13902,14 @@ function co({ collectionId: e, onBack: t, onStartResearch: n }) {
 }
 //#endregion
 //#region src/app/DeepResearchRoute.tsx
-function lo({ children: e = "저장된 구조화 정보가 없습니다." }) {
+function X({ children: e = "저장된 구조화 정보가 없습니다." }) {
 	return /* @__PURE__ */ (0, x.jsx)("p", {
 		className: "topicrpt-provenance-empty",
 		children: e
 	});
 }
-function uo({ report: e }) {
-	let t = e.topicPlan, n = e.evidencePackSummary, r = e.researchResolution, i = Ln(e.personalOverlay, e.canonicalRevision), a = typeof e.userContext == "string" ? e.userContext.trim() : e.userContext ? "생성 요청에 사용자 컨텍스트가 포함되었습니다." : "";
+function ho({ report: e }) {
+	let t = e.topicPlan, n = e.evidencePackSummary, r = e.researchResolution, i = Rn(e.personalOverlay, e.canonicalRevision), a = typeof e.userContext == "string" ? e.userContext.trim() : e.userContext ? "생성 요청에 사용자 컨텍스트가 포함되었습니다." : "";
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "topicrpt-provenance",
 		"aria-labelledby": "dr-provenance-heading",
@@ -13937,10 +13953,10 @@ function uo({ report: e }) {
 								]
 							}),
 							/* @__PURE__ */ (0, x.jsx)("h4", { children: "리서치 질문" }),
-							Mo(t.researchQuestions),
+							Fo(t.researchQuestions),
 							/* @__PURE__ */ (0, x.jsx)("h4", { children: "반증 조건" }),
-							Mo(t.falsificationTriggers)
-						] }) : /* @__PURE__ */ (0, x.jsx)(lo, {})]
+							Fo(t.falsificationTriggers)
+						] }) : /* @__PURE__ */ (0, x.jsx)(X, {})]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("section", {
 						className: "topicrpt-provenance-panel",
@@ -13965,7 +13981,7 @@ function uo({ report: e }) {
 									"건 · ",
 									t.level || "수준 미상"
 								] })] }, e))
-							}) : /* @__PURE__ */ (0, x.jsx)(lo, { children: "분석 축별 커버리지가 없습니다." }),
+							}) : /* @__PURE__ */ (0, x.jsx)(X, { children: "분석 축별 커버리지가 없습니다." }),
 							Object.keys(n.questionCoverage).length > 0 && /* @__PURE__ */ (0, x.jsxs)("details", { children: [/* @__PURE__ */ (0, x.jsx)("summary", { children: "리서치 질문 커버리지" }), /* @__PURE__ */ (0, x.jsx)("ul", {
 								className: "topicrpt-provenance-list",
 								children: Object.entries(n.questionCoverage).map(([e, t]) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.question || e }), /* @__PURE__ */ (0, x.jsxs)("span", { children: [
@@ -13986,7 +14002,7 @@ function uo({ report: e }) {
 									e.confidence
 								].filter(Boolean).join(" · ") })] }, e.id))
 							})] })
-						] }) : /* @__PURE__ */ (0, x.jsx)(lo, {})]
+						] }) : /* @__PURE__ */ (0, x.jsx)(X, {})]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("section", {
 						className: "topicrpt-provenance-panel topicrpt-provenance-wide",
@@ -14024,7 +14040,7 @@ function uo({ report: e }) {
 										children: "원문 열기"
 									})
 								] }, e.sourceId))
-							}) : /* @__PURE__ */ (0, x.jsx)(lo, { children: "확인 가능한 외부 근거 원장이 없습니다." })
+							}) : /* @__PURE__ */ (0, x.jsx)(X, { children: "확인 가능한 외부 근거 원장이 없습니다." })
 						]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("section", {
@@ -14040,7 +14056,7 @@ function uo({ report: e }) {
 								"data-severity": e.severity,
 								children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.description }), /* @__PURE__ */ (0, x.jsx)("span", { children: e.resolved ? "해결됨" : e.suggestedAction || "추가 확인 필요" })]
 							}, e.id))
-						}) : /* @__PURE__ */ (0, x.jsx)(lo, { children: "기록된 자료 공백이 없습니다." })]
+						}) : /* @__PURE__ */ (0, x.jsx)(X, { children: "기록된 자료 공백이 없습니다." })]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("section", {
 						className: "topicrpt-provenance-panel",
@@ -14059,10 +14075,10 @@ function uo({ report: e }) {
 								] })] }), /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("dt", { children: "상태" }), /* @__PURE__ */ (0, x.jsx)("dd", { children: e.quality.status || "미기록" })] })]
 							}),
 							/* @__PURE__ */ (0, x.jsx)("h4", { children: "경고" }),
-							Mo(e.quality.warnings, "경고 없음"),
+							Fo(e.quality.warnings, "경고 없음"),
 							/* @__PURE__ */ (0, x.jsx)("h4", { children: "보완 제안" }),
-							Mo(e.quality.suggestedFixes, "제안 없음")
-						] }) : /* @__PURE__ */ (0, x.jsx)(lo, {})]
+							Fo(e.quality.suggestedFixes, "제안 없음")
+						] }) : /* @__PURE__ */ (0, x.jsx)(X, {})]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("section", {
 						className: "topicrpt-provenance-panel topicrpt-provenance-wide",
@@ -14112,7 +14128,7 @@ function uo({ report: e }) {
 								className: "topicrpt-contract-warning",
 								children: ["근거 부족 확인: ", r.zeroEvidenceReason || "사유 미기록"]
 							})
-						] }) : /* @__PURE__ */ (0, x.jsx)(lo, {})]
+						] }) : /* @__PURE__ */ (0, x.jsx)(X, {})]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("aside", {
 						className: "topicrpt-hypothesis-panel",
@@ -14143,7 +14159,7 @@ function uo({ report: e }) {
 								id: "dr-overlay-heading",
 								children: "개인 해석"
 							}),
-							/* @__PURE__ */ (0, x.jsx)(en, {
+							/* @__PURE__ */ (0, x.jsx)(tn, {
 								overlay: i,
 								staleQa: "dr-overlay-stale"
 							})
@@ -14154,9 +14170,9 @@ function uo({ report: e }) {
 		]
 	});
 }
-function fo({ resolution: e }) {
+function go({ resolution: e }) {
 	if (!e) return null;
-	let t = Zi(e), n = typeof e.reason == "string" ? e.reason : "", r = e.injected === !0, i = t?.status || (n === "policy_excluded" ? "excluded" : "unknown"), a = i === "current" && r ? "생성 시점의 현재 상태를 별도 시장 배경으로 포함했습니다." : i === "stale" ? "최신성이 만료되어 보고서 판단에는 주입하지 않았습니다." : i === "fallback" ? "참고용 대체 상태이며 현재 투자 자세로 사용하지 않았습니다." : i === "empty" ? "사용 가능한 시장 상태가 없어 보고서 판단에 포함하지 않았습니다." : i === "excluded" ? "요청 정책에 따라 시장 상태를 제외했습니다." : "시장 상태 참조를 확인할 수 없습니다.";
+	let t = na(e), n = typeof e.reason == "string" ? e.reason : "", r = e.injected === !0, i = t?.status || (n === "policy_excluded" ? "excluded" : "unknown"), a = i === "current" && r ? "생성 시점의 현재 상태를 별도 시장 배경으로 포함했습니다." : i === "stale" ? "최신성이 만료되어 보고서 판단에는 주입하지 않았습니다." : i === "fallback" ? "참고용 대체 상태이며 현재 투자 자세로 사용하지 않았습니다." : i === "empty" ? "사용 가능한 시장 상태가 없어 보고서 판단에 포함하지 않았습니다." : i === "excluded" ? "요청 정책에 따라 시장 상태를 제외했습니다." : "시장 상태 참조를 확인할 수 없습니다.";
 	return /* @__PURE__ */ (0, x.jsxs)("aside", {
 		className: `topicrpt-market-state-context state-${i}`,
 		"data-qa": "dr-market-state-context",
@@ -14175,10 +14191,10 @@ function fo({ resolution: e }) {
 		]
 	});
 }
-var po = [{
+var _o = [{
 	key: "custom",
 	label: "질문 중심"
-}], mo = { custom: "질문 중심" }, ho = [
+}], vo = { custom: "질문 중심" }, yo = [
 	"queued",
 	"running",
 	"cancel_requested",
@@ -14191,7 +14207,7 @@ var po = [{
 	"failed_restart",
 	"failed_commit_recovery"
 ];
-function go(e, t) {
+function bo(e, t) {
 	return new Promise((n, r) => {
 		if (t.aborted) {
 			r(new DOMException("Request cancelled", "AbortError"));
@@ -14205,35 +14221,35 @@ function go(e, t) {
 		t.addEventListener("abort", a, { once: !0 });
 	});
 }
-function _o(e) {
+function xo(e) {
 	return typeof e == "object" && !!e && !Array.isArray(e);
 }
-function vo(e) {
-	return typeof e == "string" && ho.includes(e);
+function So(e) {
+	return typeof e == "string" && yo.includes(e);
 }
-function yo(e) {
-	return _o(e) ? typeof e.id == "string" && vo(e.status) : !1;
+function Co(e) {
+	return xo(e) ? typeof e.id == "string" && So(e.status) : !1;
 }
-function bo(e) {
-	return _o(e) ? yo(e.job) : !1;
+function wo(e) {
+	return xo(e) ? Co(e.job) : !1;
 }
-var xo = class extends Error {
+var To = class extends Error {
 	job;
 	name = "JobTerminalError";
 	constructor(e) {
 		super(e.message || e.error || `딥 리서치 작업이 ${e.status} 상태로 종료되었습니다.`), this.job = e;
 	}
 };
-async function So(e, t) {
+async function Eo(e, t) {
 	let n = e, r = Date.now() + 12e4;
 	for (; f(n.status);) {
 		if (Date.now() >= r) throw Error("작업이 아직 실행 중입니다. 잠시 후 작업 목록에서 다시 확인하세요.");
-		await go(1e3, t), n = await l(`/api/jobs/${encodeURIComponent(n.id)}`, { signal: t });
+		await bo(1e3, t), n = await l(`/api/jobs/${encodeURIComponent(n.id)}`, { signal: t });
 	}
-	if (n.status !== "done") throw new xo(n);
+	if (n.status !== "done") throw new To(n);
 	return n;
 }
-function Co(e = "", t = "딥 리서치") {
+function Do(e = "", t = "딥 리서치") {
 	let n = e.replace(/\r\n/g, "\n").split("\n"), r = n.findIndex((e) => e.trim());
 	if (r < 0) return {
 		title: t,
@@ -14248,36 +14264,36 @@ function Co(e = "", t = "딥 리서치") {
 		body: e
 	};
 }
-function wo(e) {
+function Z(e) {
 	return e.topicLabel || e.topicKey || "딥 리서치";
 }
-function To(e) {
+function Oo(e) {
 	let t = String(e.topicKey || "").trim();
-	return mo[t] || t || "기타";
-}
-function Eo(e) {
-	return e ? e.slice(0, 10) || e : "날짜 미상";
-}
-function Do(e) {
-	window.location.hash = e ? vn(e) : "#/deep-research";
-}
-function Oo() {
-	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "deep-research";
+	return vo[t] || t || "기타";
 }
 function ko(e) {
-	return e instanceof c ? e.code : e instanceof xo ? e.job.errorCode || e.job.status : e instanceof Error ? e.name : "request_failed";
+	return e ? e.slice(0, 10) || e : "날짜 미상";
 }
-function Ao(e, t) {
-	let n = ko(t);
+function Ao(e) {
+	window.location.hash = e ? yn(e) : "#/deep-research";
+}
+function jo() {
+	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "deep-research";
+}
+function Mo(e) {
+	return e instanceof c ? e.code : e instanceof To ? e.job.errorCode || e.job.status : e instanceof Error ? e.name : "request_failed";
+}
+function No(e, t) {
+	let n = Mo(t);
 	return e === "validation" ? "투자 질문을 1~500자로 입력하세요." : n === "evidence_confirmation_required" || n === "resolution_changed" ? "자료 상태가 계획 미리보기와 달라졌습니다. 최신 계획을 다시 미리보고 확인하세요." : n === "no_index" || n === "index_unavailable" ? "연구 인덱스를 아직 읽을 수 없습니다. RSS 자료를 수집하고 인덱스를 만든 뒤 다시 시도하세요." : n === "rss_unavailable" ? "RSS 자료를 읽을 수 없습니다. RSS 수집 상태를 확인한 뒤 다시 시도하세요." : n === "cli_unavailable" ? "선택한 CLI 어댑터를 사용할 수 없습니다. 자동 어댑터를 선택하거나 설정을 확인하세요." : e === "degraded" ? "근거가 없는 규칙 기반 보고서를 실행하려면 근거 부족 확인이 필요합니다." : e === "generation" ? "생성 작업에 실패했습니다. 입력과 승인 계획은 유지되므로 다시 실행할 수 있습니다." : e === "report" ? "저장된 보고서를 열지 못했습니다. 목록으로 돌아가 다시 시도하세요." : t instanceof Error && t.message ? t.message : "요청을 처리하지 못했습니다. 입력을 확인하고 다시 시도하세요.";
 }
-function jo(e) {
+function Po(e) {
 	return {
 		id: e.approval.id,
 		token: e.approval.token
 	};
 }
-function Mo(e, t = "없음") {
+function Fo(e, t = "없음") {
 	return e.length ? /* @__PURE__ */ (0, x.jsx)("ul", {
 		className: "topicrpt-inline-list",
 		children: e.map((e) => /* @__PURE__ */ (0, x.jsx)("li", { children: e }, e))
@@ -14286,7 +14302,7 @@ function Mo(e, t = "없음") {
 		children: t
 	});
 }
-function No({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, onCliAdapter: i, onContinue: a, onEdit: o, degradedConfirming: s, onConfirmDegraded: c, onCancelDegraded: l }) {
+function Io({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, onCliAdapter: i, onContinue: a, onEdit: o, degradedConfirming: s, onConfirmDegraded: c, onCancelDegraded: l }) {
 	let { approvedRequest: u, preview: d } = e, f = u.topicPlan, p = d.zeroEvidence, m = p.reasonCode;
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "input-panel topicrpt-plan-panel",
@@ -14324,7 +14340,7 @@ function No({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 							}),
 							f.analysisAxes.length ? /* @__PURE__ */ (0, x.jsx)("ul", {
 								className: "topicrpt-axis-list",
-								children: f.analysisAxes.map((e) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.label }), Mo(e.questions)] }, e.key))
+								children: f.analysisAxes.map((e) => /* @__PURE__ */ (0, x.jsxs)("li", { children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.label }), Fo(e.questions)] }, e.key))
 							}) : /* @__PURE__ */ (0, x.jsx)("span", {
 								className: "topicrpt-empty-value",
 								children: "분석 축 없음"
@@ -14338,7 +14354,7 @@ function No({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 								className: "topicrpt-plan-label",
 								children: "검색 질의"
 							}),
-							Mo(f.searchQueries),
+							Fo(f.searchQueries),
 							/* @__PURE__ */ (0, x.jsx)("span", {
 								className: "topicrpt-plan-label",
 								children: "심층 범위"
@@ -14354,7 +14370,7 @@ function No({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 								className: "topicrpt-plan-label",
 								children: "예상 공백"
 							}),
-							Mo(f.dataGapsLikely)
+							Fo(f.dataGapsLikely)
 						]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("div", {
@@ -14484,19 +14500,19 @@ function No({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 		]
 	});
 }
-function Po() {
-	let [e, t] = (0, b.useState)(0), [n, r] = (0, b.useState)([]), [i, a] = (0, b.useState)(null), s = (0, b.useMemo)(() => yn(window.location.hash), []), [u, f] = (0, b.useState)(s.kind === "report" ? s.id : ""), [p, m] = (0, b.useState)(s.kind === "collection" ? s.id : ""), [h, g] = (0, b.useState)(s.malformed), [_, v] = (0, b.useState)(""), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)("include_current"), [T, E] = (0, b.useState)("AUTO"), [D, k] = (0, b.useState)(null), [A, j] = (0, b.useState)(!1), [M, N] = (0, b.useState)("readiness"), [P, F] = (0, b.useState)(null), [I, L] = (0, b.useState)("direct"), [R, z] = (0, b.useState)("auto"), [B, V] = (0, b.useState)(!1), [H, U] = (0, b.useState)(!1), [W, G] = (0, b.useState)(""), [K, q] = (0, b.useState)(null), [ee, te] = (0, b.useState)(""), [ne, re] = (0, b.useState)(null), [ie, ae] = (0, b.useState)(""), [oe, se] = (0, b.useState)(""), [ce, le] = (0, b.useState)(0), ue = (0, b.useRef)(0), fe = (0, b.useRef)(null), pe = (0, b.useRef)(null), me = (0, b.useRef)(""), he = (0, b.useRef)(!1), ge = po[0].key, _e = _, ve = (0, b.useCallback)(() => {
-		fe.current?.abort();
+function Lo() {
+	let [e, t] = (0, b.useState)(0), [n, r] = (0, b.useState)([]), [i, a] = (0, b.useState)(null), s = (0, b.useMemo)(() => bn(window.location.hash), []), [u, f] = (0, b.useState)(s.kind === "report" ? s.id : ""), [p, m] = (0, b.useState)(s.kind === "collection" ? s.id : ""), [h, g] = (0, b.useState)(s.malformed), [_, v] = (0, b.useState)(""), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)("include_current"), [T, E] = (0, b.useState)("AUTO"), [D, k] = (0, b.useState)(null), [A, j] = (0, b.useState)(!1), [M, N] = (0, b.useState)("readiness"), [P, F] = (0, b.useState)(null), [I, L] = (0, b.useState)("direct"), [R, z] = (0, b.useState)("auto"), [B, V] = (0, b.useState)(!1), [H, U] = (0, b.useState)(!1), [W, ee] = (0, b.useState)(""), [G, K] = (0, b.useState)(null), [te, ne] = (0, b.useState)(""), [re, ie] = (0, b.useState)(null), [ae, oe] = (0, b.useState)(""), [se, ce] = (0, b.useState)(""), [le, ue] = (0, b.useState)(0), de = (0, b.useRef)(0), pe = (0, b.useRef)(null), me = (0, b.useRef)(null), he = (0, b.useRef)(""), ge = (0, b.useRef)(!1), _e = _o[0].key, ve = _, ye = (0, b.useCallback)(() => {
+		pe.current?.abort();
 		let e = new AbortController();
-		return fe.current = e, ue.current += 1, {
-			id: ue.current,
+		return pe.current = e, de.current += 1, {
+			id: de.current,
 			signal: e.signal
 		};
-	}, []), ye = (0, b.useCallback)((e) => e === ue.current, []), be = (0, b.useCallback)(async (e) => {
+	}, []), be = (0, b.useCallback)((e) => e === de.current, []), xe = (0, b.useCallback)(async (e) => {
 		U(!0);
 		try {
 			let t = await l("/api/topic-reports", { signal: e });
-			r(Bn(t)), re(null), N((e) => e === "readiness" ? "draft" : e), Te("deep-research", {
+			r(Vn(t)), ie(null), N((e) => e === "readiness" ? "draft" : e), Ee("deep-research", {
 				surface: "topic_report",
 				viewId: "topicrpt",
 				reportKind: "",
@@ -14506,43 +14522,43 @@ function Po() {
 			});
 		} catch (e) {
 			if (e instanceof DOMException && e.name === "AbortError") return;
-			G(Ao("readiness", e)), q("readiness"), te(ko(e));
-			let t = ko(e);
-			re(t === "no_index" || t === "index_unavailable" ? "no-index" : t === "rss_unavailable" ? "rss" : "api"), N("recoverable-error");
+			ee(No("readiness", e)), K("readiness"), ne(Mo(e));
+			let t = Mo(e);
+			ie(t === "no_index" || t === "index_unavailable" ? "no-index" : t === "rss_unavailable" ? "rss" : "api"), N("recoverable-error");
 		} finally {
 			U(!1);
 		}
 	}, []);
 	(0, b.useEffect)(() => {
 		let e = new AbortController();
-		return be(e.signal), () => e.abort();
-	}, [be]), (0, b.useEffect)(() => {
+		return xe(e.signal), () => e.abort();
+	}, [xe]), (0, b.useEffect)(() => {
 		let e = {
 			collectionId: D?.id || null,
 			collectionRevision: D?.revision || null
 		};
-		return Ee("deep-research", e), () => {
+		return De("deep-research", e), () => {
 			let t = window.FolioAgent?.currentContext;
-			t?.collectionId === e.collectionId && t.collectionRevision === e.collectionRevision && Ee("deep-research", {
+			t?.collectionId === e.collectionId && t.collectionRevision === e.collectionRevision && De("deep-research", {
 				collectionId: null,
 				collectionRevision: null
 			});
 		};
 	}, [D]), (0, b.useEffect)(() => {
 		let e = () => {
-			if (!Oo()) return;
-			let e = yn(window.location.hash);
-			g(e.malformed), f(e.kind === "report" ? e.id : ""), m(e.kind === "collection" ? e.id : ""), e.malformed && (a(null), G(e.kind === "collection" ? "컬렉션 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요." : "보고서 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요."), q("report"), te(e.kind === "collection" ? "malformed_collection_id" : "malformed_report_id"), N("recoverable-error"));
+			if (!jo()) return;
+			let e = bn(window.location.hash);
+			g(e.malformed), f(e.kind === "report" ? e.id : ""), m(e.kind === "collection" ? e.id : ""), e.malformed && (a(null), ee(e.kind === "collection" ? "컬렉션 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요." : "보고서 주소 형식이 올바르지 않습니다. 목록으로 돌아가 다시 여세요."), K("report"), ne(e.kind === "collection" ? "malformed_collection_id" : "malformed_report_id"), N("recoverable-error"));
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []);
-	let xe = (0, b.useCallback)(() => {
-		he.current = !0, a(null), g(!1), G(""), q(null), te(""), Do();
+	let Se = (0, b.useCallback)(() => {
+		ge.current = !0, a(null), g(!1), ee(""), K(null), ne(""), Ao();
 	}, []);
 	(0, b.useEffect)(() => {
-		u || h || !he.current || (he.current = !1, window.requestAnimationFrame(() => {
-			let e = me.current.replace(/["\\]/g, "");
-			((e ? document.querySelector("[data-report-id=\"" + e + "\"]") : null) || pe.current)?.focus({ preventScroll: !0 });
+		u || h || !ge.current || (ge.current = !1, window.requestAnimationFrame(() => {
+			let e = he.current.replace(/["\\]/g, "");
+			((e ? document.querySelector("[data-report-id=\"" + e + "\"]") : null) || me.current)?.focus({ preventScroll: !0 });
 		}));
 	}, [
 		u,
@@ -14551,21 +14567,21 @@ function Po() {
 	]), (0, b.useEffect)(() => {
 		let e = (e) => {
 			let n = e.detail;
-			de(n, window.FolioAgent?.currentContext) && (le((e) => e + 1), t((e) => e + 1));
+			fe(n, window.FolioAgent?.currentContext) && (ue((e) => e + 1), t((e) => e + 1));
 		};
 		return window.addEventListener(O, e), () => window.removeEventListener(O, e);
 	}, []), (0, b.useEffect)(() => {
 		let e = new AbortController();
-		fe.current?.abort();
-		let t = ue.current + 1;
-		ue.current = t;
+		pe.current?.abort();
+		let t = de.current + 1;
+		de.current = t;
 		async function n(n) {
-			U(!0), G(""), q(null), te("");
+			U(!0), ee(""), K(null), ne("");
 			try {
 				let r = await l(`/api/topic-reports/${encodeURIComponent(n)}?includePersonal=true`, { signal: e.signal });
-				if (e.signal.aborted || ue.current !== t) return;
-				let i = zn(r);
-				a(i), N("report"), Te("deep-research", {
+				if (e.signal.aborted || de.current !== t) return;
+				let i = Bn(r);
+				a(i), N("report"), Ee("deep-research", {
 					surface: "topic_report_reader",
 					viewId: "topicrpt",
 					reportKind: "topic_report",
@@ -14574,13 +14590,13 @@ function Po() {
 					collectionRevision: D?.revision || null
 				});
 			} catch (n) {
-				if (n instanceof DOMException && n.name === "AbortError" || e.signal.aborted || ue.current !== t) return;
-				a(null), G(Ao("report", n)), q("report"), te(ko(n)), N("recoverable-error");
+				if (n instanceof DOMException && n.name === "AbortError" || e.signal.aborted || de.current !== t) return;
+				a(null), ee(No("report", n)), K("report"), ne(Mo(n)), N("recoverable-error");
 			} finally {
-				!e.signal.aborted && ue.current === t && U(!1);
+				!e.signal.aborted && de.current === t && U(!1);
 			}
 		}
-		return u && !h ? n(u) : !h && !p && (a(null), N((e) => e === "report" ? "draft" : e), Te("deep-research", {
+		return u && !h ? n(u) : !h && !p && (a(null), N((e) => e === "report" ? "draft" : e), Ee("deep-research", {
 			surface: "topic_report",
 			viewId: "topicrpt",
 			reportKind: "",
@@ -14592,17 +14608,17 @@ function Po() {
 		p,
 		u,
 		h,
-		ce
+		le
 	]);
-	let Se = async (e) => {
+	let Ce = async (e) => {
 		e.preventDefault();
 		let t = _.normalize("NFKC").trim();
 		if (!t || t.length > 500) {
-			G(Ao("validation", /* @__PURE__ */ Error("question_invalid"))), q("validation"), te("question_invalid"), N("recoverable-error");
+			ee(No("validation", /* @__PURE__ */ Error("question_invalid"))), K("validation"), ne("question_invalid"), N("recoverable-error");
 			return;
 		}
-		let n = ve();
-		N("plan-loading"), F(null), V(!1), G(""), q(null), te(""), ae("질문을 실행 계획으로 바꾸는 중입니다.");
+		let n = ye();
+		N("plan-loading"), F(null), V(!1), ee(""), K(null), ne(""), oe("질문을 실행 계획으로 바꾸는 중입니다.");
 		let r = {
 			question: t,
 			userContext: y.normalize("NFKC").trim(),
@@ -14614,34 +14630,34 @@ function Po() {
 		};
 		try {
 			let e = await o("/api/topic-reports/plan", r, { signal: n.signal });
-			if (!ye(n.id)) return;
-			F(e), N("plan-review"), ae("실행 계획을 확인하세요.");
+			if (!be(n.id)) return;
+			F(e), N("plan-review"), oe("실행 계획을 확인하세요.");
 		} catch (e) {
-			if (e instanceof DOMException && e.name === "AbortError" || !ye(n.id)) return;
-			G(Ao("plan", e)), q("plan"), te(ko(e)), re(ko(e) === "no_index" || ko(e) === "index_unavailable" ? "no-index" : ko(e) === "rss_unavailable" ? "rss" : null), N("recoverable-error"), ae("");
+			if (e instanceof DOMException && e.name === "AbortError" || !be(n.id)) return;
+			ee(No("plan", e)), K("plan"), ne(Mo(e)), ie(Mo(e) === "no_index" || Mo(e) === "index_unavailable" ? "no-index" : Mo(e) === "rss_unavailable" ? "rss" : null), N("recoverable-error"), oe("");
 		}
-	}, Ce = async (e) => {
-		let n = ve();
-		N("generation"), G(""), q(null), te(""), ae("승인된 계획으로 리서치를 생성하는 중입니다.");
+	}, we = async (e) => {
+		let n = ye();
+		N("generation"), ee(""), K(null), ne(""), oe("승인된 계획으로 리서치를 생성하는 중입니다.");
 		let i = {
 			mode: I,
 			adapter: I === "direct" ? "auto" : R,
 			fallbackPolicy: d
 		}, s = {
 			approvedRequest: e.approvedRequest,
-			approval: jo(e),
+			approval: Po(e),
 			execution: i
 		};
 		try {
-			let e = await o("/api/topic-reports", s, { signal: n.signal }), i = bo(e) ? e.job : yo(e) ? e : null;
+			let e = await o("/api/topic-reports", s, { signal: n.signal }), i = wo(e) ? e.job : Co(e) ? e : null;
 			if (!i) throw Error("생성 작업 ID를 확인하지 못했습니다.");
-			let c = await So(i, n.signal);
-			if (t((e) => e + 1), !ye(n.id)) return;
+			let c = await Eo(i, n.signal);
+			if (t((e) => e + 1), !be(n.id)) return;
 			let u = c.result?.reportId || c.result?.artifactId || "";
 			if (!u) throw Error("생성된 보고서 ID를 확인하지 못했습니다.");
-			let d = zn(await l(`/api/topic-reports/${encodeURIComponent(u)}?includePersonal=true`, { signal: n.signal }));
-			if (!ye(n.id)) return;
-			r((e) => [d, ...e.filter((e) => e.id !== d.id)]), a(d), N("report"), ae("딥 리서치를 생성하고 자동 저장했습니다."), Do(d.id), Te("deep-research", {
+			let d = Bn(await l(`/api/topic-reports/${encodeURIComponent(u)}?includePersonal=true`, { signal: n.signal }));
+			if (!be(n.id)) return;
+			r((e) => [d, ...e.filter((e) => e.id !== d.id)]), a(d), N("report"), oe("딥 리서치를 생성하고 자동 저장했습니다."), Ao(d.id), Ee("deep-research", {
 				surface: "topic_report_reader",
 				viewId: "topicrpt",
 				reportKind: "topic_report",
@@ -14650,96 +14666,96 @@ function Po() {
 				collectionRevision: D?.revision || null
 			});
 		} catch (e) {
-			if (t((e) => e + 1), e instanceof DOMException && e.name === "AbortError" || !ye(n.id)) return;
-			G(Ao("generation", e)), q(e instanceof c && (e.code === "evidence_confirmation_required" || e.code === "resolution_changed") ? "degraded" : "generation"), te(ko(e)), N("recoverable-error"), ae("");
+			if (t((e) => e + 1), e instanceof DOMException && e.name === "AbortError" || !be(n.id)) return;
+			ee(No("generation", e)), K(e instanceof c && (e.code === "evidence_confirmation_required" || e.code === "resolution_changed") ? "degraded" : "generation"), ne(Mo(e)), N("recoverable-error"), oe("");
 		}
-	}, we = () => {
+	}, Te = () => {
 		if (P) {
 			if (P.preview.zeroEvidence.required) {
 				if (!P.preview.zeroEvidence.reasonCode || !P.preview.zeroEvidence.resolutionFingerprint) {
-					G("근거 부족 확인 정보가 없어 실행을 중단했습니다. 계획을 다시 미리보세요."), q("degraded"), te("invalid_zero_evidence"), N("recoverable-error");
+					ee("근거 부족 확인 정보가 없어 실행을 중단했습니다. 계획을 다시 미리보세요."), K("degraded"), ne("invalid_zero_evidence"), N("recoverable-error");
 					return;
 				}
-				V(!0), ae("근거 부족 확인을 검토하세요.");
+				V(!0), oe("근거 부족 확인을 검토하세요.");
 				return;
 			}
-			Ce(P);
+			we(P);
 		}
-	}, De = async () => {
+	}, Oe = async () => {
 		if (!P) return;
 		let e = P.preview.zeroEvidence;
 		if (!e.required || !e.reasonCode || !e.resolutionFingerprint) return;
-		let t = ve();
-		G(""), q(null), te(""), ae("근거 부족 확인을 저장하는 중입니다.");
+		let t = ye();
+		ee(""), K(null), ne(""), oe("근거 부족 확인을 저장하는 중입니다.");
 		let n = {
 			approvedRequest: P.approvedRequest,
-			approval: jo(P),
+			approval: Po(P),
 			reasonCode: e.reasonCode,
 			resolutionFingerprint: e.resolutionFingerprint,
 			confirmed: !0
 		};
 		try {
 			let e = await o("/api/topic-reports/confirm-degraded", n, { signal: t.signal });
-			if (!ye(t.id)) return;
-			F(e), V(!1), await Ce(e);
+			if (!be(t.id)) return;
+			F(e), V(!1), await we(e);
 		} catch (e) {
-			if (e instanceof DOMException && e.name === "AbortError" || !ye(t.id)) return;
-			G(Ao("degraded", e)), q("degraded"), te(ko(e)), N("recoverable-error"), ae("");
+			if (e instanceof DOMException && e.name === "AbortError" || !be(t.id)) return;
+			ee(No("degraded", e)), K("degraded"), ne(Mo(e)), N("recoverable-error"), oe("");
 		}
 	};
-	async function Oe(e) {
-		if (!(!e.id || !window.confirm(`${wo(e)} 보고서를 삭제할까요?`))) {
-			se(`delete-${e.id}`), G("");
+	async function ke(e) {
+		if (!(!e.id || !window.confirm(`${Z(e)} 보고서를 삭제할까요?`))) {
+			ce(`delete-${e.id}`), ee("");
 			try {
 				let t = await fetch(`/api/topic-reports/${encodeURIComponent(e.id)}`, { method: "DELETE" });
 				if (!t.ok) throw Error(`삭제 실패: ${t.status}`);
-				i?.id === e.id && Do(), r((t) => t.filter((t) => t.id !== e.id)), ae("저장된 딥 리서치를 삭제했습니다.");
+				i?.id === e.id && Ao(), r((t) => t.filter((t) => t.id !== e.id)), oe("저장된 딥 리서치를 삭제했습니다.");
 			} catch (e) {
-				G(e instanceof Error ? e.message : "보고서 삭제에 실패했습니다."), q("report"), te(ko(e));
+				ee(e instanceof Error ? e.message : "보고서 삭제에 실패했습니다."), K("report"), ne(Mo(e));
 			} finally {
-				se("");
+				ce("");
 			}
 		}
 	}
-	async function Ae(e) {
+	async function je(e) {
 		if (i) {
-			se(e), ae(e === "notion" ? "Notion으로 내보내는 중..." : "Obsidian으로 내보내는 중...");
+			ce(e), oe(e === "notion" ? "Notion으로 내보내는 중..." : "Obsidian으로 내보내는 중...");
 			try {
 				let t = e === "notion" ? await o("/api/export-notion/topic-report", i) : await o("/api/export-obsidian/topic-report", i);
-				ae(e === "notion" ? `Notion으로 내보냈습니다${t.title ? `: ${t.title}` : ""}` : `Obsidian으로 내보냈습니다${t.topic || t.filename ? `: ${t.topic || t.filename}` : ""}`);
+				oe(e === "notion" ? `Notion으로 내보냈습니다${t.title ? `: ${t.title}` : ""}` : `Obsidian으로 내보냈습니다${t.topic || t.filename ? `: ${t.topic || t.filename}` : ""}`);
 			} catch (e) {
-				ae(e instanceof Error ? e.message : "내보내기에 실패했습니다.");
+				oe(e instanceof Error ? e.message : "내보내기에 실패했습니다.");
 			} finally {
-				se("");
+				ce("");
 			}
 		}
 	}
-	async function je() {
+	async function Me() {
 		if (i?.id) {
-			se("overlay"), ae("내 노트와 연결하는 중...");
+			ce("overlay"), oe("내 노트와 연결하는 중...");
 			try {
 				let e = await o(`/api/topic-reports/${encodeURIComponent(i.id)}/personal-overlay`, {});
-				yo(e) && await So(e, new AbortController().signal);
-				let t = zn(await l(`/api/topic-reports/${encodeURIComponent(i.id)}?includePersonal=true`));
-				a(t), ae("내 노트와 연결했습니다.");
+				Co(e) && await Eo(e, new AbortController().signal);
+				let t = Bn(await l(`/api/topic-reports/${encodeURIComponent(i.id)}?includePersonal=true`));
+				a(t), oe("내 노트와 연결했습니다.");
 			} catch (e) {
-				ae(e instanceof Error ? e.message : "내 노트 연결에 실패했습니다.");
+				oe(e instanceof Error ? e.message : "내 노트 연결에 실패했습니다.");
 			} finally {
-				se("");
+				ce("");
 			}
 		}
 	}
-	let Me = (0, b.useMemo)(() => {
+	let Ne = (0, b.useMemo)(() => {
 		let e = /* @__PURE__ */ new Map();
 		for (let t of n) {
-			let n = To(t);
+			let n = Oo(t);
 			e.has(n) || e.set(n, []), e.get(n)?.push(t);
 		}
 		return Array.from(e.entries()).map(([e, t]) => ({
 			key: e,
 			rows: t.sort((e, t) => String(t.generatedAt || t.date || "").localeCompare(String(e.generatedAt || e.date || "")))
 		})).sort((e, t) => String(t.rows[0]?.generatedAt || t.rows[0]?.date || "").localeCompare(String(e.rows[0]?.generatedAt || e.rows[0]?.date || "")));
-	}, [n]), Ne = Co(i?.markdown || "", i ? wo(i) : "딥 리서치"), Pe = Qi(i?.marketStateResolution), Fe = (0, b.useCallback)((e) => {
+	}, [n]), Pe = Do(i?.markdown || "", i ? Z(i) : "딥 리서치"), Fe = ra(i?.marketStateResolution), Ie = (0, b.useCallback)((e) => {
 		let t = e.source === "both" ? "포트폴리오·워치리스트" : e.source === "portfolio" ? "포트폴리오" : "워치리스트", n = `개인 맥락(hypothesis): ${e.ticker} · ${t}`;
 		S((e) => {
 			let t = e.split("\n").map((e) => e.trim()).filter(Boolean);
@@ -14749,15 +14765,15 @@ function Po() {
 	if (p && !h) return /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "react-deep-research-route",
 		"data-deep-research-route": !0,
-		children: /* @__PURE__ */ (0, x.jsx)(co, {
+		children: /* @__PURE__ */ (0, x.jsx)(mo, {
 			collectionId: p,
-			onBack: () => Do(),
+			onBack: () => Ao(),
 			onStartResearch: (e) => {
-				k(e), Do();
+				k(e), Ao();
 			}
 		})
 	});
-	if (u && !i && (M !== "recoverable-error" || K !== "report")) return /* @__PURE__ */ (0, x.jsx)("div", {
+	if (u && !i && (M !== "recoverable-error" || G !== "report")) return /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "react-deep-research-route",
 		"data-deep-research-route": !0,
 		children: /* @__PURE__ */ (0, x.jsxs)("section", {
@@ -14779,8 +14795,8 @@ function Po() {
 			]
 		})
 	});
-	if ((u || h) && !i && (h || M === "recoverable-error" && K === "report")) {
-		let e = ee === "topic_report_not_found" || ee === "not_found";
+	if ((u || h) && !i && (h || M === "recoverable-error" && G === "report")) {
+		let e = te === "topic_report_not_found" || te === "not_found";
 		return /* @__PURE__ */ (0, x.jsx)("div", {
 			className: "react-deep-research-route",
 			"data-deep-research-route": !0,
@@ -14803,7 +14819,7 @@ function Po() {
 						className: "filter-btn clear",
 						type: "button",
 						"data-qa": "dr-report-return",
-						onClick: xe,
+						onClick: Se,
 						children: "딥 리서치 목록으로 돌아가기"
 					})
 				]
@@ -14826,107 +14842,107 @@ function Po() {
 				role: "status",
 				children: "근거 부족을 확인한 규칙 기반 보고서입니다. 자료 공백과 반대 근거를 함께 확인하세요."
 			}),
-			/* @__PURE__ */ (0, x.jsxs)(mn, {
+			/* @__PURE__ */ (0, x.jsxs)(hn, {
 				eyebrow: `DEEP RESEARCH${i.date ? ` · ${i.date}` : ""}`,
-				title: Ne.title,
-				meta: `${wo(i)} · 뉴스 ${i.docCount || 0}건 · 내러티브 ${i.memoryCount || 0}건`,
+				title: Pe.title,
+				meta: `${Z(i)} · 뉴스 ${i.docCount || 0}건 · 내러티브 ${i.memoryCount || 0}건`,
 				agentContext: {
 					surface: "topic_report_reader",
 					viewId: "topicrpt",
 					reportKind: "topic_report",
 					reportId: i.id || "",
-					topic: wo(i),
-					marketState: Pe
+					topic: Z(i),
+					marketState: Fe
 				},
 				breadcrumb: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [/* @__PURE__ */ (0, x.jsx)("button", {
 					type: "button",
 					"data-qa": "dr-report-return",
-					onClick: xe,
+					onClick: Se,
 					children: "딥 리서치"
-				}), /* @__PURE__ */ (0, x.jsx)("span", { children: Ne.title })] }),
-				onClose: xe,
+				}), /* @__PURE__ */ (0, x.jsx)("span", { children: Pe.title })] }),
+				onClose: Se,
 				actionSlot: /* @__PURE__ */ (0, x.jsxs)(x.Fragment, { children: [
-					/* @__PURE__ */ (0, x.jsx)(Rt, {
+					/* @__PURE__ */ (0, x.jsx)(zt, {
 						title: "AI",
-						children: /* @__PURE__ */ (0, x.jsx)(zt, {
+						children: /* @__PURE__ */ (0, x.jsx)(Bt, {
 							icon: "agent",
-							onClick: () => ke({
+							onClick: () => Ae({
 								surface: "topic_report_reader",
 								reportKind: "topic_report",
 								reportId: i.id || "",
-								topic: wo(i),
-								message: `${Ne.title}의 핵심 결론, 반대 근거, 더 발전시킬 분석 방향을 정리해줘.`,
+								topic: Z(i),
+								message: `${Pe.title}의 핵심 결론, 반대 근거, 더 발전시킬 분석 방향을 정리해줘.`,
 								autoSubmit: !0
 							}),
 							children: "Agent에게 묻기"
 						})
 					}),
-					/* @__PURE__ */ (0, x.jsx)(Rt, {
+					/* @__PURE__ */ (0, x.jsx)(zt, {
 						title: "노트",
-						children: /* @__PURE__ */ (0, x.jsx)(zt, {
+						children: /* @__PURE__ */ (0, x.jsx)(Bt, {
 							icon: "link",
 							"data-qa": "dr-overlay-generate",
-							disabled: oe === "overlay" || !i.id,
-							onClick: je,
-							children: oe === "overlay" ? "연결 중" : "내 노트와 연결"
+							disabled: se === "overlay" || !i.id,
+							onClick: Me,
+							children: se === "overlay" ? "연결 중" : "내 노트와 연결"
 						})
 					}),
-					/* @__PURE__ */ (0, x.jsxs)(Rt, {
+					/* @__PURE__ */ (0, x.jsxs)(zt, {
 						title: "내보내기",
-						children: [/* @__PURE__ */ (0, x.jsx)(zt, {
+						children: [/* @__PURE__ */ (0, x.jsx)(Bt, {
 							icon: "notion",
-							disabled: oe === "notion",
-							onClick: () => Ae("notion"),
-							children: oe === "notion" ? "내보내는 중" : "Notion으로 내보내기"
-						}), /* @__PURE__ */ (0, x.jsx)(zt, {
+							disabled: se === "notion",
+							onClick: () => je("notion"),
+							children: se === "notion" ? "내보내는 중" : "Notion으로 내보내기"
+						}), /* @__PURE__ */ (0, x.jsx)(Bt, {
 							icon: "obsidian",
-							disabled: oe === "obsidian",
-							onClick: () => Ae("obsidian"),
-							children: oe === "obsidian" ? "내보내는 중" : "Obsidian으로 내보내기"
+							disabled: se === "obsidian",
+							onClick: () => je("obsidian"),
+							children: se === "obsidian" ? "내보내는 중" : "Obsidian으로 내보내기"
 						})]
 					}),
 					i.generation?.message && /* @__PURE__ */ (0, x.jsx)("p", {
 						className: "react-reader-status",
 						children: i.generation.message
 					}),
-					ie && /* @__PURE__ */ (0, x.jsx)("p", {
+					ae && /* @__PURE__ */ (0, x.jsx)("p", {
 						className: "react-reader-status",
-						children: ie
+						children: ae
 					})
 				] }),
 				noteIdentity: {
-					id: fn("topic", wo(i)),
+					id: pn("topic", Z(i)),
 					noteType: "topic_review",
-					title: wo(i) ? `${wo(i)} 리서치 노트` : "딥 리서치 노트",
-					topic: wo(i),
-					label: wo(i),
+					title: Z(i) ? `${Z(i)} 리서치 노트` : "딥 리서치 노트",
+					topic: Z(i),
+					label: Z(i),
 					reportKind: "topic_report",
-					reportId: wo(i),
-					linkedReports: [Ne.title].filter(Boolean)
+					reportId: Z(i),
+					linkedReports: [Pe.title].filter(Boolean)
 				},
-				noteLinkedTitle: Ne.title,
-				noteOverlay: Ln(i.personalOverlay, i.canonicalRevision),
+				noteLinkedTitle: Pe.title,
+				noteOverlay: Rn(i.personalOverlay, i.canonicalRevision),
 				children: [
-					/* @__PURE__ */ (0, x.jsx)(fo, { resolution: i.marketStateResolution }),
-					/* @__PURE__ */ (0, x.jsx)(Kt, { markdown: Ne.body || i.markdown || "" }),
-					/* @__PURE__ */ (0, x.jsx)(uo, { report: i })
+					/* @__PURE__ */ (0, x.jsx)(go, { resolution: i.marketStateResolution }),
+					/* @__PURE__ */ (0, x.jsx)(qt, { markdown: Pe.body || i.markdown || "" }),
+					/* @__PURE__ */ (0, x.jsx)(ho, { report: i })
 				]
 			})
 		]
 	});
-	let Ie = M === "plan-loading" || M === "generation" || H || A, Le = M === "recoverable-error" && W;
+	let Le = M === "plan-loading" || M === "generation" || H || A, Re = M === "recoverable-error" && W;
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-deep-research-route",
 		"data-deep-research-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Deep Research",
 				title: "딥 리서치",
 				description: "투자 질문을 실행 계획으로 정리해 확인한 뒤, 정해진 자료 범위 안에서 근거를 구분한 보고서를 생성합니다.",
 				actions: /* @__PURE__ */ (0, x.jsx)("button", {
 					className: "filter-btn clear",
 					type: "button",
-					onClick: () => void be(),
+					onClick: () => void xe(),
 					disabled: H,
 					children: H ? "불러오는 중" : "새로고침"
 				})
@@ -14937,20 +14953,20 @@ function Po() {
 				role: "status",
 				children: "저장된 리포트와 자료 상태를 확인하는 중입니다."
 			}),
-			ne && M === "recoverable-error" && /* @__PURE__ */ (0, x.jsx)("p", {
+			re && M === "recoverable-error" && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "react-dashboard-error",
-				"data-qa": `dr-readiness-${ne}`,
+				"data-qa": `dr-readiness-${re}`,
 				children: W
 			}),
-			Le && /* @__PURE__ */ (0, x.jsxs)("div", {
+			Re && /* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "react-dashboard-error topicrpt-recoverable-error",
-				"data-qa": `dr-error-${K || "request"}`,
+				"data-qa": `dr-error-${G || "request"}`,
 				role: "alert",
 				children: [
 					/* @__PURE__ */ (0, x.jsx)("strong", { children: "다시 시도할 수 있습니다" }),
 					/* @__PURE__ */ (0, x.jsx)("span", {
-						"data-qa": `dr-error-${(ee || "request").replace(/_/g, "-")}`,
-						"data-error-code": ee || "request",
+						"data-qa": `dr-error-${(te || "request").replace(/_/g, "-")}`,
+						"data-error-code": te || "request",
 						children: W
 					}),
 					/* @__PURE__ */ (0, x.jsx)("p", { children: "입력한 질문과 컨텍스트, 마지막 계획은 유지됩니다." }),
@@ -14958,7 +14974,7 @@ function Po() {
 						className: "filter-btn clear",
 						type: "button",
 						onClick: () => {
-							G(""), q(null), te(""), N(P ? "plan-review" : "draft");
+							ee(""), K(null), ne(""), N(P ? "plan-review" : "draft");
 						},
 						children: "돌아가서 수정"
 					})
@@ -14966,7 +14982,7 @@ function Po() {
 			}),
 			M !== "plan-review" && M !== "generation" && /* @__PURE__ */ (0, x.jsxs)("form", {
 				className: "input-panel topicrpt-form",
-				onSubmit: Se,
+				onSubmit: Ce,
 				noValidate: !0,
 				children: [
 					/* @__PURE__ */ (0, x.jsxs)("div", {
@@ -14985,7 +15001,7 @@ function Po() {
 						children: /* @__PURE__ */ (0, x.jsx)("div", {
 							className: "topicrpt-preset-btns",
 							"aria-label": "리서치 모드",
-							children: po.map((e) => /* @__PURE__ */ (0, x.jsx)("span", {
+							children: _o.map((e) => /* @__PURE__ */ (0, x.jsx)("span", {
 								className: "filter-btn topicrpt-preset active",
 								"data-topic": e.key,
 								children: e.label
@@ -15029,16 +15045,16 @@ function Po() {
 									placeholder: "예: 보유 종목, 관심 지역, 확인할 기간 등. 이 내용은 내 생각(가설)로 표시됩니다."
 								})]
 							}),
-							/* @__PURE__ */ (0, x.jsx)(Ft, {
+							/* @__PURE__ */ (0, x.jsx)(It, {
 								mode: "deep-research",
-								onReference: Fe
+								onReference: Ie
 							}),
-							/* @__PURE__ */ (0, x.jsx)(so, {
+							/* @__PURE__ */ (0, x.jsx)(po, {
 								selectedRef: D,
 								onSelectedRef: k,
 								onBusyChange: j,
 								onOpenDetail: (e) => {
-									window.location.hash = _n(e);
+									window.location.hash = vn(e);
 								},
 								disabled: M === "plan-loading" || H
 							}),
@@ -15094,14 +15110,14 @@ function Po() {
 							className: "filter-btn apply",
 							type: "submit",
 							"data-qa": "dr-preview",
-							disabled: Ie,
+							disabled: Le,
 							children: M === "plan-loading" ? "계획 준비 중" : "계획 미리보기"
 						})]
 					}),
 					/* @__PURE__ */ (0, x.jsx)("input", {
 						type: "hidden",
-						value: _e,
-						"data-legacy-topic": ge,
+						value: ve,
+						"data-legacy-topic": _e,
 						readOnly: !0,
 						"aria-hidden": "true"
 					}),
@@ -15113,18 +15129,18 @@ function Po() {
 					})
 				]
 			}),
-			M === "plan-review" && P && /* @__PURE__ */ (0, x.jsx)(No, {
+			M === "plan-review" && P && /* @__PURE__ */ (0, x.jsx)(Io, {
 				envelope: P,
 				executionMode: I,
 				cliAdapter: R,
 				onExecutionMode: L,
 				onCliAdapter: z,
-				onContinue: we,
+				onContinue: Te,
 				onEdit: () => {
-					N("draft"), ae("");
+					N("draft"), oe("");
 				},
 				degradedConfirming: B,
-				onConfirmDegraded: () => void De(),
+				onConfirmDegraded: () => void Oe(),
 				onCancelDegraded: () => V(!1)
 			}),
 			M === "generation" && /* @__PURE__ */ (0, x.jsxs)("section", {
@@ -15139,20 +15155,20 @@ function Po() {
 					/* @__PURE__ */ (0, x.jsx)("h2", { children: "승인한 계획을 실행하는 중입니다" }),
 					/* @__PURE__ */ (0, x.jsx)("p", {
 						"data-qa": "dr-generation-status",
-						children: ie || "작업 상태를 확인하는 중입니다."
+						children: ae || "작업 상태를 확인하는 중입니다."
 					})
 				]
 			}),
-			ie && M !== "generation" && M !== "report" && /* @__PURE__ */ (0, x.jsx)("p", {
+			ae && M !== "generation" && M !== "report" && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "react-dashboard-warning",
 				"data-qa": "dr-status",
 				role: "status",
-				children: ie
+				children: ae
 			}),
 			/* @__PURE__ */ (0, x.jsx)("div", {
 				className: "section-head compact analysis-archive-head topicrpt-saved-panel",
 				children: /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("h2", {
-					ref: pe,
+					ref: me,
 					className: "section-title",
 					tabIndex: -1,
 					children: "저장된 리포트"
@@ -15163,7 +15179,7 @@ function Po() {
 			}),
 			/* @__PURE__ */ (0, x.jsx)("div", {
 				className: "report-feed",
-				children: Me.length ? Me.map((e) => /* @__PURE__ */ (0, x.jsxs)("section", {
+				children: Ne.length ? Ne.map((e) => /* @__PURE__ */ (0, x.jsxs)("section", {
 					className: "report-feed-group",
 					children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "report-feed-group-head",
@@ -15175,13 +15191,13 @@ function Po() {
 							children: [
 								e.rows.length,
 								"건 · 최근 ",
-								Eo(e.rows[0]?.generatedAt || e.rows[0]?.date)
+								ko(e.rows[0]?.generatedAt || e.rows[0]?.date)
 							]
 						})]
 					}), /* @__PURE__ */ (0, x.jsx)("div", {
 						className: "report-feed-group-cards",
 						children: e.rows.map((e) => {
-							let t = oe === `delete-${e.id}`;
+							let t = se === `delete-${e.id}`;
 							return /* @__PURE__ */ (0, x.jsxs)("div", {
 								className: "report-feed-card-wrap",
 								children: [/* @__PURE__ */ (0, x.jsxs)("button", {
@@ -15189,7 +15205,7 @@ function Po() {
 									type: "button",
 									"data-report-id": e.id,
 									onClick: () => {
-										e.id && (me.current = e.id, Do(e.id));
+										e.id && (he.current = e.id, Ao(e.id));
 									},
 									children: [
 										/* @__PURE__ */ (0, x.jsx)("span", {
@@ -15199,18 +15215,18 @@ function Po() {
 												children: String(e.mode).toUpperCase()
 											})
 										}),
-										/* @__PURE__ */ (0, x.jsx)("strong", { children: wo(e) }),
+										/* @__PURE__ */ (0, x.jsx)("strong", { children: Z(e) }),
 										/* @__PURE__ */ (0, x.jsx)("span", {
 											className: "report-feed-card-foot",
-											children: Eo(e.date || e.generatedAt)
+											children: ko(e.date || e.generatedAt)
 										})
 									]
 								}), /* @__PURE__ */ (0, x.jsx)("button", {
 									type: "button",
 									className: "report-feed-card-delete",
 									disabled: t,
-									onClick: () => void Oe(e),
-									"aria-label": `${wo(e)} 삭제`,
+									onClick: () => void ke(e),
+									"aria-label": `${Z(e)} 삭제`,
 									"data-tooltip": "삭제",
 									"data-tooltip-pos": "bottom",
 									children: /* @__PURE__ */ (0, x.jsx)("svg", {
@@ -15226,7 +15242,7 @@ function Po() {
 										children: /* @__PURE__ */ (0, x.jsx)("path", { d: "M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" })
 									})
 								})]
-							}, e.id || `${wo(e)}-${e.date}`);
+							}, e.id || `${Z(e)}-${e.date}`);
 						})
 					})]
 				}, e.key)) : /* @__PURE__ */ (0, x.jsx)("div", {
@@ -15235,7 +15251,7 @@ function Po() {
 					children: "저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요."
 				})
 			}),
-			/* @__PURE__ */ (0, x.jsx)(Et, {
+			/* @__PURE__ */ (0, x.jsx)(Dt, {
 				surface: "deep-research",
 				pageSize: 20,
 				defaultFilter: "task",
@@ -15246,7 +15262,7 @@ function Po() {
 }
 //#endregion
 //#region src/app/marketMemoryJobResume.ts
-var Fo = "folio.marketMemory.activeJob.v1", Io = /^job_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/, Lo = /* @__PURE__ */ new Set([
+var Ro = "folio.marketMemory.activeJob.v1", zo = /^job_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/, Bo = /* @__PURE__ */ new Set([
 	"queued",
 	"running",
 	"cancel_requested",
@@ -15258,51 +15274,51 @@ var Fo = "folio.marketMemory.activeJob.v1", Io = /^job_[0-9a-f]{8}-[0-9a-f]{4}-4
 	"failed_commit",
 	"failed_restart",
 	"failed_commit_recovery"
-]), Ro = "market_memory_update", zo = "LLM CLI 시장 메모리 업데이트";
-function Bo() {
+]), Vo = "market_memory_update", Ho = "LLM CLI 시장 메모리 업데이트";
+function Uo() {
 	try {
 		return typeof window > "u" ? null : window.localStorage;
 	} catch {
 		return null;
 	}
 }
-function Vo(e) {
-	return typeof e == "string" && Io.test(e);
+function Wo(e) {
+	return typeof e == "string" && zo.test(e);
 }
-function Ho(e, t) {
+function Go(e, t) {
 	if (!e || typeof e != "object" || Array.isArray(e)) return !1;
 	let n = e;
-	return n.id === t && Lo.has(n.status);
+	return n.id === t && Bo.has(n.status);
 }
-function Uo(e) {
+function Ko(e) {
 	if (!e || typeof e != "object" || Array.isArray(e)) return !1;
 	let t = e;
-	return !Vo(t.id) || !Lo.has(t.status) || !f(t.status) ? !1 : t.taskType === Ro || t.taskType === void 0 && t.label === zo;
+	return !Wo(t.id) || !Bo.has(t.status) || !f(t.status) ? !1 : t.taskType === Vo || t.taskType === void 0 && t.label === Ho;
 }
-function Wo(e = Bo()) {
+function qo(e = Uo()) {
 	try {
-		e?.removeItem(Fo);
+		e?.removeItem(Ro);
 	} catch {}
 }
-function Go(e = Bo()) {
+function Jo(e = Uo()) {
 	let t = null;
 	try {
 		t = e?.getItem("folio.marketMemory.activeJob.v1") ?? null;
 	} catch {
 		return null;
 	}
-	return t ? Vo(t) ? t : (Wo(e), null) : null;
+	return t ? Wo(t) ? t : (qo(e), null) : null;
 }
-function Ko(e, t = Bo()) {
-	if (!Vo(e) || !t) return !1;
+function Yo(e, t = Uo()) {
+	if (!Wo(e) || !t) return !1;
 	try {
-		return t.setItem(Fo, e), t.getItem(Fo) === e;
+		return t.setItem(Ro, e), t.getItem(Ro) === e;
 	} catch {
 		return !1;
 	}
 }
-async function qo(e, t = Bo()) {
-	let n = Go(t);
+async function Xo(e, t = Uo()) {
+	let n = Jo(t);
 	if (!n) return { kind: "none" };
 	let r;
 	try {
@@ -15313,15 +15329,15 @@ async function qo(e, t = Bo()) {
 			id: n
 		};
 	}
-	return Ho(r, n) ? f(r.status) ? {
+	return Go(r, n) ? f(r.status) ? {
 		kind: "active",
 		job: r
-	} : (Wo(t), {
+	} : (qo(t), {
 		kind: "terminal",
 		job: r
-	}) : (Wo(t), { kind: "invalid" });
+	}) : (qo(t), { kind: "invalid" });
 }
-async function Jo(e, t = Bo()) {
+async function Zo(e, t = Uo()) {
 	let n;
 	try {
 		n = await e();
@@ -15329,36 +15345,36 @@ async function Jo(e, t = Bo()) {
 		return { kind: "none" };
 	}
 	if (!Array.isArray(n)) return { kind: "invalid" };
-	let r = n.find(Uo);
-	return r ? (Ko(r.id, t), {
+	let r = n.find(Ko);
+	return r ? (Yo(r.id, t), {
 		kind: "active",
 		job: r
 	}) : { kind: "none" };
 }
 //#endregion
 //#region src/app/MarketMemoryRoute.tsx
-function Yo() {
+function Qo() {
 	return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 }
-function Xo(e) {
+function $o(e) {
 	return e.snapshot?.headline ? e.message || `시장 상태 스냅샷을 저장했습니다: ${e.snapshot.headline}` : e.snapshotId || e.title ? e.message || `시장 상태 스냅샷을 저장했습니다${e.title ? `: ${e.title}` : ""}` : `${e.message || (e.ok ? "시장 내러티브를 정리했습니다." : "시장 내러티브 정리가 완료되었습니다.")}${Number.isFinite(Number(e.savedCount)) ? ` 저장 ${e.savedCount}건` : ""}${e.estimatedInputTokens ? ` · 입력 약 ${e.estimatedInputTokens} tokens` : ""}${e.rawEntryCount === void 0 ? "" : ` · 응답 ${e.rawEntryCount}건 · 제외 ${e.droppedCount || 0}건`}`;
 }
-function Zo(e) {
+function es(e) {
 	let t = e;
 	return !!(t?.id && t.status);
 }
-async function Qo() {
-	return o("/api/memory/update", { date: Yo() });
+async function ts() {
+	return o("/api/memory/update", { date: Qo() });
 }
-function $o() {
+function ns() {
 	let [e, t] = (0, b.useState)(0), [n, r] = (0, b.useState)(!1), [i, a] = (0, b.useState)(""), [o, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(() => {
-		let e = Go();
+		let e = Jo();
 		return e ? {
 			id: e,
 			status: "running"
 		} : null;
 	}), d = (0, b.useRef)(null), f = (0, b.useCallback)((e) => {
-		Te("market-memory", {
+		Ee("market-memory", {
 			surface: "market_state",
 			viewId: "memory",
 			reportKind: "",
@@ -15368,19 +15384,19 @@ function $o() {
 	}, []);
 	function p(e) {
 		if (e.ok === !1) throw Error(e.message || e.status || "시장 메모리 업데이트에 실패했습니다.");
-		Wo(), a(`시장 메모리를 업데이트했습니다. ${Xo(e)}`), u(null), t((e) => e + 1);
+		qo(), a(`시장 메모리를 업데이트했습니다. ${$o(e)}`), u(null), t((e) => e + 1);
 	}
 	(0, b.useEffect)(() => {
 		let e = !0;
 		return (async () => {
-			let t = await qo((e) => l(`/api/jobs/${encodeURIComponent(e)}`));
-			if (t.kind === "none" && (t = await Jo(() => l("/api/jobs"))), e) if (t.kind === "active") {
+			let t = await Xo((e) => l(`/api/jobs/${encodeURIComponent(e)}`));
+			if (t.kind === "none" && (t = await Zo(() => l("/api/jobs"))), e) if (t.kind === "active") {
 				u(t.job), r(!0), a("이전에 시작한 서버 작업에 자동으로 다시 연결했습니다.");
 				try {
 					await m(t.job);
 				} catch (t) {
 					if (!e) return;
-					t instanceof Ne ? (Wo(), u(null), s(t.message), a("")) : t instanceof DOMException && t.name === "AbortError" || (s(t instanceof Error ? t.message : "작업 상태 확인에 실패했습니다."), a(""));
+					t instanceof Pe ? (qo(), u(null), s(t.message), a("")) : t instanceof DOMException && t.name === "AbortError" || (s(t instanceof Error ? t.message : "작업 상태 확인에 실패했습니다."), a(""));
 				} finally {
 					e && r(!1);
 				}
@@ -15397,7 +15413,7 @@ function $o() {
 		let t = new AbortController();
 		d.current = t;
 		try {
-			p((await Re(e, { signal: t.signal })).result || {});
+			p((await ze(e, { signal: t.signal })).result || {});
 		} finally {
 			d.current === t && (d.current = null);
 		}
@@ -15406,10 +15422,10 @@ function $o() {
 		r(!0), s(""), a("AI Agent가 단기 뉴스와 기존 중기 메모리를 업데이트하는 중입니다.");
 		try {
 			a("시장 메모리와 화면용 시장 상태를 함께 갱신하는 중입니다.");
-			let e = await Qo();
-			Zo(e) ? (Ko(e.id), u(e), await m(e)) : p(e);
+			let e = await ts();
+			es(e) ? (Yo(e.id), u(e), await m(e)) : p(e);
 		} catch (e) {
-			e instanceof Ne ? (Wo(), u(null), s(e.message), a("")) : e instanceof DOMException && e.name === "AbortError" || (s(e instanceof Error ? e.message : "시장 메모리 업데이트에 실패했습니다."), a(""));
+			e instanceof Pe ? (qo(), u(null), s(e.message), a("")) : e instanceof DOMException && e.name === "AbortError" || (s(e instanceof Error ? e.message : "시장 메모리 업데이트에 실패했습니다."), a(""));
 		} finally {
 			r(!1);
 		}
@@ -15420,7 +15436,7 @@ function $o() {
 			try {
 				await m(c);
 			} catch (e) {
-				e instanceof Ne ? (Wo(), u(null), s(e.message), a("")) : e instanceof DOMException && e.name === "AbortError" || (s(e instanceof Error ? e.message : "작업 상태 확인에 실패했습니다."), a(""));
+				e instanceof Pe ? (qo(), u(null), s(e.message), a("")) : e instanceof DOMException && e.name === "AbortError" || (s(e instanceof Error ? e.message : "작업 상태 확인에 실패했습니다."), a(""));
 			} finally {
 				r(!1);
 			}
@@ -15430,7 +15446,7 @@ function $o() {
 		className: "react-market-memory-route",
 		"data-market-memory-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Market Memory",
 				title: "시장 내러티브",
 				description: "단기 뉴스 흐름을 중기 시장 상황으로 압축해 투자 판단의 배경으로 유지합니다."
@@ -15459,11 +15475,11 @@ function $o() {
 					children: "같은 작업 다시 확인"
 				})]
 			}) : null,
-			/* @__PURE__ */ (0, x.jsx)(Ft, { mode: "market-memory" }),
+			/* @__PURE__ */ (0, x.jsx)(It, { mode: "market-memory" }),
 			/* @__PURE__ */ (0, x.jsx)("section", {
 				className: "market-state-dashboard react-market-memory-dashboard",
 				"aria-label": "현재 중기 시장 상황",
-				children: /* @__PURE__ */ (0, x.jsx)(ga, {
+				children: /* @__PURE__ */ (0, x.jsx)(xa, {
 					onUpdate: h,
 					updating: n,
 					updateDisabled: !!c,
@@ -15475,7 +15491,7 @@ function $o() {
 }
 //#endregion
 //#region src/app/portfolio/HoldingsTable.tsx
-function es({ positions: e, onChange: t }) {
+function rs({ positions: e, onChange: t }) {
 	function n(n, r, i) {
 		t(e.map((e, t) => t === n ? {
 			...e,
@@ -15535,7 +15551,7 @@ function es({ positions: e, onChange: t }) {
 }
 //#endregion
 //#region src/app/portfolio/ImportPositionsDialog.tsx
-function ts(e, t) {
+function is(e, t) {
 	let n = e.map((e) => ({ ...e }));
 	for (let e of t) {
 		if (!e.ticker || !e.quantity || e.action === "skip") continue;
@@ -15560,7 +15576,7 @@ function ts(e, t) {
 	}
 	return n;
 }
-function ns({ current: e, onApply: t, onClose: n }) {
+function as({ current: e, onApply: t, onClose: n }) {
 	let [r, i] = (0, b.useState)(null), [a, o] = (0, b.useState)(""), [s, c] = (0, b.useState)({
 		top: 0,
 		right: 0,
@@ -15772,7 +15788,7 @@ function ns({ current: e, onApply: t, onClose: n }) {
 							children: [/* @__PURE__ */ (0, x.jsx)("button", {
 								className: "filter-btn apply",
 								type: "button",
-								onClick: () => t(ts(e, h)),
+								onClick: () => t(is(e, h)),
 								children: "편집표에 적용"
 							}), /* @__PURE__ */ (0, x.jsx)("span", { children: "적용 후 Portfolio 저장 버튼을 눌러야 실제 저장됩니다." })]
 						})
@@ -15784,11 +15800,11 @@ function ns({ current: e, onApply: t, onClose: n }) {
 }
 //#endregion
 //#region src/app/portfolio/ConsultationEntry.tsx
-function rs({ tickers: e }) {
+function os({ tickers: e }) {
 	return /* @__PURE__ */ (0, x.jsx)("button", {
 		className: "filter-btn apply",
 		type: "button",
-		onClick: () => va({
+		onClick: () => Ca({
 			title: "현재 Portfolio 상담",
 			scope: {
 				kind: "portfolio",
@@ -15802,14 +15818,14 @@ function rs({ tickers: e }) {
 }
 //#endregion
 //#region src/app/PortfolioRoute.tsx
-function is() {
+function ss() {
 	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)([]), [i, a] = (0, b.useState)(!1), [s, u] = (0, b.useState)(!1), [d, f] = (0, b.useState)(""), [p, m] = (0, b.useState)("");
 	async function h() {
 		let e = await l("/api/portfolio");
 		t(e), r(e.positions || []);
 	}
 	(0, b.useEffect)(() => {
-		h().catch((e) => m(e instanceof Error ? e.message : "Portfolio를 불러오지 못했습니다.")), Te("portfolio", {
+		h().catch((e) => m(e instanceof Error ? e.message : "Portfolio를 불러오지 못했습니다.")), Ee("portfolio", {
 			surface: "portfolio",
 			viewId: "portfolio",
 			reportKind: "portfolio",
@@ -15836,7 +15852,7 @@ function is() {
 	return /* @__PURE__ */ (0, x.jsxs)("main", {
 		className: "portfolio-route",
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Portfolio",
 				title: "보유 종목과 리서치 연결",
 				description: "입력 부담을 줄이고, 보유 포지션에서 시작해 뉴스·브리핑·시장 내러티브를 함께 검토합니다."
@@ -15882,7 +15898,7 @@ function is() {
 								})
 							]
 						}),
-						/* @__PURE__ */ (0, x.jsx)(es, {
+						/* @__PURE__ */ (0, x.jsx)(rs, {
 							positions: n,
 							onChange: r
 						}),
@@ -15908,12 +15924,12 @@ function is() {
 							})] })
 						}),
 						/* @__PURE__ */ (0, x.jsx)("p", { children: "현재 보유 종목을 기준으로 최근 뉴스, 브리핑, 시장 내러티브의 변화와 반대 근거를 함께 살펴봅니다." }),
-						/* @__PURE__ */ (0, x.jsx)(rs, { tickers: n.map((e) => e.ticker).filter(Boolean) }),
+						/* @__PURE__ */ (0, x.jsx)(os, { tickers: n.map((e) => e.ticker).filter(Boolean) }),
 						/* @__PURE__ */ (0, x.jsx)("small", { children: "상담 내용은 보고서 근거로 사용되지 않습니다." })
 					]
 				})]
 			}),
-			i && /* @__PURE__ */ (0, x.jsx)(ns, {
+			i && /* @__PURE__ */ (0, x.jsx)(as, {
 				current: n,
 				onApply: (e) => {
 					r(e), a(!1), f("이미지 인식 결과를 편집표에 적용했습니다. 아직 저장되지 않았습니다.");
@@ -15925,58 +15941,58 @@ function is() {
 }
 //#endregion
 //#region src/app/ReactAgentDock.tsx
-var as = /* @__PURE__ */ new Set([
+var cs = /* @__PURE__ */ new Set([
 	"codex",
 	"claude",
 	"antigravity"
-]), os = {
+]), ls = {
 	id: "welcome",
 	role: "assistant",
 	text: "현재 화면에 대해 물어보세요. 보고서 수정이나 발전 요청은 작업으로 전환해 처리합니다.",
 	variant: "welcome",
 	createdAt: (/* @__PURE__ */ new Date()).toISOString()
-}, ss = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z\" fill=\"#fff\"></path><path d=\"M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z\" fill=\"url(#folio-react-codex-gradient)\"></path><defs><linearGradient gradientUnits=\"userSpaceOnUse\" id=\"folio-react-codex-gradient\" x1=\"12\" x2=\"12\" y1=\"3\" y2=\"21\"><stop stop-color=\"#B1A7FF\"></stop><stop offset=\".5\" stop-color=\"#7A9DFF\"></stop><stop offset=\"1\" stop-color=\"#3941FF\"></stop></linearGradient></defs></svg>", cs = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z\" fill=\"currentColor\"/></svg>", ls = "M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z", us = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${ls}" fill="#D97757" fill-rule="nonzero"></path></svg>`, ds = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${ls}" fill="currentColor" fill-rule="nonzero"></path></svg>`, fs = "M21.751 22.607c1.34 1.005 3.35.335 1.508-1.508C17.73 15.74 18.904 1 12.037 1 5.17 1 6.342 15.74.815 21.1c-2.01 2.009.167 2.511 1.507 1.506 5.192-3.517 4.857-9.714 9.715-9.714 4.857 0 4.522 6.197 9.714 9.715z", ps = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${fs}" fill="url(#folio-react-antigravity-gradient)"></path><defs><linearGradient id="folio-react-antigravity-gradient" x1="5" x2="19" y1="22" y2="2" gradientUnits="userSpaceOnUse"><stop stop-color="#3186FF"></stop><stop offset=".42" stop-color="#34A853"></stop><stop offset=".72" stop-color="#FBBC04"></stop><stop offset="1" stop-color="#EA4335"></stop></linearGradient></defs></svg>`, ms = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${fs}" fill="currentColor"></path></svg>`, hs = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M9 3c.4 3.9 3.1 6.6 7 7-3.9.4-6.6 3.1-7 7-.4-3.9-3.1-6.6-7-7 3.9-.4 6.6-3.1 7-7z\"/><path d=\"M17.8 13c.25 2.4 1.85 4 4.2 4.25-2.35.25-3.95 1.85-4.2 4.25-.25-2.4-1.85-4-4.2-4.25 2.35-.25 3.95-1.85 4.2-4.25z\" opacity=\".7\"/></svg>", gs = {
+}, us = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z\" fill=\"#fff\"></path><path d=\"M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z\" fill=\"url(#folio-react-codex-gradient)\"></path><defs><linearGradient gradientUnits=\"userSpaceOnUse\" id=\"folio-react-codex-gradient\" x1=\"12\" x2=\"12\" y1=\"3\" y2=\"21\"><stop stop-color=\"#B1A7FF\"></stop><stop offset=\".5\" stop-color=\"#7A9DFF\"></stop><stop offset=\"1\" stop-color=\"#3941FF\"></stop></linearGradient></defs></svg>", ds = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z\" fill=\"currentColor\"/></svg>", fs = "M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z", ps = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${fs}" fill="#D97757" fill-rule="nonzero"></path></svg>`, ms = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${fs}" fill="currentColor" fill-rule="nonzero"></path></svg>`, hs = "M21.751 22.607c1.34 1.005 3.35.335 1.508-1.508C17.73 15.74 18.904 1 12.037 1 5.17 1 6.342 15.74.815 21.1c-2.01 2.009.167 2.511 1.507 1.506 5.192-3.517 4.857-9.714 9.715-9.714 4.857 0 4.522 6.197 9.714 9.715z", gs = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${hs}" fill="url(#folio-react-antigravity-gradient)"></path><defs><linearGradient id="folio-react-antigravity-gradient" x1="5" x2="19" y1="22" y2="2" gradientUnits="userSpaceOnUse"><stop stop-color="#3186FF"></stop><stop offset=".42" stop-color="#34A853"></stop><stop offset=".72" stop-color="#FBBC04"></stop><stop offset="1" stop-color="#EA4335"></stop></linearGradient></defs></svg>`, _s = `<svg viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="${hs}" fill="currentColor"></path></svg>`, vs = "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M9 3c.4 3.9 3.1 6.6 7 7-3.9.4-6.6 3.1-7 7-.4-3.9-3.1-6.6-7-7 3.9-.4 6.6-3.1 7-7z\"/><path d=\"M17.8 13c.25 2.4 1.85 4 4.2 4.25-2.35.25-3.95 1.85-4.2 4.25-.25-2.4-1.85-4-4.2-4.25 2.35-.25 3.95-1.85 4.2-4.25z\" opacity=\".7\"/></svg>", ys = {
 	codex: {
 		label: "Codex",
 		color: "#3941ff",
-		logo: ss,
-		monoLogo: cs
+		logo: us,
+		monoLogo: ds
 	},
 	claude: {
 		label: "Claude",
 		color: "#d97757",
-		logo: us,
-		monoLogo: ds
+		logo: ps,
+		monoLogo: ms
 	},
 	antigravity: {
 		label: "Antigravity",
 		color: "#3186ff",
-		logo: ps,
-		monoLogo: ms
+		logo: gs,
+		monoLogo: _s
 	},
 	default: {
 		label: "Folio Agent",
 		color: "#c79a45",
-		logo: hs,
-		monoLogo: hs
+		logo: vs,
+		monoLogo: vs
 	}
 };
-function _s() {
+function bs() {
 	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
-function vs(e) {
+function xs(e) {
 	return (e ? new Date(e) : /* @__PURE__ */ new Date()).toLocaleTimeString("ko-KR", {
 		hour: "2-digit",
 		minute: "2-digit"
 	});
 }
-function ys(e) {
+function Ss(e) {
 	return e === "high" ? "높음" : e === "low" ? "낮음" : "중간";
 }
-function bs(e) {
+function Cs(e) {
 	return `${Math.max(1, Math.round((Date.now() - e) / 1e3))}초`;
 }
-var xs = [
+var ws = [
 	"surface",
 	"viewId",
 	"reportKind",
@@ -15986,13 +16002,13 @@ var xs = [
 	"visibleSection",
 	"portfolioLinked"
 ];
-function Ss(e) {
+function Ts(e) {
 	if (!e) return {};
 	let t = {};
-	for (let n of xs) Object.prototype.hasOwnProperty.call(e, n) && (t[n] = e[n]);
+	for (let n of ws) Object.prototype.hasOwnProperty.call(e, n) && (t[n] = e[n]);
 	return t;
 }
-function Cs(e) {
+function Es(e) {
 	if (!e) return {};
 	let t = Object.prototype.hasOwnProperty.call(e, "collectionId"), n = Object.prototype.hasOwnProperty.call(e, "collectionRevision");
 	if (!t || !n) return {};
@@ -16005,51 +16021,51 @@ function Cs(e) {
 		collectionRevision: i
 	} : {};
 }
-function ws(e) {
+function Ds(e) {
 	let t = { ...e };
 	return delete t.collectionId, delete t.collectionRevision, t;
 }
-function Ts(e, t) {
+function Os(e, t) {
 	return e.ownerSurface === t ? e : {
 		ownerSurface: t,
 		patch: {}
 	};
 }
-function Es(e, t, n) {
+function ks(e, t, n) {
 	return {
 		ownerSurface: t,
 		patch: {
-			...Ts(e, t).patch,
+			...Os(e, t).patch,
 			...n,
 			surface: String(n.surface || t)
 		}
 	};
 }
-function Ds(e, t, n, r = {}) {
-	let i = Ts(t, n);
+function As(e, t, n, r = {}) {
+	let i = Os(t, n);
 	return {
-		...Ss(e),
-		...ws(i.patch),
-		...ws(r),
-		...Cs(e)
+		...Ts(e),
+		...Ds(i.patch),
+		...Ds(r),
+		...Es(e)
 	};
 }
-function Os(e) {
-	let t = e?.provider && as.has(e.provider) ? e.provider : e?.selectedAdapter || "";
+function js(e) {
+	let t = e?.provider && cs.has(e.provider) ? e.provider : e?.selectedAdapter || "";
 	return e?.adapters?.find((e) => e.id === t) || null;
 }
-function ks(e) {
-	return gs[e?.provider && as.has(e.provider) ? e.provider : e?.selectedAdapter || ""] || gs.default;
+function Ms(e) {
+	return ys[e?.provider && cs.has(e.provider) ? e.provider : e?.selectedAdapter || ""] || ys.default;
 }
-function As(e) {
+function Ns(e) {
 	return e?.modelChoices || [];
 }
-function js(e) {
-	let t = As(e);
+function Ps(e) {
+	let t = Ns(e);
 	return t.length ? t.some((t) => t.value === e?.model) ? String(e?.model || "") : t[0].value : "";
 }
-function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
-	let [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(null), [u, d] = (0, b.useState)([os]), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)("medium"), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), w = (0, b.useRef)(null), T = (0, b.useRef)({
+function Fs({ surface: e, open: t, onOpen: n, onClose: r }) {
+	let [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(null), [u, d] = (0, b.useState)([ls]), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)("medium"), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), w = (0, b.useRef)(null), T = (0, b.useRef)({
 		ownerSurface: e,
 		patch: {}
 	}), O = (0, b.useRef)(/* @__PURE__ */ new Map());
@@ -16058,17 +16074,17 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 		O.current.clear();
 	}, []);
 	let k = (0, b.useCallback)((e, t = !1) => {
-		let n = Os(e);
+		let n = js(e);
 		a(e), h((e) => {
-			let r = js(n);
-			return t && As(n).some((t) => t.value === e) ? e : r;
+			let r = Ps(n);
+			return t && Ns(n).some((t) => t.value === e) ? e : r;
 		});
 	}, []), A = (0, b.useCallback)(async (e = !1) => {
 		let t = await l(`/api/agent-bridge/settings${e ? "?refresh=true" : ""}`);
 		return k(t, !0), t;
 	}, [k]), j = (0, b.useCallback)(async (e) => {
 		try {
-			let t = e?.provider && as.has(e.provider) ? e.provider : "", n = t ? `?adapter=${encodeURIComponent(t)}` : "";
+			let t = e?.provider && cs.has(e.provider) ? e.provider : "", n = t ? `?adapter=${encodeURIComponent(t)}` : "";
 			c(await l(`/api/agent-bridge/preflight${n}`));
 		} catch (e) {
 			c({
@@ -16095,7 +16111,7 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 	}, [k, j]), (0, b.useEffect)(() => {
 		w.current && (w.current.scrollTop = w.current.scrollHeight);
 	}, [u, t]), (0, b.useEffect)(() => {
-		T.current = Ts(T.current, e);
+		T.current = Os(T.current, e);
 	}, [e]), (0, b.useEffect)(() => {
 		let e = (e) => {
 			let t = e.detail;
@@ -16107,15 +16123,15 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 		A,
 		j
 	]);
-	let M = Os(i), N = ks(i), P = As(M), F = (0, b.useMemo)(() => ({ "--react-agent-accent": N.color }), [N.color]), I = (s?.checks || []).filter((e) => !e.ok), L = (0, b.useCallback)(async (t, n = {}) => {
+	let M = js(i), N = Ms(i), P = Ns(M), F = (0, b.useMemo)(() => ({ "--react-agent-accent": N.color }), [N.color]), I = (s?.checks || []).filter((e) => !e.ok), L = (0, b.useCallback)(async (t, n = {}) => {
 		let r = t.trim();
 		if (!r || v) return;
-		T.current = Ts(T.current, e);
-		let i = Ds(window.FolioAgent?.currentContext, T.current, e, n), a = _s(), s = Date.now(), c = new Date(s).toISOString(), l = M?.label || N.label, u = m || M?.model || "model";
+		T.current = Os(T.current, e);
+		let i = As(window.FolioAgent?.currentContext, T.current, e, n), a = bs(), s = Date.now(), c = new Date(s).toISOString(), l = M?.label || N.label, u = m || M?.model || "model";
 		d((e) => [
 			...e,
 			{
-				id: _s(),
+				id: bs(),
 				role: "user",
 				text: r,
 				createdAt: c
@@ -16127,7 +16143,7 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 				pending: !0,
 				runState: "pending",
 				runTitle: `${l} 세션 시작`,
-				runMeta: `${u} · ${ys(g)} · on-request`,
+				runMeta: `${u} · ${Ss(g)} · on-request`,
 				createdAt: c
 			}
 		]), p(""), y(!0), C("");
@@ -16141,10 +16157,10 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 					effort: g
 				}
 			});
-			f = new AbortController(), Pe(O.current, a, f);
-			let t = await Le(e, { signal: f.signal });
-			Fe(O.current, a, f);
-			let n = t.result || {}, c = await ie(n);
+			f = new AbortController(), Fe(O.current, a, f);
+			let t = await Re(e, { signal: f.signal });
+			Ie(O.current, a, f);
+			let n = t.result || {}, c = await ae(n);
 			d((e) => e.map((e) => e.id === a ? {
 				...e,
 				text: n.reply || t.message || "Agent가 응답을 반환하지 않았습니다.",
@@ -16154,17 +16170,17 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 				pending: !1,
 				runState: "done",
 				runTitle: `${l} 응답`,
-				runMeta: `${u} · ${ys(g)} · ${bs(s)}`
+				runMeta: `${u} · ${Ss(g)} · ${Cs(s)}`
 			} : e));
 		} catch (e) {
-			if (f && Fe(O.current, a, f), e instanceof Me) {
+			if (f && Ie(O.current, a, f), e instanceof Ne) {
 				d((t) => t.map((t) => t.id === a ? {
 					...t,
 					text: e.message,
 					pending: !1,
 					runState: "still-running",
 					runTitle: `${l} 계속 실행 중`,
-					runMeta: `${u} · ${ys(g)} · ${bs(s)}`,
+					runMeta: `${u} · ${Ss(g)} · ${Cs(s)}`,
 					jobId: e.job.id
 				} : t));
 				return;
@@ -16176,7 +16192,7 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 				pending: !1,
 				runState: "error",
 				runTitle: `${l} 오류`,
-				runMeta: `${u} · ${ys(g)}`
+				runMeta: `${u} · ${Ss(g)}`
 			} : e));
 		} finally {
 			y(!1);
@@ -16192,14 +16208,14 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 	]);
 	async function R(e, t) {
 		let n = new AbortController();
-		Pe(O.current, e, n), d((t) => t.map((t) => t.id === e ? {
+		Fe(O.current, e, n), d((t) => t.map((t) => t.id === e ? {
 			...t,
 			pending: !0,
 			runState: "pending",
 			runTitle: "Agent 상태 다시 확인 중"
 		} : t));
 		try {
-			let r = await Le(await l(`/api/jobs/${encodeURIComponent(t)}`, { signal: n.signal }), { signal: n.signal }), i = r.result || {}, a = await ie(i);
+			let r = await Re(await l(`/api/jobs/${encodeURIComponent(t)}`, { signal: n.signal }), { signal: n.signal }), i = r.result || {}, a = await ae(i);
 			d((t) => t.map((t) => t.id === e ? {
 				...t,
 				text: i.reply || r.message || "Agent가 응답을 반환하지 않았습니다.",
@@ -16212,7 +16228,7 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 				jobId: void 0
 			} : t));
 		} catch (t) {
-			t instanceof Me ? d((n) => n.map((n) => n.id === e ? {
+			t instanceof Ne ? d((n) => n.map((n) => n.id === e ? {
 				...n,
 				text: t.message,
 				pending: !1,
@@ -16227,13 +16243,13 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 				runTitle: "Agent 오류"
 			} : n));
 		} finally {
-			Fe(O.current, e, n);
+			Ie(O.current, e, n);
 		}
 	}
 	(0, b.useEffect)(() => {
 		let t = (t) => {
 			let { message: n, prompt: r, autoSubmit: i, ...a } = t.detail || {};
-			T.current = Es(T.current, e, a);
+			T.current = ks(T.current, e, a);
 			let o = String(n || r || "");
 			o && (i ? L(o, a) : p(o));
 		};
@@ -16244,7 +16260,7 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 	}
 	function B() {
 		d([{
-			...os,
+			...ls,
 			createdAt: (/* @__PURE__ */ new Date()).toISOString()
 		}]), p(""), C("");
 	}
@@ -16263,11 +16279,11 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 	}
 	async function W(e, t, n) {
 		try {
-			let r = await le(t, n);
+			let r = await ue(t, n);
 			d((t) => t.map((t) => t.id === e ? {
 				...t,
 				proposalStatus: r.status
-			} : t)), ue(r);
+			} : t)), de(r);
 		} catch (e) {
 			C(e instanceof Error ? e.message : "제안 처리에 실패했습니다.");
 		}
@@ -16338,7 +16354,7 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 											dangerouslySetInnerHTML: { __html: N.logo }
 										}),
 										/* @__PURE__ */ (0, x.jsx)("strong", { children: M?.label || N.label }),
-										/* @__PURE__ */ (0, x.jsx)("time", { children: vs(e.createdAt) })
+										/* @__PURE__ */ (0, x.jsx)("time", { children: xs(e.createdAt) })
 									]
 								}),
 								e.runTitle && /* @__PURE__ */ (0, x.jsx)(D, {
@@ -16491,14 +16507,14 @@ function Ms({ surface: e, open: t, onOpen: n, onClose: r }) {
 }
 //#endregion
 //#region src/app/RssRoute.tsx
-var Ns = {
+var Is = {
 	start: "",
 	end: "",
 	source: "",
 	market: "",
 	country: "",
 	language: ""
-}, Ps = 20, Fs = [
+}, Ls = 20, Rs = [
 	{
 		value: "",
 		label: "전체 시장"
@@ -16523,7 +16539,7 @@ var Ns = {
 		value: "GLOBAL",
 		label: "글로벌"
 	}
-], Is = {
+], zs = {
 	GB: "영국",
 	DE: "독일",
 	FR: "프랑스",
@@ -16531,7 +16547,7 @@ var Ns = {
 	IT: "이탈리아",
 	ES: "스페인",
 	JP: "일본"
-}, Ls = {
+}, Bs = {
 	en: "영어",
 	de: "독일어",
 	fr: "프랑스어",
@@ -16541,54 +16557,54 @@ var Ns = {
 	ja: "일본어",
 	ko: "한국어"
 };
-function Rs(e) {
+function Vs(e) {
 	return new Promise((t) => window.setTimeout(t, e));
 }
-function zs(e) {
+function Hs(e) {
 	let t = e.timestamp || e.date || "";
 	if (!t) return "시간 정보 없음";
 	let n = new Date(t);
 	return Number.isNaN(n.getTime()) ? t : n.toLocaleString("ko-KR");
 }
-function Bs(e) {
+function Us(e) {
 	let t = [
 		e.start ? `${e.start} 이후` : "",
 		e.end ? `${e.end} 이전` : "",
 		e.source ? e.source : "",
-		e.market ? Fs.find((t) => t.value === e.market)?.label || e.market : "",
-		e.country ? Is[e.country] || e.country : "",
-		e.language ? Ls[e.language] || e.language : ""
+		e.market ? Rs.find((t) => t.value === e.market)?.label || e.market : "",
+		e.country ? zs[e.country] || e.country : "",
+		e.language ? Bs[e.language] || e.language : ""
 	].filter(Boolean);
 	return t.length ? t.join(" · ") : "전체 RSS 피드";
 }
-function Vs(e, t) {
+function Ws(e, t) {
 	let n = new URLSearchParams({
-		offset: String((Math.max(1, e) - 1) * Ps),
-		limit: String(Ps)
+		offset: String((Math.max(1, e) - 1) * Ls),
+		limit: String(Ls)
 	});
 	return t.start && n.set("start", t.start), t.end && n.set("end", t.end), t.source && n.set("source", t.source), t.market && n.set("market", t.market), t.country && n.set("country", t.country), t.language && n.set("language", t.language), n;
 }
-function Hs(e) {
+function Gs(e) {
 	let t = e.markets, n = Array.isArray(t) ? t : typeof t == "string" ? t.split(",") : String(e.market || "").split(","), r = /* @__PURE__ */ new Set();
 	return n.map((e) => String(e || "").trim()).filter(Boolean).filter((e) => !r.has(e) && (r.add(e), !0));
 }
-async function Us(e) {
+async function Ks(e) {
 	let t = e;
-	for (; f(t.status);) await Rs(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
+	for (; f(t.status);) await Vs(1e3), t = await l(`/api/jobs/${encodeURIComponent(t.id)}`);
 	if (t.status !== "done") throw Error(t.message || t.error || "RSS 수집 작업에 실패했습니다.");
 	return t;
 }
-function Ws(e, t) {
+function qs(e, t) {
 	return e.url || `${e.title || "rss"}-${e.timestamp || e.date || t}`;
 }
-function Gs(e) {
+function Js(e) {
 	return {
 		title: e.title || e.headline || e.path || "검색 결과",
 		url: e.url || e.sourceUrl || e.link || "",
 		description: e.summary || e.snippet || e.text || e.content || "",
 		media: e.media || e.source || e.collector || "",
 		source: e.source || e.media || e.collector || "",
-		markets: Hs({
+		markets: Gs({
 			markets: e.markets,
 			market: String(e.market || "")
 		}),
@@ -16597,12 +16613,12 @@ function Gs(e) {
 		date: e.date || e.publishedAt || e.published || e.timestamp || ""
 	};
 }
-function Ks() {
-	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)(null), [i, a] = (0, b.useState)(1), [s, c] = (0, b.useState)(Ns), [u, d] = (0, b.useState)(Ns), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)(!1), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), E = n?.items || [], D = n?.total ?? E.length, O = Math.max(1, Math.ceil(D / Ps)), k = (0, b.useMemo)(() => n?.sources || [], [n?.sources]), A = (0, b.useMemo)(() => n?.countries || [], [n?.countries]), j = (0, b.useMemo)(() => n?.languages || [], [n?.languages]), M = (0, b.useCallback)(async (e = i, t = s) => {
+function Ys() {
+	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)(null), [i, a] = (0, b.useState)(1), [s, c] = (0, b.useState)(Is), [u, d] = (0, b.useState)(Is), [f, p] = (0, b.useState)(""), [m, h] = (0, b.useState)(!1), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), E = n?.items || [], D = n?.total ?? E.length, O = Math.max(1, Math.ceil(D / Ls)), k = (0, b.useMemo)(() => n?.sources || [], [n?.sources]), A = (0, b.useMemo)(() => n?.countries || [], [n?.countries]), j = (0, b.useMemo)(() => n?.languages || [], [n?.languages]), M = (0, b.useCallback)(async (e = i, t = s) => {
 		h(!0), C("");
 		try {
-			let n = Vs(e, t), i = await l(`/api/rss/items?${n.toString()}`);
-			r(i), a(e), c(t), d(t), Te("rss", {
+			let n = Ws(e, t), i = await l(`/api/rss/items?${n.toString()}`);
+			r(i), a(e), c(t), d(t), Ee("rss", {
 				surface: "rss",
 				viewId: "rssfeed",
 				reportKind: "",
@@ -16630,7 +16646,7 @@ function Ks() {
 		T(""), await M(1, u);
 	}
 	async function F() {
-		T(""), p(""), d(Ns), await M(1, Ns);
+		T(""), p(""), d(Is), await M(1, Is);
 	}
 	async function I(e) {
 		e?.preventDefault();
@@ -16647,13 +16663,13 @@ function Ks() {
 				limit: "50"
 			}), n = await l(`/api/search?${e.toString()}`), i = Array.isArray(n) ? n : n.items || [];
 			r({
-				items: i.map(Gs),
+				items: i.map(Js),
 				total: i.length,
 				offset: 0,
 				limit: i.length,
 				has_more: !1,
 				sources: k
-			}), a(1), T(`뉴스 검색 결과 ${i.length}개`), Te("rss", {
+			}), a(1), T(`뉴스 검색 결과 ${i.length}개`), Ee("rss", {
 				surface: "rss",
 				viewId: "rssfeed",
 				reportKind: "news_search",
@@ -16668,7 +16684,7 @@ function Ks() {
 	async function L() {
 		_(!0), C(""), T("RSS 수집 작업을 시작했습니다.");
 		try {
-			let e = await Us(await o("/api/rssarchive/import", {})), t = Number.isFinite(Number(e.result?.added)) ? ` 신규 ${e.result?.added}개` : "";
+			let e = await Ks(await o("/api/rssarchive/import", {})), t = Number.isFinite(Number(e.result?.added)) ? ` 신규 ${e.result?.added}개` : "";
 			T(`RSS 수집 완료.${t}`), await M(1, s), await N();
 		} catch (e) {
 			C(e instanceof Error ? e.message : "RSS 수집에 실패했습니다."), T("");
@@ -16681,7 +16697,7 @@ function Ks() {
 		className: "react-rss-route",
 		"data-rss-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "RSS Feed",
 				title: "RSS 피드",
 				description: "수집한 기사와 원천 자료를 시간, 출처, 키워드로 빠르게 훑습니다.",
@@ -16745,7 +16761,7 @@ function Ks() {
 										market: t
 									}));
 								},
-								children: Fs.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+								children: Rs.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
 									value: e.value,
 									children: e.label
 								}, e.value || "all-market"))
@@ -16764,7 +16780,7 @@ function Ks() {
 									children: "전체 국가"
 								}), A.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
 									value: e,
-									children: Is[e] || e
+									children: zs[e] || e
 								}, e))]
 							})] }),
 							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "언어" }), /* @__PURE__ */ (0, x.jsxs)("select", {
@@ -16781,7 +16797,7 @@ function Ks() {
 									children: "전체 언어"
 								}), j.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
 									value: e,
-									children: Ls[e] || e
+									children: Bs[e] || e
 								}, e))]
 							})] }),
 							/* @__PURE__ */ (0, x.jsxs)("label", { children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "소스" }), /* @__PURE__ */ (0, x.jsxs)("select", {
@@ -16844,7 +16860,7 @@ function Ks() {
 			}),
 			/* @__PURE__ */ (0, x.jsxs)("div", {
 				className: "react-rss-summary",
-				children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: Bs(s) }), /* @__PURE__ */ (0, x.jsx)("span", { children: D > 0 ? `${D}개 · ${R}/${O}` : "0개" })]
+				children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: Us(s) }), /* @__PURE__ */ (0, x.jsx)("span", { children: D > 0 ? `${D}개 · ${R}/${O}` : "0개" })]
 			}),
 			S && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "react-dashboard-error",
@@ -16858,7 +16874,7 @@ function Ks() {
 				className: "react-rss-feed",
 				"aria-label": "RSS feed items",
 				children: E.length ? E.map((e, t) => {
-					let n = Ws(e, t), r = String(e.description || "").trim(), i = Hs(e);
+					let n = qs(e, t), r = String(e.description || "").trim(), i = Gs(e);
 					return /* @__PURE__ */ (0, x.jsxs)("article", {
 						className: "react-rss-card",
 						children: [/* @__PURE__ */ (0, x.jsxs)("div", {
@@ -16881,7 +16897,7 @@ function Ks() {
 											className: "pill",
 											children: i.join(" · ")
 										}) : null,
-										/* @__PURE__ */ (0, x.jsx)("span", { children: zs(e) })
+										/* @__PURE__ */ (0, x.jsx)("span", { children: Hs(e) })
 									]
 								}),
 								r && /* @__PURE__ */ (0, x.jsx)("p", { children: r })
@@ -16941,7 +16957,7 @@ function Ks() {
 }
 //#endregion
 //#region src/app/homePreference.ts
-var qs = "folio.homePreference.v1", Js = "folio.agentCharacter.v1", Ys = "folio.motionPreference.v1", Xs = "folio:ui-preferences-updated", Zs = {
+var Xs = "folio.homePreference.v1", Zs = "folio.agentCharacter.v1", Qs = "folio.motionPreference.v1", $s = "folio:ui-preferences-updated", ec = {
 	home: {
 		mode: "home",
 		choiceSeen: !0
@@ -16952,7 +16968,7 @@ var qs = "folio.homePreference.v1", Js = "folio.agentCharacter.v1", Ys = "folio.
 	},
 	motion: "system"
 };
-function Qs(e) {
+function tc(e) {
 	if (typeof window > "u") return "";
 	try {
 		return window.localStorage.getItem(e) || "";
@@ -16960,7 +16976,7 @@ function Qs(e) {
 		return "";
 	}
 }
-function $s(e) {
+function nc(e) {
 	if (!e) return {};
 	try {
 		let t = JSON.parse(e);
@@ -16969,8 +16985,8 @@ function $s(e) {
 		return {};
 	}
 }
-function ec() {
-	let e = $s(Qs(qs)), t = $s(Qs(Js)), n = Qs(Ys);
+function rc() {
+	let e = nc(tc(Xs)), t = nc(tc(Zs)), n = tc(Qs);
 	return {
 		home: {
 			mode: e.mode === "home" ? "home" : "office",
@@ -16983,40 +16999,40 @@ function ec() {
 		motion: n === "reduced" ? "reduced" : "system"
 	};
 }
-function tc(e, t) {
+function ic(e, t) {
 	if (!(typeof window > "u")) try {
 		window.localStorage.setItem(e, typeof t == "string" ? t : JSON.stringify(t));
 	} catch {}
 }
-function nc(e) {
-	typeof window > "u" || window.dispatchEvent(new CustomEvent(Xs, { detail: e }));
+function ac(e) {
+	typeof window > "u" || window.dispatchEvent(new CustomEvent($s, { detail: e }));
 }
-function rc(e) {
-	return tc(qs, e.home), tc(Js, e.character), tc(Ys, e.motion), nc(e), e;
+function oc(e) {
+	return ic(Xs, e.home), ic(Zs, e.character), ic(Qs, e.motion), ac(e), e;
 }
-function ic() {
+function sc() {
 	if (typeof window < "u") try {
-		window.localStorage.removeItem(qs), window.localStorage.removeItem(Js), window.localStorage.removeItem(Ys);
+		window.localStorage.removeItem(Xs), window.localStorage.removeItem(Zs), window.localStorage.removeItem(Qs);
 	} catch {}
-	let e = structuredClone(Zs);
-	return nc(e), e;
+	let e = structuredClone(ec);
+	return ac(e), e;
 }
-function ac(e = ec()) {
+function cc(e = rc()) {
 	return "home";
 }
-function oc() {
-	let [e, t] = (0, b.useState)(() => ec());
+function lc() {
+	let [e, t] = (0, b.useState)(() => rc());
 	(0, b.useEffect)(() => {
 		let e = (e) => {
 			let n = e.detail;
-			t(n || ec());
-		}, n = () => t(ec());
-		return window.addEventListener(Xs, e), window.addEventListener("storage", n), () => {
-			window.removeEventListener(Xs, e), window.removeEventListener("storage", n);
+			t(n || rc());
+		}, n = () => t(rc());
+		return window.addEventListener($s, e), window.addEventListener("storage", n), () => {
+			window.removeEventListener($s, e), window.removeEventListener("storage", n);
 		};
 	}, []);
 	function n(e) {
-		t(e), rc(e);
+		t(e), oc(e);
 	}
 	return {
 		preferences: e,
@@ -17045,24 +17061,24 @@ function oc() {
 			});
 		},
 		reset() {
-			let e = ic();
+			let e = sc();
 			t(e);
 		}
 	};
 }
 //#endregion
 //#region src/app/WorkLogMigration.tsx
-function sc(e) {
+function uc(e) {
 	return e instanceof c ? e.code || `http_${e.status}` : e instanceof Error && /^[a-z0-9_]+$/.test(e.message) ? e.message : "request_failed";
 }
-function cc(e) {
+function dc(e) {
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? "시간 확인 불가" : new Intl.DateTimeFormat("ko-KR", {
 		dateStyle: "short",
 		timeStyle: "short"
 	}).format(t);
 }
-function lc() {
+function Q() {
 	let [e, t] = (0, b.useState)(null), [n, r] = (0, b.useState)("migrate_keep_original"), [i, a] = (0, b.useState)(!1), [s, c] = (0, b.useState)(""), [l, u] = (0, b.useState)(""), d = (0, b.useRef)(!1), f = (0, b.useRef)(null), p = (0, b.useRef)(null);
 	(0, b.useEffect)(() => {
 		if (!e) return;
@@ -17086,7 +17102,7 @@ function lc() {
 				let e = await o("/api/agent/work-log/migration-preview", {});
 				t(e), r("migrate_keep_original");
 			} catch (e) {
-				c(sc(e));
+				c(uc(e));
 			} finally {
 				d.current = !1, a(!1);
 			}
@@ -17102,7 +17118,7 @@ function lc() {
 				});
 				u(`${t.migratedJobs}건을 가져왔습니다.`), m();
 			} catch (e) {
-				t(null), c(sc(e));
+				t(null), c(uc(e));
 			} finally {
 				d.current = !1, a(!1);
 			}
@@ -17160,7 +17176,7 @@ function lc() {
 								"건 · 가져올 수 있음 ",
 								e.migratableJobs,
 								"건 · ",
-								cc(e.expiresAt),
+								dc(e.expiresAt),
 								"까지"
 							]
 						}),
@@ -17210,11 +17226,11 @@ function lc() {
 }
 //#endregion
 //#region src/app/SettingsRoute.tsx
-var uc = [
+var fc = [
 	"openai",
 	"gemini",
 	"claude"
-], dc = {
+], pc = {
 	openai: {
 		name: "OpenAI",
 		key: "sk-...",
@@ -17231,19 +17247,19 @@ var uc = [
 		model: "claude-sonnet-5"
 	}
 };
-function Q(e) {
-	return uc.includes(e) ? e : "openai";
+function mc(e) {
+	return fc.includes(e) ? e : "openai";
 }
-function fc(e, t, n, r) {
+function hc(e, t, n, r) {
 	return e ? `${r} 저장됨: ${t || "저장됨"}` : n;
 }
-function pc(e) {
+function gc(e) {
 	return e.bridgeSupported === !1 ? "지원 안 됨" : e.installed ? e.authenticated || e.available ? "사용 가능" : "로그인 필요" : "미설치";
 }
-function mc(e) {
+function _c(e) {
 	return e.bridgeSupported === !1 ? "warn" : e.authenticated || e.available ? "ready" : e.installed ? "warn" : "";
 }
-function hc({ checked: e, onChange: t, label: n, ariaLabel: r, compact: i = !1 }) {
+function vc({ checked: e, onChange: t, label: n, ariaLabel: r, compact: i = !1 }) {
 	return /* @__PURE__ */ (0, x.jsxs)("label", {
 		className: `settings-switch${i ? " settings-switch-compact" : ""}${e ? " is-on" : ""}`,
 		children: [
@@ -17269,7 +17285,7 @@ function hc({ checked: e, onChange: t, label: n, ariaLabel: r, compact: i = !1 }
 		]
 	});
 }
-function gc(e) {
+function yc(e) {
 	return {
 		rss: {
 			enabled: !!e.rss?.enabled,
@@ -17293,16 +17309,16 @@ function gc(e) {
 		}
 	};
 }
-function _c() {
-	let e = p(), t = oc(), [n, r] = (0, b.useState)("integrations"), [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(null), [u, d] = (0, b.useState)({}), [f, m] = (0, b.useState)({}), [h, g] = (0, b.useState)(null), [_, v] = (0, b.useState)("openai"), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)(""), [T, E] = (0, b.useState)(!0), [D, O] = (0, b.useState)("cli"), [k, A] = (0, b.useState)("codex"), [j, M] = (0, b.useState)(""), [N, P] = (0, b.useState)({
+function bc() {
+	let e = p(), t = lc(), [n, r] = (0, b.useState)("integrations"), [i, a] = (0, b.useState)(null), [s, c] = (0, b.useState)(null), [u, d] = (0, b.useState)({}), [f, m] = (0, b.useState)({}), [h, g] = (0, b.useState)(null), [_, v] = (0, b.useState)("openai"), [y, S] = (0, b.useState)(""), [C, w] = (0, b.useState)(""), [T, E] = (0, b.useState)(!0), [D, O] = (0, b.useState)("cli"), [k, A] = (0, b.useState)("codex"), [j, M] = (0, b.useState)(""), [N, P] = (0, b.useState)({
 		fred: "",
 		bok: "",
 		dart: ""
 	}), [F, I] = (0, b.useState)({
 		token: "",
 		dbId: ""
-	}), [L, R] = (0, b.useState)(""), [z, B] = (0, b.useState)({}), [V, H] = (0, b.useState)(""), [U, W] = (0, b.useState)(""), [G, K] = (0, b.useState)(""), q = i?.llm?.providers || {}, ee = q[_] || {}, te = dc[_], ne = ee.modelChoices || [], re = s?.adapters || [], ie = (re.find((e) => e.id === k) || re[0])?.modelChoices || [], ae = (0, b.useCallback)(async (e = !1) => {
-		K(""), W("load");
+	}), [L, R] = (0, b.useState)(""), [z, B] = (0, b.useState)({}), [V, H] = (0, b.useState)(""), [U, W] = (0, b.useState)(""), [ee, G] = (0, b.useState)(""), K = i?.llm?.providers || {}, te = K[_] || {}, ne = pc[_], re = te.modelChoices || [], ie = s?.adapters || [], ae = (ie.find((e) => e.id === k) || ie[0])?.modelChoices || [], oe = (0, b.useCallback)(async (e = !1) => {
+		G(""), W("load");
 		try {
 			let [t, n, r, i] = await Promise.all([
 				l(`/api/settings${e ? "?refresh=true" : ""}`),
@@ -17311,7 +17327,7 @@ function _c() {
 				l("/api/obsidian/settings")
 			]);
 			a(t), E(t.agent?.enabled !== !1), O(t.agent?.mode === "api" ? "api" : "cli");
-			let o = Q(t.llm?.provider);
+			let o = mc(t.llm?.provider);
 			v(o);
 			let s = t.llm?.providers?.[o] || {}, u = s.modelChoices || [];
 			w(u.some((e) => e.value === s.model) ? String(s.model || "") : u[0]?.value || ""), I({
@@ -17325,52 +17341,52 @@ function _c() {
 			].includes(n.provider || "") ? String(n.provider) : String(n.selectedAdapter || n.adapters?.[0]?.id || "codex"), p = n.adapters?.find((e) => e.id === f) || n.adapters?.[0];
 			A(f);
 			let h = p?.modelChoices || [];
-			M(h.some((e) => e.value === p?.model) ? String(p?.model || "") : h[0]?.value || ""), window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: n })), d(gc(r)), m(i), R(i.vaultPath || ""), Te("settings", {
+			M(h.some((e) => e.value === p?.model) ? String(p?.model || "") : h[0]?.value || ""), window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: n })), d(yc(r)), m(i), R(i.vaultPath || ""), Ee("settings", {
 				surface: "settings",
 				viewId: "settings",
 				reportKind: "",
 				reportId: ""
 			});
 		} catch (e) {
-			K(e instanceof Error ? e.message : "설정을 불러오지 못했습니다.");
+			G(e instanceof Error ? e.message : "설정을 불러오지 못했습니다.");
 		} finally {
 			W("");
 		}
-	}, []), oe = (0, b.useCallback)(async () => {
-		W("cache"), K("");
+	}, []), se = (0, b.useCallback)(async () => {
+		W("cache"), G("");
 		try {
 			let e = await l("/api/cache/stats");
 			g(e), H("캐시 상태를 불러왔습니다.");
 		} catch (e) {
-			K(e instanceof Error ? e.message : "캐시 상태를 불러오지 못했습니다.");
+			G(e instanceof Error ? e.message : "캐시 상태를 불러오지 못했습니다.");
 		} finally {
 			W("");
 		}
 	}, []);
-	async function se() {
-		W("cache-cleanup"), K(""), H("오래된 기업 데이터 캐시를 정리하는 중입니다.");
+	async function ce() {
+		W("cache-cleanup"), G(""), H("오래된 기업 데이터 캐시를 정리하는 중입니다.");
 		try {
 			let e = await o("/api/cache/cleanup", {}), t = await l("/api/cache/stats");
 			g(t), H(`캐시 정리 완료: ${e.deleted || 0}개 삭제, ${e.freed_mb || 0}MB 확보`);
 		} catch (e) {
-			K(e instanceof Error ? e.message : "캐시 정리에 실패했습니다.");
+			G(e instanceof Error ? e.message : "캐시 정리에 실패했습니다.");
 		} finally {
 			W("");
 		}
 	}
 	(0, b.useEffect)(() => {
-		ae();
-	}, [ae]), (0, b.useEffect)(() => {
-		let e = q[_] || {}, t = e.modelChoices || [];
+		oe();
+	}, [oe]), (0, b.useEffect)(() => {
+		let e = K[_] || {}, t = e.modelChoices || [];
 		w((n) => t.some((e) => e.value === n) ? n : t.some((t) => t.value === e.model) ? String(e.model || "") : t[0]?.value || ""), S("");
-	}, [_, q]), (0, b.useEffect)(() => {
-		let e = re.find((e) => e.id === k) || re[0], t = e?.modelChoices || [];
+	}, [_, K]), (0, b.useEffect)(() => {
+		let e = ie.find((e) => e.id === k) || ie[0], t = e?.modelChoices || [];
 		M((n) => t.some((e) => e.value === n) ? n : t.some((t) => t.value === e?.model) ? String(e?.model || "") : t[0]?.value || "");
-	}, [k, re]);
-	async function ce() {
+	}, [k, ie]);
+	async function le() {
 		W("agent"), H("AI Agent 설정을 저장하는 중입니다.");
 		try {
-			let e = Object.fromEntries(re.map((e) => [e.id, e.model || ""]));
+			let e = Object.fromEntries(ie.map((e) => [e.id, e.model || ""]));
 			e[k] = j;
 			let [t, n] = await Promise.all([o("/api/agent-bridge/settings", {
 				provider: k,
@@ -17393,12 +17409,12 @@ function _c() {
 				return delete t[_], t;
 			}), window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: t })), H(T ? `AI Agent를 ${D === "cli" ? "LLM CLI" : "LLM API"} 모드로 저장했습니다.` : "AI Agent 생성을 비활성화했습니다.");
 		} catch (e) {
-			K(e instanceof Error ? e.message : "AI Agent 설정 저장에 실패했습니다.");
+			G(e instanceof Error ? e.message : "AI Agent 설정 저장에 실패했습니다.");
 		} finally {
 			W("");
 		}
 	}
-	async function le(e) {
+	async function ue(e) {
 		B((t) => ({
 			...t,
 			[e]: { checking: !0 }
@@ -17420,7 +17436,7 @@ function _c() {
 			}));
 		}
 	}
-	async function ue() {
+	async function de() {
 		W("api"), H("외부 데이터 API 설정을 저장하는 중입니다.");
 		try {
 			let e = await o("/api/settings", {
@@ -17434,12 +17450,12 @@ function _c() {
 				dart: ""
 			}), H("외부 데이터 API 설정을 저장했습니다.");
 		} catch (e) {
-			K(e instanceof Error ? e.message : "API 설정 저장에 실패했습니다.");
+			G(e instanceof Error ? e.message : "API 설정 저장에 실패했습니다.");
 		} finally {
 			W("");
 		}
 	}
-	async function de() {
+	async function fe() {
 		W("notion"), H("Notion 설정을 저장하는 중입니다.");
 		try {
 			let e = await o("/api/settings", { notion: {
@@ -17451,35 +17467,35 @@ function _c() {
 				dbId: e.notion?.dbId || ""
 			}), H("Notion 설정을 저장했습니다.");
 		} catch (e) {
-			K(e instanceof Error ? e.message : "Notion 설정 저장에 실패했습니다.");
-		} finally {
-			W("");
-		}
-	}
-	async function fe() {
-		W("obsidian"), H("Obsidian 경로를 저장하는 중입니다.");
-		try {
-			let e = await o("/api/obsidian/settings", { vaultPath: L.trim() });
-			m(e), R(e.vaultPath || L), H(e.vaultPath ? "Obsidian 경로를 저장했습니다." : "Vault 경로를 입력하세요.");
-		} catch (e) {
-			K(e instanceof Error ? e.message : "Obsidian 설정 저장에 실패했습니다.");
+			G(e instanceof Error ? e.message : "Notion 설정 저장에 실패했습니다.");
 		} finally {
 			W("");
 		}
 	}
 	async function pe() {
-		W("automation"), H("자동화 설정을 저장하는 중입니다.");
+		W("obsidian"), H("Obsidian 경로를 저장하는 중입니다.");
 		try {
-			let e = await o("/api/automation/settings", gc(u));
-			d(gc(e)), H("자동화 설정을 저장했습니다.");
+			let e = await o("/api/obsidian/settings", { vaultPath: L.trim() });
+			m(e), R(e.vaultPath || L), H(e.vaultPath ? "Obsidian 경로를 저장했습니다." : "Vault 경로를 입력하세요.");
 		} catch (e) {
-			K(e instanceof Error ? e.message : "자동화 설정 저장에 실패했습니다.");
+			G(e instanceof Error ? e.message : "Obsidian 설정 저장에 실패했습니다.");
 		} finally {
 			W("");
 		}
 	}
-	let me = (0, b.useMemo)(() => uc.map((e) => {
-		let t = q[e] || {}, n = z[e], r = n?.checking;
+	async function me() {
+		W("automation"), H("자동화 설정을 저장하는 중입니다.");
+		try {
+			let e = await o("/api/automation/settings", yc(u));
+			d(yc(e)), H("자동화 설정을 저장했습니다.");
+		} catch (e) {
+			G(e instanceof Error ? e.message : "자동화 설정 저장에 실패했습니다.");
+		} finally {
+			W("");
+		}
+	}
+	let he = (0, b.useMemo)(() => fc.map((e) => {
+		let t = K[e] || {}, n = z[e], r = n?.checking;
 		return {
 			providerId: e,
 			row: t,
@@ -17487,19 +17503,19 @@ function _c() {
 			className: n?.available ? "ready" : r || n ? "warn" : "",
 			detail: n?.message || `${t.model || "모델 미설정"} · ${t.hasApiKey ? "저장된 키가 있습니다." : "API Key를 저장하세요."}`
 		};
-	}), [z, q]);
+	}), [z, K]);
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: "react-settings-route",
 		"data-settings-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Settings",
 				title: "설정",
 				description: "LLM, 외부 데이터, 내보내기, 자동화 설정을 관리합니다.",
 				actions: /* @__PURE__ */ (0, x.jsx)("button", {
 					className: "filter-btn clear",
 					type: "button",
-					onClick: () => ae(!0),
+					onClick: () => oe(!0),
 					disabled: U === "load",
 					children: U === "load" ? "불러오는 중" : "새로고침"
 				})
@@ -17519,9 +17535,9 @@ function _c() {
 					children: "관리"
 				})]
 			}),
-			G && /* @__PURE__ */ (0, x.jsx)("p", {
+			ee && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "react-dashboard-error",
-				children: G
+				children: ee
 			}),
 			V && /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "react-dashboard-warning",
@@ -17597,7 +17613,7 @@ function _c() {
 									className: "field",
 									children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "실행 방식" }), /* @__PURE__ */ (0, x.jsxs)("div", {
 										className: "settings-agent-mode-row",
-										children: [/* @__PURE__ */ (0, x.jsx)(hc, {
+										children: [/* @__PURE__ */ (0, x.jsx)(vc, {
 											ariaLabel: "AI Agent 사용",
 											checked: T,
 											onChange: E,
@@ -17631,7 +17647,7 @@ function _c() {
 										children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "사용할 CLI" }), /* @__PURE__ */ (0, x.jsx)("select", {
 											value: k,
 											onChange: (e) => A(e.currentTarget.value),
-											children: (re.length ? re : [
+											children: (ie.length ? ie : [
 												{
 													id: "codex",
 													label: "Codex CLI"
@@ -17654,7 +17670,7 @@ function _c() {
 										children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "모델" }), /* @__PURE__ */ (0, x.jsx)("select", {
 											value: j,
 											onChange: (e) => M(e.currentTarget.value),
-											children: ie.length ? ie.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+											children: ae.length ? ae.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
 												value: e.value,
 												children: e.label
 											}, e.value)) : /* @__PURE__ */ (0, x.jsx)("option", {
@@ -17666,15 +17682,15 @@ function _c() {
 								}), /* @__PURE__ */ (0, x.jsx)("div", {
 									className: "cli-provider-list",
 									"aria-live": "polite",
-									children: re.map((e) => /* @__PURE__ */ (0, x.jsxs)("div", {
+									children: ie.map((e) => /* @__PURE__ */ (0, x.jsxs)("div", {
 										className: "cli-provider-row",
 										children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 											className: "cli-provider-main",
 											children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "cli-provider-head",
 												children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: e.label || e.id }), /* @__PURE__ */ (0, x.jsx)("span", {
-													className: `cli-status-chip ${mc(e)}`,
-													children: pc(e)
+													className: `cli-status-chip ${_c(e)}`,
+													children: gc(e)
 												})]
 											}), /* @__PURE__ */ (0, x.jsx)("div", {
 												className: "cli-provider-meta",
@@ -17693,7 +17709,7 @@ function _c() {
 										className: "field",
 										children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "API 제공자" }), /* @__PURE__ */ (0, x.jsxs)("select", {
 											value: _,
-											onChange: (e) => v(Q(e.currentTarget.value)),
+											onChange: (e) => v(mc(e.currentTarget.value)),
 											children: [
 												/* @__PURE__ */ (0, x.jsx)("option", {
 													value: "openai",
@@ -17714,19 +17730,19 @@ function _c() {
 										className: "settings-grid",
 										children: [/* @__PURE__ */ (0, x.jsxs)("label", {
 											className: "field",
-											children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [te.name, " API Key"] }), /* @__PURE__ */ (0, x.jsx)("input", {
+											children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [ne.name, " API Key"] }), /* @__PURE__ */ (0, x.jsx)("input", {
 												value: y,
 												onChange: (e) => S(e.currentTarget.value),
 												type: "password",
 												autoComplete: "off",
-												placeholder: ee.hasApiKey ? `${ee.apiKeyMasked} 저장됨` : te.key
+												placeholder: te.hasApiKey ? `${te.apiKeyMasked} 저장됨` : ne.key
 											})]
 										}), /* @__PURE__ */ (0, x.jsxs)("label", {
 											className: "field",
-											children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [te.name, " Model"] }), /* @__PURE__ */ (0, x.jsx)("select", {
+											children: [/* @__PURE__ */ (0, x.jsxs)("span", { children: [ne.name, " Model"] }), /* @__PURE__ */ (0, x.jsx)("select", {
 												value: C,
 												onChange: (e) => w(e.currentTarget.value),
-												children: ne.length ? ne.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
+												children: re.length ? re.map((e) => /* @__PURE__ */ (0, x.jsx)("option", {
 													value: e.value,
 													children: e.label
 												}, e.value)) : /* @__PURE__ */ (0, x.jsx)("option", {
@@ -17739,13 +17755,13 @@ function _c() {
 									/* @__PURE__ */ (0, x.jsx)("div", {
 										className: "cli-provider-list",
 										"aria-live": "polite",
-										children: me.map(({ providerId: e, row: t, label: n, className: r, detail: i }) => /* @__PURE__ */ (0, x.jsxs)("div", {
+										children: he.map(({ providerId: e, row: t, label: n, className: r, detail: i }) => /* @__PURE__ */ (0, x.jsxs)("div", {
 											className: "cli-provider-row",
 											children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "cli-provider-main",
 												children: [/* @__PURE__ */ (0, x.jsxs)("div", {
 													className: "cli-provider-head",
-													children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.label || dc[e].name }), /* @__PURE__ */ (0, x.jsx)("span", {
+													children: [/* @__PURE__ */ (0, x.jsx)("strong", { children: t.label || pc[e].name }), /* @__PURE__ */ (0, x.jsx)("span", {
 														className: `cli-status-chip ${r}`,
 														children: n
 													})]
@@ -17759,7 +17775,7 @@ function _c() {
 													className: "filter-btn",
 													type: "button",
 													disabled: !t.hasApiKey || !!z[e]?.checking,
-													onClick: () => le(e),
+													onClick: () => ue(e),
 													children: "연결 확인"
 												}), t.setupUrl && /* @__PURE__ */ (0, x.jsx)("a", {
 													className: "filter-btn",
@@ -17778,13 +17794,13 @@ function _c() {
 								children: [/* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: ce,
+									onClick: le,
 									disabled: U === "agent",
 									children: "AI Agent 설정 저장"
 								}), /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn clear",
 									type: "button",
-									onClick: () => ae(!0),
+									onClick: () => oe(!0),
 									disabled: U === "load",
 									children: "모델/상태 새로고침"
 								})]
@@ -17816,7 +17832,7 @@ function _c() {
 									className: "field",
 									children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "FRED 상태" }), /* @__PURE__ */ (0, x.jsx)("p", {
 										className: "section-subtitle",
-										children: fc(i?.fred?.hasApiKey, i?.fred?.apiKeyMasked, "딥 리서치 미국 경제지표용 FRED API 키가 없습니다.", "FRED API 키")
+										children: hc(i?.fred?.hasApiKey, i?.fred?.apiKeyMasked, "딥 리서치 미국 경제지표용 FRED API 키가 없습니다.", "FRED API 키")
 									})]
 								})]
 							}),
@@ -17838,7 +17854,7 @@ function _c() {
 									className: "field",
 									children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "BOK 상태" }), /* @__PURE__ */ (0, x.jsx)("p", {
 										className: "section-subtitle",
-										children: fc(i?.bok?.hasApiKey, i?.bok?.apiKeyMasked, "딥 리서치 한국 경제지표용 BOK API 키가 없습니다.", "BOK API 키")
+										children: hc(i?.bok?.hasApiKey, i?.bok?.apiKeyMasked, "딥 리서치 한국 경제지표용 BOK API 키가 없습니다.", "BOK API 키")
 									})]
 								})]
 							}),
@@ -17860,7 +17876,7 @@ function _c() {
 									className: "field",
 									children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "DART 상태" }), /* @__PURE__ */ (0, x.jsx)("p", {
 										className: "section-subtitle",
-										children: fc(i?.dart?.hasApiKey, i?.dart?.apiKeyMasked, "국내 기업 분석용 DART API 키가 없습니다.", "DART API 키")
+										children: hc(i?.dart?.hasApiKey, i?.dart?.apiKeyMasked, "국내 기업 분석용 DART API 키가 없습니다.", "DART API 키")
 									})]
 								})]
 							}),
@@ -17869,7 +17885,7 @@ function _c() {
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: ue,
+									onClick: de,
 									disabled: U === "api",
 									children: "API 설정 저장"
 								})
@@ -17930,7 +17946,7 @@ function _c() {
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: de,
+									onClick: fe,
 									disabled: U === "notion",
 									children: "Notion 설정 저장"
 								})
@@ -17967,7 +17983,7 @@ function _c() {
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: fe,
+									onClick: pe,
 									disabled: U === "obsidian",
 									children: "Obsidian 설정 저장"
 								})
@@ -17998,7 +18014,7 @@ function _c() {
 													/* @__PURE__ */ (0, x.jsx)("span", { children: "RSS Collection" }),
 													/* @__PURE__ */ (0, x.jsx)("strong", { children: "RSS 수집" }),
 													/* @__PURE__ */ (0, x.jsx)("p", { children: "뉴스 피드를 정해진 간격으로 가져와 research inbox와 인덱스에 반영합니다." })
-												] }), /* @__PURE__ */ (0, x.jsx)(hc, {
+												] }), /* @__PURE__ */ (0, x.jsx)(vc, {
 													ariaLabel: "RSS 자동 수집",
 													checked: !!u.rss?.enabled,
 													onChange: (e) => d({
@@ -18044,7 +18060,7 @@ function _c() {
 											}),
 											/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "automation-inline-switch",
-												children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "기사 전문 저장 (무료 공개 본문만, 로컬 보관용)" }), /* @__PURE__ */ (0, x.jsx)(hc, {
+												children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "기사 전문 저장 (무료 공개 본문만, 로컬 보관용)" }), /* @__PURE__ */ (0, x.jsx)(vc, {
 													ariaLabel: "기사 전문 저장",
 													checked: u.rss?.saveFullText !== !1,
 													onChange: (e) => d({
@@ -18067,7 +18083,7 @@ function _c() {
 												/* @__PURE__ */ (0, x.jsx)("span", { children: "Fast-origin signals" }),
 												/* @__PURE__ */ (0, x.jsx)("strong", { children: "저지연 리드 수집" }),
 												/* @__PURE__ */ (0, x.jsx)("p", { children: "설정된 속보 RSS와 기존 한국 RSS lead를 규칙 기반으로 수집합니다. Agent는 호출하지 않습니다." })
-											] }), /* @__PURE__ */ (0, x.jsx)(hc, {
+											] }), /* @__PURE__ */ (0, x.jsx)(vc, {
 												ariaLabel: "저지연 리드 자동 수집",
 												checked: !!u.signals?.enabled,
 												onChange: (e) => d({
@@ -18120,7 +18136,7 @@ function _c() {
 													/* @__PURE__ */ (0, x.jsx)("span", { children: "Market Memory" }),
 													/* @__PURE__ */ (0, x.jsx)("strong", { children: "시장 메모리 업데이트" }),
 													/* @__PURE__ */ (0, x.jsx)("p", { children: "최근 RSS와 시장 자료를 중기 시장 판단용 컨텍스트로 정리합니다." })
-												] }), /* @__PURE__ */ (0, x.jsx)(hc, {
+												] }), /* @__PURE__ */ (0, x.jsx)(vc, {
 													ariaLabel: "Market Memory 자동 정리",
 													checked: !!u.marketMemory?.enabled,
 													onChange: (e) => d({
@@ -18166,7 +18182,7 @@ function _c() {
 											}),
 											/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "automation-inline-switch",
-												children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "RSS 수집 직후에도 정리" }), /* @__PURE__ */ (0, x.jsx)(hc, {
+												children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "RSS 수집 직후에도 정리" }), /* @__PURE__ */ (0, x.jsx)(vc, {
 													ariaLabel: "RSS 수집 직후 Market Memory 정리",
 													checked: !!u.marketMemory?.runAfterRss,
 													onChange: (e) => d({
@@ -18190,7 +18206,7 @@ function _c() {
 													/* @__PURE__ */ (0, x.jsx)("span", { children: "Daily Briefing" }),
 													/* @__PURE__ */ (0, x.jsx)("strong", { children: "브리핑 생성" }),
 													/* @__PURE__ */ (0, x.jsx)("p", { children: "지정한 시각에 RSS와 Market Memory를 반영해 일일 브리핑을 생성합니다." })
-												] }), /* @__PURE__ */ (0, x.jsx)(hc, {
+												] }), /* @__PURE__ */ (0, x.jsx)(vc, {
 													ariaLabel: "일일 브리핑 자동 생성",
 													checked: !!u.briefing?.enabled,
 													onChange: (e) => d({
@@ -18260,7 +18276,7 @@ function _c() {
 											}),
 											/* @__PURE__ */ (0, x.jsxs)("div", {
 												className: "automation-inline-switch",
-												children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "브리핑 전 RSS/Memory 실행" }), /* @__PURE__ */ (0, x.jsx)(hc, {
+												children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "브리핑 전 RSS/Memory 실행" }), /* @__PURE__ */ (0, x.jsx)(vc, {
 													ariaLabel: "브리핑 전 RSS와 Market Memory 실행",
 													checked: !!u.briefing?.runPrerequisites,
 													onChange: (e) => d({
@@ -18282,7 +18298,7 @@ function _c() {
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: pe,
+									onClick: me,
 									disabled: U === "automation",
 									children: "자동화 저장"
 								})
@@ -18297,7 +18313,7 @@ function _c() {
 								children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "캐시 관리" }), /* @__PURE__ */ (0, x.jsx)("p", { children: "기업 분석용 SEC/DART per-company 캐시 중 오래된 항목만 정리합니다. 공통 ticker/corpCode 목록은 삭제하지 않습니다." })] }), /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn clear",
 									type: "button",
-									onClick: oe,
+									onClick: se,
 									disabled: U === "cache",
 									children: U === "cache" ? "확인 중" : "상태 확인"
 								})]
@@ -18336,7 +18352,7 @@ function _c() {
 								children: /* @__PURE__ */ (0, x.jsx)("button", {
 									className: "filter-btn apply",
 									type: "button",
-									onClick: se,
+									onClick: ce,
 									disabled: U === "cache-cleanup",
 									children: U === "cache-cleanup" ? "정리 중" : "오래된 캐시 정리"
 								})
@@ -18348,7 +18364,7 @@ function _c() {
 						children: [/* @__PURE__ */ (0, x.jsx)("div", {
 							className: "input-panel-header",
 							children: /* @__PURE__ */ (0, x.jsxs)("div", { children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: "이전 작업 기록" }), /* @__PURE__ */ (0, x.jsx)("p", { children: "예전 버전이 남긴 작업 기록 파일을 현재 저장소로 한 번만 옮깁니다. 보고서와 제안 파일은 건드리지 않습니다." })] })
-						}), /* @__PURE__ */ (0, x.jsx)(lc, {})]
+						}), /* @__PURE__ */ (0, x.jsx)(Q, {})]
 					})
 				]
 			})
@@ -18357,7 +18373,7 @@ function _c() {
 }
 //#endregion
 //#region src/app/watchlist/FastSignalList.tsx
-function vc(e) {
+function xc(e) {
 	if (!e) return "시각 미확인";
 	let t = new Date(e);
 	return Number.isNaN(t.getTime()) ? e : t.toLocaleString("ko-KR", {
@@ -18367,13 +18383,13 @@ function vc(e) {
 		minute: "2-digit"
 	});
 }
-var yc = {
+var Sc = {
 	unconfirmed: "확인 전",
 	corroborated: "교차 확인",
 	expired: "만료",
 	retracted: "철회"
 };
-function bc({ signals: e, providers: t }) {
+function Cc({ signals: e, providers: t }) {
 	let n = t.filter((e) => !["active", "delayed"].includes(String(e.sourceStatus || "")));
 	return /* @__PURE__ */ (0, x.jsxs)("section", {
 		className: "evidence-rail evidence-rail--lead",
@@ -18411,8 +18427,8 @@ function bc({ signals: e, providers: t }) {
 						className: "evidence-rail__meta",
 						children: [
 							/* @__PURE__ */ (0, x.jsx)("span", { children: e.provider || "unknown" }),
-							/* @__PURE__ */ (0, x.jsx)("span", { children: e.sourceStatus === "delayed" ? "지연 수신" : yc[e.signalStatus || ""] || "확인 전" }),
-							/* @__PURE__ */ (0, x.jsx)("time", { children: vc(e.providerPublishedAt) })
+							/* @__PURE__ */ (0, x.jsx)("span", { children: e.sourceStatus === "delayed" ? "지연 수신" : Sc[e.signalStatus || ""] || "확인 전" }),
+							/* @__PURE__ */ (0, x.jsx)("time", { children: xc(e.providerPublishedAt) })
 						]
 					}),
 					e.url ? /* @__PURE__ */ (0, x.jsx)("a", {
@@ -18421,7 +18437,7 @@ function bc({ signals: e, providers: t }) {
 						rel: "noopener noreferrer",
 						children: e.title
 					}) : /* @__PURE__ */ (0, x.jsx)("strong", { children: e.title }),
-					/* @__PURE__ */ (0, x.jsxs)("small", { children: ["수신 ", vc(e.receivedAt)] })
+					/* @__PURE__ */ (0, x.jsxs)("small", { children: ["수신 ", xc(e.receivedAt)] })
 				] }, e.id || `${e.provider}-${e.title}`))
 			}) : /* @__PURE__ */ (0, x.jsx)("p", {
 				className: "section-subtitle",
@@ -18432,11 +18448,11 @@ function bc({ signals: e, providers: t }) {
 }
 //#endregion
 //#region src/app/watchlist/ConsultationEntry.tsx
-function xc({ item: e }) {
+function wc({ item: e }) {
 	return /* @__PURE__ */ (0, x.jsx)("button", {
 		type: "button",
 		className: "filter-btn apply",
-		onClick: () => va({
+		onClick: () => Ca({
 			title: `${e} 상담`,
 			scope: {
 				kind: "watchlist",
@@ -18450,23 +18466,23 @@ function xc({ item: e }) {
 }
 //#endregion
 //#region src/app/WatchlistRoute.tsx
-function Sc(e) {
+function Tc(e) {
 	let t = /* @__PURE__ */ new Set();
 	return e.map((e) => String(e || "").trim()).filter(Boolean).filter((e) => {
 		let n = e.toLowerCase();
 		return !t.has(n) && (t.add(n), !0);
 	});
 }
-function Cc(e) {
+function Ec(e) {
 	return e.ticker || e.item || "";
 }
-function wc(e) {
-	return e.companyName || e.name || e.item || Cc(e);
+function Dc(e) {
+	return e.companyName || e.name || e.item || Ec(e);
 }
-function Tc(e, t = "") {
+function Oc(e, t = "") {
 	return e?.company?.name || e?.item || t || "상세 보기";
 }
-function Ec(e) {
+function kc(e) {
 	if (!e) return "상세 정보를 불러오는 중입니다.";
 	let t = e.company || {};
 	return [
@@ -18476,27 +18492,27 @@ function Ec(e) {
 		e.newsCount ? `${e.newsCount}개 뉴스` : ""
 	].filter(Boolean).join(" · ") || "확인된 심볼 정보가 없습니다.";
 }
-function Dc(e = []) {
+function Ac(e = []) {
 	return [...e].sort((e, t) => String(t.date || "").localeCompare(String(e.date || "")));
 }
-function Oc(e) {
+function jc(e) {
 	return e.title || e.url || e.path || "자료";
 }
-function kc(e) {
+function Mc(e) {
 	return [e.source, e.date].filter(Boolean).join(" · ");
 }
-function Ac(e) {
+function Nc(e) {
 	window.location.hash = e ? `#/watchlist/${encodeURIComponent(e)}` : "#/watchlist";
 }
-function jc() {
+function Pc() {
 	let e = window.location.hash.match(/^#\/?watchlist\/(.+)$/);
 	return e ? decodeURIComponent(e[1]) : "";
 }
-function Mc() {
+function Fc() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "watchlist";
 }
-function Nc() {
-	let { resolved: e } = p(), [t, n] = (0, b.useState)([]), [r, i] = (0, b.useState)([]), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(() => jc()), [d, f] = (0, b.useState)(null), [m, h] = (0, b.useState)(!1), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), E = (0, b.useRef)(null), D = (0, b.useCallback)(async (e) => {
+function Ic() {
+	let { resolved: e } = p(), [t, n] = (0, b.useState)([]), [r, i] = (0, b.useState)([]), [a, s] = (0, b.useState)(""), [c, u] = (0, b.useState)(() => Pc()), [d, f] = (0, b.useState)(null), [m, h] = (0, b.useState)(!1), [g, _] = (0, b.useState)(!1), [v, y] = (0, b.useState)(!1), [S, C] = (0, b.useState)(""), [w, T] = (0, b.useState)(""), E = (0, b.useRef)(null), D = (0, b.useCallback)(async (e) => {
 		if (!e.length) {
 			i([]);
 			return;
@@ -18506,8 +18522,8 @@ function Nc() {
 	}, []), O = (0, b.useCallback)(async () => {
 		h(!0), C("");
 		try {
-			let e = await l("/api/watchlist"), t = Sc(Array.isArray(e) ? e : []);
-			n(t), await D(t), Te("watchlist", {
+			let e = await l("/api/watchlist"), t = Tc(Array.isArray(e) ? e : []);
+			n(t), await D(t), Ee("watchlist", {
 				surface: "watchlist",
 				viewId: "watchlist",
 				reportKind: "",
@@ -18523,13 +18539,13 @@ function Nc() {
 		O();
 	}, [O]), (0, b.useEffect)(() => {
 		let e = () => {
-			Mc() && u(jc());
+			Fc() && u(Pc());
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), (0, b.useEffect)(() => {
 		let e = !0;
 		async function t(t) {
-			_(!0), C(""), f({ item: t }), Te("watchlist", {
+			_(!0), C(""), f({ item: t }), Ee("watchlist", {
 				surface: "watchlist_detail",
 				viewId: "watchlist",
 				reportKind: "watchlist",
@@ -18547,7 +18563,7 @@ function Nc() {
 				e && _(!1);
 			}
 		}
-		return c ? t(c) : (f(null), Te("watchlist", {
+		return c ? t(c) : (f(null), Ee("watchlist", {
 			surface: "watchlist",
 			viewId: "watchlist",
 			reportKind: "",
@@ -18587,7 +18603,7 @@ function Nc() {
 	async function k(e, t) {
 		y(!0), C("");
 		try {
-			let r = await o("/api/watchlist", { items: e }), i = Sc(Array.isArray(r) ? r : []);
+			let r = await o("/api/watchlist", { items: e }), i = Tc(Array.isArray(r) ? r : []);
 			n(i), await D(i), t && T(t);
 		} catch (e) {
 			C(e instanceof Error ? e.message : "워치리스트 저장에 실패했습니다.");
@@ -18613,9 +18629,9 @@ function Nc() {
 		s(""), n.length !== t.length && await k(n, "워치리스트에 추가했습니다.");
 	}
 	async function M(e) {
-		await k(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), c === e && Ac();
+		await k(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), c === e && Nc();
 	}
-	let N = (0, b.useMemo)(() => Dc(d?.news || []), [d]), P = Tc(d, c);
+	let N = (0, b.useMemo)(() => Ac(d?.news || []), [d]), P = Oc(d, c);
 	return c ? /* @__PURE__ */ (0, x.jsx)("div", {
 		className: "react-watchlist-route",
 		"data-watchlist-route": !0,
@@ -18628,7 +18644,7 @@ function Nc() {
 					/* @__PURE__ */ (0, x.jsx)("button", {
 						type: "button",
 						className: "reader-crumb-link",
-						onClick: () => Ac(),
+						onClick: () => Nc(),
 						children: "워치리스트"
 					}),
 					/* @__PURE__ */ (0, x.jsx)("span", {
@@ -18659,17 +18675,17 @@ function Nc() {
 							}),
 							/* @__PURE__ */ (0, x.jsx)("p", {
 								className: "section-subtitle",
-								children: Ec(d)
+								children: kc(d)
 							})
 						] }), /* @__PURE__ */ (0, x.jsxs)("div", {
 							className: "watchlist-detail-actions",
-							children: [/* @__PURE__ */ (0, x.jsx)(xc, { item: c }), /* @__PURE__ */ (0, x.jsx)("button", {
+							children: [/* @__PURE__ */ (0, x.jsx)(wc, { item: c }), /* @__PURE__ */ (0, x.jsx)("button", {
 								className: "icon-btn",
 								type: "button",
 								"aria-label": "닫기",
 								"data-tooltip": "닫기",
 								"data-tooltip-pos": "left",
-								onClick: () => Ac(),
+								onClick: () => Nc(),
 								children: "×"
 							})]
 						})]
@@ -18688,10 +18704,10 @@ function Nc() {
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "watchlist-intelligence-rails",
-						children: [/* @__PURE__ */ (0, x.jsx)(bc, {
+						children: [/* @__PURE__ */ (0, x.jsx)(Cc, {
 							signals: d?.fastSignals || [],
 							providers: d?.signalProviderHealth || []
-						}), /* @__PURE__ */ (0, x.jsx)(Qn, { events: d?.changeHistory || [] })]
+						}), /* @__PURE__ */ (0, x.jsx)($n, { events: d?.changeHistory || [] })]
 					}),
 					/* @__PURE__ */ (0, x.jsxs)("div", {
 						className: "watchlist-detail-news",
@@ -18705,17 +18721,17 @@ function Nc() {
 								children: [
 									/* @__PURE__ */ (0, x.jsx)("div", {
 										className: "meta",
-										children: kc(e)
+										children: Mc(e)
 									}),
 									/* @__PURE__ */ (0, x.jsx)("h4", { children: e.url ? /* @__PURE__ */ (0, x.jsx)("a", {
 										href: e.url,
 										target: "_blank",
 										rel: "noopener noreferrer",
-										children: Oc(e)
-									}) : /* @__PURE__ */ (0, x.jsx)("span", { children: Oc(e) }) }),
+										children: jc(e)
+									}) : /* @__PURE__ */ (0, x.jsx)("span", { children: jc(e) }) }),
 									e.snippet && /* @__PURE__ */ (0, x.jsx)("p", { children: e.snippet })
 								]
-							}, `${Oc(e)}-${t}`))
+							}, `${jc(e)}-${t}`))
 						}) : /* @__PURE__ */ (0, x.jsx)("p", {
 							className: "section-subtitle",
 							children: "수집된 관련 뉴스가 없습니다."
@@ -18728,7 +18744,7 @@ function Nc() {
 		className: "react-watchlist-route",
 		"data-watchlist-route": !0,
 		children: [
-			/* @__PURE__ */ (0, x.jsx)(hn, {
+			/* @__PURE__ */ (0, x.jsx)(gn, {
 				eyebrow: "Watchlist",
 				title: "워치리스트",
 				description: "관심 기업, 섹터, 테마를 추적하고 관련 뉴스와 시장 반응을 확인합니다.",
@@ -18784,16 +18800,16 @@ function Nc() {
 			/* @__PURE__ */ (0, x.jsx)("div", {
 				className: "watchlist-grid",
 				children: r.length ? r.map((e) => {
-					let t = e.item || wc(e);
+					let t = e.item || Dc(e);
 					return /* @__PURE__ */ (0, x.jsxs)("article", {
 						className: "watchlist-card",
 						"data-watchlist-detail-item": t,
 						tabIndex: 0,
 						role: "button",
 						"aria-label": `${t} 상세 보기`,
-						onClick: () => Ac(t),
+						onClick: () => Nc(t),
 						onKeyDown: (e) => {
-							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), Ac(t));
+							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), Nc(t));
 						},
 						children: [
 							/* @__PURE__ */ (0, x.jsx)("span", {
@@ -18826,8 +18842,8 @@ function Nc() {
 								className: "watchlist-card-top",
 								children: [/* @__PURE__ */ (0, x.jsx)("strong", {
 									className: "watchlist-ticker",
-									children: Cc(e)
-								}), /* @__PURE__ */ (0, x.jsx)("h3", { children: wc(e) })]
+									children: Ec(e)
+								}), /* @__PURE__ */ (0, x.jsx)("h3", { children: Dc(e) })]
 							}),
 							/* @__PURE__ */ (0, x.jsxs)("div", {
 								className: "watchlist-card-meta",
@@ -18854,18 +18870,18 @@ function Nc() {
 }
 //#endregion
 //#region src/app/statusStore.ts
-var Pc = {
+var Lc = {
 	statusText: "",
 	docCount: "",
 	activeJobId: null
 };
-function Fc() {
-	return Pc;
+function Rc() {
+	return Lc;
 }
-function Ic() {
-	let [e, t] = (0, b.useState)(() => Fc());
+function zc() {
+	let [e, t] = (0, b.useState)(() => Rc());
 	return (0, b.useEffect)(() => {
-		let e = () => t(Fc());
+		let e = () => t(Rc());
 		e();
 		let n = window.setInterval(e, 1e3);
 		return () => window.clearInterval(n);
@@ -18873,7 +18889,7 @@ function Ic() {
 }
 //#endregion
 //#region src/app/AppShell.tsx
-var Lc = [
+var Bc = [
 	{
 		id: "home",
 		title: "홈",
@@ -18903,7 +18919,7 @@ var Lc = [
 		title: "시스템",
 		routes: ["settings"]
 	}
-], Rc = {
+], $ = {
 	home: /* @__PURE__ */ (0, x.jsxs)("svg", {
 		className: "react-left-nav-svg",
 		viewBox: "0 0 24 24",
@@ -19035,25 +19051,25 @@ var Lc = [
 		"aria-hidden": "true",
 		children: [/* @__PURE__ */ (0, x.jsx)("path", { d: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" }), /* @__PURE__ */ (0, x.jsx)("path", { d: "M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.22 3.43l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.34.4.7.6 1a1.7 1.7 0 0 0 1.1.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.1.4c-.17.14-.31.28-.41.2Z" })]
 	})
-}, zc = "(max-width: 1024px)";
-function Bc() {
-	return typeof window < "u" && window.matchMedia(zc).matches;
+}, Vc = "(max-width: 1024px)";
+function Hc() {
+	return typeof window < "u" && window.matchMedia(Vc).matches;
 }
-function $() {
-	let e = window.location.hash || Kr(ac());
-	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Kr("home")) : e;
+function Uc() {
+	let e = window.location.hash || Xr(cc());
+	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Xr("home")) : e;
 }
-function Vc() {
-	let [e, t] = (0, b.useState)(() => $());
+function Wc() {
+	let [e, t] = (0, b.useState)(() => Uc());
 	return (0, b.useEffect)(() => {
-		let e = () => t($());
+		let e = () => t(Uc());
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), {
 		hash: e,
-		routeId: Gr(e)
+		routeId: Yr(e)
 	};
 }
-async function Hc(e) {
+async function Gc(e) {
 	await new Promise((e) => window.setTimeout(e, 1500));
 	let t = Date.now() + 6e4;
 	for (; Date.now() < t;) {
@@ -19067,13 +19083,13 @@ async function Hc(e) {
 	}
 	e("재시작 확인 실패 · 수동 새로고침 필요");
 }
-function Uc() {
-	let { hash: e, routeId: t } = Vc(), n = qr(t), r = ac(oc().preferences), i = Ic(), [a, o] = (0, b.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, b.useRef)(!1), [c, l] = (0, b.useState)(() => {
+function Kc() {
+	let { hash: e, routeId: t } = Wc(), n = Zr(t), r = cc(lc().preferences), i = zc(), [a, o] = (0, b.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, b.useRef)(!1), [c, l] = (0, b.useState)(() => {
 		let e = localStorage.getItem("folio.react.agentClosed"), t = e === null || e !== "1";
-		return t && Bc() ? (s.current = !0, !1) : t;
-	}), [u, d] = (0, b.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, b.useState)(() => ({ [t]: $() })), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)(!1), v = (0, b.useRef)(null), y = (0, b.useRef)(t), S = (0, b.useRef)(!1), C = (0, b.useRef)({}), w = n.id !== "home", T = w && c ? " is-agent-open" : " is-agent-closed";
+		return t && Hc() ? (s.current = !0, !1) : t;
+	}), [u, d] = (0, b.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, b.useState)(() => ({ [t]: Uc() })), [m, h] = (0, b.useState)(""), [g, _] = (0, b.useState)(!1), v = (0, b.useRef)(null), y = (0, b.useRef)(t), S = (0, b.useRef)(!1), C = (0, b.useRef)({}), w = n.id !== "home", T = w && c ? " is-agent-open" : " is-agent-closed";
 	(0, b.useEffect)(() => {
-		Oe(n.id, {
+		ke(n.id, {
 			surface: `react_${n.id}`,
 			viewId: n.id
 		});
@@ -19086,7 +19102,7 @@ function Uc() {
 		}
 		localStorage.setItem("folio.react.agentClosed", c ? "0" : "1");
 	}, [c]), (0, b.useEffect)(() => {
-		let e = window.matchMedia(zc), t = (e) => {
+		let e = window.matchMedia(Vc), t = (e) => {
 			e.matches && l((e) => e && (s.current = !0, !1));
 		};
 		return e.addEventListener("change", t), () => e.removeEventListener("change", t);
@@ -19130,16 +19146,16 @@ function Uc() {
 					body: "{}"
 				});
 			} catch {}
-			h("서버 재시작 중"), await Hc(h), _(!1);
+			h("서버 재시작 중"), await Gc(h), _(!1);
 		}
 	}
 	function D(e) {
-		let t = f[e] || Kr(e);
+		let t = f[e] || Xr(e);
 		window.location.hash !== t && (window.location.hash = t);
 	}
 	function O(e) {
-		let t = qr(e);
-		return t.id === "home" ? /* @__PURE__ */ (0, x.jsx)(It, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, x.jsx)(Xa, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, x.jsx)(Vr, {}) : t.id === "rss" ? /* @__PURE__ */ (0, x.jsx)(Ks, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, x.jsx)($o, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, x.jsx)(Wi, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, x.jsx)(Po, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, x.jsx)(Nc, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, x.jsx)(is, {}) : t.id === "settings" ? /* @__PURE__ */ (0, x.jsx)(_c, {}) : null;
+		let t = Zr(e);
+		return t.id === "home" ? /* @__PURE__ */ (0, x.jsx)(Lt, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, x.jsx)(to, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, x.jsx)(Gr, {}) : t.id === "rss" ? /* @__PURE__ */ (0, x.jsx)(Ys, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, x.jsx)(ns, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, x.jsx)(Yi, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, x.jsx)(Lo, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, x.jsx)(Ic, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, x.jsx)(ss, {}) : t.id === "settings" ? /* @__PURE__ */ (0, x.jsx)(bc, {}) : null;
 	}
 	return /* @__PURE__ */ (0, x.jsxs)("div", {
 		className: `react-shell${a ? " is-nav-collapsed" : ""}${T}${w ? "" : " is-agent-suppressed"}`,
@@ -19161,7 +19177,7 @@ function Uc() {
 						D(r);
 					},
 					"aria-label": "홈으로 이동",
-					children: [/* @__PURE__ */ (0, x.jsx)(Dt, {}), /* @__PURE__ */ (0, x.jsx)("small", { children: "Investment Workspace" })]
+					children: [/* @__PURE__ */ (0, x.jsx)(Ot, {}), /* @__PURE__ */ (0, x.jsx)("small", { children: "Investment Workspace" })]
 				}), /* @__PURE__ */ (0, x.jsxs)("div", {
 					className: "react-shell-status",
 					"aria-live": "polite",
@@ -19198,13 +19214,13 @@ function Uc() {
 					children: [/* @__PURE__ */ (0, x.jsx)("div", {
 						className: "react-left-nav-title",
 						children: "Navigate"
-					}), Lc.map((e) => /* @__PURE__ */ (0, x.jsxs)("section", {
+					}), Bc.map((e) => /* @__PURE__ */ (0, x.jsxs)("section", {
 						className: "react-left-nav-group",
 						"data-nav-group": e.id,
 						children: [/* @__PURE__ */ (0, x.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, x.jsx)("div", {
 							className: "react-left-nav-items",
 							children: e.routes.map((t) => {
-								let i = e.title === "Home" ? r : t, a = Ur.find((e) => e.id === i);
+								let i = e.title === "Home" ? r : t, a = qr.find((e) => e.id === i);
 								return a ? /* @__PURE__ */ (0, x.jsxs)("span", {
 									className: "react-left-nav-entry",
 									children: [e.id === "home" && a.id === "dashboard" && /* @__PURE__ */ (0, x.jsx)("span", {
@@ -19221,7 +19237,7 @@ function Uc() {
 										children: [/* @__PURE__ */ (0, x.jsx)("span", {
 											className: "react-left-nav-icon",
 											"aria-hidden": "true",
-											children: Rc[a.id]
+											children: $[a.id]
 										}), /* @__PURE__ */ (0, x.jsx)("span", {
 											className: "react-left-nav-label",
 											children: a.label
@@ -19241,7 +19257,7 @@ function Uc() {
 					"data-route": n.id,
 					ref: v,
 					tabIndex: -1,
-					children: Hr.filter((e) => u.has(e.id)).map((e) => /* @__PURE__ */ (0, x.jsx)("div", {
+					children: Kr.filter((e) => u.has(e.id)).map((e) => /* @__PURE__ */ (0, x.jsx)("div", {
 						className: "react-route-pane",
 						"data-route-pane": e.id,
 						hidden: e.id !== n.id,
@@ -19249,37 +19265,37 @@ function Uc() {
 					}, e.id))
 				})
 			}),
-			w && /* @__PURE__ */ (0, x.jsx)(Ms, {
+			w && /* @__PURE__ */ (0, x.jsx)(Fs, {
 				surface: `react_${n.id}`,
 				open: c,
 				onOpen: () => l(!0),
 				onClose: () => l(!1)
 			}),
-			/* @__PURE__ */ (0, x.jsx)(ya, {}),
-			/* @__PURE__ */ (0, x.jsx)(Qr, {})
+			/* @__PURE__ */ (0, x.jsx)(wa, {}),
+			/* @__PURE__ */ (0, x.jsx)(ni, {})
 		]
 	});
 }
 //#endregion
 //#region src/app/App.tsx
-function Wc() {
-	return /* @__PURE__ */ (0, x.jsx)(Uc, {});
+function qc() {
+	return /* @__PURE__ */ (0, x.jsx)(Kc, {});
 }
 //#endregion
 //#region src/main.tsx
-var Gc = { "market-state": () => /* @__PURE__ */ (0, x.jsx)(ga, {}) };
-function Kc() {
+var Jc = { "market-state": () => /* @__PURE__ */ (0, x.jsx)(xa, {}) };
+function Yc() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = Gc[e.dataset.reactIsland || ""];
+		let t = Jc[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, y.createRoot)(e).render(/* @__PURE__ */ (0, x.jsx)(b.StrictMode, { children: t() })));
 	});
 }
-function qc() {
+function Xc() {
 	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, y.createRoot)(e).render(/* @__PURE__ */ (0, x.jsx)(b.StrictMode, { children: /* @__PURE__ */ (0, x.jsx)(Wc, {}) })), !0) : !1;
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, y.createRoot)(e).render(/* @__PURE__ */ (0, x.jsx)(b.StrictMode, { children: /* @__PURE__ */ (0, x.jsx)(qc, {}) })), !0) : !1;
 }
-function Jc() {
-	qc(), Kc();
+function Zc() {
+	Xc(), Yc();
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Jc) : Jc();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Zc) : Zc();
 //#endregion

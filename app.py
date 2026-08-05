@@ -299,6 +299,7 @@ def build_briefing(
     quality_mode="diagnose_only",
     market_scope="both",
     briefing_type="default",
+    markets=None,
 ):
     return build_daily_briefing(
         date=date,
@@ -309,6 +310,7 @@ def build_briefing(
         quality_mode=quality_mode,
         market_scope=market_scope,
         briefing_type=briefing_type,
+        markets=markets,
     )
 
 
@@ -528,6 +530,7 @@ def api_create_briefing(body: dict | None = Body(default=None)):
             "strict_date": body.get("strictDate", False),
             "quality_mode": body.get("qualityMode", "diagnose_only"),
             "market_scope": body.get("marketScope", "both"),
+            "markets": body.get("markets"),
             "briefing_type": body.get("briefingType", "default"),
         }, adapter=body.get("agentAdapter", ""))
         if prerequisites and isinstance(job, dict):
@@ -540,6 +543,8 @@ def api_create_briefing(body: dict | None = Body(default=None)):
         llm_override=llm_override_for_mode(generation_mode),
         quality_mode=body.get("qualityMode", "diagnose_only"),
         market_scope=body.get("marketScope", "both"),
+        # 시장 다중 선택. 없으면 예전 단일 범위로 해석한다.
+        markets=body.get("markets"),
         briefing_type=body.get("briefingType", "default"),
     )
     if prerequisites and isinstance(result, dict):

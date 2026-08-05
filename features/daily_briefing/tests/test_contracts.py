@@ -113,7 +113,7 @@ def test_legacy_report_contract_and_v2_defaults_are_backward_compatible():
 
 
 def test_v2_enums_are_closed_and_normalized_in_code():
-    assert MARKET_SCOPES == {"us", "kr", "europe", "jp", "all", "both"}
+    assert MARKET_SCOPES == {"us", "kr", "europe", "jp", "all", "both", "multi"}
     assert BRIEFING_TYPES == {"default", "market_focused", "concise"}
     assert normalize_market_scope("US") == "us"
     assert normalize_market_scope("EUROPE") == "europe"

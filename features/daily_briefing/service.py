@@ -25,6 +25,7 @@ from features.daily_briefing.schema import (
     briefing_type_instruction,
     market_keys_for_briefing_scope,
     normalize_briefing_markdown_titles,
+    normalize_market_selection,
     normalize_briefing_type,
     normalize_market_scope,
     visual_sidecar_file_name,
@@ -126,9 +127,12 @@ NEWS_INBOX_PREFIXES = ("research-inbox/articles/", "research-inbox/rss/")
 
 
 def briefing_prompt_paths(market_scope="both"):
-    """Prompt files for a scope. Aggregates concatenate their markets' prompts."""
-    scope = normalize_market_scope(market_scope)
-    return [BRIEFING_PROMPT_PATHS[key] for key in market_keys_for_briefing_scope(scope)]
+    """Prompt files for a market set or a legacy scope name.
+
+    A selection is a set of markets, so this accepts one directly; a scope
+    string still resolves for saved settings and older callers.
+    """
+    return [BRIEFING_PROMPT_PATHS[key] for key in normalize_market_selection(market_scope)]
 
 
 def briefing_prompt_path_label(market_scope="both"):

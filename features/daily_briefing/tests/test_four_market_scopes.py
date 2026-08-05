@@ -54,7 +54,9 @@ def test_all_covers_four_markets_and_both_stays_two():
     # 저장된 `both` 보고서는 유럽·일본을 담은 적이 없다. 소급해서 넓히면
     # 생성된 적 없는 커버리지를 주장하게 된다.
     assert market_keys_for_briefing_scope("both") == ("us", "kr")
-    assert AGGREGATE_SCOPES == {"all", "both"}
+    # `multi`는 이름 없는 조합의 레이블이다. 읽기 검색 범위는 네 시장이지만
+    # 실제 커버리지는 저장된 시장 목록이 말한다.
+    assert AGGREGATE_SCOPES == {"all", "both", "multi"}
 
 
 def test_an_unknown_scope_does_not_widen_to_four_markets():
@@ -315,3 +317,73 @@ def test_each_market_titles_its_own_session_not_the_publication_date():
     # 유럽은 한국시간 자정 이후 마감하므로 발행일이 아니라 전일 세션이다.
     assert "2026.08.04" in view["title"]
     assert "Europe Market Briefing" in view["title"]
+
+
+# --- multi-select -------------------------------------------------------
+
+
+@pytest.mark.parametrize("value,expected", [
+    (["us", "jp"], ("us", "jp")),
+    (["jp", "us"], ("us", "jp")),          # 순서는 계약을 따른다
+    (["us", "kr"], ("us", "kr")),
+    ("us,jp", ("us", "jp")),               # 쿼리스트링은 문자열로 도착한다
+    ("all", ("us", "kr", "europe", "jp")),
+    ("both", ("us", "kr")),
+    ("europe", ("europe",)),
+    ([], ("us", "kr")),
+    (["nonsense"], ("us", "kr")),
+])
+def test_a_market_selection_resolves_from_a_list_or_a_legacy_scope(value, expected):
+    from features.daily_briefing.schema import normalize_market_selection
+
+    assert normalize_market_selection(value) == expected
+
+
+@pytest.mark.parametrize("markets,label", [
+    (("us",), "us"),
+    (("us", "kr"), "both"),
+    (("us", "kr", "europe", "jp"), "all"),
+    (("us", "jp"), "multi"),
+    (("europe", "jp"), "multi"),
+])
+def test_a_selection_label_reuses_all_and_both_only_for_their_own_sets(markets, label):
+    from features.daily_briefing.schema import market_selection_scope
+
+    assert market_selection_scope(markets) == label
+
+
+def test_an_unnamed_combination_records_the_markets_it_actually_ran():
+    """`multi` is a label, not a coverage claim — the list is what a reader trusts."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in ("us", "jp"):
+            path = root / briefing_file_name(DATE, key)
+            path.write_text(json.dumps({
+                "date": DATE, "marketScope": key, "briefingType": "default",
+                "generatedAt": f"{DATE}T08:00:00+09:00",
+                "generationScope": "multi", "generationMarkets": ["us", "jp"],
+                "markdown": f"# {TITLES[key]}\n\n{key}-body",
+            }, ensure_ascii=False), encoding="utf-8")
+        item = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"][0]
+        assert item["marketScope"] == "multi"
+        assert item["includedMarkets"] == ["us", "jp"]
+        # 레이블에서 되짚으면 네 시장을 요청했다고 말하게 된다.
+        assert item["expectedMarkets"] == ["us", "jp"]
+
+
+def test_two_different_combinations_on_one_date_stay_separate_cards():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key, markets in (("us", ["us", "jp"]), ("jp", ["us", "jp"]),
+                             ("kr", ["kr", "europe"]), ("europe", ["kr", "europe"])):
+            (root / briefing_file_name(DATE, key)).write_text(json.dumps({
+                "date": DATE, "marketScope": key, "briefingType": "default",
+                "generatedAt": f"{DATE}T08:00:00+09:00",
+                "generationScope": "multi", "generationMarkets": markets,
+                "markdown": f"# {TITLES[key]}\n\n{key}-body",
+            }, ensure_ascii=False), encoding="utf-8")
+        items = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"]
+        assert len(items) == 2
+        assert sorted(tuple(row["includedMarkets"]) for row in items) == [
+            ("kr", "europe"), ("us", "jp"),
+        ]

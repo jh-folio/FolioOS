@@ -59,7 +59,10 @@ from features.daily_briefing.builder import _scope_session_date
 from features.daily_briefing.schema import (
     briefing_expected_titles,
     briefing_file_name,
+    MARKET_TAGS,
     market_keys_for_briefing_scope,
+    market_selection_scope,
+    normalize_market_selection,
     briefing_scope_view,
     enrich_briefing_sections,
     merge_briefing_report,
@@ -235,11 +238,14 @@ def _write_pack(pack: dict, owner_job_id: str | None) -> Path:
     return A.write_pack(pack, owner_job_id=owner_job_id)
 
 
-def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality_mode="diagnose_only", market_scope="both", briefing_type="default", owner_job_id: str | None = None) -> tuple[dict, Path]:
+def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality_mode="diagnose_only", market_scope="both", briefing_type="default", markets=None, owner_job_id: str | None = None) -> tuple[dict, Path]:
     generated_at = now_iso()
     date = date or kst_date()
     quality_mode = normalize_quality_mode(quality_mode)
-    market_scope = normalize_market_scope(market_scope)
+    requested_markets = normalize_market_selection(
+        markets if markets is not None else market_scope
+    )
+    market_scope = market_selection_scope(requested_markets)
     briefing_type = normalize_briefing_type(briefing_type)
     try:
         build_index(incremental=True)
@@ -258,10 +264,10 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
     market_drivers = derive_market_drivers(scoped_docs, market_windows, limit=4)
     session_modes = session_modes_from_windows(market_windows)
     issue_coverage_raw = []
-    for target in (key.upper() for key in market_keys_for_briefing_scope(market_scope)):
+    for target in (key.upper() for key in requested_markets):
         issue_coverage_raw.extend(build_issue_coverage(scoped_docs, target, market_windows, limit=10))
     visual_scope_results = {}
-    for target in market_keys_for_briefing_scope(market_scope):
+    for target in requested_markets:
         target_docs = documents_for_scope(docs, target)
         visual_scope_results[target] = {
             # 세션 기준일은 빌더와 같은 규칙을 쓴다. 여기서 따로 고르면 Agent 경로만
@@ -331,11 +337,16 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         "date": date,
         "generatedAt": generated_at,
         "title": f"Daily Market Briefing — {date.replace('-', '.')}",
-        "summary": f"{source_date}에 수집된 최신 자료를 바탕으로 미국장과 한국장의 시장 반응, 핵심 이슈, 주도 기업을 정리했습니다.",
+        "summary": (
+            f"{source_date}에 수집된 최신 자료를 바탕으로 "
+            f"{', '.join(MARKET_TAGS[key] for key in requested_markets)}의 "
+            "시장 반응, 핵심 이슈, 주도 기업을 정리했습니다."
+        ),
         "marketScope": market_scope,
+        "generationMarkets": list(requested_markets),
         "briefingType": briefing_type,
-        "prompt": read_briefing_prompt(market_scope),
-        "promptPath": briefing_prompt_path_label(market_scope),
+        "prompt": read_briefing_prompt(requested_markets),
+        "promptPath": briefing_prompt_path_label(requested_markets),
         "headlines": _briefing_headlines(groups),
         "sources": source_refs(sources, limit=14),
         "marketSnapshot": market_snapshot,
@@ -503,7 +514,11 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
 
     if persist:
         BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
-    requested_scopes = list(market_keys_for_briefing_scope(market_scope))
+    # 저장된 pack의 시장 목록이 권위다. 레이블에서 되짚으면 이름 없는 조합이
+    # 네 시장으로 넓어진다.
+    requested_scopes = list(
+        normalize_market_selection(briefing.get("generationMarkets") or market_scope)
+    )
     saved_reports = {}
     visuals = {}
     sidecar = (pack.get("internal") or {}).get("visualSidecar") or {}
