@@ -143,7 +143,7 @@ def test_package_defaults_to_version_file() -> None:
     result = run_package("--dry-run")
 
     assert result.returncode == 0, result.stderr
-    assert "FolioOS-v0.4.5" in result.stdout
+    assert "FolioOS-v0.4.8" in result.stdout
 
 
 def test_package_dry_run_requires_a_safe_version() -> None:
@@ -212,13 +212,16 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
     assert {
         "company_aliases.json",
         "company_master.json",
+        # 0.5에서 유럽·일본 히트맵 universe가 패키지에 함께 실린다.
+        "europe_core_constituents.json",
         "evidence_sources.yaml",
         "kospi200_constituents.json",
+        "nikkei225_constituents.json",
         "rss_feeds.yaml",
         "sp500_constituents.json",
     } == {path.name for path in (package_dir / "defaults" / "config").iterdir()}
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
-    assert build["version"] == "0.4.5"
+    assert build["version"] == "0.4.8"
     assert len(build["commit"]) == 40
     assert package_zip.is_file()
     with zipfile.ZipFile(package_zip) as archive:
@@ -347,7 +350,7 @@ def test_real_zip_extracts_verifies_and_boots_on_first_run(tmp_path: Path) -> No
             except OSError:
                 time.sleep(0.2)
         assert health is not None, server.stderr.read() if server.poll() is not None and server.stderr else ""
-        assert health["version"] == "0.4.5"
+        assert health["version"] == "0.4.8"
         assert health["commit"] == expected_commit
         assert (package / "config").is_dir()
     finally:

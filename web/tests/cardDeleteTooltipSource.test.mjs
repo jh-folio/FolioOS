@@ -29,7 +29,7 @@ test("change feed explains what changed and against which baseline", async () =>
   // 눌러서 이동하기 전에 왜 떴는지 알 수 있어야 한다.
   assert.match(source, /changeReasonText\(event\)/);
   assert.match(source, /baselineText\(event\)/);
-  const helpers = await readFile(new URL("../src/app/watchlist/ChangeHistory.tsx", import.meta.url), "utf8");
+  const helpers = await readFile(new URL("../src/app/changeEvents.ts", import.meta.url), "utf8");
   assert.match(helpers, /export function changeReasonText/);
   assert.match(helpers, /export function baselineText/);
 });

@@ -172,7 +172,11 @@ from features.daily_briefing.builder import (
     cached_market_snapshot as feature_cached_market_snapshot,
 )
 from features.daily_briefing.archive import query_briefing_archive, refresh_briefing_archive
-from features.daily_briefing.schema import briefing_scope_view
+from features.daily_briefing.schema import (
+    briefing_scope_view,
+    market_selection_scope,
+    normalize_market_selection,
+)
 from features.daily_briefing.visuals import load_current_visuals, load_visual_sidecar
 from features.company_analysis.report_rules import build_rule_report
 from features.company_analysis.generation_service import analyze_company as generate_company_analysis
@@ -524,27 +528,42 @@ def api_create_briefing(body: dict | None = Body(default=None)):
     if automation_settings.get("briefing", {}).get("runPrerequisites"):
         prerequisites = run_briefing_prerequisites()
     generation_mode = request_generation_mode(body)
+    # 시장 다중 선택. 없으면 예전 단일 범위로 해석한다. 날짜 변환은 선택된
+    # 시장 집합에 달려 있으므로 여기서 먼저 확정한다.
+    requested_markets = list(
+        normalize_market_selection(body.get("markets") or body.get("marketScope", "both"))
+    )
+    market_scope = market_selection_scope(requested_markets)
+    # 화면의 날짜 선택은 "시장 기준일"(그 시장의 세션일)이다. 저장 키와 아카이브
+    # 정렬은 계속 발행일이므로 여기서 한 번 옮긴다. 한 브리핑 안에서 미국장은
+    # 전일 정규장을, 한국장은 당일 장을 다루므로 변환은 시장마다 다르다.
+    from features.common.market_calendar import publication_date_for_session
+
+    requested_date = str(body.get("date") or "").strip()
+    publication_date = (
+        publication_date_for_session(requested_date, requested_markets)
+        if requested_date else kst_date()
+    )
     if generation_mode == "llm_cli":
         job = submit_agent_task("briefing", {
-            "date": body.get("date") or kst_date(),
+            "date": publication_date,
             "strict_date": body.get("strictDate", False),
             "quality_mode": body.get("qualityMode", "diagnose_only"),
-            "market_scope": body.get("marketScope", "both"),
-            "markets": body.get("markets"),
+            "market_scope": market_scope,
+            "markets": requested_markets,
             "briefing_type": body.get("briefingType", "default"),
         }, adapter=body.get("agentAdapter", ""))
         if prerequisites and isinstance(job, dict):
             job["prerequisites"] = prerequisites
         return job
     result = build_briefing(
-        body.get("date") or kst_date(),
+        publication_date,
         strict_date=body.get("strictDate", False),
         web_search_override=bool_override(body.get("webSearch")),
         llm_override=llm_override_for_mode(generation_mode),
         quality_mode=body.get("qualityMode", "diagnose_only"),
-        market_scope=body.get("marketScope", "both"),
-        # 시장 다중 선택. 없으면 예전 단일 범위로 해석한다.
-        markets=body.get("markets"),
+        market_scope=market_scope,
+        markets=requested_markets,
         briefing_type=body.get("briefingType", "default"),
     )
     if prerequisites and isinstance(result, dict):

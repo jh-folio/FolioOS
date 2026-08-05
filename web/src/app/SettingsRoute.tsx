@@ -64,6 +64,7 @@ type AutomationSettings = {
     enabled?: boolean;
     time?: string;
     marketScope?: string;
+    briefingType?: string;
     runPrerequisites?: boolean;
   };
 };
@@ -171,10 +172,19 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
       enabled: Boolean(form.briefing?.enabled),
       time: form.briefing?.time || "08:00",
       marketScope: form.briefing?.marketScope || "both",
+      briefingType: form.briefing?.briefingType || "default",
       runPrerequisites: Boolean(form.briefing?.runPrerequisites),
     },
   };
 }
+
+// 수동 생성 화면(BriefingRoute)과 같은 문구를 쓴다. 두 화면이 다른 이름으로
+// 같은 유형을 부르면 자동 브리핑이 무엇으로 나오는지 알 수 없다.
+const AUTOMATION_BRIEFING_TYPES: Record<string, string> = {
+  default: "기본",
+  market_focused: "시황 중심",
+  concise: "요약",
+};
 
 export function SettingsRoute() {
   const theme = useThemePreference();
@@ -706,6 +716,7 @@ export function SettingsRoute() {
                 <div className="settings-grid compact">
                   <label className="field"><span>브리핑 시각</span><input value={automation.briefing?.time || "08:00"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, time: event.currentTarget.value } })} type="time" /></label>
                   <label className="field"><span>시장 범위</span><select value={automation.briefing?.marketScope || "both"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, marketScope: event.currentTarget.value } })}><option value="all">전체(미국+한국+유럽+일본)</option><option value="both">미국+한국</option><option value="us">미국</option><option value="kr">한국</option><option value="europe">유럽</option><option value="jp">일본</option></select></label>
+                  <label className="field"><span>브리핑 유형</span><select value={automation.briefing?.briefingType || "default"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, briefingType: event.currentTarget.value } })}>{Object.entries(AUTOMATION_BRIEFING_TYPES).map(([value, label]) => (<option value={value} key={value}>{label}</option>))}</select></label>
                 </div>
                 <div className="automation-inline-switch"><span>브리핑 전 RSS/Memory 실행</span><ToggleSwitch ariaLabel="브리핑 전 RSS와 Market Memory 실행" checked={Boolean(automation.briefing?.runPrerequisites)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, runPrerequisites: checked } })} compact /></div>
               </section>

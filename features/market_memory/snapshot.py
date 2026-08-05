@@ -75,6 +75,69 @@ def _text(value, limit: int = 500) -> str:
     return value[:limit]
 
 
+def _body_text(value, limit: int) -> str:
+    """본문 길이 필드는 문장 경계에서 자른다.
+
+    _text()는 value[:limit]이라 상한에 걸리면 단어 중간에서 끊긴다. 짧은 라벨은
+    그래도 되지만 시장 해석처럼 화면의 큰 본문으로 읽히는 값은 잘린 티가 나지
+    않는 채로 문장이 끊긴다. 상한을 넘으면 마지막 온전한 문장까지만 남긴다.
+    """
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    cut = max(head.rfind(mark) for mark in (".", "!", "?", "。"))
+    return head[: cut + 1].strip() if cut > limit // 3 else head.strip()
+
+
+_REF_ID = r"(?:rss:item:\d+|driver:\d+|state:[A-Za-z0-9_:-]+)"
+_INLINE_REF_GROUP = re.compile(r"\s*[\(\[]\s*(" + _REF_ID + r"(?:\s*[,;/]\s*" + _REF_ID + r")*)\s*[\)\]]")
+_INLINE_REF_BARE = re.compile(r"\s*" + _REF_ID)
+_REF_ONLY = re.compile(_REF_ID)
+# 본문에 내부 id가 들어가면 안 되는 필드만 훑는다. sourceRefs와 id는 id가 값이다.
+_REF_SAFE_KEYS = {"id", "sourceRefs", "sources", "sourceLookup", "inputWatermarks"}
+
+
+def _resolve_ref_label(source_id: str, lookup: dict[str, dict] | None) -> str:
+    entry = (lookup or {}).get(source_id) or {}
+    return _text(entry.get("source") or entry.get("title"), 60)
+
+
+def scrub_inline_refs(value, lookup: dict[str, dict] | None = None):
+    """모델이 본문에 써넣은 내부 참조 id를 읽을 수 있는 출처명으로 바꾸거나 지운다.
+
+    `rss:item:13`은 context 항목에 코드가 붙인 내부 id다. 프롬프트는 이 id를
+    sourceRefs 배열에 담으라고 하지만 모델은 문장 안에도 인용처럼 써넣는다.
+    구조화된 sourceRefs는 이미 `_display_source_refs()`가 해석 불가능한 id를
+    걸러내는데, 본문에 박힌 것은 그 관문을 지나지 않고 화면까지 나온다.
+
+    아는 출처면 매체명으로 바꾸고, 모르면 지운다. 사용자에게 `rss:item:13`은
+    출처가 아니라 새는 내부 구현이다.
+    """
+    if isinstance(value, str):
+        def replace_group(match):
+            labels = []
+            for source_id in _REF_ONLY.findall(match.group(1)):
+                label = _resolve_ref_label(source_id, lookup)
+                if label and label not in labels:
+                    labels.append(label)
+            return f" ({', '.join(labels)})" if labels else ""
+
+        text = _INLINE_REF_GROUP.sub(replace_group, value)
+        text = _INLINE_REF_BARE.sub("", text)
+        text = re.sub(r"\s+([,.;:!?%)\]])", r"", text)
+        text = re.sub(r"\(\s*\)", "", text)
+        return re.sub(r"\s{2,}", " ", text).strip()
+    if isinstance(value, list):
+        return [scrub_inline_refs(item, lookup) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: item if key in _REF_SAFE_KEYS else scrub_inline_refs(item, lookup)
+            for key, item in value.items()
+        }
+    return value
+
+
 def _confidence(value) -> float:
     try:
         score = float(value)
@@ -218,12 +281,14 @@ def _market_view(value, key: str, fallback: dict, lookup: dict[str, dict] | None
     if not isinstance(value, dict):
         return None
     headline = _text(value.get("headline") or value.get("title"), 160)
-    interpretation = _text(
+    # 시장 해석은 화면 상단의 큰 본문이다. 짧은 라벨과 같은 상한을 두면 모델이
+    # 근거를 덧붙일수록 뒤가 잘린다. 상한은 폭주 방지용으로만 남긴다.
+    interpretation = _body_text(
         value.get("marketInterpretation")
         or value.get("oneLineSummary")
         or value.get("reasonSummary")
         or value.get("summary"),
-        700,
+        1600,
     )
     action_summary = _text(value.get("actionSummary") or value.get("beginnerSummary") or value.get("actionPosture"), 420)
     drivers = [
@@ -435,6 +500,7 @@ def validate_market_state_snapshot(payload: dict, context: dict | None = None) -
         if key in payload or isinstance(context, dict) and key in context
     })
     snapshot["marketViews"] = _market_views(payload, snapshot, source_lookup)
+    snapshot = scrub_inline_refs(snapshot, source_lookup)
     for key in ("changeBasis", "changeSummary", "changeIntelligence"):
         if isinstance(payload.get(key), dict):
             snapshot[key] = payload[key]

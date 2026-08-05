@@ -240,7 +240,7 @@ features/company_analysis/financial_quality_prompt.md
 0.4 기본 사용자 화면에서의 노출 상태:
 
 - **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
-- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Watchlist의 빠른 시장 신호·변화 이력, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio 상담과 `노트로 정리`, Portfolio 스크린샷 가져오기.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio 상담과 `노트로 정리`, Portfolio 스크린샷 가져오기.
 - **Agent 실행 경계**: freshness/health/context 배지와 `changeSummary`는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 상담 답변은 사용자의 명시적 action에서만 Agent를 실행한다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
 - **숨김/축소 유지**: Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 보이는 리서치 화면의 제한된 projection으로만 노출한다. Portfolio 독립 화면은 0.4에서 공개로 복귀했다.
@@ -303,7 +303,7 @@ features/company_analysis/financial_quality_prompt.md
 - 설정 파일로 분리: `config/rss_feeds.yaml`, `config/evidence_sources.yaml`. 코드 수정 없이 feed enable/disable이 가능하다.
 - **피드는 정기적으로 죽는다.** 매체가 호스트를 옮기면 기존 URL이 200 OK와 옛 항목을 계속 반환해 정상처럼 보인다(2026-08 확인: WSJ `feeds.a.dj.com` 3개가 553일, MarketWatch `feeds.marketwatch.com`이 396일 정체 상태로 응답 중이었고 `feeds.content.dowjones.io`가 현행 호스트다). 커버리지가 이상하면 건수가 아니라 **최신 항목 시각**을 먼저 확인한다.
 - `only_publishers`를 지정하면 aggregating 피드에서 해당 발행처 항목만 남기고 저장 시 **원 발행처 이름으로 태그**한다(Yahoo Finance→Reuters). 발행처는 RSS `<source>`에서 읽는다.
-- feed의 `source_type`이 소비 경로를 가른다. 기본 `news`는 브리핑 입력에 포함되고, **`press_release`(PR Newswire·GlobeNewswire 같은 보도자료 와이어)는 `is_news_document()`에서 제외**되어 브리핑에 들어가지 않는다. 같은 문서는 인덱스에 그대로 남아 워치리스트 종목 뉴스와 기업분석 보조자료로 쓰인다. 브리핑은 교차 보도량(`publisherCount`)으로 이슈를 고르는데 보도자료는 발행처가 1곳뿐이라 이슈로 뜨지 않으면서 클러스터링만 흐리기 때문이다.
+- feed의 `source_type`이 소비 경로를 가른다. 기본 `news`만 사용자에게 보이는 뉴스 경로에 들어간다. **`press_release`(PR Newswire·GlobeNewswire 같은 보도자료 와이어)는 브리핑과 RSS 피드 화면 양쪽에서 제외한다.** 브리핑은 `is_news_document()`가, RSS 화면은 `_HIDE_PRESS_RELEASE_SQL`이 담당하며 목록과 출처 드롭다운이 같은 조건을 공유한다(출처를 직접 골라도 보이지 않는다). 이야기 비중 패널도 `news_documents()`를 거치므로 함께 제외된다. 같은 문서는 인덱스에 그대로 남아 워치리스트 종목 뉴스와 기업분석 보조자료로 쓰인다. 브리핑은 교차 보도량(`publisherCount`)으로 이슈를 고르는데 보도자료는 발행처가 1곳뿐이라 이슈로 뜨지 않으면서 클러스터링만 흐리고, RSS 화면에서는 발행량이 많아 뉴스를 밀어내기 때문이다.
 - feed는 **직접 피드**와 **aggregator 경유**로 성격이 다르다. 직접 피드(CNBC·Yahoo Finance·The Guardian·BBC·한국 매체)는 본문까지 확보되지만, `news.google.com` 검색 경유(Reuters·Bloomberg·WSJ·Barron's 등)는 `AGGREGATOR_REDIRECT_HOSTS` 정책상 기사 HTML을 가져오지 않아 **제목·링크만 남는다**. 커버리지 논의에서 수집 건수와 실제 사용 가능한 본문 수를 구분한다. Reuters·AP·Bloomberg 등은 공개 RSS를 종료했거나 라이선스 전용이라(2026-08 확인: Reuters 401·도메인 소멸, AP 401/404) 제목 신호로만 유지하며, 제3자 RSS 변환기나 scraping으로 우회하지 않는다.
 - 신규 Markdown은 YAML front matter(`collector`/`source_type`/`normalized_url`/`collection_status`/`reliability_tier`/`query` 등) + body section 포맷이다. legacy line-oriented Markdown은 읽기 호환을 유지한다.
 - CLI 기본 실행은 기사 전문을 저장하지 않는다. `--save-full-text` 명시 시에만 `Full Text` 섹션에 전문을 쓴다. 웹 앱이 실행하는 수집(RSS 수집 버튼/자동화)은 설정 탭의 `rss.saveFullText`(automation-settings, 기본 켜짐)에 따라 이 플래그를 전달한다. 유료 본문 우회는 금지한다.
@@ -312,6 +312,7 @@ features/company_analysis/financial_quality_prompt.md
 - 공식자료(SEC/OpenDART/FRED/BOK)는 `source_type=official_filing|macro_data|official_release`, `reliability_tier=1`로 구분한다. 현재 adapter는 fake data 없는 stub이며 브리핑 직접 근거로 쓰지 않는다.
 - 외부 검색 API 기반 추가 수집은 사용하지 않는다. RSS 수집 버튼(`/api/rssarchive/import`)은 RSS collector만 실행한다.
 - RSS API: `app.py::rss_feed_payload()`, `rss_merge_payload()`. import 경로는 `service.py::import_rssarchive()`.
+- 출처 필터 드롭다운은 **현재 `config/rss_feeds.yaml`에서 수집 중인 매체만** 노출한다(`_selectable_sources()`). 피드를 지웠거나 aggregating 피드가 원 발행처로 재태그해서 더는 새 항목이 들어오지 않는 매체는 고를 수 있어도 결과가 늘지 않아 사용자를 오도한다. 과거 수집분은 목록에 그대로 보이며 필터 대상에서만 빠진다. 설정을 읽지 못하면 전부 노출하는 기존 동작으로 되돌아간다.
 - 화면: RSS 피드 탭. 한 페이지 20개 표시. 시간, 소스, 시장 필터를 제공한다.
 - RSS 피드 목록은 Markdown 파일 전체를 매 요청마다 읽지 않고 `data/research-index.sqlite3`의 `rss_feed_items` 캐시 테이블에서 `LIMIT/OFFSET`으로 읽는다. 캐시는 파일 `mtime_ns`/크기 기준으로 증분 갱신하며 기본 TTL은 `RSS_CACHE_REFRESH_TTL_SECONDS=30`초다. RSS 수집 직후에는 강제 갱신한다. 캐시는 각 항목의 `markets` 태그를 `US`, `KR`, `GLOBAL`, `UNKNOWN` 중 하나 이상으로 저장하며, `/api/rss/items`와 `/api/rss/merge`는 `market=US|KR|GLOBAL|UNKNOWN` 필터를 지원한다.
 - 인덱싱은 front matter metadata(`collector`/`sourceType`/`reliabilityTier`/`query`/`relatedTickers`/`narrativeIds` 등)를 문서/chunk metadata로 보존해 briefing/topic/market_memory 소비자가 읽을 수 있게 한다. 단, 브리핑 입력 범위는 계속 `articles/rss` 원칙을 지킨다.
@@ -330,6 +331,7 @@ features/company_analysis/financial_quality_prompt.md
 - 대표 지수는 `features/common/markets.py`의 `MARKET_REGISTRY.representative_indices`가 단일 출처다. 통화·시간대는 시리즈마다 붙는다. 유럽은 GBP와 EUR이 한 차트에 섞이므로 스냅샷 통화를 하나로 stamp하지 않는다(`currencies` 목록, 섞이면 `currency: MIXED`).
 - 히트맵 상자 크기는 `weightBasis`와 함께 저장한다. 유럽은 EUR 환산 시가총액(`market_cap_eur`)이며 환율 없이 GBP와 EUR을 더하지 않는다.
 - 시장별 독자용 제목은 세션일과 상태를 함께 쓴다(`US ... D-1 마감`, `Korea ... D 장중|마감`). 발행일은 별도 `publicationDate`/`KST 발행` 메타데이터로 표시하고 저장 키·기본 정렬 기준으로 유지한다. Agent/API/규칙 생성과 아카이브가 같은 계약을 사용해야 한다.
+- **화면의 날짜 선택은 발행일이 아니라 그 시장의 세션 기준일이다.** 한 브리핑 안에서 미국장은 발행일 D의 D-1 정규장을, 한국장은 D 장을 다루므로 변환은 시장마다 다르다: 미국장·종합은 `세션일 다음 거래일`, 한국장은 `세션일 그대로`. 변환은 `publication_date_for_session()` 하나가 담당하고 `POST /api/briefings`에서 한 번만 적용한다. 저장 키·아카이브 정렬·기존 보고서는 계속 발행일 기준이라 호환이 깨지지 않는다.
 - 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. `pykrx` 기반 KRX 수치를 우선하고 실패하면 yfinance/기사 기반 fallback을 사용하되, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.
 - LLM 실패 시 규칙 기반 브리핑이 필요하다. 참고자료 섹션은 유지한다.
 - `select_briefing_docs()`의 fallback 경로에서 `market_windows`는 브리핑 날짜 기준 원본을 유지한다. 문서 날짜로 재계산하면 공휴일/주말에 `krPreviousSessionDate`가 틀린 날짜를 가리키는 버그가 발생한다.
@@ -484,6 +486,7 @@ features/company_analysis/financial_quality_prompt.md
 - retention 기본값: 일반 lead 3일, Watchlist/Portfolio 관련 14일, corroborated 30일.
 - polling provider는 automation의 `signals` kind로 실행한다. 승인된 provider가 모두 polling RSS라 상시 WebSocket 연결은 두지 않는다(`start_signal_runtime`은 lifespan 호환용 no-op).
 - run log에는 provider/count/status/error code만 남기고 headline/raw payload를 남기지 않는다.
+- **0.4.8부터 lead를 보여주는 화면이 없다.** 워치리스트 상세의 `빠른 시장 신호` 레일은 승인 provider가 하나만 남아 교차 확인이 불가능해졌고 lead 티커가 워치리스트 종목과 맞는 경우가 없어 제거했다. 승격·retention 런타임은 그대로 남아 상담 context(`sourceContext.fastSignals`)가 계속 읽는다.
 
 ### Change Intelligence
 

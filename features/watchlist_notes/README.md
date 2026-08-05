@@ -2,7 +2,11 @@
 
 이 기능은 사용자가 관심 기업/섹터를 저장하고, 관련 뉴스와 태그를 확인하며, 투자 아이디어 메모를 남기는 보조 기능입니다.
 
-0.4.x 상세 화면은 두 흐름을 분리합니다. `fastSignals`는 approved fast-origin provider의 metadata-only lead이고, `changeHistory`는 새 보고서/시장 내러티브 생성 시 규칙으로 확인된 변화입니다. stale/unhealthy/disabled/unauthorized provider는 headline 대신 health 설명만 표시합니다. signal polling은 fast signal 영역만 갱신하며 Change History는 generation commit 뒤에만 바뀝니다.
+상세 화면은 차트와 수집 뉴스만 보여줍니다. 0.4.x에 있던 `빠른 시장 신호`와 `확인된 변화 기록` 두 레일은 0.4.8에서 뺐습니다.
+
+빠른 시장 신호는 승인 provider가 한국 RSS 하나만 남으면서(0.4.5) 교차 확인이 구조적으로 불가능해졌고, lead에 붙는 티커가 워치리스트 종목과 맞는 경우가 없어 항상 비어 있었습니다. 내용도 RSS 피드와 종목별 뉴스에 이미 있는 같은 기사입니다. 확인된 변화 기록은 변화 이벤트를 티커로 거르는데 브리핑 lineage가 시장 단위라 역시 걸리는 것이 없었고, 대시보드 `무엇이 달라졌나`가 같은 이벤트를 더 읽을 수 있는 형태로 보여줍니다.
+
+수집 자체는 그대로 둡니다. lead 승격은 RSS 수집 경로에 남아 있고 변화 이벤트는 생성 커밋에서 계속 쌓입니다. 사라진 것은 워치리스트 상세의 표시 레일과 그 화면이 60초마다 돌던 `/api/signals` polling입니다.
 
 ## 담당 범위
 

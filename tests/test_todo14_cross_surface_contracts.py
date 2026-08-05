@@ -310,7 +310,6 @@ def _patch_direct_briefing(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
     monkeypatch.setattr(builder, "list_briefing_memories", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(builder, "load_prev_briefing", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(builder, "_scope_result", lambda scope, *_args, **_kwargs: _scope_result(scope))
-    monkeypatch.setattr(builder, "derive_link_status", lambda *_args, **_kwargs: "insufficient_evidence")
     monkeypatch.setattr(builder, "leading_company_subjects_from_markdown", lambda *_args, **_kwargs: [])
     monkeypatch.setattr(
         builder,

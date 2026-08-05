@@ -8,7 +8,7 @@ import {
   changeReasonText,
   type ChangedItem,
   type ChangeEvent,
-} from "../watchlist/ChangeHistory";
+} from "../changeEvents";
 import { StoryShare, type StoryMarket } from "./StoryShare";
 
 export const CHANGE_STATUS_LABELS: Record<string, string> = {

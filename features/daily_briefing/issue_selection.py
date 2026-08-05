@@ -344,8 +344,35 @@ def documents_for_scope(docs, market_scope):
     return [doc for doc in docs or [] if infer_doc_market(doc) in {target, "BOTH", "GLOBAL"}]
 
 
+def _kr_session_is_still_open(market_windows) -> bool:
+    """생성 시각 기준으로 한국장이 아직 진행 중인가.
+
+    analysisMode는 "그날이 거래일인가"만 본다. 그것만으로 장중이라고 하면 지난
+    날짜로 생성한 브리핑도 "장중"이 되어, 이미 끝난 장을 진행 중이라고 말한다.
+    한국장은 CLAUDE.md 계약대로 생성 시각으로 가른다.
+    """
+    import datetime as dt
+
+    session_date = str((market_windows or {}).get("krCurrentSessionDate") or "").strip()
+    if not session_date:
+        return False
+    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+    today = now.date().isoformat()
+    if session_date < today:
+        return False
+    if session_date > today:
+        # 아직 오지 않은 세션은 장중이 아니다. 개장 전 상태는 별도 mode가 없어
+        # 마감과 같은 취급을 하되 제목이 사실과 어긋나지 않게 한다.
+        return False
+    # 한국 정규장 09:00~15:30 KST. 종료 후 생성분은 마감으로 본다.
+    return dt.time(9, 0) <= now.time() < dt.time(15, 30)
+
+
 def session_modes_from_windows(market_windows):
     mode = str((market_windows or {}).get("analysisMode") or "")
+    # 저장된 세션 단계가 있으면 그게 권위다. 그 값은 생성 시각(`as_of`)으로
+    # 계산돼 제목·기준일과 같은 출처를 쓴다. 없으면 벽시계로 판정한다 —
+    # 단계 없이 만들어진 window도 지난 세션을 "장중"이라 말하면 안 되기 때문이다.
     kr_phase = str((market_windows or {}).get("krSessionPhase") or "")
     if kr_phase == "intraday":
         kr_mode = "kr_intraday"
@@ -354,26 +381,31 @@ def session_modes_from_windows(market_windows):
     elif kr_phase == "holiday":
         kr_mode = "kr_holiday"
     else:
-        kr_mode = ""
+        kr_mode = "kr_intraday" if _kr_session_is_still_open(market_windows) else ""
+
     if mode == "weekend":
         legacy = {"us": "us_off_session", "kr": "kr_off_session"}
     elif mode == "both_holiday":
         legacy = {"us": "us_holiday", "kr": kr_mode or "kr_holiday"}
+    elif mode.startswith("us_holiday_kr_open"):
+        legacy = {"us": "us_holiday", "kr": kr_mode or "kr_close"}
     elif mode.startswith("us_holiday_kr_"):
-        legacy = {"us": "us_holiday", "kr": kr_mode or "kr_intraday"}
+        legacy = {"us": "us_holiday", "kr": kr_mode or "kr_close"}
     elif mode == "kr_holiday":
         legacy = {"us": "us_close", "kr": kr_mode or "kr_holiday"}
     elif kr_mode:
         legacy = {"us": "us_close", "kr": kr_mode}
     elif mode == "weekday_kr_open":
-        legacy = {"us": "us_close", "kr": "kr_intraday"}
+        # 단계도 없고 장중도 아니면 이미 끝난 세션이다. 거래일이라는 것만으로
+        # 장중이라고 하면 두 달 전 브리핑도 "진행 중"이 된다.
+        legacy = {"us": "us_close", "kr": "kr_close"}
     else:
         legacy = {"us": "us_close", "kr": "kr_off_session"}
     # 유럽·일본은 analysisMode가 다루지 않는다. 세션 기술자에서 직접 읽는다.
     for scope in ("europe", "jp"):
-        resolved = briefing_session_mode(scope, "", market_windows or {})
-        if resolved:
-            legacy[scope] = resolved
+        resolved_mode = briefing_session_mode(scope, "", market_windows or {})
+        if resolved_mode:
+            legacy[scope] = resolved_mode
     return legacy
 
 

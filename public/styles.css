@@ -14286,72 +14286,9 @@ main.page {
     display: none;
   }
 }
-/* 0.4.x evidence rails: fast-origin lead vs report-confirmed change */
-.watchlist-intelligence-rails {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin: 18px 0;
-}
-
-.evidence-rail {
-  position: relative;
-  border: 1px solid var(--folio-border);
-  border-radius: var(--folio-radius);
-  padding: 18px 18px 18px 24px;
-  background: var(--folio-surface-clean);
-  overflow: hidden;
-  box-shadow: var(--folio-shadow);
-}
-
-.evidence-rail::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  content: "";
-}
-
-.evidence-rail--lead::before {
-  background: linear-gradient(180deg, var(--folio-surface-dark), var(--folio-gold));
-}
-
-.evidence-rail--confirmed::before {
-  background: linear-gradient(180deg, var(--folio-surface-dark), var(--folio-teal));
-}
-
-.evidence-rail__head,
-.evidence-rail__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.evidence-rail__head h3 { margin: 3px 0 0; color: var(--folio-ink); }
-.evidence-rail__eyebrow { color: var(--folio-gold); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.evidence-rail__note { color: var(--folio-ink-muted); font-size: 13px; line-height: 1.6; }
+/* 변화 상태 칩. 브리핑 상단 스트립과 대시보드 변화 피드가 쓴다. */
 .status-chip { border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-.status-chip--lead { color: var(--folio-gold); background: var(--folio-gold-soft); }
-.status-chip--confirmed { color: var(--folio-teal); background: var(--folio-teal-soft); }
-.evidence-rail__list { display: grid; gap: 0; margin: 14px 0 0; padding: 0; list-style: none; }
-.evidence-rail__list li { display: grid; gap: 6px; padding: 13px 0; border-top: 1px solid var(--folio-border); }
-.evidence-rail__list a { color: var(--folio-ink); font-weight: 600; line-height: 1.5; text-decoration: none; }
-.evidence-rail__list a:hover { text-decoration: underline; }
-.evidence-rail__list small { color: var(--folio-ink-subtle); font-variant-numeric: tabular-nums; }
-.evidence-rail__meta { justify-content: flex-start; flex-wrap: wrap; color: var(--folio-ink-subtle); font-size: 11px; font-variant-numeric: tabular-nums; }
-.evidence-rail__meta > * + *::before { margin-right: 7px; content: "·"; }
-.provider-health-list { display: grid; gap: 7px; margin: 12px 0; }
-.provider-health-item { display: flex; justify-content: space-between; gap: 12px; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); padding: 8px 12px; background: var(--folio-surface-muted); color: var(--folio-ink-muted); font-size: 12px; }
-.provider-health-item b { color: var(--folio-burgundy); font-weight: 700; }
 
-@media (max-width: 900px) {
-  .watchlist-intelligence-rails { grid-template-columns: 1fr; }
-  .evidence-rail__head { align-items: flex-start; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .evidence-rail, .evidence-rail * { scroll-behavior: auto !important; transition: none !important; }
-}
 /* Research Cockpit */
 .settings-notice { display: grid; gap: 4px; padding: 12px 14px; margin: 12px 0; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); background: var(--folio-surface-muted); color: var(--folio-ink-muted); }
 .settings-notice strong { color: var(--folio-ink); }
@@ -14371,6 +14308,9 @@ main.page {
 .portfolio-crop-controls label { display: grid; gap: 4px; font-size: 12px; color: var(--folio-ink-muted); }
 .portfolio-crop-preview { display: block; width: min(100%, 900px); max-height: 420px; object-fit: contain; margin: 0 auto 14px; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); background: var(--folio-surface-dark); }
 .portfolio-import-mode { display: flex; flex-wrap: wrap; gap: 12px 18px; margin: 12px 0; border: 0; padding: 0; }
+.portfolio-import-file { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.portfolio-import-file__name { min-width: 0; color: var(--folio-ink-subtle); font-size: 12.5px; overflow-wrap: anywhere; }
+.portfolio-import-pages { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
 .portfolio-import-mode legend { width: 100%; font-weight: 700; }
 .portfolio-import-results { margin-top: 16px; overflow-x: auto; }
 .portfolio-import-results table { width: 100%; border-collapse: collapse; }
@@ -14600,7 +14540,6 @@ main.page {
   .briefing-archive-filters,
   .react-analysis-feed-controls .briefing-archive-filters,
   .research-cockpit,
-  .watchlist-intelligence-rails,
   .portfolio-route-grid {
     grid-template-columns: 1fr;
   }

@@ -986,15 +986,21 @@ def test_press_release_feeds_are_tagged_and_excluded_from_briefing_only():
     assert is_news_document({"path": base}) is True
 
 
-def test_rss_list_hides_press_releases_until_the_source_is_chosen():
-    """와이어는 발행량이 많아 기본 목록 앞쪽을 점유한다. 소스를 고를 때만 보여준다."""
+def test_rss_screen_never_shows_press_release_wires():
+    """PR Newswire·GlobeNewswire는 RSS 피드 화면에 아예 노출하지 않는다.
+
+    소스를 직접 고르면 보여주던 예외를 없앴다. 기업이 직접 낸 1차 자료라 매체 교차
+    확인이 없고 발행량이 많아 목록에서 뉴스를 밀어낸다. 수집·인덱싱은 그대로여서
+    워치리스트 종목 뉴스와 기업분석 보조자료로는 계속 쓰인다.
+    """
     from features.common.research_library.rss.service import _cache_where
 
     default_where, _ = _cache_where()
     assert "press_release" in default_where
 
+    # 소스를 직접 골라도 제외 조건이 남아야 한다.
     chosen_where, params = _cache_where(source="PR Newswire")
-    assert "press_release" not in chosen_where
+    assert "press_release" in chosen_where
     assert "PR Newswire" in params
 
 
@@ -1076,3 +1082,54 @@ def test_market_filter_accepts_the_new_markets_and_the_eu_alias():
     assert _normalize_market_filter("US") == "US"
     assert _normalize_market_filter("KR") == "KR"
     assert _normalize_market_filter("ZZ") == ""
+def test_rss_source_dropdown_excludes_press_release_wires():
+    """목록에서 안 보이는 매체가 출처 목록에만 남으면 고를 수 있는 빈 항목이 된다."""
+    from features.common.research_library.rss import service
+
+    source = Path(service.__file__).read_text(encoding="utf-8")
+    dropdown_count = source.count("SELECT DISTINCT media FROM")
+    assert dropdown_count >= 1, "출처 목록 쿼리를 찾지 못했다"
+    # 출처 목록 쿼리는 전부 목록과 같은 제외 조건을 공유해야 한다.
+    guarded = source.count("_HIDE_PRESS_RELEASE_SQL} ORDER BY media")
+    assert guarded == dropdown_count
+
+
+def test_source_dropdown_only_offers_currently_collected_media(monkeypatch):
+    """수집 경로가 사라진 매체는 필터에서 뺀다. 과거 항목은 목록에 그대로 남는다."""
+    from features.common.research_library.rss import service
+
+    monkeypatch.setattr(service, "_configured_source_names", lambda: {"CNBC", "Reuters"})
+    rows = [{"media": "CNBC"}, {"media": "Barron's"}, {"media": "Reuters"}]
+    assert service._selectable_sources(rows) == ["CNBC", "Reuters"]
+
+
+def test_source_dropdown_keeps_republished_publisher_names(monkeypatch):
+    """aggregating 피드는 원 발행처 이름으로 다시 태그되므로 그 이름이 살아야 한다."""
+    from features.common.research_library.rss import service
+
+    # Yahoo Finance 피드가 only_publishers=[Reuters]이면 새 항목은 Reuters로 저장된다.
+    monkeypatch.setattr(service, "_configured_source_names", lambda: {"Reuters"})
+    rows = [{"media": "Reuters"}, {"media": "Yahoo Finance"}]
+    assert service._selectable_sources(rows) == ["Reuters"]
+
+
+def test_source_dropdown_falls_back_to_all_media_when_config_is_unreadable(monkeypatch):
+    """설정을 못 읽으면 필터를 비우지 말고 기존 동작대로 전부 노출한다."""
+    from features.common.research_library.rss import service
+
+    def boom():
+        raise RuntimeError("config unreadable")
+
+    monkeypatch.setattr(service, "_configured_source_names", boom)
+    rows = [{"media": "CNBC"}, {"media": "Barron's"}]
+    assert service._selectable_sources(rows) == ["CNBC", "Barron's"]
+
+
+def test_configured_source_names_reads_the_live_feed_config():
+    """헬퍼가 실제 config를 읽는지 확인한다(이름 하드코딩 방지)."""
+    from features.common.research_library.rss.service import _configured_source_names
+
+    names = _configured_source_names()
+    assert names, "rss_feeds.yaml에서 매체를 읽지 못했다"
+    assert "CNBC" in names
+

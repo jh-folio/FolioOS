@@ -9,7 +9,7 @@ import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
 import { parsePersonalOverlayPayload } from "./deepResearchPayload";
 import { BriefingChangeStrip } from "./briefing/BriefingChangeStrip";
-import type { ChangeEvent } from "./watchlist/ChangeHistory";
+import type { ChangeEvent } from "./changeEvents";
 
 // `all`은 네 시장 생성 범위, `both`는 US/KR만 담은 예전 저장본이다.
 type MarketScope = "us" | "kr" | "europe" | "jp" | "all" | "both" | "multi";
@@ -613,14 +613,17 @@ export function BriefingRoute() {
               {generating ? "생성 중" : "오늘 브리핑 생성"}
             </button>
             <span className="brief-gen-actionbar-divider" aria-hidden="true" />
+            {/* 발행일이 아니라 시장 세션일이다. 미국장 8/3 세션은 8/4에 발행되므로
+                예전 라벨("브리핑 날짜")은 어느 장을 받게 되는지 알 수 없었다. */}
             <input
               type="date"
               value={briefingDate}
               onChange={(event) => setBriefingDate(event.currentTarget.value)}
-              aria-label="생성할 브리핑 날짜"
+              aria-label={`${SCOPE_LABELS[marketScope]} 기준일`}
+              title={`${SCOPE_LABELS[marketScope]} 세션 기준일`}
             />
             <button className="filter-btn clear" type="button" onClick={() => generateBriefing(briefingDate)} disabled={generating || !briefingDate}>
-              이 날짜로 생성
+              이 기준일로 생성
             </button>
           </div>
         </section>

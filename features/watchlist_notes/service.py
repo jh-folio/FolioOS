@@ -404,11 +404,17 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
         }
     idx = load_index()
     candidates = search_documents(idx, query=query, limit=max(limit * 3, 12), scope="news")
-    hits = [h for h in candidates if any(_item_matches_company(query, c) for c in h.get("companies", []))]
-    if not hits:
-        hits = candidates[:limit]
+    matched = [h for h in candidates if any(_item_matches_company(query, c) for c in h.get("companies", []))]
+    # 워치리스트에는 종목과 테마가 함께 들어간다. 테마("AI", "ETF" 등)는 매칭할 회사가
+    # 없으므로 검색 결과가 곧 답이다. 반면 종목은 그 종목이 실제로 언급된 문서만
+    # 뉴스여야 한다. 예전에는 매칭 0건이면 검색 결과 앞부분을 그대로 내보내서
+    # "NVDA" 카드에 무관한 기업 기사가 실렸다.
+    if matched or not _is_watchlist_theme_query(query):
+        hits = matched[:limit]
+        if not matched:
+            warnings.append("no_company_matched_news")
     else:
-        hits = hits[:limit]
+        hits = candidates[:limit]
     company = resolve_watchlist_company(query, hits)
     if not company:
         company = {"name": query, "ticker": "", "market": "", "sector": ""}
@@ -424,25 +430,6 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
                 tag_counts[tag] += 1
     tags = [tag for tag, _count in tag_counts.most_common(8)]
     news = [_public_news_doc(hit) for hit in hits]
-    ticker = str(company.get("ticker") or "").strip().upper()
-    fast_signals = []
-    change_history = []
-    signal_provider_health = []
-    try:
-        from features.common.research_library.signals.service import default_db_path, provider_health, query_signals
-
-        if ticker:
-            fast_signals = query_signals(default_db_path(DATA_DIR), ticker=ticker, limit=20).get("items", [])
-        signal_provider_health = list(provider_health(DATA_DIR).values())
-    except Exception:
-        warnings.append("fast_signal_context_unavailable")
-    try:
-        from features.common.change_intelligence.projection import list_change_events
-
-        if ticker:
-            change_history = list_change_events(DATA_DIR / "market-memory.sqlite3", ticker=ticker, limit=20)
-    except Exception:
-        warnings.append("change_history_unavailable")
     return {
         "item": query,
         "company": company,
@@ -451,9 +438,6 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
         "newsCount": len(news),
         "latestDate": news[0].get("date", "") if news else "",
         "warnings": warnings,
-        "fastSignals": fast_signals,
-        "signalProviderHealth": signal_provider_health,
-        "changeHistory": change_history,
     }
 
 

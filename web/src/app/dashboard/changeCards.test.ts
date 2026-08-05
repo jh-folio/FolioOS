@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChangeEvent } from "../watchlist/ChangeHistory";
+import type { ChangeEvent } from "../changeEvents";
 import { agentQuestionForEvent, baselineRoute, primaryChangedItem } from "./ChangeFeed";
 
 const EVENT: ChangeEvent = {

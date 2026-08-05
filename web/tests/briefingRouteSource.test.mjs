@@ -21,7 +21,9 @@ test("Briefing route mirrors the legacy generation and archive controls", async 
   assert.match(source, /brief-market-segment/);
   assert.match(source, /brief-gen-actionbar/);
   assert.match(source, /오늘 브리핑 생성/);
-  assert.match(source, /이 날짜로 생성/);
+  // 날짜 선택은 발행일이 아니라 시장 세션 기준일이다. 문구가 그걸 말해야 한다.
+  assert.match(source, /이 기준일로 생성/);
+  assert.match(source, /기준일`/);
   assert.doesNotMatch(source, />품질 모드</);
   assert.doesNotMatch(source, /setQualityMode/);
   assert.match(source, /briefing-archive-filters/);

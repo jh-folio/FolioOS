@@ -12,6 +12,8 @@ from features.common.utils import normalize
 # 한국 기사 관행: 종목명 뒤 6자리 종목코드 대괄호 표기(예: 셀트리온[068270]).
 _KR_STOCK_CODE_RE = re.compile(r"\[\d{6}\]")
 _KST = dt.timezone(dt.timedelta(hours=9))
+# 한국시간 자정 이후에 마감하는 시장. 이 시장의 세션 S는 발행일 S+1에 실린다.
+OVERNIGHT_CLOSE_MARKETS = ("us", "europe")
 _KR_REGULAR_OPEN = dt.time(9, 0)
 _KR_REGULAR_CLOSE = dt.time(15, 30)
 # JST는 KST와 같은 시간대(UTC+9)라 한국 기준 생성 시각을 그대로 비교할 수 있다.
@@ -343,6 +345,46 @@ def previous_trading_day(day, market, exchange_calendar_fetcher=None):
             return cursor
         cursor -= dt.timedelta(days=1)
     return day - dt.timedelta(days=1)
+
+
+def next_trading_day(day, market, exchange_calendar_fetcher=None):
+    cursor = day + dt.timedelta(days=1)
+    for _ in range(14):
+        if is_market_open(cursor, market, exchange_calendar_fetcher):
+            return cursor
+        cursor += dt.timedelta(days=1)
+    return day + dt.timedelta(days=1)
+
+
+def publication_date_for_session(session_date: str, market_scope: str) -> str:
+    """사용자가 고른 시장 세션일을 저장·생성 기준인 발행일로 옮긴다.
+
+    한 브리핑 안에서 두 시장의 세션일은 하루 어긋난다. 발행일 D에서 미국장은
+    D-1 정규장을 복기하고 한국장은 D 장을 다룬다. 따라서 같은 세션일이라도
+    어느 시장을 생성하느냐에 따라 발행일이 달라진다.
+
+        미국장·유럽장 세션 S -> 발행일 = S 다음 거래일 (한국시간 자정 이후 마감)
+        한국장·일본장 세션 S -> 발행일 = S           (KST와 같은 시간대)
+        여러 시장 동시 선택   -> 밤샘 마감 시장 기준
+
+    저장 키와 아카이브 정렬은 계속 발행일이다. 이 함수는 입력 해석만 바꾼다.
+    """
+    text = str(session_date or "").strip()[:10]
+    try:
+        day = dt.date.fromisoformat(text)
+    except ValueError:
+        return text
+    from features.daily_briefing.schema import normalize_market_selection
+
+    markets = normalize_market_selection(market_scope)
+    overnight = [key for key in OVERNIGHT_CLOSE_MARKETS if key in markets]
+    if not overnight:
+        return day.isoformat()
+    # 밤샘 마감 시장이 하나라도 있으면 그 기준으로 옮긴다. 여러 시장을 함께
+    # 고르면 발행일 하나로 둘을 다 만족시킬 수 없다는 긴장이 그대로 남는다 —
+    # 미국+한국에서 이미 그랬고(한국장은 그 다음 세션이 함께 담긴다), 시장이
+    # 늘어도 규칙은 같다.
+    return next_trading_day(day, overnight[0].upper()).isoformat()
 
 
 def latest_trading_day_on_or_before(day, market, exchange_calendar_fetcher=None):

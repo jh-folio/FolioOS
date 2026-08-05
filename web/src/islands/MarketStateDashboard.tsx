@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getJson } from "../api";
+import { openReactAgentDock } from "../app/agentContext";
 import { legacyBridge as bridge } from "../app/legacyBridge";
 import { marketStateContextProjection, readMarketStateRef, type MarketStateRef, type MarketStateStatus } from "../app/marketStateContext";
 
@@ -74,12 +75,43 @@ type MarketScope = "overall" | "us" | "kr";
 const MARKET_SCOPE_LABELS: Record<MarketScope, string> = { overall: "종합", us: "미국장", kr: "한국장" };
 type CheckItem = string | { title?: string; summary?: string; sourceRefs?: string[] };
 
-function splitNarrative(value: string) {
+/** 문장 단위로 가른다. 소수점은 문장 끝이 아니다.
+ *
+ * `[^.!?。]+`로 자르면 "S&P 500이 7736.52로 1일 +1.79%"가 세 조각이 된다.
+ * 문장 끝 마침표는 뒤에 공백이나 문자열 끝이 오지만 소수점은 숫자가 온다.
+ */
+export function splitSentences(text: string): string[] {
+  const out: string[] = [];
+  let start = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch !== "." && ch !== "!" && ch !== "?" && ch !== "。") continue;
+    const next = text[i + 1];
+    if (ch !== "。") {
+      if (next && !/\s/.test(next)) continue;
+      // 1.79처럼 숫자 사이에 낀 점은 소수점이다.
+      if (/\d/.test(text[i - 1] || "") && /\d/.test(next || "")) continue;
+    }
+    out.push(text.slice(start, i + 1).trim());
+    start = i + 1;
+  }
+  const tail = text.slice(start).trim();
+  if (tail) out.push(tail);
+  return out.filter(Boolean);
+}
+
+/** 시장 해석을 첫 문장(강조)과 나머지 본문으로 가른다.
+ *
+ * 나머지는 전부 남긴다. 예전에는 `slice(1, 3)`으로 4번째 문장부터 버렸는데,
+ * 그때까지 저장된 해석이 모두 1~2문장이라 아무도 손실을 보지 못했다. 모델이
+ * 더 긴 문단을 쓰기 시작하자 뒷문장이 통째로 사라졌다.
+ */
+export function splitNarrative(value: string) {
   const normalized = String(value || "").replace(/\s+/g, " ").trim();
-  const parts = normalized.match(/[^.!?。]+[.!?。]?/g)?.map((part) => part.trim()).filter(Boolean) || [];
+  const parts = splitSentences(normalized);
   return {
     lead: parts[0] || normalized,
-    support: parts.slice(1, 3).join(" "),
+    support: parts.slice(1).join(" "),
   };
 }
 
@@ -192,14 +224,15 @@ function DriverCard({ driver }: { driver: Driver }) {
           확신도 {confidence}
           {driver.confidencePct ? ` · ${driver.confidencePct}%` : ""}
         </small>
-        {/* The existing document-level [data-agent-prompt] handler in app.js opens the dock;
+        {/* Opens the dock directly. The [data-agent-prompt] document handler this
+            once relied on no longer exists, which left the button inert.
             .agent-logo-slot is filled by the shared applyAgentBranding bridge. */}
         <button
           type="button"
           className="agent-action agent-ask-btn"
-          data-agent-prompt={driver.askAgentPrompt}
           data-tooltip="Agent에게 묻기"
           aria-label="Agent에게 묻기"
+          onClick={() => openReactAgentDock({ message: driver.askAgentPrompt })}
         >
           <span className="agent-logo-slot" aria-hidden="true" />
         </button>

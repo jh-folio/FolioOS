@@ -1,5 +1,5 @@
 import { CHANGE_STATUS_LABELS, SEMANTIC_VERDICT_LABELS } from "../dashboard/ChangeFeed";
-import { changeReasonText, type ChangeEvent } from "../watchlist/ChangeHistory";
+import { changeReasonText, type ChangeEvent } from "../changeEvents";
 
 /** 브리핑 상단 "이 브리핑에서 달라진 것" — 저장된 changeSummary만 읽는 표시 전용 스트립. */
 export function BriefingChangeStrip({ summary }: { summary?: ChangeEvent }) {
