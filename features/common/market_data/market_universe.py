@@ -630,3 +630,144 @@ def build_kospi_heatmap_snapshot(
             "KRX unavailable; last-good snapshot used"
         )
         return cached
+
+
+def fetch_bulk_daily_prices_by_symbol(symbols: list[str], date: str) -> dict[str, dict]:
+    """Daily closes keyed by the provider symbol, passed through untouched.
+
+    ``fetch_bulk_daily_prices`` rewrites dots to dashes for US share classes,
+    which would turn ``SAP.DE`` into ``SAP-DE`` and ``7203.T`` into ``7203-T``.
+    Overseas symbols carry their exchange in that suffix, so they go as-is.
+    """
+    import yfinance as yf
+
+    target = str(date)[:10]
+    target_date = dt.date.fromisoformat(target)
+    output: dict[str, dict] = {}
+    for offset in range(0, len(symbols), 100):
+        batch = [str(symbol or "").strip() for symbol in symbols[offset:offset + 100] if str(symbol or "").strip()]
+        if not batch:
+            continue
+        frame = yf.download(
+            batch,
+            start=(target_date - dt.timedelta(days=14)).isoformat(),
+            end=(target_date + dt.timedelta(days=1)).isoformat(),
+            interval="1d",
+            auto_adjust=False,
+            group_by="ticker",
+            threads=True,
+            progress=False,
+        )
+        for symbol in batch:
+            pairs = _close_pairs(frame, symbol, target)
+            if not pairs:
+                continue
+            output[symbol] = {
+                "close": pairs[-1][1],
+                "previousClose": pairs[-2][1] if len(pairs) >= 2 else None,
+                "asOf": pairs[-1][0],
+                "provider": "yfinance",
+            }
+    return output
+
+
+def build_overseas_heatmap_snapshot(
+    market: str,
+    date: str,
+    *,
+    provider_prefix: str,
+    cache_dir: Path | str | None = None,
+    constituents: list[dict] | None = None,
+    constituents_loader: Callable[[], list[dict]] | None = None,
+    price_fetcher: Callable[[list[str], str], dict] | None = None,
+    weight_basis: str = "market_cap",
+    universe_metadata: dict | None = None,
+    limit: int | None = None,
+) -> dict:
+    """Heatmap for a market whose universe is a committed constituent file.
+
+    ``weightBasis`` travels with the payload because Europe's caps are restated
+    into one currency at build time. A consumer that reads the sizes without
+    reading what they are denominated in would be guessing.
+
+    A provider failure falls back to the last good snapshot rather than an empty
+    map, and says so — an empty heatmap and a flat market look the same.
+    """
+    if constituents is None:
+        constituents = (constituents_loader or (lambda: []))()
+    universe = [
+        row for row in (constituents or [])
+        if str(row.get("providerSymbol") or row.get("ticker") or "") and _number(row.get("marketCap")) > 0
+    ]
+    if not universe:
+        return unavailable_snapshot(market, date, provider_prefix, f"{provider_prefix} universe is empty")
+    ranked = sorted(universe, key=lambda row: _number(row.get("marketCap")), reverse=True)
+    if limit is not None:
+        ranked = ranked[:max(0, int(limit))]
+    symbols = [str(row.get("providerSymbol") or row.get("ticker")) for row in ranked]
+    cache_path = Path(cache_dir) / f"{provider_prefix}-heatmap-last-good.json.gz" if cache_dir else None
+
+    def _stale_or_unavailable(reason: str) -> dict:
+        cached = load_last_good_snapshot(cache_path) if cache_path else None
+        if cached and cached.get("rows"):
+            cached["freshness"] = "stale"
+            cached.setdefault("warnings", []).append(f"{reason}; last-good snapshot used")
+            return cached
+        result = unavailable_snapshot(market, date, provider_prefix, reason)
+        result["coverage"] = _coverage(len(ranked), 0)
+        result["weightBasis"] = weight_basis
+        return result
+
+    try:
+        prices = (price_fetcher or fetch_bulk_daily_prices_by_symbol)(symbols, str(date)[:10])
+    except Exception:
+        return _stale_or_unavailable("market_data_unavailable")
+    rows = [
+        row for row in (
+            heatmap_row({**meta, "ticker": str(meta.get("providerSymbol") or meta.get("ticker"))},
+                        prices.get(str(meta.get("providerSymbol") or meta.get("ticker"))))
+            for meta in ranked
+        )
+        if row is not None and row["asOf"] == str(date)[:10]
+    ]
+    if not rows:
+        return _stale_or_unavailable("no constituent closed on the session date")
+    payload = snapshot_payload(market, date, _provider_label(provider_prefix, rows, provider_prefix), ranked, rows)
+    payload["weightBasis"] = weight_basis
+    # 구성종목 명단의 출처와 기준일을 스냅샷이 함께 들고 간다. 시세 provider만
+    # 표시하면 "이 200종목이 어디서 왔는가"에 답할 수 없다.
+    if universe_metadata:
+        payload["universe"] = dict(universe_metadata)
+    if cache_path:
+        save_last_good_snapshot(cache_path, payload)
+    return payload
+
+
+def build_europe_heatmap_snapshot(date: str, *, cache_dir: Path | str | None = None, **kwargs) -> dict:
+    from features.common.market_data.europe_core_universe import (
+        WEIGHT_BASIS,
+        load_europe_core_constituents,
+        universe_metadata,
+    )
+
+    kwargs.setdefault("universe_metadata", universe_metadata())
+    kwargs.setdefault("constituents_loader", load_europe_core_constituents)
+    kwargs.setdefault("weight_basis", WEIGHT_BASIS)
+    return build_overseas_heatmap_snapshot(
+        "EUROPE", date, provider_prefix="europe-core", cache_dir=cache_dir, **kwargs,
+    )
+
+
+def build_nikkei_heatmap_snapshot(date: str, *, cache_dir: Path | str | None = None, **kwargs) -> dict:
+    from features.common.market_data.nikkei225_universe import (
+        WEIGHT_BASIS,
+        load_nikkei225_constituents,
+        universe_metadata,
+    )
+
+    kwargs.setdefault("universe_metadata", universe_metadata())
+    kwargs.setdefault("constituents_loader", load_nikkei225_constituents)
+    kwargs.setdefault("weight_basis", WEIGHT_BASIS)
+    return build_overseas_heatmap_snapshot(
+        "JP", date, provider_prefix="nikkei225", cache_dir=cache_dir, **kwargs,
+    )

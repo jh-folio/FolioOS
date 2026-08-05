@@ -325,6 +325,10 @@ features/company_analysis/financial_quality_prompt.md
 - Lightweight Charts의 `layout.attributionLogo`와 사용자 화면의 TradingView 링크·copyright, `THIRD_PARTY_NOTICES.md`를 제거하지 않는다.
 - `GET /api/briefings/{date}/visuals/current`는 저장 snapshot의 종목 universe만 최신 일봉으로 재조회하는 read-only 경로다. current payload를 보고서 JSON이나 `.visuals.json`에 merge/write하지 않는다. yfinance 일봉은 실시간 체결가가 아니므로 `snapshot/delayed/stale/unavailable`과 장 상태를 명시한다.
 - 한국시간 기준 날짜 `D` 브리핑은 미국장 `D-1` 마감과 한국장 `D-1` 결과 및 `D` 개장/장중을 구분해야 한다.
+- 시장별 세션은 `briefing_market_windows()`의 `marketSessions.{us,kr,europe,jp}`로 읽는다. 기존 `us*`/`kr*` 키는 호환을 위해 그대로 둔다. 유럽은 미국처럼 한국시간 자정 이후 마감하므로 항상 직전 완료 세션을, 일본은 한국처럼 생성 시각으로 `pre_open|intraday|closed`를 가른다.
+- 유럽·일본 휴장일 표는 `features/common/exchange_holidays.py` 하나이며 세션 판정과 시장 캘린더가 함께 읽는다. 유럽은 거래소별로 판정하고(런던만 쉬는 날이 연 십여 일) 표가 없는 연도는 `coverage_expired`로 보고한다. 평일을 개장으로 추측하지 않는다.
+- 대표 지수는 `features/common/markets.py`의 `MARKET_REGISTRY.representative_indices`가 단일 출처다. 통화·시간대는 시리즈마다 붙는다. 유럽은 GBP와 EUR이 한 차트에 섞이므로 스냅샷 통화를 하나로 stamp하지 않는다(`currencies` 목록, 섞이면 `currency: MIXED`).
+- 히트맵 상자 크기는 `weightBasis`와 함께 저장한다. 유럽은 EUR 환산 시가총액(`market_cap_eur`)이며 환율 없이 GBP와 EUR을 더하지 않는다.
 - 시장별 독자용 제목은 세션일과 상태를 함께 쓴다(`US ... D-1 마감`, `Korea ... D 장중|마감`). 발행일은 별도 `publicationDate`/`KST 발행` 메타데이터로 표시하고 저장 키·기본 정렬 기준으로 유지한다. Agent/API/규칙 생성과 아카이브가 같은 계약을 사용해야 한다.
 - 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. `pykrx` 기반 KRX 수치를 우선하고 실패하면 yfinance/기사 기반 fallback을 사용하되, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.
 - LLM 실패 시 규칙 기반 브리핑이 필요하다. 참고자료 섹션은 유지한다.

@@ -112,15 +112,31 @@ def test_a_proxy_series_says_so_instead_of_posing_as_the_index():
     assert "proxyFor" not in nikkei
 
 
-def test_markets_without_a_heatmap_universe_emit_no_empty_heatmap():
-    """Europe/Japan constituent sets land in Task 2.3; an empty card is worse than none."""
-    for scope in ("europe", "jp"):
-        result = collect_briefing_visuals(
-            "2026-08-05", scope, {scope: {"marketSessionDate": SESSION}},
-            price_history_fetcher=_fetcher(), leader_subjects={},
-        )
-        assert [row["type"] for row in result["visualSnapshots"]] == ["price_series"]
-        assert result["sidecar"]["snapshots"] == {}
+def test_a_heatmap_records_the_currency_its_boxes_are_sized_in():
+    """Europe caps are restated into EUR at build time.
+
+    Labeling the boxes with the market's first currency (GBP) would say the
+    sizes mean something they do not.
+    """
+    result = collect_briefing_visuals(
+        "2026-08-05", "europe", {"europe": {"marketSessionDate": SESSION}},
+        price_history_fetcher=_fetcher(), leader_subjects={},
+        heatmap_fetchers={"europe": lambda _: {"weightBasis": "market_cap_eur", "rows": [], "asOf": SESSION}},
+    )
+    heatmap = next(row for row in result["visualSnapshots"] if row["type"] == "market_heatmap")
+    assert heatmap["weightBasis"] == "market_cap_eur"
+    assert heatmap["currency"] == "EUR"
+
+
+def test_a_market_without_a_weight_basis_does_not_invent_a_currency():
+    result = collect_briefing_visuals(
+        "2026-08-05", "europe", {"europe": {"marketSessionDate": SESSION}},
+        price_history_fetcher=_fetcher(), leader_subjects={},
+        heatmap_fetchers={"europe": lambda _: {"rows": [], "asOf": SESSION}},
+    )
+    heatmap = next(row for row in result["visualSnapshots"] if row["type"] == "market_heatmap")
+    assert heatmap["weightBasis"] == "market_cap"
+    assert heatmap["currency"] == ""  # 유럽은 통화가 둘이라 하나를 고를 수 없다
 
 
 @pytest.mark.parametrize("scope,expected", [("both", ["US", "KR"]), ("all", ["US", "KR", "EUROPE", "JP"])])

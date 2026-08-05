@@ -15,6 +15,8 @@
 | `market_calendar.py` | 브리핑 날짜 계산, 시장별 세션 기술자(`marketSessions`) |
 | `exchange_holidays.py` | LSE/Xetra/Euronext/Borsa Italiana/BME/JPX 연간 휴장일 표와 거래소별 개장 판정 |
 | `market_data/providers.py` | provider 기반 시장 데이터 인터페이스와 한국장 수치 조회 |
+| `market_data/europe_core_universe.py` | FTSE 100+DAX+CAC 40+AEX 합성 유럽 히트맵 universe와 EUR 환산 |
+| `market_data/nikkei225_universe.py` | 닛케이 225 히트맵 universe |
 | `research_library/` | 자료 폴더 계약, RSS 수집, 증분 인덱싱, 하이브리드 검색 |
 | `research_schema/` | checkpoint/evidence/sourceLedger/dataGap 공통 스키마 |
 | `research_quality/` | 저장 산출물의 source grounding, hallucination risk, personal bias risk 평가 |
@@ -34,6 +36,21 @@
 
 - **유럽은 하나의 캘린더가 아닙니다.** 영국 은행휴일은 LSE만 닫고 Euronext·Xetra는 열립니다. 주현절은 반대로 마드리드만 닫습니다. 이런 날이 연 십여 일 있어 `divergent`/`openVenues`/`closedVenues`로 갈린 상태를 그대로 보고하고, 지역 `isOpen`은 한 곳이라도 열리면 참입니다.
 - **표가 없는 연도는 추측하지 않습니다.** `coverage_expired`를 반환하고 개장으로 간주하지 않습니다. 새 연도 공시가 나오면 `EXCHANGE_HOLIDAYS` 표만 갱신합니다.
+
+## 히트맵 universe (S&P 500 / KOSPI 200 / 유럽 / 닛케이 225)
+
+네 시장 모두 같은 방식입니다. **구성종목 명단은 위키백과**에서 받아 `config/*_constituents.json`에 커밋하고, 런타임에는 일봉 시세만 조회합니다. 새 연도/분기 갱신은 각 모듈의 `__main__` 진입점으로 실행합니다.
+
+```bash
+py -3 -m features.common.market_data.europe_core_universe
+py -3 -m features.common.market_data.nikkei225_universe
+```
+
+- **유럽에는 재배포 가능한 광역 구성종목 명단이 없습니다.** 그래서 계획이 허용한 국가지수 합성으로 만듭니다: FTSE 100 + DAX + CAC 40 + AEX(총 203종목, 에어버스·아르셀로미탈은 두 지수에 중복 등재되어 한 번만 남습니다). 유럽 선 차트와 같은 네 지수입니다.
+- **시가총액을 통화 섞어 더하지 않습니다.** 런던 종목은 GBP, 나머지는 EUR로 오므로 빌드 시점에 EUR로 환산하고 사용한 환율을 파일에 기록합니다(`fxRates`). 환율을 모르면 1.0으로 가정하지 않고 그 종목을 뺍니다(`missingFx`). 산출물은 `weightBasis: market_cap_eur`를 달고 다니며, 히트맵 스냅샷도 이 값을 그대로 들고 갑니다.
+- **섹터는 지수별 분류 대신 시세 provider의 분류를 씁니다.** 네 유럽 지수가 ICB·Prime Standard·GICS 하위산업을 제각각 쓰기 때문입니다. 네 어휘로 동시에 묶은 히트맵은 묶음이 아닙니다.
+- **일본 증권코드는 영숫자입니다.** 2024년부터 `285A`(키오시아) 같은 코드가 쓰여 숫자 4자리만 받으면 신규 편입 종목이 조용히 빠집니다.
+- provider 실패는 마지막 정상 스냅샷으로 되돌아가고 `stale`로 표시합니다. 캐시도 없으면 `unavailable`입니다 — 빈 히트맵과 무변동 장세는 화면에서 구분되지 않기 때문입니다.
 
 ## market_data/providers.py
 

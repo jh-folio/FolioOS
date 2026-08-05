@@ -10,8 +10,10 @@ DEFAULT_CONFIG_NAMES: Final = frozenset(
     {
         "company_aliases.json",
         "company_master.json",
+        "europe_core_constituents.json",
         "evidence_sources.yaml",
         "kospi200_constituents.json",
+        "nikkei225_constituents.json",
         "rss_feeds.yaml",
         "sp500_constituents.json",
     }

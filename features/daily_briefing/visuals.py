@@ -17,7 +17,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from features.common.market_calendar import is_market_open, latest_trading_day_on_or_before, previous_trading_day
 from features.common.config_bootstrap import resolve_config
-from features.common.market_data.market_universe import build_kospi_heatmap_snapshot, build_us_heatmap_snapshot
+from features.common.market_data.market_universe import (
+    build_europe_heatmap_snapshot,
+    build_kospi_heatmap_snapshot,
+    build_nikkei_heatmap_snapshot,
+    build_us_heatmap_snapshot,
+)
 from features.common.market_data.price_history import INDEX_UNIVERSE, build_price_history
 from features.common.markets import (
     MARKET_REGISTRY,
@@ -292,6 +297,15 @@ def _snapshot_currencies(meta, series, requested):
     return [meta["currency"]] if len(meta["currencies"]) == 1 and meta["currency"] else []
 
 
+def _heatmap_currency(meta, payload):
+    """The currency the box sizes are measured in, read off the weight basis."""
+    basis = str((payload or {}).get("weightBasis") or "")
+    _, _, suffix = basis.rpartition("_")
+    if len(suffix) == 3 and suffix.isalpha():
+        return suffix.upper()
+    return meta["currency"] if len(meta["currencies"]) == 1 else ""
+
+
 def _price_snapshot(snapshot_id, market_key, role, session_date, requested, series, missing, subject=None):
     meta = MARKET_META[market_key]
     latest = _latest_series_time(series)
@@ -387,6 +401,8 @@ def collect_briefing_visuals(
     heatmap_fetchers = heatmap_fetchers or {
         "us": lambda session_date: build_us_heatmap_snapshot(session_date, cache_dir=MARKET_CACHE_DIR),
         "kr": lambda session_date: build_kospi_heatmap_snapshot(session_date, cache_dir=MARKET_CACHE_DIR),
+        "europe": lambda session_date: build_europe_heatmap_snapshot(session_date, cache_dir=MARKET_CACHE_DIR),
+        "jp": lambda session_date: build_nikkei_heatmap_snapshot(session_date, cache_dir=MARKET_CACHE_DIR),
     }
     # 스냅샷 범위는 브리핑 본문의 scope enum이 아니라 시장 계약을 따른다. 유럽·일본
     # 차트는 브리핑 생성이 그 시장을 지원하기 전에도 만들 수 있어야 하고, 나중에
@@ -537,9 +553,11 @@ def collect_briefing_visuals(
             "provider": heatmap_payload.get("provider") or "unavailable",
             "freshness": heatmap_payload.get("freshness") or "unavailable",
             "coverage": heatmap_payload.get("coverage") or {"requested": 0, "returned": 0, "ratio": 0.0, "status": "unavailable"},
-            "timezone": MARKET_META[market_key]["timezone"],
-            "currency": MARKET_META[market_key]["currency"],
-            "weightBasis": "market_cap",
+            "timezone": meta["timezone"],
+            # 유럽 히트맵 상자 크기는 EUR로 환산된 시가총액이다. 시장 기본 통화(GBP)를
+            # 붙이면 상자가 무엇으로 측정됐는지 잘못 말하게 된다.
+            "currency": _heatmap_currency(meta, heatmap_payload),
+            "weightBasis": str(heatmap_payload.get("weightBasis") or "market_cap"),
             "rows": heatmap_payload.get("rows") or [],
             "warnings": heatmap_payload.get("warnings") or [],
         }

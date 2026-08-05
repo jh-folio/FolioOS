@@ -51,7 +51,20 @@ TOPIX는 yfinance에 지수 심볼이 없어(`^TPX`·`^TOPX` 모두 빈 응답) 
 
 지수 하나가 실패해도 브리핑은 실패하지 않습니다. 해당 심볼만 `coverage.missingSymbols`로 빠지고 나머지 지수는 그대로 그려집니다.
 
-유럽·일본은 재배포 가능한 구성종목 universe가 아직 없어(`capabilities.heatmap=False`) 히트맵 스냅샷을 만들지 않습니다. 빈 카드를 붙이지 않기 위해서입니다.
+### 히트맵 universe
+
+| 시장 | universe | 상자 크기 기준 |
+| --- | --- | --- |
+| 미국 | S&P 500 | `market_cap` (USD) |
+| 한국 | KOSPI 200 | `market_cap` (KRW) |
+| 유럽 | FTSE 100 + DAX + CAC 40 + AEX 합성 199종목 | `market_cap_eur` |
+| 일본 | 닛케이 225 | `market_cap_jpy` |
+
+유럽 상자는 **EUR로 환산한** 시가총액입니다. 런던 종목은 GBP로 오기 때문에 환산 없이 더하면 영국 기업이 환율만큼 부풀어 오릅니다. 스냅샷은 `weightBasis`와 그 기준 통화를 함께 저장하므로, 화면이 크기를 읽을 때 무엇으로 잰 크기인지도 함께 읽습니다. 시장 기본 통화를 쓰지 않는 이유도 같습니다 — 유럽의 기본 통화 하나를 붙이면 절반이 틀립니다.
+
+에어버스(DAX·CAC 40)와 아르셀로미탈(CAC 40·AEX)처럼 두 지수에 든 기업, 셸·유니레버·RELX처럼 런던과 암스테르담에 이중상장된 기업은 한 상자로 접습니다. 접지 않으면 같은 기업이 두 번 그려져 섹터 비중까지 부풀어 오릅니다.
+
+유럽 일봉은 마감 직후 provider 반영이 늦습니다(런던 16:30 마감 = KST 다음날 00:30). 세션일 종가가 아직 없으면 마지막 정상 스냅샷으로 되돌아가 `stale`로 표시하고, 그것도 없으면 `unavailable`로 둡니다. 전일 종가를 당일 세션 종가로 붙이지 않습니다.
 
 가격 series는 보고서 JSON에 inline 저장합니다. 히트맵 상세 rows는 compact gzip `data/briefings/{date}.visuals.json.gz` 사이드카에 저장하고 보고서는 `sidecarRef`만 가집니다. 기존 `.visuals.json`은 읽기 호환합니다. 일부 시장만 재생성하면 반대편 시장의 snapshot과 사이드카 rows를 보존합니다. 따라서 과거 브리핑은 provider를 다시 호출하지 않고 생성 당시 데이터를 재현할 수 있습니다.
 

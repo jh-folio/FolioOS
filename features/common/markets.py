@@ -127,8 +127,10 @@ _JP_INDICES = (
 )
 
 _ALL = MarketCapabilities(True, True, True, True, True, True)
-_EUROPE = MarketCapabilities(True, True, True, False, True, True)
-_JAPAN = MarketCapabilities(True, True, True, False, True, True)
+# 유럽·일본 히트맵은 재배포 가능한 구성종목 파일(FTSE100+DAX+CAC40+AEX 합성,
+# 닛케이 225)이 들어오면서 켜졌다.
+_EUROPE = MarketCapabilities(True, True, True, True, True, True)
+_JAPAN = MarketCapabilities(True, True, True, True, True, True)
 _NON_PRODUCT = MarketCapabilities(True, False, False, False, False, False)
 _UNKNOWN = MarketCapabilities(False, False, False, False, False, False)
 
