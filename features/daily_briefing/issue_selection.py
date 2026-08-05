@@ -332,12 +332,37 @@ def documents_for_scope(docs, market_scope):
     return [doc for doc in docs or [] if infer_doc_market(doc) in {target, "BOTH", "GLOBAL"}]
 
 
+def _kr_session_is_still_open(market_windows) -> bool:
+    """생성 시각 기준으로 한국장이 아직 진행 중인가.
+
+    analysisMode는 "그날이 거래일인가"만 본다. 그것만으로 장중이라고 하면 지난
+    날짜로 생성한 브리핑도 "장중"이 되어, 이미 끝난 장을 진행 중이라고 말한다.
+    한국장은 CLAUDE.md 계약대로 생성 시각으로 가른다.
+    """
+    import datetime as dt
+
+    session_date = str((market_windows or {}).get("krCurrentSessionDate") or "").strip()
+    if not session_date:
+        return False
+    now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+    today = now.date().isoformat()
+    if session_date < today:
+        return False
+    if session_date > today:
+        # 아직 오지 않은 세션은 장중이 아니다. 개장 전 상태는 별도 mode가 없어
+        # 마감과 같은 취급을 하되 제목이 사실과 어긋나지 않게 한다.
+        return False
+    # 한국 정규장 09:00~15:30 KST. 종료 후 생성분은 마감으로 본다.
+    return dt.time(9, 0) <= now.time() < dt.time(15, 30)
+
+
 def session_modes_from_windows(market_windows):
     mode = str((market_windows or {}).get("analysisMode") or "")
+    kr_open_now = _kr_session_is_still_open(market_windows)
     if mode == "weekday_kr_open":
-        return {"us": "us_close", "kr": "kr_intraday"}
+        return {"us": "us_close", "kr": "kr_intraday" if kr_open_now else "kr_close"}
     if mode == "us_holiday_kr_open":
-        return {"us": "us_holiday", "kr": "kr_intraday"}
+        return {"us": "us_holiday", "kr": "kr_intraday" if kr_open_now else "kr_close"}
     if mode == "kr_holiday":
         return {"us": "us_close", "kr": "kr_holiday"}
     if mode == "both_holiday":
