@@ -24,9 +24,6 @@ def briefing_specs(data_root: Path, request: BriefingJobRequest) -> list[Artifac
         raise JobArtifactValidationError("briefing reports must exactly match requested scopes")
     if not set(request.visuals).issubset(request.scopes):
         raise JobArtifactValidationError("briefing visuals must belong to requested scopes")
-    both = set(request.scopes) == {"us", "kr"}
-    if both != (request.link is not None):
-        raise JobArtifactValidationError("both-scope briefing requires exactly one link")
     specs: list[ArtifactSpec] = []
     for scope in request.scopes:
         report = deepcopy(request.reports[scope])
@@ -56,16 +53,4 @@ def briefing_specs(data_root: Path, request: BriefingJobRequest) -> list[Artifac
                     payload=visual,
                 )
             )
-    if request.link is not None:
-        link = deepcopy(request.link)
-        link["date"] = request.date
-        specs.append(
-            JsonArtifactSpec(
-                storage=StorageKind.JSON,
-                artifact_type="briefing_link",
-                artifact_id=request.date,
-                exact_path=data_root / "briefings" / f"{request.date}.link.json",
-                payload=link,
-            )
-        )
     return specs

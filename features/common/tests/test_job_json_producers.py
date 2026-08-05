@@ -53,8 +53,8 @@ def _read(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_briefing_producer_stages_complete_multiscope_visual_and_link_matrix(tmp_path: Path) -> None:
-    # Given: a both-scope briefing with one optional visual sidecar and a fresh link.
+def test_briefing_producer_stages_complete_multiscope_visual_matrix(tmp_path: Path) -> None:
+    # Given: a two-scope briefing with one optional visual sidecar.
     data_root = tmp_path / "data"
     store = SharedJobStore(data_root / "jobs-v2.json", data_root / "jobs.json", clock=_clock)
     lifecycle = JobPrivateLifecycle(data_root / "job-context", clock=_clock)
@@ -65,7 +65,6 @@ def test_briefing_producer_stages_complete_multiscope_visual_and_link_matrix(tmp
         scopes=("us", "kr"),
         reports={"us": {"markdown": "# US"}, "kr": {"markdown": "# KR"}},
         visuals={"us": {"snapshots": {"SPY": {"rows": [1]}}}, "kr": {"snapshots": {}}},
-        link={"summary": "linked"},
         terminal_result={
             "artifactId": "2026-07-18",
             "reportId": "2026-07-18",
@@ -79,10 +78,9 @@ def test_briefing_producer_stages_complete_multiscope_visual_and_link_matrix(tmp
     assert not (data_root / "briefings" / "2026-07-18.us.json").exists()
     producers.workspace.commit(bundle, store, lifecycle)
 
-    # Then: exact refs, paths, markers, optional gzip, and fresh link are durable.
+    # Then: exact refs, paths, markers, and the optional gzip are durable.
     assert [(item.storage.value, item.type, item.id) for item in bundle.intent.expectedArtifacts] == [
         ("gzip_json", "briefing_visual", "2026-07-18.us"),
-        ("json", "briefing_link", "2026-07-18"),
         ("json", "briefing_report", "2026-07-18.kr"),
         ("json", "briefing_report", "2026-07-18.us"),
     ]
@@ -93,7 +91,6 @@ def test_briefing_producer_stages_complete_multiscope_visual_and_link_matrix(tmp
     with gzip.open(data_root / "briefings" / "2026-07-18.us.visuals.json.gz", "rt", encoding="utf-8") as stream:
         assert json.load(stream)["jobCommit"]["operationId"] == bundle.operation_id
     assert not (data_root / "briefings" / "2026-07-18.kr.visuals.json.gz").exists()
-    assert _read(data_root / "briefings" / "2026-07-18.link.json")["summary"] == "linked"
 
 
 def test_company_overlay_and_quality_producers_preserve_revision_contract(tmp_path: Path) -> None:
@@ -277,7 +274,6 @@ def test_briefing_producer_rejects_unrequested_visual_metadata(tmp_path: Path) -
         scopes=("us",),
         reports={"us": {"markdown": "# US"}},
         visuals={"kr": {"snapshots": {"KOSPI": {"rows": [1]}}}},
-        link=None,
         terminal_result={"artifactId": "2026-07-18", "date": "2026-07-18"},
     )
 

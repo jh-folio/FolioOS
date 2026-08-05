@@ -133,7 +133,6 @@ def commit_json_output(
                     scopes=tuple(reports),
                     reports=reports,
                     visuals=prepared["visuals"],
-                    link=prepared["link"],
                     terminal_result=summary,
                 ),
             )

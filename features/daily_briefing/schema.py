@@ -29,14 +29,6 @@ SESSION_MODES_BY_SCOPE = {
     "europe": (EUROPE_SESSION_MODES, "europe_off_session"),
     "jp": (JP_SESSION_MODES, "jp_off_session"),
 }
-LINK_STATUSES = frozenset({
-    "connected",
-    "selectively_connected",
-    "decoupled",
-    "pending_time_lag",
-    "independent",
-    "insufficient_evidence",
-})
 FRESHNESS_STATUSES = frozenset({
     "live",
     "partial_live",
@@ -97,7 +89,13 @@ def briefing_file_name(date, market_scope=None):
 
 
 def briefing_link_file_name(date):
-    """Cross-market connection analysis sidecar for 종합(both) briefings."""
+    """Legacy cross-market sidecar name, kept only so deletion still finds it.
+
+    Connection analysis was removed: with a seven-driver taxonomy every market
+    shared every driver, so "common flows" grew while the differences — the part
+    that carried information — went blank. Sidecars saved before then stay on
+    disk; nothing reads them, and deleting a briefing still cleans them up.
+    """
     return f"{_scoped_file_stem(date)}.link.json"
 
 
@@ -291,10 +289,6 @@ def normalize_briefing_markdown_titles(
             count=1,
         )
     return text
-
-
-def normalize_link_status(value):
-    return _normalize_enum(value, LINK_STATUSES, "insufficient_evidence")
 
 
 def normalize_freshness(value):
@@ -523,8 +517,9 @@ def split_market_markdown(markdown, market_scope="both"):
         (key, rf"(?m)^#\s+{re.escape(label)}\b")
         for key, label in MARKET_TITLE_LABELS.items()
     ]
-    # 연결 분석 제목은 두 시장 시절 문구와 네 시장 문구를 모두 받는다.
-    patterns.append(("link", r"(?m)^##\s+(?:한미 시장 연결 요약|시장 간 연결 요약)\b"))
+    # 연결 분석 제목은 계속 인식한다. 더 만들지는 않지만, 예전 종합 응답을 다시
+    # 나눌 때 이 구획을 못 알아보면 그 본문이 앞 시장 섹션에 딸려 들어간다.
+    patterns.append(("link", r"(?m)^##\s+(?:한미 시장 연결 요약|한미 시장 연결 분석|시장 간 연결 요약)\b"))
     starts = []
     for key, pattern in patterns:
         match = re.search(pattern, text)
@@ -561,9 +556,8 @@ def merge_briefing_report(report, existing, market_scope="both"):
         if incoming_sections or scopes:
             merged["briefings"] = scopes
         if incoming_sections:
-            ordered = [scopes.get("us", {}).get("markdown", ""), scopes.get("kr", {}).get("markdown", "")]
-            link = scopes.get("link", {}).get("markdown", "")
-            merged["markdown"] = "\n\n---\n\n".join(part for part in ordered + [link] if part)
+            ordered = [scopes.get(key, {}).get("markdown", "") for key in SINGLE_MARKET_SCOPES]
+            merged["markdown"] = "\n\n---\n\n".join(part for part in ordered if part)
         target_market = scope.upper()
         for field in ("visualRecommendations", "visualSnapshots"):
             preserved = [

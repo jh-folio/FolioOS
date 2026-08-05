@@ -29,18 +29,15 @@ from features.common.research_schema.data_gaps import data_gaps_from_messages
 from features.common.utils import kst_date, now_iso, read_json, write_json
 from features.daily_briefing.issue_selection import (
     build_issue_coverage,
-    derive_link_status,
     doc_ref as issue_doc_ref,
     documents_for_scope,
     public_issue_coverage,
     session_modes_from_windows,
 )
-from features.daily_briefing.link_analysis import build_cross_market_analysis, build_link_analysis
 from features.daily_briefing.schema import (
     AGGREGATE_SCOPES,
     briefing_expected_titles,
     briefing_file_name,
-    briefing_link_file_name,
     briefing_scope_view,
     enrich_briefing_sections,
     merge_briefing_report,
@@ -64,7 +61,6 @@ from features.daily_briefing.service import (
     extract_prev_checklist,
     generate_llm_briefing,
     group_digest,
-    llm_enhance_link_analysis,
     llm_status_message,
     load_prev_briefing,
     news_documents,
@@ -381,39 +377,6 @@ def build_briefing(
         )
         for scope in requested_scopes
     }
-    # 사용자 요청(2026-06): '한미 시장 연결 요약'은 사용자에게 보여줄 필요가 없으므로 Canonical
-    # 본문에 추가하지 않는다. linkStatus는 디버깅/메타데이터로만 계속 계산해 저장한다.
-    link_status = "insufficient_evidence"
-    link_analysis = None
-    if market_scope in AGGREGATE_SCOPES and len(requested_scopes) > 1:
-        # 연결 분석은 각 시장 Canonical 본문을 바꾸지 않는 별도 레이어다(읽기 시 결합).
-        if market_scope == "both":
-            # 저장된 `both` 보고서 독자는 usOnlyDrivers/krOnlyDrivers와 예전 제목을
-            # 읽으므로 두 시장 경로는 그대로 둔다.
-            link_status = derive_link_status(
-                results["us"]["issueCoverageRaw"], results["kr"]["issueCoverageRaw"],
-            )
-            link_analysis = build_link_analysis(
-                results["us"], results["kr"],
-                market_windows=market_windows, market_tape=market_tape, link_status=link_status,
-            )
-        else:
-            link_analysis = build_cross_market_analysis(
-                results, market_windows=market_windows, market_tape=market_tape,
-                aggregate_scope=market_scope,
-            ) or {}
-            link_status = link_analysis.get("status") or link_status
-        # LLM이 켜져 있으면 규칙 초안을 심화한다. 실패/비활성/무효 출력이면 규칙 본문 유지.
-        enhanced_link = llm_enhance_link_analysis(
-            link_analysis, market_windows=market_windows,
-            llm_override=llm_override, web_search_override=web_search_override,
-        )
-        link_analysis = {
-            **link_analysis,
-            "llmEnhanced": bool(enhanced_link),
-            **({"markdown": enhanced_link} if enhanced_link else {}),
-        }
-
     markdown_parts = [results[scope]["markdown"] for scope in requested_scopes]
     markdown = "\n\n---\n\n".join(part for part in markdown_parts if part)
     sources = _merge_sources(results.values())
@@ -541,7 +504,6 @@ def build_briefing(
             "topDrivers": [driver.get("driver", "") for driver in scope_drivers[:4]],
             "sourceCount": len(sources), "issueCount": len(issue_coverage),
             "visualSnapshotCount": len(visual_result.get("visualSnapshots", [])),
-            "linkStatus": link_status,
             "koreaMarketDataOk": bool(korea_market_data.get("ok")) if isinstance(korea_market_data, dict) else False,
             **session_counts,
         },
@@ -592,11 +554,6 @@ def build_briefing(
                 "projectionStatus": projection.get("status"),
                 "invalidationToken": projection.get("invalidationToken") or (saved_reports[scope].get("changeIntelligence") or {}).get("invalidationToken"),
             }
-        if market_scope in AGGREGATE_SCOPES and link_analysis:
-            write_json(
-                BRIEFINGS_DIR / briefing_link_file_name(date),
-                {"date": date, "generatedAt": generated_at, **link_analysis},
-            )
         # 내러티브 누적은 통합 생성에서만 한다. 시장별 생성에서도 하면 같은 이슈가
         # 시장 수만큼 중복 적재된다.
         if market_scope in AGGREGATE_SCOPES:

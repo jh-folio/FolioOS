@@ -255,41 +255,26 @@ def test_resolve_briefing_prefers_per_market_file_then_legacy_scope():
         assert "legacy-kr" in kr["markdown"]
 
 
-def test_resolve_briefing_injects_combined_link_analysis():
+def test_a_saved_link_sidecar_is_no_longer_read_into_the_combined_view():
+    """Connection analysis was removed; a sidecar left on disk must stay inert."""
     from features.daily_briefing import service
 
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         _write_single_market_report(root / "2026-06-22.us.json", "2026-06-22", "us", "us-body")
         _write_single_market_report(root / "2026-06-22.kr.json", "2026-06-22", "kr", "kr-body")
-        (root / "2026-06-22.link.json").write_text(json.dumps({
-            "date": "2026-06-22",
-            "status": "connected",
-            "markdown": "## 한미 시장 연결 분석\n\n공통 흐름: AI 반도체",
-        }, ensure_ascii=False), encoding="utf-8")
-        with patch.object(service, "BRIEFINGS_DIR", root):
-            combined = service.resolve_briefing("2026-06-22", "both")
-
-        assert combined["marketScope"] == "both"
-        assert combined["linkAnalysis"]["status"] == "connected"
-        # Link analysis leads the combined view; both market bodies follow.
-        assert combined["markdown"].lstrip().startswith("## 한미 시장 연결 분석")
-        assert "us-body" in combined["markdown"]
-        assert "kr-body" in combined["markdown"]
-
-
-def test_resolve_briefing_without_link_file_has_no_link_analysis():
-    from features.daily_briefing import service
-
-    with TemporaryDirectory() as tmp:
-        root = Path(tmp)
-        _write_single_market_report(root / "2026-06-22.us.json", "2026-06-22", "us", "us-body")
-        _write_single_market_report(root / "2026-06-22.kr.json", "2026-06-22", "kr", "kr-body")
+        (root / "2026-06-22.link.json").write_text(
+            json.dumps({"date": "2026-06-22", "markdown": "## legacy link body"}, ensure_ascii=False),
+            encoding="utf-8",
+        )
         with patch.object(service, "BRIEFINGS_DIR", root):
             combined = service.resolve_briefing("2026-06-22", "both")
 
         assert combined.get("linkAnalysis") is None
-        assert "한미 시장 연결 분석" not in combined["markdown"]
+        assert "legacy link body" not in combined["markdown"]
+        assert "us-body" in combined["markdown"] and "kr-body" in combined["markdown"]
+        # 사용자 데이터는 지우지 않는다. 읽지 않을 뿐이다.
+        assert (root / "2026-06-22.link.json").exists()
 
 
 def test_resolve_briefing_backfills_missing_leading_company_visuals():

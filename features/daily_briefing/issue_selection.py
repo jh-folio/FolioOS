@@ -377,25 +377,6 @@ def session_modes_from_windows(market_windows):
     return legacy
 
 
-def derive_link_status(us_issues, kr_issues):
-    us_concepts = set()
-    kr_concepts = set()
-    for issue in us_issues or []:
-        for doc in issue.get("docs", []):
-            us_concepts.update(concepts_for_doc(doc))
-    for issue in kr_issues or []:
-        for doc in issue.get("docs", []):
-            kr_concepts.update(concepts_for_doc(doc))
-    shared = us_concepts & kr_concepts
-    if not us_issues or not kr_issues:
-        return "insufficient_evidence"
-    if len(shared) >= 2:
-        return "connected"
-    if shared:
-        return "selectively_connected"
-    return "independent"
-
-
 def select_diverse_documents(issues, market_windows, limit=24, per_publisher=4, minimum_publishers=5):
     candidates = []
     seen = set()

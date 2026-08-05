@@ -69,7 +69,7 @@ class JobJsonProducers:
         }
         decorated = BriefingJobRequest(
             date=request.date, scopes=request.scopes, reports=reports, visuals=request.visuals,
-            link=request.link, terminal_result=request.terminal_result,
+            terminal_result=request.terminal_result,
         )
         return self.workspace.stage(job, briefing_specs(self.data_root, decorated), terminal_result=request.terminal_result)
 

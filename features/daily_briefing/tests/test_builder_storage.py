@@ -41,7 +41,6 @@ def _build_patches(visuals):
         patch.object(builder, "list_briefing_memories", return_value=[]),
         patch.object(builder, "load_prev_briefing", return_value=None),
         patch.object(builder, "_scope_result", side_effect=lambda scope, *args, **kwargs: _scope_result(scope)),
-        patch.object(builder, "derive_link_status", return_value="insufficient_evidence"),
         patch.object(builder, "leading_company_subjects_from_markdown", return_value=[]),
         patch.object(builder, "collect_briefing_visuals", return_value=visuals),
         patch.object(builder, "session_doc_counts", return_value={}),
@@ -116,11 +115,8 @@ def test_build_briefing_persists_per_market_reports_and_sidecars():
         assert (root / "2026-06-20.us.visuals.json.gz").exists()
         assert (root / "2026-06-20.kr.visuals.json.gz").exists()
 
-        # 종합(both) generation writes a separate cross-market link analysis sidecar.
-        assert (root / "2026-06-20.link.json").exists()
-        link = json.loads((root / "2026-06-20.link.json").read_text(encoding="utf-8"))
-        assert link["markdown"].lstrip().startswith("## 한미 시장 연결 분석")
-        assert link["date"] == "2026-06-20"
+        # 연결 분석은 제거됐다. 통합 생성이 더 이상 사이드카를 만들지 않는다.
+        assert not (root / "2026-06-20.link.json").exists()
 
 
 def test_single_market_regeneration_preserves_sibling_and_marks_overlay_stale():

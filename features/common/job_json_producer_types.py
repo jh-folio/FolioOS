@@ -13,10 +13,9 @@ type TerminalResult = dict[str, str | int | bool | None]
 @dataclass(frozen=True, slots=True)
 class BriefingJobRequest:
     date: str
-    scopes: tuple[Literal["us", "kr"], ...]
+    scopes: tuple[Literal["us", "kr", "europe", "jp"], ...]
     reports: dict[str, dict[str, JsonValue]]
     visuals: dict[str, dict[str, JsonValue]]
-    link: dict[str, JsonValue] | None
     terminal_result: TerminalResult
 
 

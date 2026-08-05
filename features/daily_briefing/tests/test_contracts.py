@@ -25,7 +25,6 @@ from features.daily_briefing.schema import (
     FRESHNESS_STATUSES,
     JP_SESSION_MODES,
     KR_SESSION_MODES,
-    LINK_STATUSES,
     MARKET_IMPACT_STATUSES,
     MARKET_SCOPES,
     US_SESSION_MODES,
@@ -42,7 +41,6 @@ from features.daily_briefing.schema import (
     normalize_briefing_type,
     normalize_freshness,
     normalize_kr_session_mode,
-    normalize_link_status,
     normalize_market_impact_status,
     normalize_market_scope,
     normalize_session_mode,
@@ -125,7 +123,6 @@ def test_v2_enums_are_closed_and_normalized_in_code():
     assert normalize_briefing_type("market_focused") == "market_focused"
     assert normalize_us_session_mode("bad") == "us_off_session"
     assert normalize_kr_session_mode("bad") == "kr_off_session"
-    assert normalize_link_status("bad") == "insufficient_evidence"
     assert normalize_freshness("bad") == "unavailable"
     assert normalize_body_availability("bad") == "headline_only"
     assert normalize_market_impact_status("bad") == "unavailable"
@@ -135,7 +132,6 @@ def test_v2_enums_are_closed_and_normalized_in_code():
     assert "jp_intraday" in JP_SESSION_MODES
     assert normalize_session_mode("europe", "bad") == "europe_off_session"
     assert normalize_session_mode("jp", "bad") == "jp_off_session"
-    assert "selectively_connected" in LINK_STATUSES
     assert "partial_live" in FRESHNESS_STATUSES
     assert BODY_AVAILABILITY == {"full", "summary_only", "headline_only"}
     assert MARKET_IMPACT_STATUSES == {"measured", "partial", "unavailable"}

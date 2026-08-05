@@ -85,7 +85,6 @@ from features.market_memory.snapshot import (
     save_market_state_snapshot,
     validate_market_state_snapshot,
 )
-from features.daily_briefing.link_analysis import build_link_analysis
 from features.company_analysis.service import (
     ANALYSIS_REPORTS_DIR,
     build_company_analysis_charts,
@@ -535,25 +534,14 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
 
     if len(requested_scopes) == 1:
         result = saved_reports.get(requested_scopes[0], briefing)
-        link = None
     else:
         briefing["briefings"] = {
             scope: saved_reports[scope] for scope in requested_scopes if scope in saved_reports
         }
         result = briefing_scope_view(briefing, market_scope)
-        link = {
-            "date": date,
-            "generatedAt": draft.get("generatedAt", ""),
-            **build_link_analysis(
-                saved_reports["us"],
-                saved_reports["kr"],
-                market_windows=briefing.get("marketWindows"),
-                market_tape=briefing.get("marketTape"),
-            ),
-        }
     if persist:
         return result
-    return {"result": result, "reports": saved_reports, "visuals": visuals, "link": link}
+    return {"result": result, "reports": saved_reports, "visuals": visuals}
 
 
 def prepare_company_analysis_pack(query: str, *, quality_mode="diagnose_only", web_search=False, analysis_style="beginner", owner_job_id: str | None = None) -> tuple[dict, Path]:
