@@ -15,6 +15,7 @@ from features.common.company_lookup import (
     sec_company_lookup,
 )
 from features.common.dataframe_ops import top_records
+from features.common.instruments.registry import exchange_suffix
 from features.investment_notes.checkpoints import project_checkpoint_notes
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -311,6 +312,13 @@ def _item_matches_company(query: str, company: dict) -> bool:
     return q in name or name in q or (ticker and q == ticker)
 
 
+TRADINGVIEW_SUFFIX_EXCHANGES = {
+    ".KS": "KRX", ".KQ": "KRX",
+    ".L": "LSE", ".DE": "XETR", ".PA": "EURONEXT", ".AS": "EURONEXT", ".MI": "MIL", ".MC": "BME",
+    ".T": "TSE",
+}
+
+
 def tradingview_symbol_for_company(company: dict) -> str:
     ticker = str((company or {}).get("ticker") or "").strip().upper().replace(".", "-")
     if not ticker:
@@ -366,6 +374,13 @@ def tradingview_symbol_for_query(query: str) -> str:
         return upper
     if re.fullmatch(r"\d{6}(?:\.(KS|KQ))?", upper):
         return f"KRX:{upper[:6]}"
+    suffix = exchange_suffix(upper)
+    if suffix:
+        # A Tokyo or London listing is not a NASDAQ share class. Sending "ASML.AS"
+        # through the US branch produced "NASDAQ:ASML-AS", a symbol that does not
+        # exist, and the chart widget rendered empty with no explanation.
+        exchange = TRADINGVIEW_SUFFIX_EXCHANGES.get(suffix, "")
+        return f"{exchange}:{upper[: -len(suffix)]}" if exchange else ""
     if re.fullmatch(r"[A-Z]{1,6}(?:[.-][A-Z]{1,3})?", upper):
         return f"NASDAQ:{upper.replace('.', '-')}"
     return ""

@@ -50,8 +50,56 @@ _SUFFIX_MARKETS = tuple(
 )
 
 
+_SUFFIX_CURRENCIES = {
+    ".KS": "KRW", ".KQ": "KRW",
+    ".L": "GBP", ".DE": "EUR", ".PA": "EUR", ".AS": "EUR", ".MI": "EUR", ".MC": "EUR",
+    ".T": "JPY",
+}
+
+# Yahoo quotes some venues in a minor unit. London prints pence, not pounds, so a
+# 3280.5 GBp Shell quote is £32.805 — reading it as GBP overstates the position by
+# 100x once it is converted. The scale belongs with the quote, never with the FX rate.
+_MINOR_UNITS = {"GBP": ("GBP", 0.01), "ILA": ("ILS", 0.01), "ZAC": ("ZAR", 0.01)}
+
+
 def _upper(value: object) -> str:
     return unicodedata.normalize("NFKC", str(value or "")).strip().upper()
+
+
+def quote_currency(value: object) -> tuple[str, float]:
+    """Return the ISO currency a provider quote is in and the scale to reach it.
+
+    ``("GBp", ...)`` is pence: the code is GBP and the scale is 0.01. Case matters
+    on the way in — "GBP" and "GBp" are different units — so this does not upper
+    the input before testing it.
+    """
+    raw = unicodedata.normalize("NFKC", str(value or "")).strip()
+    if not raw:
+        return "", 1.0
+    if raw.isupper():
+        return raw, 1.0
+    minor = _MINOR_UNITS.get(raw.upper())
+    if minor and raw != raw.upper():
+        return minor
+    return raw.upper(), 1.0
+
+
+def exchange_suffix(ticker: object) -> str:
+    """Return the exchange suffix a provider symbol carries, else ""."""
+    symbol = _upper(ticker)
+    for suffix, _market in _SUFFIX_MARKETS:
+        if symbol.endswith(suffix) and len(symbol) > len(suffix):
+            return suffix
+    return ""
+
+
+def suffix_currency(ticker: object) -> str:
+    """Return the currency implied by a provider symbol's exchange suffix, else ""."""
+    symbol = _upper(ticker)
+    for suffix, currency in sorted(_SUFFIX_CURRENCIES.items(), key=lambda row: len(row[0]), reverse=True):
+        if symbol.endswith(suffix):
+            return currency
+    return ""
 
 
 def normalize_exchange(value: object) -> str:

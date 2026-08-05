@@ -12,6 +12,8 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from features.common.dataframe_ops import aggregate_portfolio
+from features.common.instruments.registry import exchange_suffix, infer_market, quote_currency, suffix_currency
+from features.common.markets import MarketCode
 from features.common.utils import now_iso, kst_date, read_json, write_json
 from features.portfolio.schema import expected_revision as parse_expected_revision, portfolio_document
 
@@ -54,6 +56,11 @@ def _coerce_float(value, default=None):
 # Symbol and market inference
 # ---------------------------------------------------------------------------
 
+# A trailing dot means one of two different things. ``BRK.B`` is a US share class,
+# which Yahoo writes ``BRK-B``; ``7203.T`` is the Tokyo listing, which Yahoo writes
+# with the dot intact. Rewriting the second like the first asks for ``7203-T``,
+# which does not exist, and the lookup then falls through to a US/USD default — a
+# Toyota holding priced as if it were American.
 def portfolio_symbol(ticker: str, market: str = "") -> str:
     raw = str(ticker or "").strip().upper()
     market = str(market or "").strip().upper()
@@ -61,6 +68,8 @@ def portfolio_symbol(ticker: str, market: str = "") -> str:
         return ""
     if re.fullmatch(r"\d{6}", raw):
         return f"{raw}.KQ" if market == "KQ" else f"{raw}.KS"
+    if exchange_suffix(raw):
+        return raw
     return raw.replace(".", "-")
 
 
@@ -72,20 +81,44 @@ def portfolio_symbol_candidates(ticker: str, market: str = "") -> list:
     if re.fullmatch(r"\d{6}", raw):
         primary = f"{raw}.KQ" if market == "KQ" else f"{raw}.KS"
         candidates = [primary, f"{raw}.KS", f"{raw}.KQ"]
+    elif exchange_suffix(raw):
+        # ".L" and ".T" are also plausible US share classes, so keep the dash form
+        # as a second try rather than deciding which reading is right up front.
+        candidates = [raw, raw.replace(".", "-")]
     else:
         candidates = [raw.replace(".", "-")]
     seen = set()
     return [item for item in candidates if not (item in seen or seen.add(item))]
 
 
+_EXCHANGE_MARKET_HINTS = (
+    ("KR", ("KOREA", "KOSDAQ", "KSC", "KRX", "KOE")),
+    ("US", ("NYSE", "NASDAQ", "NMS", "AMEX", "PCX", "NGM", "NCM", "BATS")),
+    ("JP", ("JPX", "TOKYO", "TSE", "OSA")),
+    ("EUROPE", ("LSE", "LON", "XETRA", "GER", "FRA", "AMS", "PAR", "MIL", "MCE", "EBS", "BRU", "LIS", "VIE", "STO", "CPH", "OSL", "HEL", "EURONEXT")),
+)
+
+
 def infer_portfolio_market(symbol: str, info=None) -> str:
     symbol = str(symbol or "").upper()
     exchange = str((info or {}).get("exchange") or (info or {}).get("fullExchangeName") or "").upper()
-    if symbol.endswith((".KS", ".KQ")) or "KOREA" in exchange or "KOSDAQ" in exchange or "KSC" in exchange:
-        return "KR"
-    if "NYSE" in exchange or "NASDAQ" in exchange or "NMS" in exchange or "AMEX" in exchange or "PCX" in exchange:
-        return "US"
+    if exchange:
+        for market, hints in _EXCHANGE_MARKET_HINTS:
+            if any(hint in exchange for hint in hints):
+                return market
+    inferred = infer_market(symbol)
+    if inferred is not MarketCode.UNKNOWN:
+        return inferred.value
     return "KR" if re.match(r"^\d{6}", symbol) else "US"
+
+
+def fallback_currency(symbol: str) -> str:
+    """Currency to assume when the provider did not report one.
+
+    Falls back to USD only for symbols that actually look American. A Tokyo or
+    London symbol gets its own currency instead of being valued as dollars.
+    """
+    return suffix_currency(symbol) or ("KRW" if re.match(r"^\d{6}", str(symbol or "")) else "USD")
 
 
 ETF_SECTOR_MAP: dict[str, str] = {
@@ -201,7 +234,7 @@ def resolve_portfolio_ticker(ticker: str, market: str = "") -> dict:
             except Exception:
                 info = {}
             name = str(info.get("shortName") or info.get("longName") or info.get("displayName") or "").strip()
-            currency = str(info.get("currency") or ("KRW" if symbol.endswith((".KS", ".KQ")) else "USD")).upper()
+            currency, quote_scale = quote_currency(info.get("currency") or fallback_currency(symbol))
             price = None
             previous = None
             for field in ("last_price", "lastPrice", "currentPrice", "regularMarketPrice"):
@@ -244,8 +277,8 @@ def resolve_portfolio_ticker(ticker: str, market: str = "") -> dict:
                     "country": str(info.get("country") or ""),
                     "exchange": str(info.get("exchange") or info.get("fullExchangeName") or ""),
                     "quoteType": str(info.get("quoteType") or ""),
-                    "price": price,
-                    "previousClose": previous,
+                    "price": price if price is None else price * quote_scale,
+                    "previousClose": previous if previous is None else previous * quote_scale,
                 }
     except Exception:
         return {
@@ -254,7 +287,7 @@ def resolve_portfolio_ticker(ticker: str, market: str = "") -> dict:
             "symbol": fallback_symbol,
             "name": raw,
             "market": "KR" if re.fullmatch(r"\d{6}", raw) else "US",
-            "currency": "KRW" if re.fullmatch(r"\d{6}", raw) else "USD",
+            "currency": fallback_currency(fallback_symbol),
             "assetClass": "Unknown",
             "sector": "Unclassified",
             "error": "quote_provider_unavailable",
@@ -265,7 +298,7 @@ def resolve_portfolio_ticker(ticker: str, market: str = "") -> dict:
         "symbol": fallback_symbol,
         "name": raw,
         "market": "KR" if re.fullmatch(r"\d{6}", raw) else "US",
-        "currency": "KRW" if re.fullmatch(r"\d{6}", raw) else "USD",
+        "currency": fallback_currency(fallback_symbol),
         "assetClass": "Unknown",
         "sector": "Unclassified",
         "error": "no ticker match",
@@ -285,7 +318,7 @@ def _portfolio_suggestion_from_quote(quote: dict, fallback_query: str = ""):
         "exchange": quote.get("exchange") or quote.get("exchDisp") or "",
         "fullExchangeName": quote.get("exchDisp") or quote.get("exchange") or "",
         "shortName": name,
-        "currency": quote.get("currency") or ("KRW" if symbol.endswith((".KS", ".KQ")) else "USD"),
+        "currency": quote.get("currency") or fallback_currency(symbol),
         "sector": quote.get("sector") or "",
         "industry": quote.get("industry") or "",
     }
@@ -295,7 +328,7 @@ def _portfolio_suggestion_from_quote(quote: dict, fallback_query: str = ""):
         "symbol": symbol,
         "name": name or symbol,
         "market": infer_portfolio_market(symbol, info),
-        "currency": str(info.get("currency") or "").upper() or ("KRW" if symbol.endswith((".KS", ".KQ")) else "USD"),
+        "currency": str(info.get("currency") or "").upper() or fallback_currency(symbol),
         "assetClass": infer_portfolio_asset_class(info, symbol),
         "sector": str(info.get("sector") or "Unclassified"),
         "industry": str(info.get("industry") or ""),
@@ -503,10 +536,11 @@ def _quote_from_yahoo_chart(symbol: str):
             previous = _coerce_float(closes[-2])
         if price is None:
             return None
+        currency, scale = quote_currency(meta.get("currency") or fallback_currency(symbol))
         return {
-            "price": price,
-            "previousClose": previous,
-            "currency": str(meta.get("currency") or ("KRW" if symbol.endswith((".KS", ".KQ")) else "USD")).upper(),
+            "price": price * scale,
+            "previousClose": previous if previous is None else previous * scale,
+            "currency": currency,
             "exchange": str(meta.get("exchangeName") or ""),
         }
     except Exception:
@@ -533,7 +567,10 @@ def fetch_portfolio_quote(position):
         info = {}
         price = None
         previous = None
-        currency = position.get("currency") or ("KRW" if symbol.endswith((".KS", ".KQ")) else "USD")
+        # `scale` converts a minor-unit quote (London pence) to its major unit. It is
+        # applied once at the end so the history and chart fallbacks below, which read
+        # the same pence figures, are covered too.
+        currency, scale = quote_currency(position.get("currency") or fallback_currency(symbol))
         if yf:
             try:
                 stock = yf.Ticker(symbol)
@@ -551,7 +588,7 @@ def fetch_portfolio_quote(position):
                     "last_price", "lastPrice", "currentPrice", "regularMarketPrice", "navPrice", "open", "previousClose",
                 )
                 previous = _pick_quote_value(fast, info, "previous_close", "previousClose", "regularMarketPreviousClose")
-                currency = str(info.get("currency") or currency).upper()
+                currency, scale = quote_currency(info.get("currency") or currency)
                 if price is None:
                     try:
                         hist = stock.history(period="1mo", interval="1d", auto_adjust=False, actions=False)
@@ -567,7 +604,11 @@ def fetch_portfolio_quote(position):
                         errors.append(f"{symbol} history_unavailable")
             except Exception:
                 errors.append(f"{symbol}: quote_unavailable")
+        if scale != 1.0:
+            price = price if price is None else price * scale
+            previous = previous if previous is None else previous * scale
         if price is None:
+            # The chart helper already normalizes its own quote, so nothing to scale.
             chart = _quote_from_yahoo_chart(symbol)
             if chart:
                 price = chart.get("price")
@@ -975,37 +1016,65 @@ def _download_adjusted_close(symbol: str, start: str, end: str):
 
 
 def _fx_symbol_for_currency(currency: str):
+    """Yahoo's ``XXX=X`` is uniformly USD/XXX — units of XXX per one dollar."""
     currency = str(currency or "USD").upper()
-    if currency == "USD":
-        return None
-    if currency == "KRW":
-        return "KRW=X"
-    return f"{currency}=X"
+    return None if currency == "USD" else f"{currency}=X"
 
 
-def _convert_price_series(series, currency: str, base_currency: str, fx_series=None):
+def _benchmark_currency_hint(ticker: str) -> str:
+    """Best guess at a benchmark's currency before it is resolved, for FX prefetch."""
+    return fallback_currency(portfolio_symbol(ticker))
+
+
+def _fx_series_for_currencies(currencies, start, end) -> dict:
+    """Daily USD/XXX series for each non-dollar currency in play."""
+    rates = {}
+    for currency in sorted({str(item or "USD").upper() for item in currencies}):
+        symbol = _fx_symbol_for_currency(currency)
+        if not symbol:
+            continue
+        series, _source = _download_adjusted_close(symbol, start, end)
+        if series:
+            rates[currency] = series
+    return rates
+
+
+def _convert_price_series(series, currency: str, base_currency: str, fx_by_currency=None):
+    """Restate a price series in the base currency, routed through USD.
+
+    Every leg is a USD/XXX rate, so a foreign price divides into dollars and a
+    dollar price multiplies into a foreign base. The old version only knew the
+    KRW and USD pair and passed anything else through untouched, which let a JPY
+    backtest run on yen figures labelled as dollars — off by about 150x with no
+    warning. A currency whose rate could not be fetched now yields nothing rather
+    than an unconverted number.
+    """
     currency = str(currency or "USD").upper()
     base_currency = str(base_currency or "USD").upper()
     if currency == base_currency:
         return dict(series)
-    fx_series = fx_series or {}
+    fx_by_currency = fx_by_currency or {}
+    from_series = fx_by_currency.get(currency) if currency != "USD" else {}
+    into_series = fx_by_currency.get(base_currency) if base_currency != "USD" else {}
+    if (currency != "USD" and not from_series) or (base_currency != "USD" and not into_series):
+        return {}
     converted = {}
-    last_fx = None
+    last_from = None
+    last_into = None
     for date in sorted(series.keys()):
-        fx = _coerce_float(fx_series.get(date), None)
-        if fx is not None and fx > 0:
-            last_fx = fx
-        if last_fx is None:
+        from_rate = _coerce_float((from_series or {}).get(date), None)
+        if from_rate is not None and from_rate > 0:
+            last_from = from_rate
+        into_rate = _coerce_float((into_series or {}).get(date), None)
+        if into_rate is not None and into_rate > 0:
+            last_into = into_rate
+        if (currency != "USD" and last_from is None) or (base_currency != "USD" and last_into is None):
             continue
         price = _coerce_float(series.get(date), None)
         if price is None:
             continue
-        if currency == "KRW" and base_currency == "USD":
-            converted[date] = price / last_fx
-        elif currency == "USD" and base_currency == "KRW":
-            converted[date] = price * last_fx
-        else:
-            converted[date] = price
+        usd = price if currency == "USD" else price / last_from
+        converted[date] = usd if base_currency == "USD" else usd * last_into
     return converted
 
 
@@ -1407,10 +1476,13 @@ def run_portfolio_backtest(body, save_result=False):
     positions = [row for row in positions if row.get("ticker") and row.get("weight") > 0]
     if not positions:
         raise HTTPException(status_code=400, detail="Preset has no weighted positions")
-    fx_series = {}
-    if any(row.get("currency") != base_currency for row in positions) or benchmark_ticker.endswith((".KS", ".KQ")) != (base_currency == "KRW"):
-        fx_symbol = "KRW=X"
-        fx_series, _ = _download_adjusted_close(fx_symbol, start, end)
+    # Every currency in the run needs its own rate. A single KRW=X series left a
+    # Tokyo or Amsterdam position with nothing to convert against.
+    fx_series = _fx_series_for_currencies(
+        [base_currency, *(row.get("currency") for row in positions), _benchmark_currency_hint(benchmark_ticker)],
+        start,
+        end,
+    )
     asset_series = []
     sources = []
     for row in positions:
@@ -1430,8 +1502,11 @@ def run_portfolio_backtest(body, save_result=False):
     if benchmark_ticker:
         resolved_benchmark = resolve_portfolio_ticker(benchmark_ticker)
         benchmark_symbol = resolved_benchmark.get("symbol") or portfolio_symbol(benchmark_ticker)
-        benchmark_currency = resolved_benchmark.get("currency") or ("KRW" if benchmark_symbol.endswith((".KS", ".KQ")) else "USD")
+        benchmark_currency = resolved_benchmark.get("currency") or fallback_currency(benchmark_symbol)
         raw_benchmark, source = _download_adjusted_close(benchmark_symbol, start, end)
+        if benchmark_currency not in {"USD", base_currency} and benchmark_currency not in fx_series:
+            # The prefetch guessed from the ticker; the resolved currency can differ.
+            fx_series.update(_fx_series_for_currencies([benchmark_currency], start, end))
         converted_benchmark = _convert_price_series(raw_benchmark, benchmark_currency, base_currency, fx_series)
         benchmark_rows = _aligned_price_rows([{"symbol": benchmark_symbol, "series": converted_benchmark}])
         benchmark_values = _run_weight_backtest(benchmark_rows, {benchmark_symbol: 1.0}, initial_value, "none")

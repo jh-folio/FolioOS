@@ -22,7 +22,7 @@ export function HoldingsTable({ positions, onChange }: { positions: PositionDraf
               <td><input aria-label={`${index + 1}번 종목`} value={row.ticker} onChange={(event) => update(index, "ticker", event.currentTarget.value.toUpperCase())} placeholder="NVDA / 005930" /></td>
               <td><input aria-label={`${row.ticker || index + 1} 수량`} value={row.quantity} onChange={(event) => update(index, "quantity", event.currentTarget.value)} inputMode="decimal" /></td>
               <td><input aria-label={`${row.ticker || index + 1} 평균단가`} value={row.averagePrice ?? ""} onChange={(event) => update(index, "averagePrice", event.currentTarget.value)} inputMode="decimal" /></td>
-              <td><input aria-label={`${row.ticker || index + 1} 시장`} value={row.market || ""} onChange={(event) => update(index, "market", event.currentTarget.value.toUpperCase())} placeholder="US / KR" /></td>
+              <td><input aria-label={`${row.ticker || index + 1} 시장`} value={row.market || ""} onChange={(event) => update(index, "market", event.currentTarget.value.toUpperCase())} placeholder="US / KR / EUROPE / JP" /></td>
               <td><button type="button" className="filter-btn clear" onClick={() => onChange(positions.filter((_, rowIndex) => rowIndex !== index))}>삭제</button></td>
             </tr>
           ))}

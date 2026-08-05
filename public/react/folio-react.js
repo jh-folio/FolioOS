@@ -15507,7 +15507,7 @@ function os({ positions: e, onChange: t }) {
 					"aria-label": `${r.ticker || i + 1} 시장`,
 					value: r.market || "",
 					onChange: (e) => n(i, "market", e.currentTarget.value.toUpperCase()),
-					placeholder: "US / KR"
+					placeholder: "US / KR / EUROPE / JP"
 				}) }),
 				/* @__PURE__ */ (0, x.jsx)("td", { children: /* @__PURE__ */ (0, x.jsx)("button", {
 					type: "button",
