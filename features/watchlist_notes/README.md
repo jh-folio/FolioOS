@@ -28,6 +28,8 @@ data/notes/notes.json
 
 `watchlist_overview()`는 워치리스트 항목별 관련 기사를 검색해 태그를 집계합니다. 탭의 카드에는 요약만 표시하고, 사용자가 항목을 클릭하면 `watchlist_detail()` 결과를 팝업으로 열어 회사 정보, TradingView 위젯, 수집 뉴스를 함께 보여줍니다. 태그 노이즈를 줄이기 위해 여러 단계의 필터를 적용합니다.
 
+TradingView 심볼은 `tradingview_symbol_for_query()`가 만든다. 6자리 숫자는 `KRX:`, 거래소 접미사가 붙은 티커는 그 거래소(`7203.T` → `TSE:7203`, `ASML.AS` → `EURONEXT:ASML`, `SHEL.L` → `LSE:SHEL`), 나머지는 `NASDAQ:`을 붙인다. 예전에는 접미사도 미국 종류주처럼 다뤄 `NASDAQ:ASML-AS` 같은 없는 심볼을 만들었고, 위젯이 아무 설명 없이 비어 보였다.
+
 관심 종목 관리는 카드 한 곳에서 한다. 키워드를 추가하면 즉시 저장되고 카드가 나타나며, 삭제는 카드 우상단의 삭제 버튼으로 한다(별도 키워드 칩 목록은 두지 않는다). 카드 좌측 강조색과 밝은 표면은 브리핑 목록 카드와 같은 시각 규격을 공유한다.
 
 ## Investment Context와 checkpoint (0.2.3)

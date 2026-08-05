@@ -8,7 +8,7 @@ cockpit payload의 변화 이벤트는 `major_change | developing_signal | confl
 
 `POST /api/dashboard/settings`는 기존 저장값과 merge 후 정규화합니다(부분 갱신이 다른 키를 초기화하지 않음). 저장 키: `dashboardMode`, `calendarView`, `calendarKind`, `calendarMarket`, `calendarWatchlistOnly`, `chartRange`, `chartSymbol`.
 
-API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`, `GET /api/dashboard/story-share?market=us|kr`. 기존 `GET /api/dashboard`는 그대로 유지합니다.
+API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`, `GET /api/dashboard/story-share?market=us|kr|europe|jp`. 기존 `GET /api/dashboard`는 그대로 유지합니다.
 
 ## 오늘의 이야기 비중 (story_share.py)
 
@@ -16,6 +16,8 @@ API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`, `GET /api
 
 - 브리핑과 독립: 브리핑을 생성하지 않아도 계산되고, 브리핑용 상한 잘린 선별본이 아니라 그날 문서 전체(`select_briefing_docs(strict=True)`)를 씁니다. strict를 쓰는 이유는 두 날짜를 같은 잣대로 비교하기 위해서입니다(비-strict는 pool을 오늘까지 확장해 직전 거래일 계산을 오염시킴).
 - 비중 이동은 보도량 변화일 뿐 내용 변화가 아니라는 경고 문장을 UI에 고정합니다. 내용 판정은 Change Intelligence의 의미 비교가 담당합니다.
+- 네 시장(US/KR/EUROPE/JP)을 지원하며 시장 목록은 `PRODUCT_MARKETS`에서 파생합니다.
+- 표본이 작으면 비중과 %p 델타가 기사 몇 건에 좌우되므로, 문서가 `MIN_CONFIDENT_SAMPLE`(12건) 미만이면 `smallSample` 경고를 붙여 화면에 표본 수를 함께 표시합니다. 유럽·일본은 수집량이 미국·한국보다 적어 이 경로에 자주 들어갑니다.
 - 응답은 (date, market) 키로 10분 캐시하고 RSS 수집 완료 시 `invalidate_story_share_cache()`로 비웁니다.
 
 ## 내용의 변화 카드
