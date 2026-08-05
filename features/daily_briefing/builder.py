@@ -6,8 +6,10 @@ generation, persistence and scope merging live here.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from copy import deepcopy
 import datetime as dt
+import time
 from pathlib import Path
 
 from features.common.canonical_identity import ReportKind
@@ -156,6 +158,44 @@ def _headlines(groups):
             ],
         })
     return rows
+
+
+# 시장 하나가 늦어도 나머지가 끝나야 한다. 순차 실행이면 네 시장은 기준선의 4배가
+# 되고, 한 시장의 provider 지연이 나머지 셋을 통째로 막는다.
+MARKET_GENERATION_TIMEOUT_SECONDS = 900
+
+
+def generate_scope_results(scopes, build_one, *, timeout=None):
+    """Generate each market concurrently, returning whatever finished in time.
+
+    The work is network-bound (an LLM call per market), so threads overlap the
+    waiting. A market that raises or runs past the deadline is dropped and named
+    in the warnings rather than failing the whole run — partial coverage is
+    already a first-class result, recorded in `includedMarkets`.
+
+    Python cannot kill a running thread, so a straggler keeps going in the
+    background and its result is discarded. The pool is shut down without
+    waiting; blocking on it would give back exactly the time the timeout saved.
+    """
+    scopes = list(scopes)
+    if len(scopes) <= 1:
+        return ({scope: build_one(scope) for scope in scopes}, [])
+
+    deadline = time.monotonic() + (timeout or MARKET_GENERATION_TIMEOUT_SECONDS)
+    pool = ThreadPoolExecutor(max_workers=len(scopes), thread_name_prefix="briefing")
+    futures = {scope: pool.submit(build_one, scope) for scope in scopes}
+    results, warnings = {}, []
+    try:
+        for scope, future in futures.items():
+            try:
+                results[scope] = future.result(timeout=max(0.0, deadline - time.monotonic()))
+            except FuturesTimeout:
+                warnings.append(f"{scope}: 생성 시간이 초과되어 이 시장은 빠졌습니다.")
+            except Exception as exc:
+                warnings.append(f"{scope}: 생성에 실패해 이 시장은 빠졌습니다({type(exc).__name__}).")
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
+    return results, warnings
 
 
 def _scope_session_date(scope, market_windows):
@@ -384,13 +424,16 @@ def build_briefing(
     prev_checklist = extract_prev_checklist((prev_briefing or {}).get("markdown", ""))
 
     requested_scopes = list(requested_markets)
-    results = {
-        scope: _scope_result(
+    results, scope_warnings = generate_scope_results(
+        requested_scopes,
+        lambda scope: _scope_result(
             scope, briefing_type, date, source_date, docs, market_windows, market_snapshot, korea_market_data,
             memories, prev_checklist, quality_preflight, web_search_override, llm_override,
-        )
-        for scope in requested_scopes
-    }
+        ),
+    )
+    if not results:
+        raise RuntimeError("no market briefing could be generated")
+    requested_scopes = [scope for scope in requested_scopes if scope in results]
     markdown_parts = [results[scope]["markdown"] for scope in requested_scopes]
     markdown = "\n\n---\n\n".join(part for part in markdown_parts if part)
     sources = _merge_sources(results.values())
@@ -450,6 +493,8 @@ def build_briefing(
     for issue in issue_coverage:
         if issue.get("marketImpactStatus") == "unavailable":
             gaps.append(f"{issue.get('market', '')} issue {issue.get('issueId', '')}: 시장 반응 데이터가 없습니다.")
+    # 시장이 통째로 빠진 것은 시각자료 결함보다 큰 공백이라 먼저 적는다.
+    gaps.extend(f"시장 생성: {warning}" for warning in scope_warnings)
     gaps.extend(f"시각자료: {warning}" for warning in visual_result.get("warnings", []))
     for snapshot in visual_result.get("visualSnapshots", []):
         gaps.extend(f"시각자료 {snapshot.get('id', '')}: {warning}" for warning in snapshot.get("warnings", []))
@@ -584,11 +629,14 @@ def build_briefing(
             # 생성 응답도 읽기 경로와 같은 커버리지 계약을 들고 나간다. 생성 직후
             # 화면에 그리는 클라이언트가 어느 시장이 빠졌는지 알 수 없으면 안 된다.
             briefing["includedMarkets"] = [scope.upper() for scope in written]
-            briefing["expectedMarkets"] = [scope.upper() for scope in requested_scopes]
-            if len(written) < len(requested_scopes):
-                missing = [s.upper() for s in requested_scopes if s not in saved_reports]
+            # 요청 집합은 생성 실패로 줄어들지 않는다. 줄이면 넷을 요청했는데
+            # 셋만 요청했다고 말하게 되고, 빠진 시장이 보이지 않는다.
+            briefing["expectedMarkets"] = [scope.upper() for scope in requested_markets]
+            if len(written) < len(requested_markets):
+                missing = [s.upper() for s in requested_markets if s not in saved_reports]
                 briefing["coverageWarnings"] = [
-                    f"요청한 {len(requested_scopes)}개 시장 중 {', '.join(missing)} 브리핑이 생성되지 않았습니다."
+                    f"요청한 {len(requested_markets)}개 시장 중 {', '.join(missing)} 브리핑이 생성되지 않았습니다.",
+                    *scope_warnings,
                 ]
     return briefing_scope_view(briefing, market_scope)
 
