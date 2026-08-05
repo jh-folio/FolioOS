@@ -208,3 +208,55 @@ def test_the_ifrs_table_is_not_a_copy_of_the_us_gaap_one():
     # IFRS는 concept 이름 체계가 달라 기존 표를 재사용할 수 없다.
     assert IFRS_METRIC_CANDIDATES["Revenue"] != METRIC_CANDIDATES["Revenue"]
     assert IFRS_METRIC_CANDIDATES["Total Assets"] == METRIC_CANDIDATES["Total Assets"]  # 겹치는 것도 있다
+
+
+# --- report currency ----------------------------------------------------
+
+
+def test_the_financial_table_reports_in_the_filers_currency():
+    from features.company_analysis.report_rules import build_financial_table
+
+    sec = {"ok": True, "currency": "EUR", "rows": [
+        {"metric": "Revenue", "annual": [{"end": "2025-12-31", "val": 36_800_000_000}]},
+    ]}
+    table = build_financial_table(sec, None)
+    assert "€36.80B" in table
+    assert "$36.80B" not in table
+
+
+def test_a_report_saved_before_this_change_still_reads_as_dollars():
+    from features.company_analysis.report_rules import build_financial_table
+
+    legacy = {"ok": True, "rows": [
+        {"metric": "Revenue", "annual": [{"end": "2025-09-27", "val": 416_161_000_000}]},
+    ]}
+    assert "$416.16B" in build_financial_table(legacy, None)
+
+
+def test_a_price_in_one_currency_and_financials_in_another_is_flagged():
+    """ASML trades as a dollar ADR while reporting in euros.
+
+    PSR then divides a USD market cap by EUR revenue — a number with no unit.
+    """
+    from features.company_analysis.report_rules import build_valuation_metrics
+
+    sec = {"ok": True, "currency": "EUR", "rows": [
+        {"metric": "Revenue", "annual": [{"end": "2025-12-31", "val": 32_667_300_000}]},
+    ]}
+    market = {"ok": True, "ticker": "ASML", "price": 900.0, "marketCap": 350_000_000_000,
+              "currency": "USD", "sharesOutstanding": 390_000_000}
+    out = build_valuation_metrics({"ticker": "ASML"}, sec, market)
+    assert "통화 주의" in out
+    assert "$900" in out          # 주가는 상장 통화
+    assert "€32.67B" in out       # 재무는 신고 통화
+
+
+def test_a_single_currency_company_gets_no_warning():
+    from features.company_analysis.report_rules import build_valuation_metrics
+
+    sec = {"ok": True, "currency": "USD", "rows": [
+        {"metric": "Revenue", "annual": [{"end": "2025-09-27", "val": 416_161_000_000}]},
+    ]}
+    market = {"ok": True, "ticker": "AAPL", "price": 250.0, "marketCap": 3_700_000_000_000,
+              "currency": "USD", "sharesOutstanding": 14_800_000_000}
+    assert "통화 주의" not in build_valuation_metrics({"ticker": "AAPL"}, sec, market)

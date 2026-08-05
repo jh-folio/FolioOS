@@ -145,12 +145,17 @@ def _year(item: dict) -> str:
     return str(str(item.get("end", ""))[:4] or item.get("fy") or "확인 필요")
 
 
-def _format_fact(item: dict, metric: str) -> str:
+def _reporting_currency(sec_summary: dict) -> str:
+    """The currency the filer reports in, or USD for reports saved before 0.5."""
+    return str((sec_summary or {}).get("currency") or "USD")
+
+
+def _format_fact(item: dict, metric: str, currency: str = "USD") -> str:
     from features.company_analysis.sec_companyfacts import format_value
 
     if not item:
         return "확인되지 않음"
-    return format_value(item.get("val"), metric)
+    return format_value(item.get("val"), metric, currency)
 
 
 def _annual_items(sec_summary: dict, metric: str) -> list[dict]:
@@ -180,10 +185,10 @@ def _pct(value: float | None) -> str:
     return f"{value * 100:.1f}%"
 
 
-def _money(value: float | None) -> str:
+def _money(value: float | None, currency: str = "USD") -> str:
     if value is None:
         return "확인 필요"
-    return _format_fact({"val": value}, "Revenue")
+    return _format_fact({"val": value}, "Revenue", currency)
 
 
 def _plain_number(value: float | None) -> str:
@@ -451,6 +456,7 @@ def _fcf_series_with_fallback(sec_summary: dict, market_data: dict | None = None
 
 
 def build_financial_table(sec_summary: dict, market_data: dict | None = None) -> str:
+    currency = _reporting_currency(sec_summary)
     rows = sec_summary.get("rows", []) if sec_summary.get("ok") else []
     metrics = [
         "Revenue",
@@ -485,17 +491,17 @@ def build_financial_table(sec_summary: dict, market_data: dict | None = None) ->
         values_by_year = {}
         source_note = row.get("concept") or ""
         if metric == "Free Cash Flow":
-            values_by_year = {year: _money(item.get("val")) for year, item in fcf_by_year.items()}
+            values_by_year = {year: _money(item.get("val"), currency) for year, item in fcf_by_year.items()}
             source_note = fcf_source or "CFO/CapEx 확인 필요"
         else:
             for item in row.get("annual", []) or []:
                 year = _year(item)
-                values_by_year.setdefault(year, _format_fact(item, metric))
+                values_by_year.setdefault(year, _format_fact(item, metric, currency))
             if metric in {"Operating Cash Flow", "Capital Expenditure"}:
                 fallback = _market_cashflow_by_year(market_data, metric)
                 for year, item in fallback.items():
                     if year not in values_by_year:
-                        values_by_year[year] = _money(item.get("val"))
+                        values_by_year[year] = _money(item.get("val"), currency)
                 if fallback and not source_note:
                     source_note = "yfinance cashflow fallback"
         lines.append(
@@ -506,6 +512,7 @@ def build_financial_table(sec_summary: dict, market_data: dict | None = None) ->
     return "\n".join(lines)
 
 def build_financial_quality_analysis(sec_summary: dict, market_data: dict | None = None) -> str:
+    currency = _reporting_currency(sec_summary)
     revenue = _latest_number(sec_summary, "Revenue")
     revenue_prior = _latest_number(sec_summary, "Revenue", 1)
     operating_income = _latest_number(sec_summary, "Operating Income")
@@ -579,7 +586,7 @@ def build_financial_quality_analysis(sec_summary: dict, market_data: dict | None
         (
             "자유현금흐름",
             fcf_judgment,
-            f"영업현금흐름 {_money(cfo)}에서 설비투자 {_money(capex)}를 차감한 단순 FCF는 {_money(fcf)}이며, FCF/매출은 {_pct(fcf_margin)}입니다.",
+            f"영업현금흐름 {_money(cfo, currency)}에서 설비투자 {_money(capex, currency)}를 차감한 단순 FCF는 {_money(fcf, currency)}이며, FCF/매출은 {_pct(fcf_margin)}입니다.",
             "리스, 일회성 현금흐름, 유지/성장 CapEx 구분",
         ),
         (
@@ -591,13 +598,13 @@ def build_financial_quality_analysis(sec_summary: dict, market_data: dict | None
         (
             "재무 안정성",
             stability_judgment,
-            f"현금성자산은 {_money(cash)}, 총부채는 {_money(liabilities)}, 장기부채/영업현금흐름은 {_pct(debt_to_cfo)}, 유동비율은 {_multiple(derived.get('currentRatio'))}입니다.",
+            f"현금성자산은 {_money(cash, currency)}, 총부채는 {_money(liabilities, currency)}, 장기부채/영업현금흐름은 {_pct(debt_to_cfo)}, 유동비율은 {_multiple(derived.get('currentRatio'))}입니다.",
             "순부채, 만기 구조",
         ),
         (
             "자본배분",
             capital_allocation,
-            f"설비투자/영업현금흐름은 {_pct(capex_to_cfo)}이며, 자사주 매입은 {_money(buybacks)}, 배당 지급은 {_money(dividends)}로 확인됩니다.",
+            f"설비투자/영업현금흐름은 {_pct(capex_to_cfo)}이며, 자사주 매입은 {_money(buybacks, currency)}, 배당 지급은 {_money(dividends, currency)}로 확인됩니다.",
             "M&A 수익률, 유지/성장 CapEx 구분",
         ),
     ]
@@ -643,6 +650,7 @@ def _dcf_value(base_fcf: float, net_debt: float, shares: float, near_growth: flo
 
 
 def build_valuation_metrics(company: dict, sec_summary: dict, market_data: dict | None = None) -> str:
+    currency = _reporting_currency(sec_summary)
     market = market_data or fetch_market_valuation_data(company)
     revenue = _latest_number(sec_summary, "Revenue")
     eps = _latest_number(sec_summary, "EPS Diluted")
@@ -682,16 +690,21 @@ def build_valuation_metrics(company: dict, sec_summary: dict, market_data: dict 
     dcf = _dcf_value(fcf or 0.0, net_debt, shares or 0.0, near_growth, discount_rate, terminal_growth)
     scenarios = financial_engine.dcf_scenarios(fcf or 0.0, net_debt, shares or 0.0, near_growth)
 
+    # 주가는 상장 통화, 재무는 신고 통화다. ASML은 나스닥 ADR이 달러인데 재무는
+    # 유로라, 두 통화가 다르면 시가총액/매출 같은 배수는 서로 다른 단위를 나눈
+    # 값이라 의미가 없다. 환산하지 않고 그 사실을 밝힌다.
+    market_currency = str(market.get("currency") or currency).upper()
+    mixed_currency = bool(market.get("ok")) and market_currency != currency
     table = [
         "| 지표 | 계산값 | 사용 입력/계산식 |",
         "| --- | ---: | --- |",
-        f"| 현재 주가 | {_money(price)} | yfinance {market.get('ticker', company.get('ticker', ''))} |",
-        f"| 시가총액 | {_money(market_cap)} | 주가 × 주식수 또는 yfinance marketCap |",
-        f"| 순부채 | {_money(net_debt)} | 장기부채 {_money(debt)} - 현금 {_money(cash)} |",
+        f"| 현재 주가 | {_money(price, market_currency)} | yfinance {market.get('ticker', company.get('ticker', ''))} |",
+        f"| 시가총액 | {_money(market_cap, market_currency)} | 주가 × 주식수 또는 yfinance marketCap |",
+        f"| 순부채 | {_money(net_debt, currency)} | 장기부채 {_money(debt, currency)} - 현금 {_money(cash, currency)} |",
         f"| PER | {_multiple(per)} | 주가 / 희석 EPS {_plain_number(eps)} |",
-        f"| PSR | {_multiple(psr)} | 시가총액 / 매출 {_money(revenue)} |",
-        f"| EV/EBITDA | {_multiple(ev_ebitda)} | 기업가치 / EBITDA {_money(ebitda)} |",
-        f"| FCF Yield | {_pct(fcf_yield)} | FCF {_money(fcf)} / 시가총액 |",
+        f"| PSR | {_multiple(psr)} | 시가총액 / 매출 {_money(revenue, currency)} |",
+        f"| EV/EBITDA | {_multiple(ev_ebitda)} | 기업가치 / EBITDA {_money(ebitda, currency)} |",
+        f"| FCF Yield | {_pct(fcf_yield)} | FCF {_money(fcf, currency)} / 시가총액 |",
         f"| FCF Margin | {_pct(fcf_margin)} | FCF / 매출 |",
     ]
 
@@ -708,7 +721,7 @@ def build_valuation_metrics(company: dict, sec_summary: dict, market_data: dict 
                 upside = _ratio(scenario["perShare"] - price, price) if price else None
                 lines.append(
                     f"| {scenario['name']} | {_pct(scenario['growth'])} | {_pct(scenario['discount'])} | {_pct(scenario['terminal'])} | "
-                    f"{_money(scenario['equityValue'])} | {_money(scenario['perShare'])} | {_pct(upside)} |"
+                    f"{_money(scenario['equityValue'], currency)} | {_money(scenario['perShare'], currency)} | {_pct(upside)} |"
                 )
             else:
                 lines.append(f"| {scenario['name']} | {_pct(scenario['growth'])} | {_pct(scenario['discount'])} | {_pct(scenario['terminal'])} | 계산 불가 | 계산 불가 | 계산 불가 |")
@@ -716,9 +729,9 @@ def build_valuation_metrics(company: dict, sec_summary: dict, market_data: dict 
             "",
             "| 항목 | 값 |",
             "| --- | ---: |",
-            f"| 기준 FCF | {_money(fcf)} |",
-            f"| 순부채 차감 후 자기자본가치 | {_money(dcf['equityValue'])} |",
-            f"| DCF 내재가치/주 | {_money(dcf['perShare'])} |",
+            f"| 기준 FCF | {_money(fcf, currency)} |",
+            f"| 순부채 차감 후 자기자본가치 | {_money(dcf['equityValue'], currency)} |",
+            f"| DCF 내재가치/주 | {_money(dcf['perShare'], currency)} |",
             "",
             "| 민감도: 내재가치/주 | 영구성장 2.0% | 영구성장 2.5% | 영구성장 3.0% |",
             "| --- | ---: | ---: | ---: |",
@@ -752,6 +765,12 @@ def build_valuation_metrics(company: dict, sec_summary: dict, market_data: dict 
         lines.append(f"\n시장가격 데이터 참고: yfinance 데이터를 가져오지 못했습니다({market.get('reason', 'unknown')}). SEC 기반 재무 지표만 표시했습니다.")
     elif market.get("warning"):
         lines.append(f"\n시장가격 데이터 참고: {market['warning']}")
+    if mixed_currency:
+        lines.append(
+            f"\n**통화 주의:** 주가·시가총액은 {market_currency}, 재무는 {currency} 기준입니다. "
+            "두 통화를 환산하지 않았으므로 PSR·EV/EBITDA·FCF Yield처럼 시장가치를 재무로 나눈 "
+            "배수는 서로 다른 단위를 나눈 값입니다. 그대로 해석하지 마세요."
+        )
     return "\n".join(lines)
 
 
