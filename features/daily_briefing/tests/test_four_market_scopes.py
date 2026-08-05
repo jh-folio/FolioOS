@@ -106,6 +106,20 @@ def test_an_aggregate_read_records_what_generated_and_what_was_asked_for():
         assert set(report["briefings"]) == {"us", "kr", "jp"}
 
 
+def test_the_generation_response_carries_the_same_coverage_contract_as_the_read():
+    """A client rendering right after generation must see which markets are missing."""
+    report = briefing_scope_view({
+        "date": DATE, "marketScope": "all",
+        "includedMarkets": ["US", "KR", "JP"],
+        "expectedMarkets": ["US", "KR", "EUROPE", "JP"],
+        "coverageWarnings": ["EUROPE 브리핑이 생성되지 않았습니다."],
+        "briefings": {"us": {"markdown": "# US Market Briefing"}},
+    }, "all")
+    assert report["includedMarkets"] == ["US", "KR", "JP"]
+    assert report["expectedMarkets"] == ["US", "KR", "EUROPE", "JP"]
+    assert report["coverageWarnings"]
+
+
 def test_a_legacy_both_read_never_reaches_for_europe_or_japan():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)

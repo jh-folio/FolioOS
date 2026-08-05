@@ -597,8 +597,16 @@ def build_briefing(
         if len(requested_scopes) == 1:
             briefing = saved_reports.get(requested_scopes[0], briefing)
         else:
-            briefing["briefings"] = {
-                scope: saved_reports[scope] for scope in requested_scopes if scope in saved_reports
-            }
+            written = [scope for scope in requested_scopes if scope in saved_reports]
+            briefing["briefings"] = {scope: saved_reports[scope] for scope in written}
+            # 생성 응답도 읽기 경로와 같은 커버리지 계약을 들고 나간다. 생성 직후
+            # 화면에 그리는 클라이언트가 어느 시장이 빠졌는지 알 수 없으면 안 된다.
+            briefing["includedMarkets"] = [scope.upper() for scope in written]
+            briefing["expectedMarkets"] = [scope.upper() for scope in requested_scopes]
+            if len(written) < len(requested_scopes):
+                missing = [s.upper() for s in requested_scopes if s not in saved_reports]
+                briefing["coverageWarnings"] = [
+                    f"요청한 {len(requested_scopes)}개 시장 중 {', '.join(missing)} 브리핑이 생성되지 않았습니다."
+                ]
     return briefing_scope_view(briefing, market_scope)
 
