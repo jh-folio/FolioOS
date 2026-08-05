@@ -16,6 +16,7 @@ from features.daily_briefing.issue_selection import (
 )
 from features.daily_briefing.schema import (
     AGGREGATE_SCOPES,
+    MARKET_TITLE_LABELS,
     SINGLE_MARKET_SCOPES,
     briefing_expected_titles,
     briefing_file_name,
@@ -55,6 +56,69 @@ FEATURES_DIR = ROOT / "features"
 BRIEFING_PROMPT_PATH = FEATURES_DIR / "daily_briefing" / "prompt.md"
 BRIEFING_PROMPT_US_PATH = FEATURES_DIR / "daily_briefing" / "prompt_us.md"
 BRIEFING_PROMPT_KR_PATH = FEATURES_DIR / "daily_briefing" / "prompt_kr.md"
+BRIEFING_PROMPT_EUROPE_PATH = FEATURES_DIR / "daily_briefing" / "prompt_europe.md"
+BRIEFING_PROMPT_JP_PATH = FEATURES_DIR / "daily_briefing" / "prompt_jp.md"
+BRIEFING_PROMPT_PATHS = {
+    "us": BRIEFING_PROMPT_US_PATH,
+    "kr": BRIEFING_PROMPT_KR_PATH,
+    "europe": BRIEFING_PROMPT_EUROPE_PATH,
+    "jp": BRIEFING_PROMPT_JP_PATH,
+}
+MARKET_LABELS = {"us": "미국장", "kr": "한국장", "europe": "유럽장", "jp": "일본장"}
+# 단독 시장 범위에서 다른 시장 자료를 어떻게 쓸지의 계약. 시장마다 옆 시장과의
+# 시간 관계가 달라 문장이 하나로 합쳐지지 않는다.
+_SCOPE_OUTPUT_INSTRUCTIONS = {
+    "us": "미국장 브리핑만 작성하세요. 한국 자료는 미국 기업·섹터의 실제 파급을 설명하는 보조 근거로만 사용하고 한국장 일반 시황 섹션을 만들지 마세요.",
+    "kr": "한국장 브리핑만 작성하세요. 미국 자료는 한국장에 이미 반영됐는지 또는 다음 한국장 반영 후보인지 시간차를 구분하는 보조 근거로만 사용하세요.",
+    "europe": "유럽장 브리핑만 작성하세요. 유럽은 영국·독일·프랑스·네덜란드·이탈리아·스페인이 각자 거래소와 통화를 가진 묶음 시장이므로 한 국가 지수로 유럽 전체를 일반화하지 마세요. 다른 시장 자료는 유럽장 해석에 필요한 만큼만 쓰고 별도 시황 섹션을 만들지 마세요.",
+    "jp": "일본장 브리핑만 작성하세요. 일본은 한국과 같은 시간대이므로 세션 단계를 따르고, '아시아 증시' 광역 기사를 일본장 근거로 쓰지 마세요. 다른 시장 자료는 일본장 해석에 필요한 만큼만 쓰고 별도 시황 섹션을 만들지 마세요.",
+}
+
+
+# 규칙 경로의 시장 간 서술. 시장마다 옆 시장과의 시차가 달라 한 문장으로 합쳐지지 않는다.
+# 유럽·일본 브리핑에 "미국장과 한국장의 연결성" 문장이 그대로 나가면 그 보고서가
+# 다루지도 않은 두 시장에 대한 유보를 다는 셈이 된다.
+_CROSS_MARKET_CAVEATS = {
+    "us": "아래에서 각 동인이 미국장 안에서 어느 업종·자산으로 전달됐는지 구분해 살펴봅니다.",
+    "kr": "미국 뉴스가 한국장에 이미 반영됐는지 다음 거래일 반영 후보인지 구분해 살펴봅니다.",
+    "europe": "유럽은 국가별로 거래소와 통화가 달라, 아래에서 각 동인이 어느 국가 지수에 반영됐는지 구분해 살펴봅니다.",
+    "jp": "일본장은 한국장과 같은 시간대에 흐르므로, 아래에서 각 동인이 엔화와 업종에 어떻게 전달됐는지 구분해 살펴봅니다.",
+}
+_MARKET_READINGS = {
+    "us": "미국장 내부의 업종·수급 확산이 지수 방향보다 중요한 관찰 대상이며, 장 마감 이후 나온 뉴스는 다음 거래일 반응으로 확인해야 합니다.",
+    "kr": "미국장과 한국장의 연결성은 자료만으로 단정하기 어렵고, 미국 뉴스가 한국장 마감 이후 나온 경우에는 다음 한국장에서 실제 수급과 가격 반응을 확인해야 합니다.",
+    "europe": "유럽장은 국가별 지수와 통화가 갈리므로 한 지수의 방향을 유럽 전체로 일반화하기 어렵고, ECB와 BoE의 정책 경로를 구분해 확인해야 합니다.",
+    "jp": "일본장은 엔화 방향에 따라 같은 재료가 수출 기업과 내수에 반대로 작용할 수 있어, 지수 방향만으로 해석하기 어렵습니다.",
+}
+
+
+def _cross_market_caveat(market_scope):
+    scope = normalize_market_scope(market_scope)
+    return _CROSS_MARKET_CAVEATS.get(
+        scope,
+        "아래에서 각 동인이 어느 시장에 반영됐는지 구분해 살펴봅니다.",
+    )
+
+
+def _market_reading(market_scope):
+    scope = normalize_market_scope(market_scope)
+    return _MARKET_READINGS.get(
+        scope,
+        "시장 간 연결성은 자료만으로 단정하기 어려워, 각 시장의 실제 수급과 가격 반응으로 확인해야 합니다.",
+    )
+
+def _scope_output_instruction(market_scope):
+    scope = normalize_market_scope(market_scope)
+    single = _SCOPE_OUTPUT_INSTRUCTIONS.get(scope)
+    if single:
+        return single
+    titles = ", ".join(
+        MARKET_TITLE_LABELS[key] for key in market_keys_for_briefing_scope(scope)
+    )
+    return (
+        f"{titles}을(를) 각각 완결형으로 작성하세요. 시장을 합치거나 별도의 시장 연결 요약 "
+        "섹션을 추가하지 말고, 연결 근거는 각 시장 본문 안에서만 짧게 설명하세요."
+    )
 BRIEFINGS_DIR = ROOT / "data" / "briefings"
 MARKET_MEMORY_DB_PATH = ROOT / "data" / "market-memory.sqlite3"
 
@@ -62,12 +126,9 @@ NEWS_INBOX_PREFIXES = ("research-inbox/articles/", "research-inbox/rss/")
 
 
 def briefing_prompt_paths(market_scope="both"):
+    """Prompt files for a scope. Aggregates concatenate their markets' prompts."""
     scope = normalize_market_scope(market_scope)
-    if scope == "us":
-        return [BRIEFING_PROMPT_US_PATH]
-    if scope == "kr":
-        return [BRIEFING_PROMPT_KR_PATH]
-    return [BRIEFING_PROMPT_US_PATH, BRIEFING_PROMPT_KR_PATH]
+    return [BRIEFING_PROMPT_PATHS[key] for key in market_keys_for_briefing_scope(scope)]
 
 
 def briefing_prompt_path_label(market_scope="both"):
@@ -658,13 +719,7 @@ def build_llm_context(
         "- 기사 발행일만 보고 미국장 거래일을 단정하지 마세요. 아래 '기사/자료 원문 요약'에 표시된 '시장기준일(추정)'을 따르세요.",
         "",
         "## 시장 범위 출력 지침",
-        (
-            "미국장 브리핑만 작성하세요. 한국 자료는 미국 기업·섹터의 실제 파급을 설명하는 보조 근거로만 사용하고 한국장 일반 시황 섹션을 만들지 마세요."
-            if market_scope == "us"
-            else "한국장 브리핑만 작성하세요. 미국 자료는 한국장에 이미 반영됐는지 또는 다음 한국장 반영 후보인지 시간차를 구분하는 보조 근거로만 사용하세요."
-            if market_scope == "kr"
-            else "US Market Briefing과 Korea Market Briefing을 각각 완결형으로 작성하세요. 두 시장을 합치거나 별도의 한미 시장 연결 요약 섹션을 추가하지 말고, 연결 근거는 각 시장 본문 안에서만 짧게 설명하세요."
-        ),
+        _scope_output_instruction(market_scope),
         "최종 Markdown은 위 `최종 제목(정확히 사용)`에 지정된 시장별 제목을 그대로 쓰고, 다음 줄은 바로 `## 0. 오늘의 ... 성격`으로 시작하세요. 제목의 날짜는 시장 세션일이며 `마감`/`장중` 상태를 생략하지 마세요. 제목과 0번 섹션 사이에 브리핑 대상, 시장 범위, 세션 모드, 자료 선별 방식, 날짜 해석 설명, blockquote를 넣지 마세요.",
         f"- 브리핑 유형 지침: {briefing_type_instruction(briefing_type)}",
         "각 주요 섹션은 '한 줄 결론 + 가운뎃점 3~4개 + 기존 줄글 해설' 순서로 쓰고, 요약이 줄글을 대체하지 않게 하세요.",
@@ -1112,7 +1167,7 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
     market_drivers = [{**driver, "docs": [doc for doc in driver.get("docs", []) if _doc_key(doc) in doc_keys]} for driver in (market_drivers or [])]
     market_drivers = [driver for driver in market_drivers if driver.get("docs")]
     session_modes = session_modes or session_modes_from_windows(market_windows)
-    market_label = "미국장" if market_scope == "us" else "한국장" if market_scope == "kr" else "시장"
+    market_label = MARKET_LABELS.get(market_scope, "시장")
     report_title = (
         briefing_expected_titles(
             date,
@@ -1120,7 +1175,7 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
             market_windows=market_windows,
             session_modes=session_modes,
         ).get(market_scope)
-        if market_scope in {"us", "kr"}
+        if market_scope in SINGLE_MARKET_SCOPES
         else f"Daily Market Briefing — {date.replace('-', '.')}"
     )
     weekend_mode = bool(market_windows.get("weekendOrHolidayNewsMode"))
@@ -1138,9 +1193,22 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
         )
     else:
         snapshot_block = "지수 수치보다 기사에서 드러난 업종·수급 흐름을 중심으로 봅니다."
-    korea_block = korea_market_data_to_markdown(korea_market_data) if market_scope in {"kr", "both"} else "미국장 단독 범위에서는 한국장 수치를 본문 시황으로 사용하지 않습니다."
-    if market_scope == "kr":
-        snapshot_block = "한국장 단독 범위에서는 미국 시장 스냅샷을 한국장 반영 여부의 보조 근거로만 사용합니다."
+    # 한국장 수치 섹션은 한국장을 포함한 범위에서만 만든다. 유럽·일본 브리핑에
+    # "한국장 시장 수치" 제목을 붙이고 본문에서 안 쓴다고 적으면, 그 보고서와
+    # 무관한 섹션이 목차에 남는다.
+    includes_korea = market_scope == "kr" or market_scope in AGGREGATE_SCOPES
+    korea_section = (
+        "### 한국장 시장 수치\n\n"
+        f"{korea_market_data_to_markdown(korea_market_data)}\n\n"
+        "한국장 수치 블록에 KOSPI/KOSDAQ 종가 등락률이 없으면 “입력 자료에서 한국장 종가 등락률은 "
+        "확인되지 않는다”고 명시하고, 수치를 추정하지 않습니다.\n\n"
+        if includes_korea
+        else ""
+    )
+    if market_scope in {"kr", "europe", "jp"}:
+        snapshot_block = (
+            f"{market_label} 단독 범위에서는 미국 시장 스냅샷을 {market_label} 반영 여부의 보조 근거로만 사용합니다."
+        )
 
     # 참고자료: 미국 D-1 마감 → 한국 D 흐름/수치 → 반도체 → 유가/지정학/금리
     # 순서가 상단에 오도록 전체 후보에서 정렬한다.
@@ -1172,10 +1240,11 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
         matched = next((g for g in groups if (g.get("company") or g.get("sector")) == leader), None)
         leader_groups.append(matched or (top_groups[0] if top_groups else {"docs": [], "company": leader, "sector": leader}))
 
+    market_reading_sentence = _market_reading(market_scope)
     market_character_sentence = (
         f"최근 시장 흐름과 새로 확인된 자료({source_date}, {len(docs)}건)를 함께 보면 {market_subjects}가 핵심 축으로 나타났습니다. 아래에서는 이 변화가 기업 실적과 업종 기대에 전달되는 경로를 살펴봅니다."
         if weekend_mode
-        else f"오늘 수집된 자료({source_date}, {len(docs)}건)에서는 {market_subjects} 흐름이 가장 두드러졌습니다. 미국장과 한국장의 연결성은 자료만으로 단정하기 어려워, 아래에서 각 동인이 어느 시장에 반영됐는지 구분해 살펴봅니다."
+        else f"오늘 수집된 자료({source_date}, {len(docs)}건)에서는 {market_subjects} 흐름이 가장 두드러졌습니다. {_cross_market_caveat(market_scope)}"
     )
     flow_insight = (
         f"**시장 흐름 인사이트:** 지수의 직전 움직임보다 {key_vars}가 기업 이익, 금리·환율과 업종 선호에 미치는 경로가 더 중요한 관찰 포인트입니다."
@@ -1218,13 +1287,7 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
 · 금리·환율·변동성
 · 주도·소외 업종
 
-### 한국장 시장 수치
-
-{korea_block}
-
-한국장 수치 블록에 KOSPI/KOSDAQ 종가 등락률이 없으면 “입력 자료에서 한국장 종가 등락률은 확인되지 않는다”고 명시하고, 수치를 추정하지 않습니다.
-
-### 글로벌 시장 가격 스냅샷
+{korea_section}### 글로벌 시장 가격 스냅샷
 
 {snapshot_block}
 
@@ -1298,7 +1361,7 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
 
 **핵심 변수:** {key_vars}.
 
-**시장 해석:** 미국장과 한국장의 연결성은 자료만으로 단정하기 어렵고, 미국 뉴스가 한국장 마감 이후 나온 경우에는 다음 한국장에서 실제 수급과 가격 반응을 확인해야 합니다.
+**시장 해석:** {market_reading_sentence}
 
 **다음 확인점:** 주요 기업의 후속 공시와 실적, 외국인·기관 수급, 금리·환율의 동시 움직임, 그리고 {market_subjects} 관련 거래대금을 함께 점검합니다.
 

@@ -37,6 +37,7 @@ from features.daily_briefing.issue_selection import (
 )
 from features.daily_briefing.link_analysis import build_link_analysis
 from features.daily_briefing.schema import (
+    AGGREGATE_SCOPES,
     briefing_expected_titles,
     briefing_file_name,
     briefing_link_file_name,
@@ -46,6 +47,7 @@ from features.daily_briefing.schema import (
     normalize_briefing_contract,
     normalize_briefing_markdown_titles,
     normalize_briefing_type,
+    market_keys_for_briefing_scope,
     normalize_market_scope,
     visual_sidecar_gzip_file_name,
 )
@@ -158,6 +160,23 @@ def _headlines(groups):
     return rows
 
 
+def _scope_session_date(scope, market_windows):
+    """The trading date this market's briefing describes.
+
+    US and Korea keep their original window keys because saved reports and every
+    current consumer read those. Europe and Japan come from the session
+    descriptors — falling through to Korea's keys would have stamped a European
+    briefing with the Korean session date.
+    """
+    windows = market_windows or {}
+    if scope == "us":
+        return windows.get("usRegularSessionDate")
+    if scope == "kr":
+        return windows.get("krCurrentSessionDate") or windows.get("krPreviousSessionDate")
+    session = (windows.get("marketSessions") or {}).get(scope) or {}
+    return session.get("sessionDate") or windows.get("briefingDate")
+
+
 def _scope_result(
     scope,
     briefing_type,
@@ -241,10 +260,7 @@ def _scope_result(
         "marketScope": scope,
         "markdown": markdown,
         "sessionMode": session_modes.get(scope, ""),
-        "marketSessionDate": (
-            market_windows.get("usRegularSessionDate") if scope == "us"
-            else market_windows.get("krCurrentSessionDate") or market_windows.get("krPreviousSessionDate")
-        ),
+        "marketSessionDate": _scope_session_date(scope, market_windows),
         "sources": sources,
         "generation": generation,
         "headlines": headlines,
@@ -357,7 +373,7 @@ def build_briefing(
     prev_briefing = load_prev_briefing(date)
     prev_checklist = extract_prev_checklist((prev_briefing or {}).get("markdown", ""))
 
-    requested_scopes = ["us", "kr"] if market_scope == "both" else [market_scope]
+    requested_scopes = list(market_keys_for_briefing_scope(market_scope))
     results = {
         scope: _scope_result(
             scope, briefing_type, date, source_date, docs, market_windows, market_snapshot, korea_market_data,
@@ -369,8 +385,11 @@ def build_briefing(
     # 본문에 추가하지 않는다. linkStatus는 디버깅/메타데이터로만 계속 계산해 저장한다.
     link_status = "insufficient_evidence"
     link_analysis = None
-    if market_scope == "both":
-        link_status = derive_link_status(results["us"]["issueCoverageRaw"], results["kr"]["issueCoverageRaw"])
+    if market_scope in AGGREGATE_SCOPES and len(requested_scopes) > 1:
+        link_status = derive_link_status(
+            results[requested_scopes[0]]["issueCoverageRaw"],
+            results[requested_scopes[1]]["issueCoverageRaw"],
+        )
         # 연결 분석은 각 시장 Canonical 본문을 바꾸지 않는 별도 레이어다(읽기 시 결합).
         link_analysis = build_link_analysis(
             results["us"], results["kr"],
@@ -565,12 +584,14 @@ def build_briefing(
                 "projectionStatus": projection.get("status"),
                 "invalidationToken": projection.get("invalidationToken") or (saved_reports[scope].get("changeIntelligence") or {}).get("invalidationToken"),
             }
-        if market_scope == "both" and link_analysis:
+        if market_scope in AGGREGATE_SCOPES and link_analysis:
             write_json(
                 BRIEFINGS_DIR / briefing_link_file_name(date),
                 {"date": date, "generatedAt": generated_at, **link_analysis},
             )
-        if market_scope == "both":
+        # 내러티브 누적은 통합 생성에서만 한다. 시장별 생성에서도 하면 같은 이슈가
+        # 시장 수만큼 중복 적재된다.
+        if market_scope in AGGREGATE_SCOPES:
             for entry in build_memory_from_briefing(briefing, all_groups):
                 upsert_memory(MARKET_MEMORY_DB_PATH, entry)
         if len(requested_scopes) == 1:

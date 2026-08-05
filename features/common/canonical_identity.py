@@ -9,9 +9,18 @@ from typing import Final, assert_never
 
 from features.common.canonical_json import JsonValue
 from features.common.canonical_report_io import safe_child_path
+from features.common.markets import PRODUCT_MARKETS
 
 DATE_PATTERN: Final = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SAFE_ID_PATTERN: Final = re.compile(r"^[A-Za-z0-9_-]{1,160}$")
+# 브리핑 파일 접미사는 시장 계약에서 파생한다. 여기에 시장을 다시 적으면
+# 새 시장의 저장이 정체성 검증에서만 조용히 막힌다.
+BRIEFING_MARKETS: Final = tuple(market.value.lower() for market in PRODUCT_MARKETS)
+_MARKET_ALT: Final = "|".join(BRIEFING_MARKETS)
+BRIEFING_ID_PATTERN: Final = re.compile(rf"(\d{{4}}-\d{{2}}-\d{{2}})(?:\.({_MARKET_ALT}))?")
+BRIEFING_FILE_PATTERN: Final = re.compile(
+    rf"(\d{{4}}-\d{{2}}-\d{{2}})(?:\.({_MARKET_ALT}))?\.json"
+)
 
 
 class ReportKind(StrEnum):
@@ -46,13 +55,15 @@ class CanonicalNotFoundError(Exception):
 
 def _briefing_identity(report_id: str, market_scope: str | None) -> tuple[str, str | None]:
     normalized_scope = str(market_scope or "").strip().lower() or None
-    if normalized_scope == "both":
-        raise CanonicalIdentityError("briefing_overlay_scope_required", "briefing scope must be us or kr")
-    if normalized_scope not in {None, "us", "kr"}:
-        raise CanonicalIdentityError("briefing_scope_invalid", "briefing scope must be us or kr")
-    match = re.fullmatch(r"(\d{4}-\d{2}-\d{2})(?:\.(us|kr))?", report_id)
+    markets = ", ".join(BRIEFING_MARKETS)
+    if normalized_scope in {"both", "all"}:
+        # 통합 범위는 파일 하나를 가리키지 않는다. 어느 시장을 쓰는지 밝혀야 한다.
+        raise CanonicalIdentityError("briefing_overlay_scope_required", f"briefing scope must be one of {markets}")
+    if normalized_scope is not None and normalized_scope not in BRIEFING_MARKETS:
+        raise CanonicalIdentityError("briefing_scope_invalid", f"briefing scope must be one of {markets}")
+    match = BRIEFING_ID_PATTERN.fullmatch(report_id)
     if match is None:
-        raise CanonicalIdentityError("briefing_id_invalid", "briefing id must be YYYY-MM-DD[.us|.kr]")
+        raise CanonicalIdentityError("briefing_id_invalid", f"briefing id must be YYYY-MM-DD[.{'|.'.join(BRIEFING_MARKETS)}]")
     date_text, suffix = match.groups()
     if suffix is not None and normalized_scope is not None and suffix != normalized_scope:
         raise CanonicalIdentityError("briefing_scope_mismatch", "briefing id suffix and scope differ")
@@ -122,7 +133,7 @@ def validate_report_identity(
 ) -> None:
     match report_kind:
         case ReportKind.BRIEFING:
-            match = re.fullmatch(r"(\d{4}-\d{2}-\d{2})(?:\.(us|kr))?\.json", exact_path.name)
+            match = BRIEFING_FILE_PATTERN.fullmatch(exact_path.name)
             date_value = report.get("date")
             scope_value = report.get("marketScope")
             if match is None or date_value != match.group(1):

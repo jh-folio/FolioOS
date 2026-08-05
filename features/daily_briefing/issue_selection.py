@@ -10,6 +10,11 @@ from collections import Counter, defaultdict
 from features.common.market_calendar import doc_analysis_priority, infer_doc_market
 from features.common.research_library.indexing.research_index import cosine, embed_text
 from features.common.utils import normalize
+from features.daily_briefing.schema import (
+    AGGREGATE_SCOPES,
+    briefing_session_mode,
+    normalize_market_scope,
+)
 from features.daily_briefing.selection import briefing_doc_score, market_connection_score
 
 
@@ -326,10 +331,16 @@ def build_issue_coverage(docs, target_market, market_windows, limit=10, publishe
 
 
 def documents_for_scope(docs, market_scope):
-    scope = str(market_scope or "both").lower()
-    if scope == "both":
+    """Narrow the candidate pool to one market, keeping global evidence.
+
+    Aggregate scopes keep everything: each market leg narrows again on its own,
+    and dropping a document here would remove it from every leg at once.
+    """
+    scope = normalize_market_scope(market_scope)
+    if scope in AGGREGATE_SCOPES:
         return list(docs or [])
     target = scope.upper()
+    # 유가·달러·공급망 기사는 특정 시장 소유가 아니라 어느 시장에도 근거가 된다.
     return [doc for doc in docs or [] if infer_doc_market(doc) in {target, "BOTH", "GLOBAL"}]
 
 
@@ -345,18 +356,25 @@ def session_modes_from_windows(market_windows):
     else:
         kr_mode = ""
     if mode == "weekend":
-        return {"us": "us_off_session", "kr": "kr_off_session"}
-    if mode == "both_holiday":
-        return {"us": "us_holiday", "kr": kr_mode or "kr_holiday"}
-    if mode.startswith("us_holiday_kr_"):
-        return {"us": "us_holiday", "kr": kr_mode or "kr_intraday"}
-    if mode == "kr_holiday":
-        return {"us": "us_close", "kr": kr_mode or "kr_holiday"}
-    if kr_mode:
-        return {"us": "us_close", "kr": kr_mode}
-    if mode == "weekday_kr_open":
-        return {"us": "us_close", "kr": "kr_intraday"}
-    return {"us": "us_close", "kr": "kr_off_session"}
+        legacy = {"us": "us_off_session", "kr": "kr_off_session"}
+    elif mode == "both_holiday":
+        legacy = {"us": "us_holiday", "kr": kr_mode or "kr_holiday"}
+    elif mode.startswith("us_holiday_kr_"):
+        legacy = {"us": "us_holiday", "kr": kr_mode or "kr_intraday"}
+    elif mode == "kr_holiday":
+        legacy = {"us": "us_close", "kr": kr_mode or "kr_holiday"}
+    elif kr_mode:
+        legacy = {"us": "us_close", "kr": kr_mode}
+    elif mode == "weekday_kr_open":
+        legacy = {"us": "us_close", "kr": "kr_intraday"}
+    else:
+        legacy = {"us": "us_close", "kr": "kr_off_session"}
+    # 유럽·일본은 analysisMode가 다루지 않는다. 세션 기술자에서 직접 읽는다.
+    for scope in ("europe", "jp"):
+        resolved = briefing_session_mode(scope, "", market_windows or {})
+        if resolved:
+            legacy[scope] = resolved
+    return legacy
 
 
 def derive_link_status(us_issues, kr_issues):
