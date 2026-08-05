@@ -16,8 +16,7 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Use the Research Cockpit Dashboard to see which stories led the market today, what actually changed in your latest reports, native symbol/index charts, market calendar events, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous widget board available.
 - Read a story-share bar built from the day's collected news, with each story's share and the move against the previous trading day. Share moves reflect coverage volume, not a change in what the story says.
 - Open a change card to see what moved: the verdict (new information, reversal, developing trend, coverage shift), a short reason, and the before/after side by side.
-- Maintain a local company, sector, and theme Watchlist with separate fast-origin leads and confirmed report change history.
-- See fast market signals — headline and link only — promoted from the Korean RSS you already collect. Article bodies are not stored, and unverified headlines never count toward report sources or a major-change call.
+- Maintain a local company, sector, and theme Watchlist with a per-symbol chart and the news collected for it.
 - Collect and search public RSS/news feeds. The source filter lists only outlets still being collected, and corporate press-release wires stay out of the feed screen while remaining available to watchlist and company analysis.
 - Generate US/KR daily market briefings. The date you pick is the market session the briefing covers, not the day it is filed, and daily automation can choose its briefing type.
 - Read a simplified medium-term Market Memory view.

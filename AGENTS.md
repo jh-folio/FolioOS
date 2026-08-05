@@ -240,7 +240,7 @@ features/company_analysis/financial_quality_prompt.md
 0.4 기본 사용자 화면에서의 노출 상태:
 
 - **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
-- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Watchlist의 빠른 시장 신호·변화 이력, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio 상담과 `노트로 정리`, Portfolio 스크린샷 가져오기.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio 상담과 `노트로 정리`, Portfolio 스크린샷 가져오기.
 - **Agent 실행 경계**: freshness/health/context 배지와 `changeSummary`는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 상담 답변은 사용자의 명시적 action에서만 Agent를 실행한다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
 - **숨김/축소 유지**: Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 보이는 리서치 화면의 제한된 projection으로만 노출한다. Portfolio 독립 화면은 0.4에서 공개로 복귀했다.
@@ -482,6 +482,7 @@ features/company_analysis/financial_quality_prompt.md
 - retention 기본값: 일반 lead 3일, Watchlist/Portfolio 관련 14일, corroborated 30일.
 - polling provider는 automation의 `signals` kind로 실행한다. 승인된 provider가 모두 polling RSS라 상시 WebSocket 연결은 두지 않는다(`start_signal_runtime`은 lifespan 호환용 no-op).
 - run log에는 provider/count/status/error code만 남기고 headline/raw payload를 남기지 않는다.
+- **0.4.8부터 lead를 보여주는 화면이 없다.** 워치리스트 상세의 `빠른 시장 신호` 레일은 승인 provider가 하나만 남아 교차 확인이 불가능해졌고 lead 티커가 워치리스트 종목과 맞는 경우가 없어 제거했다. 승격·retention 런타임은 그대로 남아 상담 context(`sourceContext.fastSignals`)가 계속 읽는다.
 
 ### Change Intelligence
 

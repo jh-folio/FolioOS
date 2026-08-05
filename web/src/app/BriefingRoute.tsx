@@ -9,7 +9,7 @@ import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { RouteHero } from "./RouteHero";
 import { parsePersonalOverlayPayload } from "./deepResearchPayload";
 import { BriefingChangeStrip } from "./briefing/BriefingChangeStrip";
-import type { ChangeEvent } from "./watchlist/ChangeHistory";
+import type { ChangeEvent } from "./changeEvents";
 
 type MarketScope = "us" | "kr" | "both";
 type ArchiveMarketFilter = "all" | MarketScope;

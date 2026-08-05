@@ -4,7 +4,7 @@ import { ChangeFeed } from "./ChangeFeed";
 import { InvestmentImplications } from "./InvestmentImplications";
 import { MarketCalendar } from "./MarketCalendar";
 import { NativeMarketChart } from "./NativeMarketChart";
-import type { ChangeEvent } from "../watchlist/ChangeHistory";
+import type { ChangeEvent } from "../changeEvents";
 
 type ProviderHealth = { provider?: string; sourceStatus?: string; errorCode?: string };
 type Cockpit = {
