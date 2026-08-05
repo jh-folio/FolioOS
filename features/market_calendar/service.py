@@ -8,6 +8,7 @@ from pathlib import Path
 from features.market_calendar.adapters.dividends import estimated_dividend_events
 from features.market_calendar.adapters.earnings import estimated_earnings_events
 from features.market_calendar.adapters.exchange import official_holiday_events
+from features.market_calendar.adapters.central_banks import official_central_bank_events
 from features.market_calendar.adapters.fed import official_fomc_events
 from features.market_calendar.adapters.filings import local_filing_events
 from features.market_calendar.adapters.bok import fetch_bok_macro_events
@@ -180,9 +181,16 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
     years = sorted({today.year, (today + dt.timedelta(days=90)).year})
     holidays = official_holiday_events(years)
     fomc = official_fomc_events(years)
+    # ECB·BoE·BOJ도 Fed와 같이 각 은행이 공시한 연간 일정 전사다. 키가 필요 없다.
+    central_banks = official_central_bank_events(years)
     events.extend(holidays)
     events.extend(fomc)
-    providers.update({"official_holidays": len(holidays), "official_fomc": len(fomc)})
+    events.extend(central_banks)
+    providers.update({
+        "official_holidays": len(holidays),
+        "official_fomc": len(fomc),
+        "official_central_banks": len(central_banks),
+    })
 
     from features.llm_settings.client import bok_api_key, fred_api_key
 

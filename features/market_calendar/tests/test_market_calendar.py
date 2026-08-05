@@ -71,13 +71,74 @@ def test_official_holidays_are_confirmed_all_day_and_kind_holiday():
     from features.market_calendar.adapters.exchange import official_holiday_events
 
     events = official_holiday_events([2026])
-    assert len(events) == 25  # NYSE 10 + KRX 15
+    # NYSE 10 + KRX 15 + 유럽 5개 venue 32 + JPX 19
+    assert len(events) == 76
     assert all(event["kind"] == "holiday" for event in events)
     assert all(event["status"] == "confirmed" for event in events)
     assert all(event["allDay"] for event in events)
     assert all(event["sourceUrl"] for event in events)
     markets = {event["market"] for event in events}
-    assert markets == {"US", "KR"}
+    assert markets == {"US", "KR", "EUROPE", "JP"}
+
+
+def test_europe_holidays_are_emitted_per_venue_not_per_region():
+    """London can be shut while Frankfurt trades; one regional entry would lie."""
+    from features.market_calendar.adapters.exchange import overseas_holiday_events
+
+    events = overseas_holiday_events([2026])
+    europe = [event for event in events if event["market"] == "EUROPE"]
+    assert {event["provider"] for event in europe} == {"lse", "xetra", "euronext", "borsa_italiana", "bme"}
+    assert {event["country"] for event in europe} == {"GB", "DE", "FR", "IT", "ES"}
+
+    # 영국 여름 은행휴일은 런던만 닫는다.
+    august = [event for event in europe if event["startsAt"].startswith("2026-08-31")]
+    assert [event["provider"] for event in august] == ["lse"]
+
+
+def test_holiday_tables_never_place_a_closure_on_a_weekend():
+    """A Saturday closure entry would show up in the calendar as a fake event."""
+    import datetime as dt
+
+    from features.market_calendar.adapters.exchange import overseas_holiday_events
+
+    for event in overseas_holiday_events([2026]):
+        day = dt.date.fromisoformat(event["startsAt"][:10])
+        assert day.weekday() < 5, event["title"]
+
+
+def test_a_year_without_a_transcribed_table_contributes_nothing():
+    from features.market_calendar.adapters.exchange import overseas_holiday_events
+
+    assert overseas_holiday_events([2030]) == []
+
+
+def test_ecb_boe_and_boj_2026_each_have_eight_decisions():
+    from features.market_calendar.adapters.central_banks import official_central_bank_events
+
+    events = official_central_bank_events([2026])
+    assert all(event["kind"] == "central_bank" for event in events)
+    assert all(event["status"] == "confirmed" for event in events)
+    assert all(event["sourceUrl"] for event in events)
+
+    by_provider = {}
+    for event in events:
+        by_provider.setdefault(event["provider"], []).append(event)
+    assert len(by_provider["ecb"]) == 8
+    assert len(by_provider["bank_of_england"]) == 8
+    # BOJ는 2일 회의라 1일차와 결과 발표가 각각 남는다.
+    assert len([e for e in by_provider["bank_of_japan"] if "결과" in e["title"]]) == 8
+
+    assert {e["market"] for e in by_provider["ecb"]} == {"EUROPE"}
+    assert {e["market"] for e in by_provider["bank_of_japan"]} == {"JP"}
+    # 유럽은 통화정책 주체가 둘이다. ECB는 유로존, BoE는 영국을 각각 가리켜야 한다.
+    assert {e["country"] for e in by_provider["ecb"]} == {"EU"}
+    assert {e["country"] for e in by_provider["bank_of_england"]} == {"GB"}
+
+
+def test_central_bank_tables_expire_instead_of_extrapolating():
+    from features.market_calendar.adapters.central_banks import official_central_bank_events
+
+    assert official_central_bank_events([2030]) == []
 
 
 def test_official_fomc_2026_has_eight_statement_events_with_et_time():

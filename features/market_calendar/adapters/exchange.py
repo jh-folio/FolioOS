@@ -1,3 +1,9 @@
+from features.common.exchange_holidays import (
+    EXCHANGE_LABELS,
+    MARKET_EXCHANGES,
+    exchange_holiday_rows,
+    has_coverage,
+)
 from features.market_calendar.schema import normalize_event
 
 # 공식 발표 연간 휴장일 전사. 새 연도 일정이 공시되면 아래 표만 갱신한다.
@@ -23,9 +29,31 @@ KRX_HOLIDAYS = {
 }
 _SOURCE_URLS = {"nyse": "https://www.nyse.com/markets/hours-calendars", "krx": "https://open.krx.co.kr"}
 
+# 유럽·일본 휴장일은 `features/common/exchange_holidays.py` 표 하나를 세션 판정과
+# 캘린더가 함께 읽는다. 두 곳에 적으면 반드시 갈라진다.
+_OVERSEAS_PROVIDERS = {
+    "LSE": ("lse", "https://www.londonstockexchange.com/trade/trading-access/business-days"),
+    "XETRA": ("xetra", "https://www.xetra.com/xetra-en/trading/trading-calendar-and-trading-hours"),
+    "EURONEXT": ("euronext", "https://www.euronext.com/en/trade/trading-hours-holidays"),
+    "BORSA_ITALIANA": ("borsa_italiana", "https://www.borsaitaliana.it/borsaitaliana/calendario-e-orari-di-negoziazione/calendario-borsa-orari-di-negoziazione.en.htm"),
+    "BME": ("bme", "https://www.bolsasymercados.es/en/bme-exchange/trading/trading-calendar.html"),
+    "JPX": ("jpx", "https://www.jpx.co.jp/english/corporate/about-jpx/calendar/"),
+}
+_OVERSEAS_TIMEZONES = {
+    "LSE": "Europe/London", "XETRA": "Europe/Berlin", "EURONEXT": "Europe/Paris",
+    "BORSA_ITALIANA": "Europe/Rome", "BME": "Europe/Madrid", "JPX": "Asia/Tokyo",
+}
+_OVERSEAS_COUNTRIES = {
+    "LSE": "GB", "XETRA": "DE", "EURONEXT": "FR",
+    "BORSA_ITALIANA": "IT", "BME": "ES", "JPX": "JP",
+}
+
+
+_VALID_PROVIDERS = {"nyse", "krx", *(code for code, _ in _OVERSEAS_PROVIDERS.values())}
+
 
 def normalize_exchange_holidays(rows: list[dict], *, provider: str) -> list[dict]:
-    if provider not in {"nyse", "krx"}:
+    if provider not in _VALID_PROVIDERS:
         raise ValueError("calendar_exchange_provider_invalid")
     return [normalize_event({**row, "kind": "holiday", "provider": provider, "source": row.get("source") or provider.upper(), "status": row.get("status") or "confirmed", "allDay": True}) for row in rows if isinstance(row, dict)]
 
@@ -42,4 +70,34 @@ def official_holiday_events(years: list[int]) -> list[dict]:
                     "importance": 1, "sourceUrl": _SOURCE_URLS[provider],
                 })
         events.extend(normalize_exchange_holidays(rows, provider=provider))
+    events.extend(overseas_holiday_events(years))
+    return events
+
+
+def overseas_holiday_events(years: list[int]) -> list[dict]:
+    """Europe and Japan venue closures.
+
+    Europe emits one event per venue rather than one per region: London can be
+    shut while Frankfurt trades, and a single "Europe closed" entry would tell
+    the reader something that is not true on those days.
+    """
+    events = []
+    for market, exchanges in MARKET_EXCHANGES.items():
+        for exchange in exchanges:
+            provider, source_url = _OVERSEAS_PROVIDERS[exchange]
+            label = EXCHANGE_LABELS.get(exchange, exchange)
+            rows = [
+                {
+                    "title": f"{label} 휴장 — {title}",
+                    "market": market,
+                    "country": _OVERSEAS_COUNTRIES[exchange],
+                    "startsAt": f"{day.isoformat()}T00:00:00",
+                    "timezone": _OVERSEAS_TIMEZONES[exchange],
+                    "importance": 1,
+                    "sourceUrl": source_url,
+                }
+                for year in years if has_coverage(exchange, year)
+                for day, title in exchange_holiday_rows(exchange, year)
+            ]
+            events.extend(normalize_exchange_holidays(rows, provider=provider))
     return events

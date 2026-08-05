@@ -4,7 +4,7 @@ import { getJson, postJson } from "../../api";
 type Event = {
   id: string; kind: string; title: string; startsAt: string; status: string;
   market?: string; tickers?: string[]; source?: string; sourceUrl?: string;
-  allDay?: boolean; timezone?: string; importance?: number;
+  allDay?: boolean; timezone?: string; importance?: number; provider?: string;
 };
 type FocusSymbol = { symbol: string; label?: string; source?: string };
 type CalendarView = "week" | "month";
@@ -20,6 +20,14 @@ const KIND_FILTERS: Array<{ value: string; label: string }> = [
   { value: "central_bank", label: "중앙은행" }, { value: "holiday", label: "휴장" },
   { value: "filing", label: "공시" }, { value: "dividend", label: "배당" },
 ];
+export const MARKET_KO: Record<string, string> = { US: "미국", KR: "한국", EUROPE: "유럽", JP: "일본" };
+const MARKET_FILTERS = ["all", "US", "KR", "EUROPE", "JP"];
+// 유럽은 거래소마다 휴장일이 달라 시장 하나로 묶이지 않는다. 칩에서도 어느 거래소가
+// 쉬는지 보여야 "유럽 휴장"으로 잘못 읽히지 않는다.
+const VENUE_KO: Record<string, string> = {
+  nyse: "NYSE", krx: "KRX", lse: "런던", xetra: "프랑크푸르트",
+  euronext: "파리·암스테르담", borsa_italiana: "밀라노", bme: "마드리드", jpx: "도쿄",
+};
 const DOW_KO = ["월", "화", "수", "목", "금", "토", "일"];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -55,7 +63,11 @@ function mondayOf(value: Date): Date {
 
 function shortChip(event: Event): string {
   if (event.kind === "earnings" && event.tickers?.length) return `${event.tickers[0]} · ${timeLabelKST(event)}`;
-  return event.title.replace(/^(NYSE|KRX) 휴장 — /, "휴장 · ").slice(0, 22);
+  if (event.kind === "holiday") {
+    const venue = VENUE_KO[event.provider || ""];
+    return venue ? `휴장 · ${venue}` : event.title.slice(0, 22);
+  }
+  return event.title.slice(0, 22);
 }
 
 export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }) {
@@ -180,9 +192,9 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             onClick={() => { setKind(row.value); persist({ calendarKind: row.value }); }}>{row.label}</button>
         ))}
         <span className="cal-filter-sep" aria-hidden="true" />
-        {["all", "US", "KR"].map((value) => (
+        {MARKET_FILTERS.map((value) => (
           <button key={value} type="button" className="cal-filter" aria-pressed={market === value}
-            onClick={() => { setMarket(value); persist({ calendarMarket: value }); }}>{value === "all" ? "전체 시장" : value}</button>
+            onClick={() => { setMarket(value); persist({ calendarMarket: value }); }}>{value === "all" ? "전체 시장" : MARKET_KO[value] || value}</button>
         ))}
         <label className="cal-watch-toggle"><input type="checkbox" checked={watchOnly}
           onChange={(event) => { setWatchOnly(event.currentTarget.checked); persist({ calendarWatchlistOnly: event.currentTarget.checked }); }} /> 보유·관심만</label>
@@ -236,7 +248,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             {dayEvents.map((event) => (
               <tr key={event.id}>
                 <td>{timeLabelKST(event)}</td>
-                <td><span className="mkt-chip">{event.market || "—"}</span></td>
+                <td><span className="mkt-chip">{MARKET_KO[event.market || ""] || event.market || "—"}</span></td>
                 <td><span className="imp" aria-label={`중요도 ${event.importance || 1}/3`}>{[1, 2, 3].map((level) => <u key={level} className={(event.importance || 1) >= level ? "on" : ""} />)}</span></td>
                 <td>
                   {event.sourceUrl ? <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.title}</strong></a> : <strong>{event.title}</strong>}
@@ -249,7 +261,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
         </table></div>
       ) : (
         <p className="cockpit-empty">
-          {events.length ? "이 날짜에는 표시할 일정이 없습니다." : "저장된 시장 일정이 없습니다. 위의 일정 수집을 실행하면 휴장일·FOMC·보유/관심 종목 실적이 채워집니다."}
+          {events.length ? "이 날짜에는 표시할 일정이 없습니다." : "저장된 시장 일정이 없습니다. 위의 일정 수집을 실행하면 미국·한국·유럽·일본 휴장일, FOMC·ECB·BoE·BOJ 금리 결정, 보유/관심 종목 실적이 채워집니다."}
         </p>
       )}
     </section>

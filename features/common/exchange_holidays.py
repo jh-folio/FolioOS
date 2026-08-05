@@ -25,43 +25,56 @@ import datetime as dt
 # Euronext: https://www.euronext.com/en/trading/trading-hours-holidays
 # BME: https://www.bolsasymercados.es/en/bme-exchange/trading/trading-calendar.html
 # JPX: https://www.jpx.co.jp/english/corporate/about-jpx/calendar/
-EXCHANGE_HOLIDAYS: dict[str, dict[int, tuple[str, ...]]] = {
+# 주말에 걸치는 공휴일은 넣지 않는다. 세션 판정에는 영향이 없지만 캘린더에
+# 토요일 휴장 일정이 뜨기 때문이다.
+EXCHANGE_HOLIDAYS: dict[str, dict[int, tuple[tuple[str, str], ...]]] = {
     "LSE": {
         2026: (
-            "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-04", "2026-05-25",
-            "2026-08-31", "2026-12-25", "2026-12-28",
+            ("2026-01-01", "New Year's Day"), ("2026-04-03", "Good Friday"),
+            ("2026-04-06", "Easter Monday"), ("2026-05-04", "Early May bank holiday"),
+            ("2026-05-25", "Spring bank holiday"), ("2026-08-31", "Summer bank holiday"),
+            ("2026-12-25", "Christmas Day"), ("2026-12-28", "Boxing Day (substitute)"),
         ),
     },
     "XETRA": {
         2026: (
-            "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01",
-            "2026-12-24", "2026-12-25", "2026-12-31",
+            ("2026-01-01", "Neujahr"), ("2026-04-03", "Karfreitag"),
+            ("2026-04-06", "Ostermontag"), ("2026-05-01", "Tag der Arbeit"),
+            ("2026-12-24", "Heiligabend"), ("2026-12-25", "1. Weihnachtstag"),
+            ("2026-12-31", "Silvester"),
         ),
     },
     "EURONEXT": {  # 파리·암스테르담·브뤼셀 공통
         2026: (
-            "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01",
-            "2026-12-25", "2026-12-26",
+            ("2026-01-01", "New Year's Day"), ("2026-04-03", "Good Friday"),
+            ("2026-04-06", "Easter Monday"), ("2026-05-01", "Labour Day"),
+            ("2026-12-25", "Christmas Day"),
         ),
     },
     "BORSA_ITALIANA": {
         2026: (
-            "2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01",
-            "2026-08-15", "2026-12-25", "2026-12-26",
+            ("2026-01-01", "Capodanno"), ("2026-04-03", "Venerdì Santo"),
+            ("2026-04-06", "Lunedì dell'Angelo"), ("2026-05-01", "Festa del Lavoro"),
+            ("2026-12-24", "Vigilia di Natale"), ("2026-12-25", "Natale"),
+            ("2026-12-31", "Ultimo dell'anno"),
         ),
     },
     "BME": {
         2026: (
-            "2026-01-01", "2026-01-06", "2026-04-03", "2026-05-01",
-            "2026-12-25", "2026-12-26",
+            ("2026-01-01", "Año Nuevo"), ("2026-04-03", "Viernes Santo"),
+            ("2026-04-06", "Lunes de Pascua"), ("2026-05-01", "Día del Trabajo"),
+            ("2026-12-25", "Navidad"),
         ),
     },
     "JPX": {
         2026: (
-            "2026-01-01", "2026-01-02", "2026-01-12", "2026-02-11", "2026-02-23",
-            "2026-03-20", "2026-04-29", "2026-05-04", "2026-05-05", "2026-05-06",
-            "2026-07-20", "2026-08-11", "2026-09-21", "2026-09-22", "2026-09-23",
-            "2026-10-12", "2026-11-03", "2026-11-23", "2026-12-31",
+            ("2026-01-01", "元日"), ("2026-01-02", "年始休業"), ("2026-01-12", "成人の日"),
+            ("2026-02-11", "建国記念の日"), ("2026-02-23", "天皇誕生日"), ("2026-03-20", "春分の日"),
+            ("2026-04-29", "昭和の日"), ("2026-05-04", "みどりの日"), ("2026-05-05", "こどもの日"),
+            ("2026-05-06", "憲法記念日 振替休日"), ("2026-07-20", "海の日"), ("2026-08-11", "山の日"),
+            ("2026-09-21", "敬老の日"), ("2026-09-22", "国民の休日"), ("2026-09-23", "秋分の日"),
+            ("2026-10-12", "スポーツの日"), ("2026-11-03", "文化の日"), ("2026-11-23", "勤労感謝の日"),
+            ("2026-12-31", "大納会翌日 休業"),
         ),
     },
 }
@@ -96,11 +109,16 @@ def has_coverage(exchange: str, year: int) -> bool:
     return year in EXCHANGE_HOLIDAYS.get(exchange, {})
 
 
+def exchange_holiday_rows(exchange: str, year: int) -> tuple[tuple[dt.date, str], ...]:
+    """Dated holidays with their published names, for calendar events."""
+    return tuple(
+        (dt.date.fromisoformat(text), title)
+        for text, title in EXCHANGE_HOLIDAYS.get(exchange, {}).get(year, ())
+    )
+
+
 def exchange_holidays(exchange: str, year: int) -> set[dt.date]:
-    return {
-        dt.date.fromisoformat(text)
-        for text in EXCHANGE_HOLIDAYS.get(exchange, {}).get(year, ())
-    }
+    return {day for day, _ in exchange_holiday_rows(exchange, year)}
 
 
 def exchange_open_on(exchange: str, day: dt.date) -> bool | None:

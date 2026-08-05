@@ -58,11 +58,17 @@ def test_a_uk_only_holiday_does_not_close_the_continent():
     assert session["closedVenues"] == ["LSE"]
 
 
-def test_a_spain_only_holiday_diverges_the_other_way():
-    """Epiphany closes Madrid while London, Paris and Frankfurt trade."""
-    status = market_exchange_status("EUROPE", dt.date(2026, 1, 6))
+def test_a_continental_only_holiday_diverges_the_other_way():
+    """Christmas Eve shuts Frankfurt and Milan while London and Paris trade."""
+    status = market_exchange_status("EUROPE", dt.date(2026, 12, 24))
     assert status["divergent"] is True
-    assert status["closedVenues"] == ["BME"]
+    assert status["closedVenues"] == ["BORSA_ITALIANA", "XETRA"]
+    assert status["openVenues"] == ["BME", "EURONEXT", "LSE"]
+
+
+def test_madrid_trades_on_epiphany():
+    """BME's published 2026 calendar does not close for 6 January."""
+    assert market_exchange_status("EUROPE", dt.date(2026, 1, 6))["divergent"] is False
 
 
 def test_a_shared_holiday_closes_the_whole_region_without_divergence():
