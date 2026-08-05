@@ -12,7 +12,12 @@ FRED_RELEASES = {
     53: ("미국 GDP", 2),
     54: ("미국 개인소득·지출 (PCE)", 3),
     46: ("미국 PPI", 2),
-    8: ("미국 소매판매", 2),
+    # `8`은 FRED 릴리즈 목록에 없는 번호라 소매판매가 한 번도 들어온 적이 없다.
+    # 실제 번호는 9(Advance Monthly Sales for Retail and Food Services)다.
+    9: ("미국 소매판매", 2),
+    192: ("미국 JOLTS 구인·이직", 2),
+    13: ("미국 산업생산", 2),
+    51: ("미국 무역수지", 2),
 }
 _FRED_API = "https://api.stlouisfed.org/fred/release/dates"
 

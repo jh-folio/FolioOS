@@ -59,7 +59,6 @@ type AgentSettings = {
 type AutomationSettings = {
   rss?: { enabled?: boolean; intervalMinutes?: number | string; saveFullText?: boolean };
   signals?: { enabled?: boolean; intervalMinutes?: number | string };
-  marketCalendar?: { enabled?: boolean; intervalMinutes?: number | string };
   marketMemory?: { enabled?: boolean; intervalMinutes?: number | string; runAfterRss?: boolean };
   briefing?: {
     enabled?: boolean;
@@ -162,10 +161,6 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
     signals: {
       enabled: Boolean(form.signals?.enabled),
       intervalMinutes: form.signals?.intervalMinutes || 1,
-    },
-    marketCalendar: {
-      enabled: Boolean(form.marketCalendar?.enabled),
-      intervalMinutes: form.marketCalendar?.intervalMinutes || 360,
     },
     marketMemory: {
       enabled: Boolean(form.marketMemory?.enabled),
@@ -684,18 +679,6 @@ export function SettingsRoute() {
                   <ToggleSwitch ariaLabel="저지연 리드 자동 수집" checked={Boolean(automation.signals?.enabled)} onChange={(checked) => setAutomation({ ...automation, signals: { ...automation.signals, enabled: checked } })} compact />
                 </div>
                 <label className="field"><span>확인 간격</span><select value={String(automation.signals?.intervalMinutes || 1)} onChange={(event) => setAutomation({ ...automation, signals: { ...automation.signals, intervalMinutes: event.currentTarget.value } })}><option value="1">1분마다</option><option value="2">2분마다</option><option value="5">5분마다</option><option value="10">10분마다</option></select></label>
-              </section>
-
-              <section className="automation-card">
-                <div className="automation-card-head">
-                  <div>
-                    <span>Market Calendar</span>
-                    <strong>시장 일정 갱신</strong>
-                    <p>경제지표·중앙은행·휴장·실적·공시·배당 일정을 새로 고칩니다. Agent는 호출하지 않습니다.</p>
-                  </div>
-                  <ToggleSwitch ariaLabel="시장 일정 자동 갱신" checked={Boolean(automation.marketCalendar?.enabled)} onChange={(checked) => setAutomation({ ...automation, marketCalendar: { ...automation.marketCalendar, enabled: checked } })} compact />
-                </div>
-                <label className="field"><span>갱신 간격</span><select value={String(automation.marketCalendar?.intervalMinutes || 360)} onChange={(event) => setAutomation({ ...automation, marketCalendar: { ...automation.marketCalendar, intervalMinutes: event.currentTarget.value } })}><option value="60">1시간마다</option><option value="180">3시간마다</option><option value="360">6시간마다</option><option value="720">12시간마다</option></select></label>
               </section>
 
               <section className="automation-card">

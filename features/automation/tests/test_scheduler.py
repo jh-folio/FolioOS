@@ -68,7 +68,10 @@ def test_run_due_automations_chains_memory_after_rss(monkeypatch):
     result = service.run_due_automations(now=dt.datetime(2026, 7, 2, 8, 0, 0))
 
     assert result["ok"] is True
-    assert calls == ["rss", "marketMemory"]
+    # marketCalendar는 설정 없이 항상 도는 유일한 자동화라 이력이 없으면 함께 실행된다.
+    assert "marketCalendar" in calls
+    # 검증 대상인 연쇄 순서는 그대로다.
+    assert [kind for kind in calls if kind != "marketCalendar"] == ["rss", "marketMemory"]
 
 
 def test_signals_collection_is_on_by_default_without_user_setup():
@@ -85,3 +88,29 @@ def test_rss_run_also_promotes_kr_leads(monkeypatch):
     monkeypatch.setattr(service, "_append_run", lambda *_args, **_kwargs: None)
     result = service.run_automation_once("rss")
     assert result["result"]["krFastOriginLeads"] == 7
+
+
+def test_market_calendar_runs_without_any_setting(monkeypatch):
+    """캘린더 갱신은 사용자 설정 항목이 아니다.
+
+    이 설정이 꺼진 채로 남아 CPI·고용지표가 한 건도 등록되지 않은 상태가 지속됐다.
+    Agent를 호출하지 않고 비용도 없으므로 항상 6시간마다 돈다.
+    """
+    from features.automation.schema import MARKET_CALENDAR_INTERVAL_MINUTES, default_settings, normalize_settings
+
+    assert "marketCalendar" not in default_settings()
+    # 옛 설정 파일에 남아 있어도 무시한다.
+    assert "marketCalendar" not in normalize_settings({"marketCalendar": {"enabled": False}})
+
+    settings = normalize_settings({})
+    now = dt.datetime(2026, 7, 2, 8, 0, 0, tzinfo=dt.timezone.utc)
+    assert service.automation_due("marketCalendar", settings=settings, now=now, runs=[]) is True
+
+    recent = [{"kind": "marketCalendar", "finishedAt": (now - dt.timedelta(hours=1)).isoformat()}]
+    assert service.automation_due("marketCalendar", settings=settings, now=now, runs=recent) is False
+
+    stale = [{
+        "kind": "marketCalendar",
+        "finishedAt": (now - dt.timedelta(minutes=MARKET_CALENDAR_INTERVAL_MINUTES + 1)).isoformat(),
+    }]
+    assert service.automation_due("marketCalendar", settings=settings, now=now, runs=stale) is True

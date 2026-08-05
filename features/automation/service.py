@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from features.automation.schema import normalize_settings
+from features.automation.schema import MARKET_CALENDAR_INTERVAL_MINUTES
 from features.agent_mode.bridge import submit_agent_task
 from features.agent_mode.generation_mode import llm_override_for_mode
 from features.common.research_library.rss.service import import_rssarchive
@@ -104,12 +105,12 @@ def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | N
         finished = _parse_iso((last or {}).get("finishedAt", ""))
         return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
     if kind == "marketCalendar":
-        cfg = settings["marketCalendar"]
-        if not cfg.get("enabled"):
-            return False
+        # 설정 없이 항상 도는 유일한 자동화다(schema.MARKET_CALENDAR_INTERVAL_MINUTES).
         last = _last_run_for("marketCalendar", runs)
         finished = _parse_iso((last or {}).get("finishedAt", ""))
-        return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
+        return finished is None or _elapsed(now, finished) >= dt.timedelta(
+            minutes=MARKET_CALENDAR_INTERVAL_MINUTES
+        )
     if kind == "marketMemory":
         cfg = settings["marketMemory"]
         if not cfg.get("enabled"):

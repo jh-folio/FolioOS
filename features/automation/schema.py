@@ -32,12 +32,18 @@ def _time(value: str, default: str = "08:00") -> str:
     return f"{hour:02d}:{minute:02d}"
 
 
+# 시장 일정 갱신은 사용자 선택 항목이 아니다. 끄면 지표 발표일이 조용히 비어 있게 되고,
+# 화면은 "이번 주에 일정이 없음"과 구분되지 않는다. 실제로 이 설정이 꺼진 채로 남아
+# CPI·고용지표가 한 건도 등록되지 않은 상태가 지속됐다. Agent를 호출하지 않고 비용도
+# 없으므로 항상 6시간마다 돈다.
+MARKET_CALENDAR_INTERVAL_MINUTES = 360
+
+
 def default_settings() -> dict:
     return {
         "rss": {"enabled": False, "intervalMinutes": 60, "saveFullText": True},
         # 자격증명이 필요 없는 공개 피드만 돌므로 기본으로 켠다.
         "signals": {"enabled": True, "intervalMinutes": 5},
-        "marketCalendar": {"enabled": False, "intervalMinutes": 360},
         "marketMemory": {"enabled": False, "intervalMinutes": 1440, "runAfterRss": True},
         "briefing": {
             "enabled": False,
@@ -61,7 +67,6 @@ def normalize_settings(raw: dict | None) -> dict:
     defaults = default_settings()
     rss = raw.get("rss") or {}
     signals = raw.get("signals") or {}
-    calendar = raw.get("marketCalendar") or {}
     memory = raw.get("marketMemory") or {}
     briefing = raw.get("briefing") or {}
     missed = raw.get("missedRuns") or {}
@@ -74,10 +79,6 @@ def normalize_settings(raw: dict | None) -> dict:
         "signals": {
             "enabled": _bool(signals.get("enabled", defaults["signals"]["enabled"])),
             "intervalMinutes": _int(signals.get("intervalMinutes"), defaults["signals"]["intervalMinutes"], 1),
-        },
-        "marketCalendar": {
-            "enabled": _bool(calendar.get("enabled", defaults["marketCalendar"]["enabled"])),
-            "intervalMinutes": _int(calendar.get("intervalMinutes"), defaults["marketCalendar"]["intervalMinutes"], 60),
         },
         "marketMemory": {
             "enabled": _bool(memory.get("enabled", defaults["marketMemory"]["enabled"])),

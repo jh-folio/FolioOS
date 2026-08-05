@@ -12,6 +12,7 @@ from features.market_calendar.adapters.fed import official_fomc_events
 from features.market_calendar.adapters.filings import local_filing_events
 from features.market_calendar.adapters.bok import fetch_bok_macro_events
 from features.market_calendar.adapters.fred import fetch_fred_macro_events
+from features.market_calendar.adapters.yf_economic import fetch_yf_economic_events
 from features.market_calendar.schema import normalize_event
 from features.portfolio.service import get_portfolio
 
@@ -199,6 +200,14 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
         providers["bok_macro"] = len(kr_macro)
     else:
         providers["bok_macro"] = "bok_key_required"
+
+    # 일본·유럽은 FRED가 다루지 않는다. yfinance 경제 캘린더는 키 없이 이 시장을 채우는
+    # 유일한 경로라 estimated로 넣는다. 미국은 FRED가 confirmed로 담당하므로 제외한다.
+    overseas = fetch_yf_economic_events(
+        start=today.isoformat(), end=(today + dt.timedelta(days=60)).isoformat()
+    )
+    events.extend(overseas)
+    providers["yfinance_economic"] = len(overseas)
 
     if include_estimates and tickers:
         earnings = estimated_earnings_events(tickers)

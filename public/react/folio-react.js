@@ -17223,10 +17223,6 @@ function Q(e) {
 			enabled: !!e.signals?.enabled,
 			intervalMinutes: e.signals?.intervalMinutes || 1
 		},
-		marketCalendar: {
-			enabled: !!e.marketCalendar?.enabled,
-			intervalMinutes: e.marketCalendar?.intervalMinutes || 360
-		},
 		marketMemory: {
 			enabled: !!e.marketMemory?.enabled,
 			intervalMinutes: e.marketMemory?.intervalMinutes || 1440,
@@ -18053,58 +18049,6 @@ function fc() {
 													/* @__PURE__ */ (0, x.jsx)("option", {
 														value: "10",
 														children: "10분마다"
-													})
-												]
-											})]
-										})]
-									}),
-									/* @__PURE__ */ (0, x.jsxs)("section", {
-										className: "automation-card",
-										children: [/* @__PURE__ */ (0, x.jsxs)("div", {
-											className: "automation-card-head",
-											children: [/* @__PURE__ */ (0, x.jsxs)("div", { children: [
-												/* @__PURE__ */ (0, x.jsx)("span", { children: "Market Calendar" }),
-												/* @__PURE__ */ (0, x.jsx)("strong", { children: "시장 일정 갱신" }),
-												/* @__PURE__ */ (0, x.jsx)("p", { children: "경제지표·중앙은행·휴장·실적·공시·배당 일정을 새로 고칩니다. Agent는 호출하지 않습니다." })
-											] }), /* @__PURE__ */ (0, x.jsx)(dc, {
-												ariaLabel: "시장 일정 자동 갱신",
-												checked: !!u.marketCalendar?.enabled,
-												onChange: (e) => d({
-													...u,
-													marketCalendar: {
-														...u.marketCalendar,
-														enabled: e
-													}
-												}),
-												compact: !0
-											})]
-										}), /* @__PURE__ */ (0, x.jsxs)("label", {
-											className: "field",
-											children: [/* @__PURE__ */ (0, x.jsx)("span", { children: "갱신 간격" }), /* @__PURE__ */ (0, x.jsxs)("select", {
-												value: String(u.marketCalendar?.intervalMinutes || 360),
-												onChange: (e) => d({
-													...u,
-													marketCalendar: {
-														...u.marketCalendar,
-														intervalMinutes: e.currentTarget.value
-													}
-												}),
-												children: [
-													/* @__PURE__ */ (0, x.jsx)("option", {
-														value: "60",
-														children: "1시간마다"
-													}),
-													/* @__PURE__ */ (0, x.jsx)("option", {
-														value: "180",
-														children: "3시간마다"
-													}),
-													/* @__PURE__ */ (0, x.jsx)("option", {
-														value: "360",
-														children: "6시간마다"
-													}),
-													/* @__PURE__ */ (0, x.jsx)("option", {
-														value: "720",
-														children: "12시간마다"
 													})
 												]
 											})]
