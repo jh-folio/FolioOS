@@ -19,6 +19,13 @@ from features.common.market_calendar import is_market_open, latest_trading_day_o
 from features.common.config_bootstrap import resolve_config
 from features.common.market_data.market_universe import build_kospi_heatmap_snapshot, build_us_heatmap_snapshot
 from features.common.market_data.price_history import INDEX_UNIVERSE, build_price_history
+from features.common.markets import (
+    MARKET_REGISTRY,
+    PRODUCT_MARKETS,
+    SavedMarketScope,
+    market_keys_for_scope,
+    normalize_saved_market_scope,
+)
 from features.common.company_lookup import find_companies
 from features.common.utils import read_json, write_json
 from features.daily_briefing.schema import (
@@ -32,9 +39,17 @@ from features.daily_briefing.schema import (
 
 ROOT = Path(__file__).resolve().parents[2]
 MARKET_CACHE_DIR = ROOT / "data" / "market-cache"
+# 시장 메타는 레지스트리에서 파생한다. `currency`는 단일 통화 시장의 기본값일 뿐이고,
+# 유럽처럼 통화가 둘인 시장은 시리즈별 통화가 권위다(`_price_snapshot` 참고).
 MARKET_META = {
-    "us": {"market": "US", "timezone": "America/New_York", "currency": "USD"},
-    "kr": {"market": "KR", "timezone": "Asia/Seoul", "currency": "KRW"},
+    market.value.lower(): {
+        "market": market.value,
+        "timezone": MARKET_REGISTRY[market].timezone,
+        "currency": MARKET_REGISTRY[market].currencies[0] if MARKET_REGISTRY[market].currencies else "",
+        "currencies": list(MARKET_REGISTRY[market].currencies),
+        "supportsHeatmap": MARKET_REGISTRY[market].capabilities.heatmap,
+    }
+    for market in PRODUCT_MARKETS
 }
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -255,6 +270,28 @@ def _series_provider(series):
     return "+".join(providers) if providers else "market-data-v2"
 
 
+def _snapshot_currencies(meta, series, requested):
+    """The currencies the plotted lines are actually denominated in.
+
+    Europe prints the FTSE 100 in GBP and everything else in EUR. Stamping one
+    currency on the snapshot would misdescribe half the lines, so the snapshot
+    reports the set and each series carries its own.
+
+    Missing series drop out: if the GBP index failed, no axis is in GBP. When no
+    series states a currency at all, a single-currency market can safely supply
+    its own — but a market with two cannot, and reports unknown rather than
+    picking one and being wrong half the time.
+    """
+    codes = []
+    for row in series or requested or []:
+        code = str((row or {}).get("currency") or "").strip().upper()
+        if code and code not in codes:
+            codes.append(code)
+    if codes:
+        return codes
+    return [meta["currency"]] if len(meta["currencies"]) == 1 and meta["currency"] else []
+
+
 def _price_snapshot(snapshot_id, market_key, role, session_date, requested, series, missing, subject=None):
     meta = MARKET_META[market_key]
     latest = _latest_series_time(series)
@@ -276,6 +313,12 @@ def _price_snapshot(snapshot_id, market_key, role, session_date, requested, seri
     sparse = [ticker for ticker, counts in point_counts.items() if counts["daily"] < 8]
     if sparse:
         warnings.append(f"fewer than 8 temporal points: {', '.join(sparse)}")
+    currencies = _snapshot_currencies(meta, series, requested)
+    proxies = [
+        f"{row.get('ticker', '')} is a proxy for {row.get('proxyFor')}"
+        for row in series if row.get("proxyFor")
+    ]
+    warnings.extend(proxies)
     return {
         "id": snapshot_id,
         "schemaVersion": 2,
@@ -288,7 +331,10 @@ def _price_snapshot(snapshot_id, market_key, role, session_date, requested, seri
         "freshness": freshness,
         "coverage": _coverage(requested, series, missing),
         "timezone": meta["timezone"],
-        "currency": meta["currency"],
+        # 단일 통화면 기존과 같은 값이 그대로 나간다. 통화가 섞이면 `MIXED`로 표시하고
+        # 실제 통화는 `currencies`와 각 시리즈에서 읽는다.
+        "currency": currencies[0] if len(currencies) == 1 else "MIXED" if currencies else "",
+        "currencies": currencies,
         "granularities": ["5m", "1d"],
         "dataSufficiency": {"minimumTrendPoints": 8, "pointCounts": point_counts, "status": "sparse" if sparse else "sufficient" if series else "unavailable"},
         "subject": subject or {},
@@ -342,8 +388,15 @@ def collect_briefing_visuals(
         "us": lambda session_date: build_us_heatmap_snapshot(session_date, cache_dir=MARKET_CACHE_DIR),
         "kr": lambda session_date: build_kospi_heatmap_snapshot(session_date, cache_dir=MARKET_CACHE_DIR),
     }
-    scope = normalize_market_scope(market_scope)
-    scopes = ["us", "kr"] if scope == "both" else [scope]
+    # 스냅샷 범위는 브리핑 본문의 scope enum이 아니라 시장 계약을 따른다. 유럽·일본
+    # 차트는 브리핑 생성이 그 시장을 지원하기 전에도 만들 수 있어야 하고, 나중에
+    # 브리핑 scope가 넓어져도 여기는 그대로 둘 수 있다.
+    # `both`는 저장된 US/KR 묶음, `all`은 네 시장이다.
+    scope = normalize_saved_market_scope(market_scope, default=SavedMarketScope.BOTH)
+    scopes = [
+        key for key in (code.value.lower() for code in market_keys_for_scope(scope, saved=True))
+        if key in MARKET_META
+    ]
     snapshots = []
     recommendations = []
     sidecar_snapshots = {}
@@ -374,6 +427,7 @@ def collect_briefing_visuals(
         return deepcopy(price_cache[key])
 
     for market_key in scopes:
+        meta = MARKET_META[market_key]
         result = (scope_results or {}).get(market_key) or {}
         session_date = _snapshot_session_date(
             result, date, MARKET_META[market_key]["market"], now=now,
@@ -391,7 +445,16 @@ def collect_briefing_visuals(
             if not (history["intraday"]["points"] or history["daily"]["points"]):
                 index_missing.append(item["ticker"])
                 continue
-            index_series.append({"ticker": item["ticker"], "label": item["label"], **history})
+            index_series.append({
+                "ticker": item["ticker"],
+                "providerSymbol": item["ticker"],
+                "label": item["label"],
+                "currency": item["currency"],
+                "timezone": item["timezone"],
+                "country": item["country"],
+                **({"proxyFor": item["proxyFor"]} if item.get("proxyFor") else {}),
+                **history,
+            })
         if include_market_visuals:
             index_snapshot = _price_snapshot(
                 f"price-series:{market_key}:indices:{date}", market_key, "market_summary", session_date,
@@ -442,6 +505,11 @@ def collect_briefing_visuals(
             ))
 
         if not include_market_visuals:
+            continue
+
+        # 유럽·일본은 재배포 가능한 구성종목 universe가 아직 없다(Task 2.3). 히트맵을
+        # `unavailable`로 만들어 붙이면 화면에 빈 카드만 남으므로 아예 만들지 않는다.
+        if not meta["supportsHeatmap"]:
             continue
 
         try:

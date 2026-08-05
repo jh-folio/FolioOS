@@ -3,17 +3,32 @@ from __future__ import annotations
 import datetime as dt
 from typing import Any, Callable
 
+from features.common.markets import MARKET_REGISTRY, PRODUCT_MARKETS
 
+
+def _index_entry(descriptor) -> dict:
+    entry = {
+        "ticker": descriptor.ticker,
+        "label": descriptor.label,
+        # 시리즈마다 통화를 들고 다닌다. 유럽은 GBP와 EUR이 한 차트에 섞이므로
+        # 스냅샷 하나에 통화 하나를 붙이면 축의 숫자에 대해 거짓을 말하게 된다.
+        "currency": descriptor.currency,
+        "timezone": descriptor.timezone,
+        "country": descriptor.country,
+    }
+    if descriptor.proxy_for:
+        entry["proxyFor"] = descriptor.proxy_for
+    return entry
+
+
+# 시장 레지스트리가 대표 지수의 단일 출처다. 여기서 다시 티커를 적지 않는다.
 INDEX_UNIVERSE = {
-    "us": (
-        {"ticker": "^GSPC", "label": "S&P 500"},
-        {"ticker": "^IXIC", "label": "Nasdaq"},
-        {"ticker": "^DJI", "label": "Dow Jones"},
-    ),
-    "kr": (
-        {"ticker": "^KS11", "label": "KOSPI"},
-        {"ticker": "^KS200", "label": "KOSPI 200"},
-    ),
+    market.value.lower(): tuple(
+        _index_entry(descriptor)
+        for descriptor in MARKET_REGISTRY[market].representative_indices
+        if descriptor.in_default_chart
+    )
+    for market in PRODUCT_MARKETS
 }
 
 

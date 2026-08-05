@@ -32,6 +32,27 @@ LLM 입력과 표시 참고자료에는 같은 evidence lane·cluster dedupe·�
 당일 한국장 브리핑을 09:00 KST 전에 생성하면 분석 창의 `krCurrentSessionDate`는 당일을 유지하더라도 차트 snapshot은 아직 시작하지 않은 세션을 요청하지 않고 직전 한국 거래일을 사용합니다. 개장 후에는 당일 5분봉을 사용합니다.
 일봉 provider 반영이 늦고 같은 세션의 5분봉이 있으면 해당 5분봉의 OHLCV를 집계해 마지막 일봉을 보완합니다. 이 파생 행은 provider에 `intraday_aggregate`를 명시합니다.
 
+### 대표 지수와 통화
+
+대표 지수는 `features/common/markets.py`의 `MARKET_REGISTRY`가 단일 출처입니다. `IndexDescriptor`가 티커·표시명·통화·시간대·국가를 함께 들고 있고, `INDEX_UNIVERSE`는 이 목록에서 파생합니다. 지수를 더하거나 빼려면 레지스트리만 고칩니다.
+
+| 시장 | 기본 차트 지수 | 통화 |
+| --- | --- | --- |
+| 미국 | S&P 500, Nasdaq, Dow Jones | USD |
+| 한국 | KOSPI, KOSPI 200 | KRW |
+| 유럽 | STOXX Europe 600, FTSE 100, DAX, CAC 40, AEX | EUR + **GBP** |
+| 일본 | Nikkei 225, TOPIX 추종 ETF(1475) | JPY |
+
+유럽은 통화가 하나가 아닙니다. FTSE 100은 GBP, 나머지는 EUR로 표시되므로 스냅샷 하나에 통화 하나를 붙이면 축의 숫자에 대해 거짓을 말하게 됩니다. 그래서 **통화는 시리즈마다** 저장하고, 스냅샷에는 `currencies` 목록을 둡니다. 스냅샷의 `currency`는 통화가 하나일 때만 그 값이고 섞이면 `MIXED`입니다. 실제로 그려진 시리즈만 통화를 주장하므로, GBP 지수가 빠지면 `currencies`에서도 GBP가 빠집니다.
+
+FTSE MIB(이탈리아)와 IBEX 35(스페인)는 레지스트리에 대표 지수로 남지만 기본 선 차트에서는 뺍니다(`in_default_chart=False`). 선 7개는 읽히지 않습니다.
+
+TOPIX는 yfinance에 지수 심볼이 없어(`^TPX`·`^TOPX` 모두 빈 응답) 추종 ETF로 대신 그립니다. 이 시리즈는 `proxyFor`와 경고로 ETF임을 밝히며, 지수라고 표기하지 않습니다.
+
+지수 하나가 실패해도 브리핑은 실패하지 않습니다. 해당 심볼만 `coverage.missingSymbols`로 빠지고 나머지 지수는 그대로 그려집니다.
+
+유럽·일본은 재배포 가능한 구성종목 universe가 아직 없어(`capabilities.heatmap=False`) 히트맵 스냅샷을 만들지 않습니다. 빈 카드를 붙이지 않기 위해서입니다.
+
 가격 series는 보고서 JSON에 inline 저장합니다. 히트맵 상세 rows는 compact gzip `data/briefings/{date}.visuals.json.gz` 사이드카에 저장하고 보고서는 `sidecarRef`만 가집니다. 기존 `.visuals.json`은 읽기 호환합니다. 일부 시장만 재생성하면 반대편 시장의 snapshot과 사이드카 rows를 보존합니다. 따라서 과거 브리핑은 provider를 다시 호출하지 않고 생성 당시 데이터를 재현할 수 있습니다.
 
 | 위치 | 분석 질문 | 차트 계약 | 핵심 필드 |
