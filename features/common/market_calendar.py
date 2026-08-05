@@ -53,12 +53,21 @@ def parse_kst_datetime(value):
     return parsed.astimezone(_KST)
 
 
+def _dt_now_kst():
+    return dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+
+
 def kr_session_phase(briefing_day, is_open_on_date, as_of=None):
     """Return holiday/pre_open/intraday/closed for a Korean trading date.
 
     ``as_of=None`` preserves the historical date-only behavior for callers that
     intentionally inspect a calendar fixture without a generation timestamp.
     Runtime briefing generation always supplies its KST-aware creation time.
+
+    A caller that omits ``as_of`` is inspecting the calendar, not generating a
+    briefing, so the legacy answer stands. Everything that decides what a
+    reader sees — session mode, title, stored windows — resolves the phase from
+    a real timestamp instead.
     """
     if not is_open_on_date:
         return "holiday"
@@ -942,3 +951,18 @@ def doc_market_bucket(doc, windows):
     if date == windows.get("briefingDate"):
         return "당일 최신 자료"
     return "보조 자료"
+
+
+def kr_session_is_open_now(market_windows) -> bool:
+    """phase가 기록되지 않은 window를 현재 시각으로 판정한다.
+
+    세션일이 오늘이고 정규장 시간 안일 때만 참이다. 지난 세션은 끝났고 아직
+    오지 않은 세션은 시작하지 않았다.
+    """
+    session_date = str((market_windows or {}).get("krCurrentSessionDate") or "").strip()
+    if not session_date:
+        return False
+    now = _dt_now_kst()
+    if session_date != now.date().isoformat():
+        return False
+    return _KR_REGULAR_OPEN <= now.time() < _KR_REGULAR_CLOSE

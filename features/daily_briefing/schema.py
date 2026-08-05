@@ -255,7 +255,12 @@ def briefing_session_mode(scope, value="", market_windows=None):
             return "kr_close"
         if phase == "holiday":
             return "kr_holiday"
-        return "kr_intraday" if windows.get("krCurrentSessionDate") else "kr_close"
+        # phase가 없는 legacy window. 거래일이라는 사실만으로 장중이라고 하면
+        # 지난 세션도 진행 중으로 읽힌다 — 세션일이 오늘이고 정규장 시간 안일
+        # 때만 장중이다.
+        from features.common.market_calendar import kr_session_is_open_now
+
+        return "kr_intraday" if kr_session_is_open_now(windows) else "kr_close"
     if normalized_scope in {"europe", "jp"}:
         if raw:
             return normalize_session_mode(normalized_scope, raw)

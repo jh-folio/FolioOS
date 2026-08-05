@@ -352,6 +352,10 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         "marketSnapshot": market_snapshot,
         "koreaMarketData": korea_market_data,
         "marketWindows": market_windows,
+        # 생성 시점의 세션 판정을 남긴다. 저장하지 않으면 읽을 때마다 다시
+        # 추측하게 되고, 추측이 틀리면 브리핑이 스스로 어느 세션을 다뤘는지
+        # 잘못 말하게 된다.
+        "sessionModes": dict(session_modes),
         "marketDrivers": [
             {
                 "driver": d.get("driver", ""),
