@@ -5,7 +5,7 @@ from pathlib import Path
 
 from features.market_memory.market_state_ref import MarketStateRefQuery, resolve_market_state_ref
 from features.market_memory.memory import connect, init_db, list_states
-from features.market_memory.snapshot import current_market_state_snapshot
+from features.market_memory.snapshot import current_market_state_snapshot, scrub_inline_refs
 
 ROOT = Path(__file__).resolve().parents[2]
 MARKET_MEMORY_DB_PATH = ROOT / "data" / "market-memory.sqlite3"
@@ -375,8 +375,21 @@ def _display_source_refs(refs) -> list[dict]:
     return out
 
 
+def _snapshot_ref_lookup(snapshot: dict) -> dict[str, dict]:
+    """저장된 sourceRefs를 id→출처 표로. 본문에 박힌 내부 id를 매체명으로 바꾼다."""
+    lookup = {}
+    for ref in snapshot.get("sourceRefs") or []:
+        if isinstance(ref, dict) and ref.get("id"):
+            lookup[str(ref["id"])] = ref
+    return lookup
+
+
 def _dashboard_payload_from_snapshot_view(snapshot: dict, view: dict | None = None) -> dict:
-    view = view if isinstance(view, dict) else {}
+    # 이미 저장된 스냅샷에는 본문에 rss:item:13 같은 내부 id가 남아 있다. 화면에서
+    # 다시 걸러야 재생성 없이도 읽을 수 있는 문장이 나온다.
+    lookup = _snapshot_ref_lookup(snapshot)
+    snapshot = scrub_inline_refs(snapshot, lookup)
+    view = scrub_inline_refs(view, lookup) if isinstance(view, dict) else {}
     confidence = _snapshot_confidence_label(snapshot.get("confidence"))
     confidence_pct = _confidence_pct(snapshot.get("confidence"))
     posture = _snapshot_posture(snapshot)
