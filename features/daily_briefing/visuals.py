@@ -118,20 +118,26 @@ def _market_companies(market):
 # 시장 라벨은 계약에서 파생한다. 여기에 시장 이름을 다시 적으면 새 시장의
 # 주도 기업 제목이 조용히 안 잡히고, 그 기업 차트만 보고서에서 빠진다.
 _LEADING_MARKET_LABELS = {"미국장": "us", "한국장": "kr", "유럽장": "europe", "일본장": "jp"}
+# ①/②가 표준이지만 LLM이 이따금 1/2로 정규화한다. 그때 제목 파싱이 통째로
+# 실패해 기업 차트가 조용히 빠졌으므로 두 표기를 모두 받는다.
 LEADING_COMPANY_HEADING_RE = re.compile(
     r"^#{1,6}\s+[34]\.\s*((?:" + "|".join(_LEADING_MARKET_LABELS) + r")(?:을|를)|시장(?:을|를)?)"
-    r"\s*주도한 기업\s*([①②])\s*(?:[-—–:]\s*)?(.+?)\s*$",
+    r"\s*주도한 기업\s*([①②12])\s*(?:[-—–:]\s*)?(.+?)\s*$",
     re.MULTILINE,
 )
 
 
 def leading_company_subjects_from_markdown(markdown):
+    text = str(markdown or "")
     result = {key: [] for key in SINGLE_MARKET_SCOPES}
     result["warnings"] = []
+    # 본문이 주도 기업 절을 몇 번 언급했는지. 파싱 결과가 이보다 적으면 제목
+    # 형식이 어긋난 것이므로, 차트 수집이 조용히 0개로 끝나는 대신 fallback을 연다.
+    result["headingMentions"] = len(re.findall(r"주도한\s*기업", text))
     seen = set()
-    for match in LEADING_COMPANY_HEADING_RE.finditer(str(markdown or "")):
+    for match in LEADING_COMPANY_HEADING_RE.finditer(text):
         heading_market = match.group(1)
-        ordinal = 1 if match.group(2) == "①" else 2
+        ordinal = 1 if match.group(2) in ("①", "1") else 2
         company_text = match.group(3).strip().strip("[]")
         market_key = next(
             (key for label, key in _LEADING_MARKET_LABELS.items() if heading_market.startswith(label)),
@@ -490,11 +496,19 @@ def collect_briefing_visuals(
                 {"market": MARKET_META[market_key]["market"], "sectionRole": "market_flow", "order": 1},
             ))
 
-        leaders = (
-            list(leader_subjects.get(market_key, []))
-            if isinstance(leader_subjects, dict)
-            else leading_company_subjects(result, MARKET_META[market_key]["market"], limit=2)
-        )
+        if isinstance(leader_subjects, dict):
+            leaders = list(leader_subjects.get(market_key, []))
+            if not leaders and int(leader_subjects.get("headingMentions") or 0) > 0:
+                # 본문에 주도 기업 절이 있는데 제목 파싱이 실패했다. 차트를 조용히
+                # 빼는 대신 본문과 같은 ranked group에서 기업을 골라 채우고, 파싱
+                # 어긋남을 경고로 남긴다 — 본문 기업과 다를 수 있음이 보이도록.
+                leaders = leading_company_subjects(result, MARKET_META[market_key]["market"], limit=2)
+                if leaders:
+                    warnings.append(
+                        f"{market_key}: leading company headings could not be parsed; charted ranked-group companies instead"
+                    )
+        else:
+            leaders = leading_company_subjects(result, MARKET_META[market_key]["market"], limit=2)
         for position, leader in enumerate(leaders, start=1):
             ordinal = int(leader.get("ordinal") or position)
             symbol = _provider_symbol(leader["ticker"], market_key)

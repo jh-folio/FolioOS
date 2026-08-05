@@ -22,4 +22,6 @@ API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`, `GET /api
 
 ## 내용의 변화 카드
 
+변화 피드는 최근 14일(`CHANGE_FEED_WINDOW_DAYS`) 안의 이벤트만 보여준다. 더 오래된 행과 권위 저장소는 그대로 두고 피드 projection만 좁힌다. 같은 날짜에 구형 통합 id(`2026-08-05`)와 시장별 id(`2026-08-05.us`)가 함께 있으면 통합 행을 피드에서 숨긴다 — 0.4→0.5 id 전환으로 남은 행이라 시장별 행이 그 날짜의 현재 세대다.
+
 변화 피드는 `semanticVerdict` 칩(새 정보/방향 전환/흐름 진전/보도량 이동/변화 없음/내용 미평가)이 붙은 카드로 렌더링합니다. 카드 본문의 `펼치기`는 항목별 직전/현재 대조(순위·비중, 대표 기사 제목 양쪽)를 인라인으로 보여주고, `Agent에게 묻기`는 카드가 아는 사실(전/후 값·분류·근거 제목·기준 id)을 질문으로 만들어 우측 Agent dock을 엽니다(`openReactAgentDock`, 자동 제출 없음). 상세 데이터는 change 이벤트 payload(`changedItems[].contextDocs/previousContextDocs/semanticNote`)에 이미 실려 있어 별도 상세 API가 없습니다.

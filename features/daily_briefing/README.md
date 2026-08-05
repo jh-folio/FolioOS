@@ -127,7 +127,7 @@ features/daily_briefing/prompt_jp.md
 | 시장 | 기본 차트 지수 | 통화 |
 | --- | --- | --- |
 | 미국 | S&P 500, Nasdaq, Dow Jones | USD |
-| 한국 | KOSPI, KOSPI 200 | KRW |
+| 한국 | KOSPI, KOSDAQ | KRW |
 | 유럽 | STOXX Europe 600, FTSE 100, DAX, CAC 40, AEX | EUR + **GBP** |
 | 일본 | Nikkei 225, TOPIX 추종 ETF(1475) | JPY |
 
@@ -162,7 +162,7 @@ TOPIX는 yfinance에 지수 심볼이 없어(`^TPX`·`^TOPX` 모두 빈 응답) 
 | 주도 기업 ①·② | 주도주의 최근 가격 경로는 어땠는가 | Focus price / line·candle | `time`, OHLCV, `subject` |
 | 시장 히트맵 | 전체 시장의 상승·하락과 시가총액 집중은 어디였는가 | Sector→industry→ticker treemap. 단, `sector`와 `industry`가 같은 KR 행은 중복 산업 단계를 생략해 Sector→ticker로 표시 | `sector`, `industry`, `changePct`, `marketCap` |
 
-미국 지수 차트는 **S&P 500 → Nasdaq → Dow Jones** 순서로 표시합니다. `Nasdaq`은 뉴스에서 일반적으로 말하는 Nasdaq Composite(`^IXIC`) 기준이며, Nasdaq 100(`^NDX`)이 아닙니다. 한국 지수는 KOSPI·KOSPI 200을 사용합니다. 히트맵은 **미국은 S&P 500 구성종목, 한국은 KOSPI 200 구성종목**으로 한정하며 KOSDAQ은 제외합니다. 미국 히트맵의 종목·섹터·산업 분류는 `config/sp500_constituents.json`에 내장한 **GICS Sector / Sub-Industry**(finviz와 동일한 익숙한 분류)를 사용하고, 시가총액(박스 크기)도 이 파일의 스냅샷을 씁니다. 한국 히트맵도 `config/kospi200_constituents.json`의 KOSPI 200 구성종목과 시가총액 스냅샷을 기본 universe로 사용합니다. KR 행에서 산업명이 섹터명과 같거나 비어 있으면 화면에서는 산업 단계를 만들지 않고 종목을 섹터 바로 아래에 배치해 중복 라벨 공간을 줄입니다. 0.2 기본 실행에서는 yfinance 일봉과 pykrx를 사용하고, 전일가·미지원/누락 종목은 저장된 마지막 정상 snapshot으로 보완합니다. 두 universe 파일은 각각 `py -3 -m features.common.market_data.sp500_universe`, `py -3 -m features.common.market_data.kospi200_universe`로 주기적으로 갱신합니다. Toss Open API 가격 보강은 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증 경로로만 남겨둡니다.
+미국 지수 차트는 **S&P 500 → Nasdaq → Dow Jones** 순서로 표시합니다. `Nasdaq`은 뉴스에서 일반적으로 말하는 Nasdaq Composite(`^IXIC`) 기준이며, Nasdaq 100(`^NDX`)이 아닙니다. 한국 지수는 KOSPI·KOSDAQ 종합(`^KQ11`)을 사용합니다. KOSPI 200은 KOSPI와 같은 선을 한 번 더 그리는 셈이라 두 번째 선을 코스닥으로 바꿔 두 시장이 갈리는 날을 보이게 했습니다(0.5). 히트맵은 **미국은 S&P 500 구성종목, 한국은 KOSPI 200 구성종목**으로 한정하며 KOSDAQ은 제외합니다. 미국 히트맵의 종목·섹터·산업 분류는 `config/sp500_constituents.json`에 내장한 **GICS Sector / Sub-Industry**(finviz와 동일한 익숙한 분류)를 사용하고, 시가총액(박스 크기)도 이 파일의 스냅샷을 씁니다. 한국 히트맵도 `config/kospi200_constituents.json`의 KOSPI 200 구성종목과 시가총액 스냅샷을 기본 universe로 사용합니다. KR 행에서 산업명이 섹터명과 같거나 비어 있으면 화면에서는 산업 단계를 만들지 않고 종목을 섹터 바로 아래에 배치해 중복 라벨 공간을 줄입니다. 0.2 기본 실행에서는 yfinance 일봉과 pykrx를 사용하고, 전일가·미지원/누락 종목은 저장된 마지막 정상 snapshot으로 보완합니다. 두 universe 파일은 각각 `py -3 -m features.common.market_data.sp500_universe`, `py -3 -m features.common.market_data.kospi200_universe`로 주기적으로 갱신합니다. Toss Open API 가격 보강은 `FOLIO_ENABLE_TOSS_OPEN_API=1`을 켠 내부 검증 경로로만 남겨둡니다.
 미국 히트맵은 `GOOGL/GOOG`, `FOXA/FOX`, `NWS/NWSA`, `BRK.A/BRK.B`처럼 같은 기업의 복수 종류주식이 universe에 함께 있으면 한 기업 타일로 합쳐 표시합니다. 타일 크기는 중복 합산하지 않고 대표 회사 시가총액(max)을 쓰며, 등락률은 종류주식별 시가총액 가중 평균으로 계산합니다.
 
 히트맵 글자 크기는 박스 면적(시가총액)에 비례해 조정되어, 대형주는 티커가 크게 보이고 소형주도 작게나마 티커가 노출됩니다(finviz 스타일).

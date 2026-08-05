@@ -55,9 +55,11 @@ def test_the_registry_is_the_only_place_index_tickers_are_written():
         assert [row["ticker"] for row in INDEX_UNIVERSE[market.value.lower()]] == expected
 
 
-def test_us_and_kr_charts_are_unchanged():
+def test_us_and_kr_charts_are_pinned():
+    """KR pairs KOSPI with KOSDAQ: KOSPI 200 redrew the same line, while the
+    KOSDAQ shows when the two Korean markets diverge (sidecars fire there first)."""
     assert [row["ticker"] for row in INDEX_UNIVERSE["us"]] == ["^GSPC", "^IXIC", "^DJI"]
-    assert [row["ticker"] for row in INDEX_UNIVERSE["kr"]] == ["^KS11", "^KS200"]
+    assert [row["ticker"] for row in INDEX_UNIVERSE["kr"]] == ["^KS11", "^KQ11"]
     for scope, currency in (("us", "USD"), ("kr", "KRW")):
         snapshot = _collect(scope)
         assert snapshot["currency"] == currency

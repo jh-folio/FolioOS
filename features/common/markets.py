@@ -104,7 +104,9 @@ _US_INDICES = (
 )
 _KR_INDICES = (
     IndexDescriptor("^KS11", "KOSPI", "KRW", "Asia/Seoul", "KR"),
-    IndexDescriptor("^KS200", "KOSPI 200", "KRW", "Asia/Seoul", "KR"),
+    # 코스피 200은 코스피와 같은 선을 한 번 더 그린다. 두 번째 선은 그날 두 시장이
+    # 갈렸는지를 보여주는 코스닥이 맞다 — 사이드카·급등락이 코스닥에서 먼저 난다.
+    IndexDescriptor("^KQ11", "KOSDAQ", "KRW", "Asia/Seoul", "KR"),
 )
 # 유럽은 광역 지수 하나로 대표되지 않는다. STOXX 600이 광역 흐름을 주고, 국가 지수가
 # 갈리는 날의 차이를 보여준다. 기본 차트는 광역 + 영국·독일·프랑스·네덜란드로 묶는다.

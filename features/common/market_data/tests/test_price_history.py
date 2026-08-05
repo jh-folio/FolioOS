@@ -118,4 +118,4 @@ def test_build_price_history_skips_toss_without_release_flag(monkeypatch):
 def test_index_universe_uses_exact_requested_indices():
     assert [row["ticker"] for row in INDEX_UNIVERSE["us"]] == ["^GSPC", "^IXIC", "^DJI"]
     assert [row["label"] for row in INDEX_UNIVERSE["us"]] == ["S&P 500", "Nasdaq", "Dow Jones"]
-    assert [row["ticker"] for row in INDEX_UNIVERSE["kr"]] == ["^KS11", "^KS200"]
+    assert [row["ticker"] for row in INDEX_UNIVERSE["kr"]] == ["^KS11", "^KQ11"]

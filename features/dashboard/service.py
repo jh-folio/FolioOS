@@ -66,13 +66,54 @@ def _calendar_refs(db_path: Path, limit: int = 12) -> list[dict]:
 
 
 VISIBLE_CHANGE_STATUSES = ("major_change", "developing_signal", "conflicting_uncertain")
+# 변화 피드는 "무엇이 달라졌나"다. 기한 없는 목록은 새 브리핑이 없는 주에 지난
+# 카드를 계속 변화처럼 보여주므로, 이 일수보다 오래된 이벤트는 피드에서 뺀다.
+# 권위 저장소(보고서 JSON/스냅샷)와 index 행은 그대로 남는다.
+CHANGE_FEED_WINDOW_DAYS = 14
+
+
+def _current_change_events(events: list[dict], *, now: str = "") -> list[dict]:
+    """Drop stale and superseded rows from the visible feed.
+
+    A briefing date used to commit one aggregate row (`2026-08-05`); the four-
+    market split commits per-market rows (`2026-08-05.us`, ...). The aggregate id
+    is never overwritten by those commits, so without this both generations of
+    the same date sit in the feed side by side and the date looks duplicated.
+    """
+    import datetime as dt
+
+    def _parse(value: str):
+        try:
+            parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=dt.timezone.utc)
+        except ValueError:
+            return None
+
+    reference = (_parse(now) if now else None) or dt.datetime.now(dt.timezone.utc)
+    cutoff = reference - dt.timedelta(days=CHANGE_FEED_WINDOW_DAYS)
+    dates_with_market_rows = {
+        str(row.get("artifactId") or "").split(".")[0]
+        for row in events
+        if row.get("artifactKind") == "briefing" and "." in str(row.get("artifactId") or "")
+    }
+    kept = []
+    for row in events:
+        generated = _parse(str(row.get("generatedAt") or ""))
+        # 시각을 못 읽는 행은 오래됐다고 단정할 수 없으므로 남긴다.
+        if generated and generated < cutoff:
+            continue
+        artifact_id = str(row.get("artifactId") or "")
+        if row.get("artifactKind") == "briefing" and "." not in artifact_id and artifact_id in dates_with_market_rows:
+            continue
+        kept.append(row)
+    return kept
 
 
 def build_cockpit_payload(data_dir: Path) -> dict:
     started = time.perf_counter()
     data_dir = Path(data_dir)
     db_path = data_dir / "market-memory.sqlite3"
-    events = list_change_events(db_path, limit=24)
+    events = _current_change_events(list_change_events(db_path, limit=24))
     changes = [row for row in events if row.get("status") in VISIBLE_CHANGE_STATUSES]
     quiet = [row for row in events if row.get("status") not in VISIBLE_CHANGE_STATUSES]
     portfolio = get_portfolio(data_dir)

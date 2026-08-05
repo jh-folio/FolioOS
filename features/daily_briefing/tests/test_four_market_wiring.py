@@ -33,7 +33,7 @@ def test_every_market_heading_is_recognized_as_a_chart_subject(scope):
     """An unrecognized heading loses that company's chart with no warning."""
     markdown = f"## 3. {LABELS[scope]}을 주도한 기업 ① — 엔비디아"
     result = leading_company_subjects_from_markdown(markdown)
-    assert set(result) == {*SINGLE_MARKET_SCOPES, "warnings"}
+    assert set(result) == {*SINGLE_MARKET_SCOPES, "warnings", "headingMentions"}
     # 엔비디아는 미국 기업이라 다른 시장 제목에서는 해석 실패로 남는다.
     resolved = result[scope]
     if scope == "us":

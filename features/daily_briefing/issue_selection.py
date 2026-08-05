@@ -7,7 +7,7 @@ import hashlib
 import re
 from collections import Counter, defaultdict
 
-from features.common.market_calendar import doc_analysis_priority, infer_doc_market
+from features.common.market_calendar import doc_analysis_priority, infer_doc_market, infer_doc_markets
 from features.common.research_library.indexing.research_index import cosine, embed_text
 from features.common.utils import normalize
 from features.daily_briefing.schema import (
@@ -330,6 +330,29 @@ def build_issue_coverage(docs, target_market, market_windows, limit=10, publishe
     return evaluated[:limit]
 
 
+_TITLE_MARKET_PRODUCTS = frozenset({"US", "KR", "EUROPE", "JP"})
+
+
+def title_claims_other_market(doc, target: str) -> bool:
+    """Whether the headline names a different market and never the target.
+
+    Body text cannot decide a document's home market: every Korean market wrap
+    opens with a sentence about the overnight New York close, which made
+    "코스피 1.6% 반등 마감" a BOTH document and put it in a US briefing's
+    참고자료. The headline states what the article is actually about, so a
+    title that names only another market keeps the document out of this scope.
+    A title with no market signal at all decides nothing — the full-document
+    inference below still governs.
+    """
+    title = str(doc.get("title") or "").strip()
+    if not title:
+        return False
+    title_markets = set(infer_doc_markets({"title": title}))
+    if target in title_markets or "GLOBAL" in title_markets:
+        return False
+    return bool(title_markets & _TITLE_MARKET_PRODUCTS)
+
+
 def documents_for_scope(docs, market_scope):
     """Narrow the candidate pool to one market, keeping global evidence.
 
@@ -341,7 +364,11 @@ def documents_for_scope(docs, market_scope):
         return list(docs or [])
     target = scope.upper()
     # 유가·달러·공급망 기사는 특정 시장 소유가 아니라 어느 시장에도 근거가 된다.
-    return [doc for doc in docs or [] if infer_doc_market(doc) in {target, "BOTH", "GLOBAL"}]
+    return [
+        doc for doc in docs or []
+        if infer_doc_market(doc) in {target, "BOTH", "GLOBAL"}
+        and not title_claims_other_market(doc, target)
+    ]
 
 
 def _kr_session_is_still_open(market_windows) -> bool:
