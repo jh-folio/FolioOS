@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baselineText, changeReasonText, type ChangeEvent } from "./ChangeHistory";
+import { baselineText, changeReasonText, type ChangeEvent } from "./changeEvents";
 
 /** 실제 briefing adapter가 만드는 change unit 모양 그대로 검증한다. */
 describe("changeReasonText", () => {

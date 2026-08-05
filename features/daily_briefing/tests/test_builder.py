@@ -94,7 +94,9 @@ def test_kr_scope_is_complete_and_does_not_render_us_report():
     assert set(report["briefings"]) == {"kr"}
     assert "# Korea Market Briefing" in report["markdown"]
     assert "# US Market Briefing" not in report["markdown"]
-    assert report["briefings"]["kr"]["sessionMode"] == "kr_intraday"
+    # 픽스처 날짜(2026-06-10)는 지난 세션이므로 마감이다. 예전에는 analysisMode만
+    # 보고 항상 장중이라 답해서, 두 달 전 브리핑도 "장중"으로 나왔다.
+    assert report["briefings"]["kr"]["sessionMode"] == "kr_close"
     assert all(item["market"] == "KR" for item in report["issueCoverage"])
 
 

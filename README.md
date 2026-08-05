@@ -4,22 +4,21 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.4.7 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
+Folio OS 0.4.8 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.4.7
+## What You Can Do In 0.4.8
 
 - Chat with the Folio OS AI Agent from the Home screen.
 - Use the Research Cockpit Dashboard to see which stories led the market today, what actually changed in your latest reports, native symbol/index charts, market calendar events, and portfolio-linked implications. A Cockpit/Legacy switch keeps the previous widget board available.
 - Read a story-share bar built from the day's collected news, with each story's share and the move against the previous trading day. Share moves reflect coverage volume, not a change in what the story says.
 - Open a change card to see what moved: the verdict (new information, reversal, developing trend, coverage shift), a short reason, and the before/after side by side.
-- Maintain a local company, sector, and theme Watchlist with separate fast-origin leads and confirmed report change history.
-- See fast market signals — headline and link only — promoted from the Korean RSS you already collect. Article bodies are not stored, and unverified headlines never count toward report sources or a major-change call.
+- Maintain a local company, sector, and theme Watchlist with a per-symbol chart and the news collected for it.
 - Collect and search public RSS/news feeds. The source filter lists only outlets still being collected, and corporate press-release wires stay out of the feed screen while remaining available to watchlist and company analysis.
-- Generate US/KR daily market briefings. The date you pick is the market session the briefing covers, not the day it is filed, and daily automation can choose its briefing type.
+- Generate US/KR daily market briefings. The date you pick is the market session the briefing covers, not the day it is filed; a Korean briefing for a past date is labelled closed rather than intraday. Daily automation can choose its briefing type.
 - Read a simplified medium-term Market Memory view.
 - Generate company analysis reports from local evidence and official data where available.
 - Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, Smart Collection scope, and your own thinking kept as separate layers.
@@ -34,7 +33,7 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Not included in the 0.4.7 user surface:
+Not included in the 0.4.8 user surface:
 
 - Installer/tray-app polish.
 

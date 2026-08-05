@@ -430,25 +430,6 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
                 tag_counts[tag] += 1
     tags = [tag for tag, _count in tag_counts.most_common(8)]
     news = [_public_news_doc(hit) for hit in hits]
-    ticker = str(company.get("ticker") or "").strip().upper()
-    fast_signals = []
-    change_history = []
-    signal_provider_health = []
-    try:
-        from features.common.research_library.signals.service import default_db_path, provider_health, query_signals
-
-        if ticker:
-            fast_signals = query_signals(default_db_path(DATA_DIR), ticker=ticker, limit=20).get("items", [])
-        signal_provider_health = list(provider_health(DATA_DIR).values())
-    except Exception:
-        warnings.append("fast_signal_context_unavailable")
-    try:
-        from features.common.change_intelligence.projection import list_change_events
-
-        if ticker:
-            change_history = list_change_events(DATA_DIR / "market-memory.sqlite3", ticker=ticker, limit=20)
-    except Exception:
-        warnings.append("change_history_unavailable")
     return {
         "item": query,
         "company": company,
@@ -457,9 +438,6 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
         "newsCount": len(news),
         "latestDate": news[0].get("date", "") if news else "",
         "warnings": warnings,
-        "fastSignals": fast_signals,
-        "signalProviderHealth": signal_provider_health,
-        "changeHistory": change_history,
     }
 
 
