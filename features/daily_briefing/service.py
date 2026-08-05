@@ -15,11 +15,14 @@ from features.daily_briefing.issue_selection import (
     session_modes_from_windows,
 )
 from features.daily_briefing.schema import (
+    AGGREGATE_SCOPES,
+    SINGLE_MARKET_SCOPES,
     briefing_expected_titles,
     briefing_file_name,
     briefing_link_file_name,
     briefing_scope_view,
     briefing_type_instruction,
+    market_keys_for_briefing_scope,
     normalize_briefing_markdown_titles,
     normalize_briefing_type,
     normalize_market_scope,
@@ -1357,37 +1360,53 @@ def _read_briefing_json(path):
         return None
 
 
-def _combine_market_reports(date_text, scoped_reports):
+def _combine_market_reports(date_text, scoped_reports, aggregate_scope="both"):
+    """Assemble one aggregate report from whichever market legs succeeded.
+
+    ``includedMarkets`` records what actually generated and ``expectedMarkets``
+    what was asked for. A reader must never have to infer coverage from the
+    scope label: an `all` run that lost Europe still says `all`, and the two
+    lists are how that gap stays visible.
+    """
     reports = {scope: report for scope, report in scoped_reports.items() if isinstance(report, dict)}
     if not reports:
         return None
-    first = reports.get("us") or reports.get("kr") or {}
+    aggregate_scope = normalize_market_scope(aggregate_scope)
+    expected = market_keys_for_briefing_scope(aggregate_scope)
+    ordered = [scope for scope in expected if scope in reports]
+    if not ordered:
+        return None
+    first = reports[ordered[0]]
     sections = {}
-    for scope in ("us", "kr"):
-        report = reports.get(scope)
-        if not isinstance(report, dict):
-            continue
-        section = dict(report)
+    for scope in ordered:
+        section = dict(reports[scope])
         section["marketScope"] = scope
         sections[scope] = section
     markdown = "\n\n---\n\n".join(
-        section.get("markdown", "") for section in (sections.get("us"), sections.get("kr"))
-        if isinstance(section, dict) and section.get("markdown")
+        sections[scope].get("markdown", "") for scope in ordered
+        if sections[scope].get("markdown")
     )
     combined = {
         **first,
         "date": date_text,
-        "marketScope": "both",
+        "marketScope": aggregate_scope,
+        "includedMarkets": [scope.upper() for scope in ordered],
+        "expectedMarkets": [scope.upper() for scope in expected],
         "title": first.get("title") or f"시장 브리핑 — {date_text}",
         "markdown": markdown,
         "briefings": sections,
         "visualRecommendations": [
-            item for scope in ("us", "kr") for item in ((reports.get(scope) or {}).get("visualRecommendations") or [])
+            item for scope in ordered for item in (reports[scope].get("visualRecommendations") or [])
         ],
         "visualSnapshots": [
-            item for scope in ("us", "kr") for item in ((reports.get(scope) or {}).get("visualSnapshots") or [])
+            item for scope in ordered for item in (reports[scope].get("visualSnapshots") or [])
         ],
     }
+    if len(ordered) < len(expected):
+        missing = [scope.upper() for scope in expected if scope not in reports]
+        combined["coverageWarnings"] = [
+            f"요청한 {len(expected)}개 시장 중 {', '.join(missing)} 브리핑이 생성되지 않았습니다."
+        ]
     return combined
 
 
@@ -1526,7 +1545,7 @@ def resolve_briefing(date, market_scope="both"):
     """
     date_text = _valid_briefing_date(date)
     scope = normalize_market_scope(market_scope)
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKET_SCOPES:
         scoped = _read_briefing_json(BRIEFINGS_DIR / briefing_file_name(date_text, scope))
         if isinstance(scoped, dict):
             return _with_visual_compatibility(briefing_scope_view(scoped, scope))
@@ -1537,9 +1556,9 @@ def resolve_briefing(date, market_scope="both"):
 
     scoped_reports = {
         scope_key: _read_briefing_json(BRIEFINGS_DIR / briefing_file_name(date_text, scope_key))
-        for scope_key in ("us", "kr")
+        for scope_key in market_keys_for_briefing_scope(scope)
     }
-    combined = _combine_market_reports(date_text, scoped_reports)
+    combined = _combine_market_reports(date_text, scoped_reports, scope)
     if combined:
         link = _read_briefing_json(BRIEFINGS_DIR / briefing_link_file_name(date_text))
         if isinstance(link, dict) and str(link.get("markdown") or "").strip():
@@ -1565,37 +1584,36 @@ def delete_briefing(date, market=None):
 
     date_text = _valid_briefing_date(date)
     market_text = str(market or "").strip().lower()
-    if market_text and market_text not in {"us", "kr"}:
-        raise ValueError("market must be us or kr")
+    if market_text and market_text not in SINGLE_MARKET_SCOPES:
+        raise ValueError(f"market must be one of {', '.join(SINGLE_MARKET_SCOPES)}")
     if market_text:
         targets = (
             BRIEFINGS_DIR / briefing_file_name(date_text, market_text),
             BRIEFINGS_DIR / visual_sidecar_file_name(date_text, market_text),
             BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date_text, market_text),
+            # 연결 분석은 어느 시장이 빠지면 더 이상 그 조합을 설명하지 않는다.
             BRIEFINGS_DIR / briefing_link_file_name(date_text),
         )
         primary_names = (briefing_file_name(date_text, market_text),)
     else:
         targets = (
             BRIEFINGS_DIR / briefing_file_name(date_text),
-            BRIEFINGS_DIR / briefing_file_name(date_text, "us"),
-            BRIEFINGS_DIR / briefing_file_name(date_text, "kr"),
             BRIEFINGS_DIR / briefing_link_file_name(date_text),
             BRIEFINGS_DIR / visual_sidecar_file_name(date_text),
             BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date_text),
-            BRIEFINGS_DIR / visual_sidecar_file_name(date_text, "us"),
-            BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date_text, "us"),
-            BRIEFINGS_DIR / visual_sidecar_file_name(date_text, "kr"),
-            BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date_text, "kr"),
+            *(
+                BRIEFINGS_DIR / name(date_text, scope)
+                for scope in SINGLE_MARKET_SCOPES
+                for name in (briefing_file_name, visual_sidecar_file_name, visual_sidecar_gzip_file_name)
+            ),
         )
         primary_names = (
             briefing_file_name(date_text),
-            briefing_file_name(date_text, "us"),
-            briefing_file_name(date_text, "kr"),
+            *(briefing_file_name(date_text, scope) for scope in SINGLE_MARKET_SCOPES),
         )
     outcome = execute_report_delete(DeleteRequest(
         root=BRIEFINGS_DIR,
-        identity=f"briefing:{date_text}:{market_text or 'both'}",
+        identity=f"briefing:{date_text}:{market_text or 'all'}",
         primary_names=primary_names,
         target_names=tuple(path.name for path in targets),
         refresh=refresh_briefing_archive,

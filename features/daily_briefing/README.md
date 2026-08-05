@@ -25,6 +25,30 @@
 
 LLM 입력과 표시 참고자료에는 같은 evidence lane·cluster dedupe·매체별 soft cap을 적용합니다. 시장 반응 자료가 없으면 영향 0으로 간주하지 않고 `marketImpactStatus: unavailable`과 `dataGaps`를 남깁니다. 공개 RSS에는 연합뉴스와 매일경제 공식 피드가 추가되었으며 유료 본문 우회 수집은 하지 않습니다.
 
+## 시장 범위와 저장
+
+브리핑 범위는 `us | kr | europe | jp | all | both` 여섯 가지입니다.
+
+- **`all`은 네 시장, `both`는 미국·한국 두 시장**입니다. `both`로 저장된 예전 보고서는 유럽·일본을 담은 적이 없으므로 소급해서 넓히지 않습니다. 넓히면 생성된 적 없는 커버리지를 주장하게 됩니다.
+- 알 수 없는 값은 `both`로 정규화합니다. 오타가 네 시장 생성으로 확대되지 않게 하기 위해서입니다.
+
+저장 위치:
+
+```text
+data/briefings/{date}.us.json
+data/briefings/{date}.kr.json
+data/briefings/{date}.europe.json
+data/briefings/{date}.jp.json
+data/briefings/{date}.link.json      # 시장 간 연결 분석
+data/briefings/{date}.json           # 통합 보고서(레거시 결합본 포함)
+```
+
+통합 보고서는 `includedMarkets`(실제로 생성된 시장)와 `expectedMarkets`(요청한 시장)를 함께 저장합니다. 범위 이름만으로 커버리지를 추측하지 않게 하기 위해서입니다. 예를 들어 유럽 생성이 실패한 `all` 요청은 범위는 그대로 `all`이지만 `includedMarkets`가 세 개이고 `coverageWarnings`가 빠진 시장을 밝힙니다.
+
+아카이브는 한 번의 통합 생성에서 나온 시장별 파일을 카드 하나로 접습니다. 접는 기준은 날짜와 **생성 범위**입니다. 같은 날 `both` 생성과 `all` 생성이 모두 있으면 두 카드로 남습니다 — 합치면 어느 쪽도 함께 만든 적 없는 시장 조합을 주장하는 카드가 됩니다.
+
+아카이브 질의의 `marketScope=all`은 **"시장 필터 없음"**이고 브리핑 범위의 `all`과 다른 말입니다. 다중 시장 카드만 보려면 `aggregate`를 씁니다.
+
 ## 생성 당시 시각 스냅샷
 
 브리핑 생성 시 `visualRecommendations`와 `visualSnapshots`를 함께 만듭니다. 선택 지수와 주도 기업은 무료·무키 경로로 생성 세션의 5분봉과 최대 1년 일봉을 저장하며 반드시 `marketSessionDate` 이후 행을 제거합니다. 1D는 5분봉, 1M·3M·YTD·1Y는 저장된 일봉에서 화면이 파생합니다. provider, 실제 `asOf`, freshness, coverage, timezone, currency를 저장하고 기준일보다 데이터가 오래됐거나 일부 종목이 누락되면 상태와 경고를 표시합니다. 시각자료 수집 실패는 Canonical markdown 생성을 막지 않습니다.

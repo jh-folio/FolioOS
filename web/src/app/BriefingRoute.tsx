@@ -11,8 +11,12 @@ import { parsePersonalOverlayPayload } from "./deepResearchPayload";
 import { BriefingChangeStrip } from "./briefing/BriefingChangeStrip";
 import type { ChangeEvent } from "./watchlist/ChangeHistory";
 
-type MarketScope = "us" | "kr" | "both";
-type ArchiveMarketFilter = "all" | MarketScope;
+// `all`은 네 시장 생성 범위, `both`는 US/KR만 담은 예전 저장본이다.
+type MarketScope = "us" | "kr" | "europe" | "jp" | "all" | "both";
+// 아카이브 필터의 `all`은 "시장 필터 없음"이라 생성 범위 `all`과 다른 말이다.
+type ArchiveMarketFilter = "all" | "aggregate" | MarketScope;
+const SINGLE_MARKETS = ["us", "kr", "europe", "jp"] as const;
+const ALL_SCOPES: MarketScope[] = [...SINGLE_MARKETS, "all", "both"];
 type ArchiveViewMode = "recent" | "month" | "market";
 
 type BriefingArchiveItem = {
@@ -77,11 +81,16 @@ type BriefingDetailRoute = {
 const SCOPE_LABELS: Record<MarketScope, string> = {
   us: "미국",
   kr: "한국",
+  europe: "유럽",
+  jp: "일본",
+  all: "통합",
   both: "통합",
 };
 
-const MARKET_BADGE: Record<MarketScope, string> = { us: "US", kr: "KR", both: "US/KR" };
-const BRIEFING_MARKET_TAGS = new Set(["미국장", "한국장", "종합"]);
+const MARKET_BADGE: Record<MarketScope, string> = {
+  us: "US", kr: "KR", europe: "EU", jp: "JP", all: "ALL", both: "US/KR",
+};
+const BRIEFING_MARKET_TAGS = new Set(["미국장", "한국장", "유럽장", "일본장", "종합"]);
 const BRIEFING_TYPE_LABELS: Record<string, string> = {
   default: "기본",
   market_focused: "시황 중심",
@@ -130,11 +139,11 @@ function sleep(ms: number) {
 }
 
 function normalizedScope(value?: string): MarketScope {
-  return value === "us" || value === "kr" || value === "both" ? value : "both";
+  return ALL_SCOPES.includes(value as MarketScope) ? (value as MarketScope) : "both";
 }
 
 function readBriefingDetailRoute(): BriefingDetailRoute | null {
-  const match = window.location.hash.match(/^#\/?briefing\/(\d{4}-\d{2}-\d{2})(?:\/(us|kr|both))?$/);
+  const match = window.location.hash.match(/^#\/?briefing\/(\d{4}-\d{2}-\d{2})(?:\/(us|kr|europe|jp|all|both))?$/);
   if (!match) return null;
   return { date: match[1], scope: normalizedScope(match[2]) };
 }
@@ -359,7 +368,9 @@ export function BriefingRoute() {
     if (!window.confirm(`${date} ${SCOPE_LABELS[scope]} 브리핑을 삭제할까요?`)) return;
     setActionBusy(`delete-${date}-${scope}`);
     try {
-      const query = scope === "both" ? "" : `?market=${encodeURIComponent(scope)}`;
+      // 통합 범위 삭제는 그 날짜 전체를 지운다. 시장 하나만 지울 때만 market을 붙인다.
+      const isAggregate = scope === "both" || scope === "all";
+      const query = isAggregate ? "" : `?market=${encodeURIComponent(scope)}`;
       await fetch(`/api/briefings/${encodeURIComponent(date)}${query}`, { method: "DELETE" });
       await loadArchive();
     } catch (err) {
@@ -404,7 +415,10 @@ export function BriefingRoute() {
       const date = displayDate(item);
       const scope = displayScope(item);
       const type = item.briefingType || "default";
-      if (archiveMarket !== "all" && scope !== archiveMarket) return false;
+      // `aggregate`는 시장 하나가 아니라 다중 시장 카드 전체를 고른다.
+      if (archiveMarket === "aggregate") {
+        if (scope !== "all" && scope !== "both") return false;
+      } else if (archiveMarket !== "all" && scope !== archiveMarket) return false;
       if (archiveType !== "all" && type !== archiveType) return false;
       if (archiveStart && date && date < archiveStart) return false;
       if (archiveEnd && date && date > archiveEnd) return false;
@@ -541,9 +555,11 @@ export function BriefingRoute() {
               <div className="brief-market-segment" role="radiogroup" aria-label="시장 범위" data-scope={marketScope}>
                 <span className="brief-market-segment-title">시장</span>
                 {([
-                  ["both", "종합"],
+                  ["all", "종합"],
                   ["us", "미국장"],
                   ["kr", "한국장"],
+                  ["europe", "유럽장"],
+                  ["jp", "일본장"],
                 ] as Array<[MarketScope, string]>).map(([value, label]) => (
                   <label key={value}>
                     <input
@@ -641,7 +657,9 @@ export function BriefingRoute() {
               <option value="all">전체</option>
               <option value="us">미국장</option>
               <option value="kr">한국장</option>
-              <option value="both">종합 보고서</option>
+              <option value="europe">유럽장</option>
+              <option value="jp">일본장</option>
+              <option value="aggregate">종합 보고서</option>
             </select>
           </label>
           <span>유형</span>

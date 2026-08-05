@@ -14,7 +14,11 @@ import json
 from pathlib import Path
 
 from features.common.utils import read_json, write_json
-from features.daily_briefing.schema import briefing_file_name, normalize_market_scope
+from features.daily_briefing.schema import (
+    SINGLE_MARKET_SCOPES,
+    briefing_file_name,
+    normalize_market_scope,
+)
 from features.llm_settings.client import (
     request_llm_text,
     selected_llm_config,
@@ -208,7 +212,7 @@ def strip_overlay(report, include_personal: bool):
 
 def _briefing_overlay_path(date: str, market_scope: str = "both") -> Path:
     scope = normalize_market_scope(market_scope)
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKET_SCOPES:
         scoped = BRIEFINGS_DIR / briefing_file_name(date, scope)
         if scoped.exists():
             return scoped

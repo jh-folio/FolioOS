@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, TypedDict
 
+from features.common.markets import PRODUCT_MARKETS
+
 
 _SAFE_ID: Final = re.compile(r"^[A-Za-z0-9:_-]+$")
 _JOURNAL_PREFIX: Final = ".report-delete-"
@@ -69,29 +71,32 @@ def _validated(request: DeleteRequest) -> DeleteRequest:
     return request
 
 
+# 삭제 허용 목록은 시장 계약에서 파생한다. 여기에 시장 이름을 다시 적으면
+# 새 시장이 늘었을 때 이 안전장치만 조용히 뒤처진다.
+_BRIEFING_MARKETS = tuple(market.value.lower() for market in PRODUCT_MARKETS)
+_BRIEFING_IDENTITY_RE = re.compile(
+    rf"briefing:(\d{{4}}-\d{{2}}-\d{{2}}):({'|'.join((*_BRIEFING_MARKETS, 'all', 'both'))})"
+)
+
+
+def _briefing_file_variants(date_text: str, scope: str = "") -> set[str]:
+    stem = f"{date_text}.{scope}" if scope else date_text
+    return {f"{stem}.json", f"{stem}.visuals.json", f"{stem}.visuals.json.gz"}
+
+
 def _is_exact_candidate(identity: str, name: str) -> bool:
-    briefing = re.fullmatch(r"briefing:(\d{4}-\d{2}-\d{2}):(us|kr|both)", identity)
+    briefing = _BRIEFING_IDENTITY_RE.fullmatch(identity)
     if briefing is not None:
         date_text, scope = briefing.groups()
-        candidates = {
-            f"{date_text}.json",
-            f"{date_text}.us.json",
-            f"{date_text}.kr.json",
-            f"{date_text}.link.json",
-            f"{date_text}.visuals.json",
-            f"{date_text}.visuals.json.gz",
-            f"{date_text}.us.visuals.json",
-            f"{date_text}.us.visuals.json.gz",
-            f"{date_text}.kr.visuals.json",
-            f"{date_text}.kr.visuals.json.gz",
-        }
-        scoped = {
-            f"{date_text}.{scope}.json",
-            f"{date_text}.{scope}.visuals.json",
-            f"{date_text}.{scope}.visuals.json.gz",
-            f"{date_text}.link.json",
-        }
-        return name in (candidates if scope == "both" else scoped)
+        # 연결 분석은 어느 시장이 빠져도 더 이상 그 조합을 설명하지 않으므로
+        # 시장 단위 삭제에서도 함께 지운다.
+        link = {f"{date_text}.link.json"}
+        if scope in {"all", "both"}:
+            date_wide = set(_briefing_file_variants(date_text)) | link
+            for market in _BRIEFING_MARKETS:
+                date_wide |= _briefing_file_variants(date_text, market)
+            return name in date_wide
+        return name in (_briefing_file_variants(date_text, scope) | link)
     company = re.fullmatch(r"company:([A-Za-z0-9_-]+)", identity)
     if company is not None:
         return name == f"{company.group(1)}.json"

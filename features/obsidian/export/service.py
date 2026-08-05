@@ -9,7 +9,7 @@ from features.common.canonical_report_io import safe_child_path
 from features.common.config_bootstrap import resolve_config
 from features.common.utils import read_json, write_json
 from features.common.taxonomy import normalize_tag
-from features.daily_briefing.schema import briefing_export_units
+from features.daily_briefing.schema import MARKET_TAGS, briefing_export_units
 from features.obsidian.export.formatter import build_frontmatter, inject_wikilinks, preserve_user_notes, charts_to_markdown, strip_duplicate_h1
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -213,7 +213,7 @@ def _write_briefing_note(folder, date, unit, chart_images):
         body_with_links += "\n\n## 시장 시각자료\n\n" + "\n\n".join(image_links)
     new_body = f"{frontmatter}\n\n{title_line}\n\n{body_with_links}"
 
-    market_label = {"us": "미국장", "kr": "한국장", "both": "종합"}.get(market_scope, "종합")
+    market_label = MARKET_TAGS.get(market_scope, "종합")
     filename = _safe_filename(f"브리핑 {date} {market_label}") + ".md"
     note_path = safe_child_path(folder, filename)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-VALID_MARKET_SCOPES = {"us", "kr", "both"}
+# 자동화 기본값은 네 시장(`all`)이다. 저장된 `both` 설정은 그대로 두 시장으로 남긴다.
+VALID_MARKET_SCOPES = {"us", "kr", "europe", "jp", "all", "both"}
 VALID_BRIEFING_TYPES = {"default", "market_focused", "concise"}
 VALID_QUALITY_MODES = {"diagnose_only", "llm_section_improve", "strict"}
 

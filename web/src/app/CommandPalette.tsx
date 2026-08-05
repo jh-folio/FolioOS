@@ -36,8 +36,10 @@ function routeSubtitle(routeId: RouteId) {
   return "설정";
 }
 
+const BRIEFING_SCOPES = ["us", "kr", "europe", "jp", "all", "both"];
+
 function normalizedScope(value?: string) {
-  return value === "us" || value === "kr" || value === "both" ? value : "both";
+  return value && BRIEFING_SCOPES.includes(value) ? value : "both";
 }
 
 function briefingDate(item: DashboardBriefing) {

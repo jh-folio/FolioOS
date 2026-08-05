@@ -705,7 +705,7 @@ export function SettingsRoute() {
                 </div>
                 <div className="settings-grid compact">
                   <label className="field"><span>브리핑 시각</span><input value={automation.briefing?.time || "08:00"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, time: event.currentTarget.value } })} type="time" /></label>
-                  <label className="field"><span>시장 범위</span><select value={automation.briefing?.marketScope || "both"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, marketScope: event.currentTarget.value } })}><option value="both">미국+한국</option><option value="us">미국</option><option value="kr">한국</option></select></label>
+                  <label className="field"><span>시장 범위</span><select value={automation.briefing?.marketScope || "both"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, marketScope: event.currentTarget.value } })}><option value="all">전체(미국+한국+유럽+일본)</option><option value="both">미국+한국</option><option value="us">미국</option><option value="kr">한국</option><option value="europe">유럽</option><option value="jp">일본</option></select></label>
                 </div>
                 <div className="automation-inline-switch"><span>브리핑 전 RSS/Memory 실행</span><ToggleSwitch ariaLabel="브리핑 전 RSS와 Market Memory 실행" checked={Boolean(automation.briefing?.runPrerequisites)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, runPrerequisites: checked } })} compact /></div>
               </section>

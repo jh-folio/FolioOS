@@ -1,0 +1,303 @@
+"""Task 3.1 — the read/write/list/delete matrix across four markets plus `all`.
+
+The gate is that a reader never infers coverage from a scope label, and that
+legacy `both` records keep meaning exactly the two markets they were generated
+with.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+
+import pytest
+
+from features.daily_briefing.archive import BriefingArchiveIndex
+from features.daily_briefing.schema import (
+    AGGREGATE_SCOPES,
+    SINGLE_MARKET_SCOPES,
+    briefing_export_units,
+    briefing_file_name,
+    briefing_scope_view,
+    market_keys_for_briefing_scope,
+    normalize_market_scope,
+    split_market_markdown,
+    visual_sidecar_gzip_file_name,
+)
+
+DATE = "2026-08-05"
+TITLES = {
+    "us": "US Market Briefing", "kr": "Korea Market Briefing",
+    "europe": "Europe Market Briefing", "jp": "Japan Market Briefing",
+}
+
+
+def _write(root: Path, scope: str, *, generation_scope: str = "", text: str = "") -> Path:
+    path = root / briefing_file_name(DATE, scope)
+    path.write_text(json.dumps({
+        "date": DATE,
+        "marketScope": scope,
+        "briefingType": "default",
+        "generatedAt": f"{DATE}T08:00:00+09:00",
+        **({"generationScope": generation_scope} if generation_scope else {}),
+        "markdown": f"# {TITLES[scope]}\n\n{text or scope}-body",
+    }, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+# --- scope contract -----------------------------------------------------
+
+
+def test_all_covers_four_markets_and_both_stays_two():
+    assert market_keys_for_briefing_scope("all") == ("us", "kr", "europe", "jp")
+    # 저장된 `both` 보고서는 유럽·일본을 담은 적이 없다. 소급해서 넓히면
+    # 생성된 적 없는 커버리지를 주장하게 된다.
+    assert market_keys_for_briefing_scope("both") == ("us", "kr")
+    assert AGGREGATE_SCOPES == {"all", "both"}
+
+
+def test_an_unknown_scope_does_not_widen_to_four_markets():
+    assert normalize_market_scope("garbage") == "both"
+
+
+@pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
+def test_each_market_gets_its_own_file_and_sidecar(scope):
+    assert briefing_file_name(DATE, scope) == f"{DATE}.{scope}.json"
+    assert visual_sidecar_gzip_file_name(DATE, scope) == f"{DATE}.{scope}.visuals.json.gz"
+
+
+@pytest.mark.parametrize("scope", ["all", "both"])
+def test_aggregate_scopes_share_the_dated_base_file(scope):
+    assert briefing_file_name(DATE, scope) == f"{DATE}.json"
+
+
+# --- read ---------------------------------------------------------------
+
+
+@pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
+def test_read_returns_the_requested_market(scope):
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key, generation_scope="all")
+        with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
+            from features.daily_briefing.service import resolve_briefing
+
+            report = resolve_briefing(DATE, scope)
+        assert report["marketScope"] == scope
+        assert f"{scope}-body" in report["markdown"]
+
+
+def test_an_aggregate_read_records_what_generated_and_what_was_asked_for():
+    """An `all` run that lost Europe still says `all` — the lists show the gap."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in ("us", "kr", "jp"):
+            _write(root, key, generation_scope="all")
+        with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
+            from features.daily_briefing.service import resolve_briefing
+
+            report = resolve_briefing(DATE, "all")
+        assert report["marketScope"] == "all"
+        assert report["includedMarkets"] == ["US", "KR", "JP"]
+        assert report["expectedMarkets"] == ["US", "KR", "EUROPE", "JP"]
+        assert any("EUROPE" in text for text in report["coverageWarnings"])
+        assert set(report["briefings"]) == {"us", "kr", "jp"}
+
+
+def test_a_legacy_both_read_never_reaches_for_europe_or_japan():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key, generation_scope="both")
+        with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
+            from features.daily_briefing.service import resolve_briefing
+
+            report = resolve_briefing(DATE, "both")
+        assert report["includedMarkets"] == ["US", "KR"]
+        assert set(report["briefings"]) == {"us", "kr"}
+        assert "coverageWarnings" not in report
+
+
+# --- list ---------------------------------------------------------------
+
+
+def test_an_all_run_collapses_to_one_card_naming_its_markets():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key, generation_scope="all")
+        payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
+        assert payload["total"] == 1
+        item = payload["items"][0]
+        assert item["marketScope"] == "all"
+        assert item["includedMarkets"] == ["us", "kr", "europe", "jp"]
+        assert item["expectedMarkets"] == ["us", "kr", "europe", "jp"]
+
+
+def test_a_partial_all_run_reports_three_markets_not_four():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in ("us", "kr", "jp"):
+            _write(root, key, generation_scope="all")
+        item = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"][0]
+        assert item["includedMarkets"] == ["us", "kr", "jp"]
+        assert item["expectedMarkets"] == ["us", "kr", "europe", "jp"]
+
+
+def test_a_both_run_and_an_all_run_on_one_date_stay_separate_cards():
+    """Merging them would produce a card claiming markets neither run made together."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _write(root, "us", generation_scope="both")
+        _write(root, "kr", generation_scope="both")
+        _write(root, "europe", generation_scope="all")
+        _write(root, "jp", generation_scope="all")
+        payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
+        scopes = sorted(item["marketScope"] for item in payload["items"])
+        assert scopes == ["all", "both"]
+
+
+@pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
+def test_the_archive_filters_by_each_market(scope):
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key)
+        payload = BriefingArchiveIndex(root, ttl_seconds=0).query(market_scope=scope)
+        assert [item["marketScope"] for item in payload["items"]] == [scope]
+
+
+def test_archive_all_means_no_filter_not_the_four_market_scope():
+    """`all` names a briefing scope and an archive filter; they mean different things."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key)
+        assert BriefingArchiveIndex(root, ttl_seconds=0).query(market_scope="all")["total"] == 4
+        assert BriefingArchiveIndex(root, ttl_seconds=0).query(market_scope="aggregate")["total"] == 0
+
+
+# --- delete -------------------------------------------------------------
+
+
+@pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
+def test_deleting_one_market_leaves_the_others(scope):
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key, generation_scope="all")
+        with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
+            from features.daily_briefing.service import delete_briefing
+
+            result = delete_briefing(DATE, market=scope)
+        assert result["deleted"] is True
+        survivors = {path.name for path in root.glob("*.json") if not path.name.startswith(".")}
+        assert briefing_file_name(DATE, scope) not in survivors
+        for other in SINGLE_MARKET_SCOPES:
+            if other != scope:
+                assert briefing_file_name(DATE, other) in survivors
+
+
+def test_a_date_wide_delete_removes_every_market():
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for key in SINGLE_MARKET_SCOPES:
+            _write(root, key, generation_scope="all")
+        with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
+            from features.daily_briefing.service import delete_briefing
+
+            result = delete_briefing(DATE)
+        assert result["deleted"] is True
+        assert not [p for p in root.glob("*.json") if not p.name.startswith(".")]
+
+
+def test_delete_rejects_a_market_outside_the_contract():
+    with TemporaryDirectory() as tmp:
+        with patch("features.daily_briefing.service.BRIEFINGS_DIR", Path(tmp)):
+            from features.daily_briefing.service import delete_briefing
+
+            with pytest.raises(ValueError):
+                delete_briefing(DATE, market="cn")
+
+
+# --- export / overlay ---------------------------------------------------
+
+
+def test_export_produces_one_unit_per_generated_market():
+    report = {
+        "date": DATE, "marketScope": "all", "briefingType": "default",
+        "briefings": {
+            key: {"markdown": f"# {TITLES[key]}\n\n{key}-body"}
+            for key in SINGLE_MARKET_SCOPES
+        },
+    }
+    units = briefing_export_units(report)
+    assert [unit["marketScope"] for unit in units] == list(SINGLE_MARKET_SCOPES)
+
+
+def test_export_labels_use_the_shared_market_tags():
+    from features.daily_briefing.schema import MARKET_TAGS
+
+    assert MARKET_TAGS["europe"] == "유럽장"
+    assert MARKET_TAGS["jp"] == "일본장"
+    assert MARKET_TAGS["all"] == MARKET_TAGS["both"] == "종합"
+
+
+@pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
+def test_overlay_targets_the_per_market_file_when_one_exists(scope):
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _write(root, scope, generation_scope="all")
+        with patch("features.personal_overlay.service.BRIEFINGS_DIR", root):
+            from features.personal_overlay.service import _briefing_overlay_path
+
+            assert _briefing_overlay_path(DATE, scope).name == f"{DATE}.{scope}.json"
+
+
+@pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
+def test_overlay_falls_back_to_the_legacy_dated_file(scope):
+    """Reports saved before per-market files still take an overlay."""
+    with TemporaryDirectory() as tmp:
+        with patch("features.personal_overlay.service.BRIEFINGS_DIR", Path(tmp)):
+            from features.personal_overlay.service import _briefing_overlay_path
+
+            assert _briefing_overlay_path(DATE, scope).name == f"{DATE}.json"
+
+
+# --- markdown splitting -------------------------------------------------
+
+
+def test_a_four_market_response_splits_into_four_sections_plus_the_link():
+    text = "\n".join(
+        f"# {TITLES[key]} — 2026.08.05 마감\n{key}-body" for key in SINGLE_MARKET_SCOPES
+    ) + "\n## 시장 간 연결 요약\nlink-body"
+    parts = split_market_markdown(text, "all")
+    assert set(parts) == {*SINGLE_MARKET_SCOPES, "link"}
+    for key in SINGLE_MARKET_SCOPES:
+        assert f"{key}-body" in parts[key]["markdown"]
+        # 각 시장 구획이 다음 시장 본문을 삼키면 안 된다.
+        assert sum(f"{other}-body" in parts[key]["markdown"] for other in SINGLE_MARKET_SCOPES) == 1
+
+
+def test_the_legacy_two_market_link_heading_still_parses():
+    text = "# US Market Briefing\nus\n# Korea Market Briefing\nkr\n## 한미 시장 연결 요약\nlink"
+    assert set(split_market_markdown(text, "both")) == {"us", "kr", "link"}
+
+
+# --- titles -------------------------------------------------------------
+
+
+def test_each_market_titles_its_own_session_not_the_publication_date():
+    from features.common.market_calendar import briefing_market_windows
+
+    windows = briefing_market_windows(DATE, as_of=f"{DATE}T18:00:00+09:00")
+    view = briefing_scope_view(
+        {"date": DATE, "marketScope": "europe", "marketWindows": windows,
+         "markdown": "# Europe Market Briefing\n\nbody"},
+        "europe",
+    )
+    # 유럽은 한국시간 자정 이후 마감하므로 발행일이 아니라 전일 세션이다.
+    assert "2026.08.04" in view["title"]
+    assert "Europe Market Briefing" in view["title"]

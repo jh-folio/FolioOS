@@ -10,16 +10,24 @@ import time
 from pathlib import Path
 
 from features.daily_briefing.schema import (
+    AGGREGATE_SCOPES,
     BRIEFING_TYPES,
+    SINGLE_MARKET_SCOPES,
     briefing_archive_items,
     briefing_market_metadata,
+    market_keys_for_briefing_scope,
+    normalize_market_scope,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
 BRIEFINGS_DIR = ROOT / "data" / "briefings"
-REPORT_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:\.(?:us|kr))?\.json$")
-SCOPED_REPORT_FILE_RE = re.compile(r"^(?P<date>\d{4}-\d{2}-\d{2})\.(?P<market>us|kr)\.json$")
+# 사이드카(`.visuals.json`, `.link.json`)를 보고서로 읽지 않도록 시장 접미사를 고정한다.
+_MARKET_ALTERNATION = "|".join(SINGLE_MARKET_SCOPES)
+REPORT_FILE_RE = re.compile(rf"^\d{{4}}-\d{{2}}-\d{{2}}(?:\.(?:{_MARKET_ALTERNATION}))?\.json$")
+SCOPED_REPORT_FILE_RE = re.compile(
+    rf"^(?P<date>\d{{4}}-\d{{2}}-\d{{2}})\.(?P<market>{_MARKET_ALTERNATION})\.json$"
+)
 
 
 def _date(value, field):
@@ -105,13 +113,19 @@ class BriefingArchiveIndex:
         return (item.get("reportDate", ""), item.get("marketScope", ""))
 
     @staticmethod
-    def _merge_combined_pairs(group):
-        """Collapse the per-market files of one 종합(both) generation into a single
-        `both` archive card. Legacy combined `{date}.json` files are never grouped
-        here because their items carry `combinedGeneration=False`."""
+    def _merge_combined_pairs(group, scope):
+        """Collapse the per-market files of one aggregate generation into one card.
+
+        The card records the markets that were actually written, not the label
+        the generation was requested under: an `all` run whose Europe leg failed
+        produced three briefings, and claiming four would be a lie the reader
+        cannot check. Legacy combined `{date}.json` files are never grouped here
+        because their items carry `combinedGeneration=False`.
+        """
+        order = {key: index for index, key in enumerate(SINGLE_MARKET_SCOPES)}
         items = sorted(
             (pair["item"] for pair in group),
-            key=lambda it: {"us": 0, "kr": 1}.get(it.get("marketScope"), 2),
+            key=lambda it: order.get(it.get("marketScope"), len(order)),
         )
         rep = items[0]
         date = rep.get("reportDate", "")
@@ -120,7 +134,7 @@ class BriefingArchiveIndex:
         session_date = next((it.get("sessionDate") for it in items if it.get("sessionDate")), "")
         synthetic = {
             "date": date,
-            "marketScope": "both",
+            "marketScope": scope,
             "briefingType": briefing_type,
             "generatedAt": generated_at,
             "title": f"Daily Market Briefing — {date}",
@@ -132,22 +146,35 @@ class BriefingArchiveIndex:
             "summary": rep.get("summary", ""),
             "briefingType": briefing_type,
         }
-        item = briefing_market_metadata(synthetic, "both", section)
+        item = briefing_market_metadata(synthetic, scope, section)
         item["combinedGeneration"] = True
+        item["generationScope"] = scope
+        item["includedMarkets"] = [it.get("marketScope") for it in items]
+        item["expectedMarkets"] = list(market_keys_for_briefing_scope(scope))
+        item["sessionDates"] = {
+            it.get("marketScope"): it.get("sessionDate", "") for it in items
+        }
         search_text = " ".join(pair["searchText"] for pair in group)
         return {"item": item, "searchText": search_text}
 
     def _collapse_combined(self, pairs):
-        """Group per-market combined-generation pairs by date into one `both` pair."""
+        """Group per-market files from one aggregate run into one card per run.
+
+        Grouping keys on the generation scope as well as the date, so a `both`
+        run and an `all` run on the same date stay separate cards rather than
+        merging into one that claims markets neither produced together.
+        """
         passthrough = []
         groups = {}
         for pair in pairs:
-            if pair["item"].get("combinedGeneration"):
-                groups.setdefault(pair["item"].get("reportDate", ""), []).append(pair)
+            item = pair["item"]
+            if item.get("combinedGeneration"):
+                scope = normalize_market_scope(item.get("generationScope") or "both")
+                groups.setdefault((item.get("reportDate", ""), scope), []).append(pair)
             else:
                 passthrough.append(pair)
-        for group in groups.values():
-            passthrough.append(self._merge_combined_pairs(group))
+        for (_, scope), group in groups.items():
+            passthrough.append(self._merge_combined_pairs(group, scope))
         return passthrough
 
     @staticmethod
@@ -160,8 +187,14 @@ class BriefingArchiveIndex:
     ):
         market_scope = str(market_scope or "all").strip().lower()
         briefing_type = str(briefing_type or "all").strip().lower()
-        if market_scope not in {"all", "us", "kr", "both"}:
-            raise ValueError("marketScope must be all, us, kr, or both")
+        # `all` here means "no market filter" for the archive query, which is a
+        # different word from the `all` briefing scope — a filter named after a
+        # scope would silently hide every single-market card. `aggregate`
+        # selects the multi-market cards regardless of which run produced them.
+        if market_scope not in {"all", "aggregate", "both", *SINGLE_MARKET_SCOPES}:
+            raise ValueError(
+                "marketScope must be all, aggregate, us, kr, europe, jp, or both"
+            )
         if briefing_type not in {"all", *BRIEFING_TYPES}:
             raise ValueError("briefingType must be all, default, market_focused, or concise")
         start = _date(date_from, "dateFrom")
@@ -190,9 +223,15 @@ class BriefingArchiveIndex:
         filtered = []
         for pair in pairs:
             item = pair["item"]
-            if market_scope == "both" and item["reportScope"] != "both":
-                continue
-            if market_scope in {"us", "kr"} and item["marketScope"] != market_scope:
+            # `all`은 이 질의에서 "시장 필터 없음"이다(브리핑 범위의 `all`과 다른 말).
+            # 다중 시장 카드만 보려면 `aggregate`를 쓴다.
+            if market_scope == "aggregate":
+                if item["reportScope"] not in AGGREGATE_SCOPES:
+                    continue
+            elif market_scope == "both":
+                if item["reportScope"] != "both":
+                    continue
+            elif market_scope in SINGLE_MARKET_SCOPES and item["marketScope"] != market_scope:
                 continue
             if briefing_type != "all" and item["briefingType"] != briefing_type:
                 continue
@@ -209,7 +248,7 @@ class BriefingArchiveIndex:
                 continue
             filtered.append(item)
 
-        order = {"us": 0, "kr": 1, "both": 2}
+        order = {key: index for index, key in enumerate((*SINGLE_MARKET_SCOPES, "both", "all"))}
         filtered.sort(key=lambda row: order.get(row["marketScope"], 9))
         filtered.sort(key=lambda row: row["reportDate"], reverse=True)
         total = len(filtered)

@@ -21,7 +21,9 @@ from features.daily_briefing.contracts import (
 from features.daily_briefing.schema import (
     BODY_AVAILABILITY,
     BRIEFING_TYPES,
+    EUROPE_SESSION_MODES,
     FRESHNESS_STATUSES,
+    JP_SESSION_MODES,
     KR_SESSION_MODES,
     LINK_STATUSES,
     MARKET_IMPACT_STATUSES,
@@ -43,6 +45,7 @@ from features.daily_briefing.schema import (
     normalize_link_status,
     normalize_market_impact_status,
     normalize_market_scope,
+    normalize_session_mode,
     normalize_us_session_mode,
     visual_sidecar_file_name,
     visual_sidecar_gzip_file_name,
@@ -112,9 +115,12 @@ def test_legacy_report_contract_and_v2_defaults_are_backward_compatible():
 
 
 def test_v2_enums_are_closed_and_normalized_in_code():
-    assert MARKET_SCOPES == {"us", "kr", "both"}
+    assert MARKET_SCOPES == {"us", "kr", "europe", "jp", "all", "both"}
     assert BRIEFING_TYPES == {"default", "market_focused", "concise"}
     assert normalize_market_scope("US") == "us"
+    assert normalize_market_scope("EUROPE") == "europe"
+    assert normalize_market_scope("JP") == "jp"
+    # 알 수 없는 값이 네 시장 생성으로 확대되면 안 된다.
     assert normalize_market_scope("invalid") == "both"
     assert normalize_briefing_type("market_focused") == "market_focused"
     assert normalize_us_session_mode("bad") == "us_off_session"
@@ -124,6 +130,11 @@ def test_v2_enums_are_closed_and_normalized_in_code():
     assert normalize_body_availability("bad") == "headline_only"
     assert normalize_market_impact_status("bad") == "unavailable"
     assert "us_close" in US_SESSION_MODES and "kr_close" in KR_SESSION_MODES
+    # 유럽은 한국시간 자정 이후 마감해 장중 모드가 없고, 일본은 한국처럼 있다.
+    assert "europe_intraday" not in EUROPE_SESSION_MODES
+    assert "jp_intraday" in JP_SESSION_MODES
+    assert normalize_session_mode("europe", "bad") == "europe_off_session"
+    assert normalize_session_mode("jp", "bad") == "jp_off_session"
     assert "selectively_connected" in LINK_STATUSES
     assert "partial_live" in FRESHNESS_STATUSES
     assert BODY_AVAILABILITY == {"full", "summary_only", "headline_only"}

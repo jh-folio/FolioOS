@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from features.llm_settings.client import load_dotenv, mask_secret
-from features.daily_briefing.schema import briefing_export_units
+from features.daily_briefing.schema import MARKET_TAGS, briefing_export_units
 from features.notion_export.client import create_page, markdown_to_blocks, upload_image_to_imgbb
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -92,7 +92,7 @@ def export_briefing(date, briefing, chart_images=None):
             markdown = "\n\n".join(parts)
 
         scope = unit.get("marketScope", "both")
-        market_label = {"us": "미국장", "kr": "한국장", "both": "종합"}.get(scope, "종합")
+        market_label = MARKET_TAGS.get(scope, "종합")
         type_label = (unit.get("tags") or ["", "기본"])[-1]
         title = f"브리핑 {date} {market_label}"
         images = _briefing_images_for_market(chart_images, scope, allow_legacy=len(units) == 1)

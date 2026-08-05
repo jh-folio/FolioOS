@@ -10,10 +10,25 @@ from copy import deepcopy
 import re
 
 
-MARKET_SCOPES = frozenset({"us", "kr", "both"})
+# `both`는 US/KR만 담은 저장된 묶음이고 `all`은 네 시장이다. 둘을 하나로 합치면
+# 예전 보고서가 담지 않은 시장을 담았다고 주장하게 된다.
+MARKET_SCOPES = frozenset({"us", "kr", "europe", "jp", "all", "both"})
+AGGREGATE_SCOPES = frozenset({"all", "both"})
+SINGLE_MARKET_SCOPES = ("us", "kr", "europe", "jp")
+LEGACY_AGGREGATE_MARKETS = ("us", "kr")
 BRIEFING_TYPES = frozenset({"default", "market_focused", "concise"})
 US_SESSION_MODES = frozenset({"us_close", "us_intraday", "us_holiday", "us_off_session"})
 KR_SESSION_MODES = frozenset({"kr_close", "kr_intraday", "kr_holiday", "kr_off_session"})
+# 유럽은 한국시간 자정 이후 마감해 미국과 같은 모양이고(장중 모드 없음),
+# 일본은 한국과 같은 시간대라 장중이 있다.
+EUROPE_SESSION_MODES = frozenset({"europe_close", "europe_holiday", "europe_off_session"})
+JP_SESSION_MODES = frozenset({"jp_close", "jp_intraday", "jp_holiday", "jp_off_session"})
+SESSION_MODES_BY_SCOPE = {
+    "us": (US_SESSION_MODES, "us_off_session"),
+    "kr": (KR_SESSION_MODES, "kr_off_session"),
+    "europe": (EUROPE_SESSION_MODES, "europe_off_session"),
+    "jp": (JP_SESSION_MODES, "jp_off_session"),
+}
 LINK_STATUSES = frozenset({
     "connected",
     "selectively_connected",
@@ -33,10 +48,17 @@ FRESHNESS_STATUSES = frozenset({
 })
 BODY_AVAILABILITY = frozenset({"full", "summary_only", "headline_only"})
 MARKET_IMPACT_STATUSES = frozenset({"measured", "partial", "unavailable"})
-VISUAL_MARKETS = frozenset({"US", "KR", "BOTH"})
+VISUAL_MARKETS = frozenset({"US", "KR", "EUROPE", "JP", "BOTH", "ALL"})
 VISUAL_TYPES = frozenset({"price_series", "market_heatmap", "index_chart"})
 VISUAL_FAMILIES = frozenset({"trend", "composition"})
-MARKET_TAGS = {"us": "미국장", "kr": "한국장", "both": "종합"}
+MARKET_TAGS = {
+    "us": "미국장", "kr": "한국장", "europe": "유럽장", "jp": "일본장",
+    "all": "종합", "both": "종합",
+}
+MARKET_TITLE_LABELS = {
+    "us": "US Market Briefing", "kr": "Korea Market Briefing",
+    "europe": "Europe Market Briefing", "jp": "Japan Market Briefing",
+}
 BRIEFING_TYPE_TAGS = {"default": "기본", "market_focused": "시황중심", "concise": "요약"}
 SESSION_STATUS_LABELS = {
     "us_close": "마감",
@@ -47,13 +69,20 @@ SESSION_STATUS_LABELS = {
     "kr_intraday": "장중",
     "kr_holiday": "마감",
     "kr_off_session": "마감",
+    "europe_close": "마감",
+    "europe_holiday": "마감",
+    "europe_off_session": "마감",
+    "jp_close": "마감",
+    "jp_intraday": "장중",
+    "jp_holiday": "마감",
+    "jp_off_session": "마감",
 }
 
 
 def _scoped_file_stem(date, market_scope=None):
     date_text = str(date or "").strip()
     scope = str(market_scope or "").strip().lower()
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKET_SCOPES:
         return f"{date_text}.{scope}"
     return date_text
 
@@ -120,9 +149,40 @@ def normalize_kr_session_mode(value):
     return _normalize_enum(value, KR_SESSION_MODES, "kr_off_session")
 
 
+def normalize_session_mode(scope, value):
+    allowed, default = SESSION_MODES_BY_SCOPE.get(normalize_market_scope(scope), (frozenset(), ""))
+    return _normalize_enum(value, allowed, default) if allowed else ""
+
+
+def market_keys_for_briefing_scope(value):
+    """The markets a scope actually covers.
+
+    `both` stays two markets forever: reports saved under it never held Europe
+    or Japan, and widening it retroactively would claim coverage that was never
+    generated.
+    """
+    scope = normalize_market_scope(value)
+    if scope == "all":
+        return SINGLE_MARKET_SCOPES
+    if scope == "both":
+        return LEGACY_AGGREGATE_MARKETS
+    return (scope,)
+
+
 def _dotted_date(value):
     text = str(value or "").strip()[:10]
     return text.replace("-", ".") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text) else text
+
+
+def _session_mode_from_phase(scope, phase, *, has_intraday):
+    """Map a session descriptor phase onto this scope's mode enum."""
+    if phase == "holiday":
+        return f"{scope}_holiday"
+    if has_intraday and phase == "intraday":
+        return f"{scope}_intraday"
+    if phase in {"pre_open", "closed", "intraday"}:
+        return f"{scope}_close"
+    return ""
 
 
 def briefing_session_mode(scope, value="", market_windows=None):
@@ -142,6 +202,21 @@ def briefing_session_mode(scope, value="", market_windows=None):
         if phase == "holiday":
             return "kr_holiday"
         return "kr_intraday" if windows.get("krCurrentSessionDate") else "kr_close"
+    if normalized_scope in {"europe", "jp"}:
+        if raw:
+            return normalize_session_mode(normalized_scope, raw)
+        session = ((market_windows or {}).get("marketSessions") or {}).get(normalized_scope) or {}
+        if not session:
+            return f"{normalized_scope}_close"
+        if not session.get("openOnBriefingDate"):
+            return f"{normalized_scope}_holiday"
+        # 유럽은 한국시간 자정 이후 마감하므로 장중 모드가 없다.
+        mode = _session_mode_from_phase(
+            normalized_scope,
+            str(session.get("phase") or "closed"),
+            has_intraday=normalized_scope == "jp",
+        )
+        return mode or f"{normalized_scope}_close"
     return ""
 
 
@@ -158,12 +233,15 @@ def briefing_session_date(report_date, scope, *, session_date="", session_mode="
         if mode in {"kr_intraday", "kr_close"} and windows.get("krCurrentSessionDate"):
             return str(windows.get("krCurrentSessionDate"))[:10]
         return str(windows.get("krPreviousSessionDate") or report_date or "")[:10]
+    if normalized_scope in {"europe", "jp"}:
+        session = (windows.get("marketSessions") or {}).get(normalized_scope) or {}
+        return str(session.get("sessionDate") or report_date or "")[:10]
     return str(report_date or "")[:10]
 
 
 def briefing_market_title(report_date, scope, *, session_date="", session_mode="", market_windows=None):
     normalized_scope = normalize_market_scope(scope)
-    if normalized_scope == "both":
+    if normalized_scope in AGGREGATE_SCOPES:
         return f"Daily Market Briefing — {_dotted_date(report_date)}"
     mode = briefing_session_mode(normalized_scope, session_mode, market_windows)
     resolved_date = briefing_session_date(
@@ -173,7 +251,7 @@ def briefing_market_title(report_date, scope, *, session_date="", session_mode="
         session_mode=mode,
         market_windows=market_windows,
     )
-    label = "US Market Briefing" if normalized_scope == "us" else "Korea Market Briefing"
+    label = MARKET_TITLE_LABELS.get(normalized_scope, "Daily Market Briefing")
     status = SESSION_STATUS_LABELS.get(mode, "마감")
     return f"{label} — {_dotted_date(resolved_date)} {status}".strip()
 
@@ -181,7 +259,7 @@ def briefing_market_title(report_date, scope, *, session_date="", session_mode="
 def briefing_expected_titles(report_date, market_scope, *, market_windows=None, session_modes=None):
     scope = normalize_market_scope(market_scope)
     modes = session_modes or {}
-    targets = ("us", "kr") if scope == "both" else (scope,)
+    targets = market_keys_for_briefing_scope(scope)
     return {
         target: briefing_market_title(
             report_date,
@@ -203,7 +281,9 @@ def normalize_briefing_markdown_titles(
         market_windows=market_windows,
         session_modes=session_modes,
     ).items():
-        heading = "US Market Briefing" if scope == "us" else "Korea Market Briefing"
+        heading = MARKET_TITLE_LABELS.get(scope, "")
+        if not heading:
+            continue
         text = re.sub(
             rf"(?m)^#\s+{re.escape(heading)}(?:\s+[—-]\s+[^\r\n]+)?\s*$",
             f"# {title}",
@@ -307,10 +387,14 @@ def briefing_market_metadata(report, market_scope, section=None):
     summary = source.get("summary") or report.get("summary") or _plain_excerpt(
         source.get("markdown") or report.get("markdown")
     )
-    # `generationScope` is only written on per-market files produced by a 종합(both)
-    # generation; legacy combined `{date}.json` files don't carry it. Explicit
-    # (non-normalized) check so a missing field never defaults to "both".
-    combined_generation = str(report.get("generationScope") or "").strip().lower() == "both"
+    # `generationScope` is only written on per-market files produced by an
+    # aggregate generation; legacy combined `{date}.json` files don't carry it.
+    # Explicit (non-normalized) check so a missing field never defaults to an
+    # aggregate. The value is carried through so the archive knows whether a
+    # group came from a two-market `both` run or a four-market `all` run — the
+    # file set alone cannot say, because an `all` run can lose two markets.
+    generation_scope = str(report.get("generationScope") or "").strip().lower()
+    combined_generation = generation_scope in AGGREGATE_SCOPES
     return {
         "id": f"{report_date}:{scope}",
         "reportDate": report_date,
@@ -321,10 +405,11 @@ def briefing_market_metadata(report, market_scope, section=None):
         "sessionDate": session_date,
         "sessionMode": session_mode,
         "publicationDate": report_date,
-        "title": default_title if scope in {"us", "kr"} else str(source.get("title") or default_title),
+        "title": default_title if scope in SINGLE_MARKET_SCOPES else str(source.get("title") or default_title),
         "summary": _plain_excerpt(summary),
         "tags": [MARKET_TAGS[scope], BRIEFING_TYPE_TAGS[briefing_type]],
         "combinedGeneration": combined_generation,
+        "generationScope": generation_scope if combined_generation else "",
     }
 
 
@@ -340,7 +425,7 @@ def enrich_briefing_sections(
     }
     enriched = {}
     for scope, raw in deepcopy(sections or {}).items():
-        if scope not in {"us", "kr"} or not isinstance(raw, dict):
+        if scope not in SINGLE_MARKET_SCOPES or not isinstance(raw, dict):
             enriched[scope] = deepcopy(raw)
             continue
         section = deepcopy(raw)
@@ -355,7 +440,7 @@ def enrich_briefing_sections(
 def briefing_archive_items(report):
     normalized = normalize_briefing_contract(report)
     sections = normalized.get("briefings") or {}
-    scopes = [scope for scope in ("us", "kr") if isinstance(sections.get(scope), dict)]
+    scopes = [scope for scope in SINGLE_MARKET_SCOPES if isinstance(sections.get(scope), dict)]
     if scopes:
         return [briefing_market_metadata(normalized, scope, sections[scope]) for scope in scopes]
     return [briefing_market_metadata(normalized, normalized.get("marketScope", "both"), normalized)]
@@ -366,10 +451,10 @@ def briefing_export_units(report):
     normalized = normalize_briefing_contract(report)
     sections = normalized.get("briefings") or {}
     report_scope = normalized.get("marketScope", "both")
-    if report_scope in {"us", "kr"}:
+    if report_scope in SINGLE_MARKET_SCOPES:
         scopes = [report_scope]
     else:
-        scopes = [scope for scope in ("us", "kr") if isinstance(sections.get(scope), dict)]
+        scopes = [scope for scope in SINGLE_MARKET_SCOPES if isinstance(sections.get(scope), dict)]
     if not scopes:
         scopes = [report_scope]
 
@@ -386,25 +471,25 @@ def briefing_scope_view(report, market_scope=None):
     out = normalize_briefing_contract(report)
     effective_market_windows = _effective_market_windows(out)
     scope = normalize_market_scope(market_scope or out.get("marketScope"))
-    if scope == "both":
+    if scope in AGGREGATE_SCOPES:
         report_date = str(out.get("date") or "")
         modes = {
             target: briefing_session_mode(target, "", effective_market_windows)
-            for target in ("us", "kr")
+            for target in market_keys_for_briefing_scope(scope)
         }
         out["markdown"] = normalize_briefing_markdown_titles(
             out.get("markdown", ""),
             report_date,
-            "both",
+            scope,
             market_windows=effective_market_windows,
             session_modes=modes,
         )
         out["marketWindows"] = effective_market_windows
         out["publicationDate"] = report_date
-        out["title"] = briefing_market_title(report_date, "both")
+        out["title"] = briefing_market_title(report_date, scope)
         return out
     report_scope = normalize_market_scope(out.get("marketScope"))
-    if not out.get("briefings") and report_scope in {"us", "kr"} and scope != report_scope:
+    if not out.get("briefings") and report_scope in SINGLE_MARKET_SCOPES and scope != report_scope:
         return out
     scoped = out.get("briefings", {}).get(scope)
     if not isinstance(scoped, dict):
@@ -432,14 +517,16 @@ def split_market_markdown(markdown, market_scope="both"):
     """Split an agent/LLM combined response into stored market sections."""
     text = str(markdown or "").strip()
     scope = normalize_market_scope(market_scope)
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKET_SCOPES:
         return {scope: {"markdown": text}}
+    patterns = [
+        (key, rf"(?m)^#\s+{re.escape(label)}\b")
+        for key, label in MARKET_TITLE_LABELS.items()
+    ]
+    # 연결 분석 제목은 두 시장 시절 문구와 네 시장 문구를 모두 받는다.
+    patterns.append(("link", r"(?m)^##\s+(?:한미 시장 연결 요약|시장 간 연결 요약)\b"))
     starts = []
-    for key, pattern in (
-        ("us", r"(?m)^#\s+US Market Briefing\b"),
-        ("kr", r"(?m)^#\s+Korea Market Briefing\b"),
-        ("link", r"(?m)^##\s+한미 시장 연결 요약\b"),
-    ):
+    for key, pattern in patterns:
         match = re.search(pattern, text)
         if match:
             starts.append((match.start(), key))
@@ -459,7 +546,7 @@ def merge_briefing_report(report, existing, market_scope="both"):
         return report
     merged = deepcopy(report)
     scope = normalize_market_scope(market_scope)
-    if scope != "both":
+    if scope not in AGGREGATE_SCOPES:
         scopes = deepcopy(existing.get("briefings") or {})
         incoming_sections = deepcopy(report.get("briefings") or {})
         if incoming_sections:
