@@ -86,6 +86,10 @@ export function AgentComposer({ workspace }: { workspace: AgentWorkspaceControll
           {workspace.attachments.map((item) => (
             <span key={item.name}>
               {item.name}
+              {/* 이미지는 본문 텍스트가 없어 예전에는 첨부해도 아무 일이 없었다.
+                  CLI가 파일을 직접 읽는다는 것과, 못 읽는 경우를 여기서 알린다. */}
+              {item.imageData ? <em className="agent-attachment-note">이미지 · Agent가 직접 읽음</em> : null}
+              {!item.imageData && !item.content ? <em className="agent-attachment-note">본문 미포함</em> : null}
               <button
                 type="button"
                 aria-label={`${item.name} 첨부 제거`}

@@ -59,6 +59,8 @@ export type Attachment = {
   name: string;
   size: number;
   content: string;
+  /** base64 image bytes; the server writes them to a scratch file for the CLI to open. */
+  imageData?: string;
 };
 
 export type AgentModelChoice = {

@@ -121,16 +121,38 @@ def normalize_agent_options(raw: dict | None) -> dict:
             size = max(0, int(item.get("size") or 0))
         except (TypeError, ValueError):
             size = 0
-        attachments.append({
+        row = {
             "name": name,
             "size": size,
             "content": str(item.get("content") or "")[:4000],
-        })
+        }
+        # 이미지 바이트는 프롬프트에 넣지 않고 임시 파일로 내려 CLI가 직접 읽는다
+        # (features/agent_mode/attachment_files.py). 여기서는 통과만 시킨다.
+        image_data = str(item.get("imageData") or "")
+        if image_data:
+            row["imageData"] = image_data
+        attachments.append(row)
     return {
         "model": str(raw.get("model") or "").strip()[:80],
         "effort": effort if effort in VALID_EFFORT_LEVELS else "medium",
         "attachments": attachments,
     }
+
+
+def public_options(options: dict) -> dict:
+    """Options as they may be stored and returned — never the image bytes.
+
+    A chat result is persisted to `data/jobs.json` and echoed to the client, so
+    passing raw options straight through would write an attached screenshot to
+    disk under a different name than the screenshot contract forbids.
+    """
+    rows = []
+    for item in (options or {}).get("attachments") or []:
+        row = {key: value for key, value in item.items() if key != "imageData"}
+        if str(item.get("imageData") or "").strip():
+            row["hasImage"] = True
+        rows.append(row)
+    return {**(options or {}), "attachments": rows}
 
 
 def _surface_actions(context: dict) -> list[dict]:
@@ -160,7 +182,7 @@ def agent_companion_reply(message: str, context: dict | None = None, options: di
             "mode": "task",
             "message": "작업 요청으로 이해했습니다. 실행 전에 계획과 저장될 대상을 먼저 확인해야 합니다.",
             "context": normalized,
-            "options": normalized_options,
+            "options": public_options(normalized_options),
             "actions": _surface_actions(normalized),
             "requiresApproval": True,
             "writeback": None,
@@ -170,7 +192,7 @@ def agent_companion_reply(message: str, context: dict | None = None, options: di
         "mode": "companion",
         "message": "현재 화면을 기준으로 질문에 답할 준비가 되어 있습니다. 저장된 보고서나 메모리는 사용자가 승인하기 전에는 변경하지 않습니다.",
         "context": normalized,
-        "options": normalized_options,
+        "options": public_options(normalized_options),
         "actions": _surface_actions(normalized),
         "requiresApproval": False,
         "writeback": None,

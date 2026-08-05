@@ -175,6 +175,15 @@ When the user explicitly asks to revise, create, update, schedule, or write back
 
 `POST /api/agent/companion`은 `message`, `context` 외에 채팅 도구 옵션 `options{model, effort, attachments}`를 받는다. `companion.normalize_agent_options()`가 effort enum(`low/medium/high/max`), 모델 문자열 길이, 첨부(최대 5개, 이름 120자, 본문 4,000자)를 코드에서 정규화해 응답 `options` 필드로 되돌려준다. 첨부파일 본문은 사용자 참고 입력(hypothesis)일 뿐 evidence로 승격하지 않는다.
 
+**이미지 첨부는 CLI가 파일을 직접 읽는다 (0.5).** 이미지는 본문 텍스트가 없어 예전에는 프롬프트에 파일명만 실렸고, 이미지를 읽을 수 있는 Agent CLI에 파일이 닿지 못했다. 이제 `features/agent_mode/attachment_files.py`가 바이트를 임시 파일로 내리고 프롬프트에는 **경로만** 싣는다(`bridge.py`가 Agent Context Pack 경로를 싣는 방식과 같다).
+
+- 형식 판정은 파일 시그니처로 한다. 브라우저 MIME과 확장자는 사용자 입력이라 신뢰하지 않는다. PNG/JPEG/GIF/WebP/BMP만 기록하고 그 외는 이유와 함께 거절한다.
+- 상한: 이미지 1건 12MB(`MAX_IMAGE_BYTES`), 한 요청 4건(`MAX_IMAGE_FILES`). 초과분은 조용히 버리지 않고 사유를 프롬프트에 남긴다.
+- 임시 파일 수명은 `StagedImages` 컨텍스트가 CLI 호출 구간으로 한정한다. 성공·실패·취소 모두에서 삭제한다. 원본을 `data/`에 남기지 않는다(0.4 스크린샷 계약과 동일).
+- **바이트는 프롬프트·잡 결과·Work Log 어디에도 남지 않는다.** 잡 결과는 `data/jobs.json`에 저장되므로 `companion.public_options()`가 `imageData`를 떼고 `hasImage: true` 플래그만 남긴다.
+- CLI가 없으면 이미지를 읽을 주체가 없다. 조용히 무시하지 않고 "Agent CLI가 없어 이미지를 열 수 없습니다"를 알린다.
+- 기존 로컬 OCR(Tesseract)·외부 Vision 경로는 **CLI를 쓰지 않는 사용자를 위한 fallback으로 그대로 남긴다.**
+
 Deep Research의 `Agent에게 변화 묻기`는 frontend가 `collectionId`와 strict 정수 `collectionRevision`만 전달하는 명시적 Companion action이다. 서버는 저장된 Collection을 다시 조회하고 revision을 검사한 뒤, 한 번의 read-only resolve로 현재/이전 스냅샷 metadata, change counts/reason, 현재 외부 evidence 카드 최대 12개를 구성한다. Collection 정의는 ID/revision/definition hash만 포함한 `saved_filter_metadata_not_evidence`, 외부 카드는 `external_evidence_untrusted`로 표시한다. 카드의 title/source/url/snippet은 인용 데이터일 뿐 prompt 지시가 아니며 별도 untrusted delimiter 안에 둔다. 사용자 note/context, frontend가 보낸 match/evidence body, 보고서, Agent 응답은 이 projection에 들어가지 않는다.
 
 Collection change-summary 응답은 conversational/non-mutating이다. workspace open과 Collection refresh는 Agent job을 만들지 않으며, Agent 조회도 스냅샷을 append하지 않는다. Work Log에는 기존 SharedJob의 task/status/timing/engine/artifact metadata만 남고 질문·context·evidence·reply는 복사되지 않는다.

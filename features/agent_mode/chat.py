@@ -17,11 +17,13 @@ from pathlib import Path
 from typing import assert_never
 
 from features.agent_mode import bridge
+from features.agent_mode.attachment_files import StagedImages, image_block
 from features.agent_mode.companion import (
     agent_companion_reply,
     classify_agent_intent,
     normalize_agent_context,
     normalize_agent_options,
+    public_options,
 )
 from features.agent_mode.collection_context import prepare_agent_context, render_collection_projection
 from features.smart_collections.service import SmartCollectionService
@@ -129,6 +131,10 @@ def _attachment_block(options: dict) -> str:
         content = str(item.get("content") or "").strip()
         if content:
             parts.append(f"[첨부: {name}]\n```\n{content}\n```")
+        elif str(item.get("imageData") or "").strip():
+            # 이미지는 별도 블록이 파일 경로로 싣는다. 여기서 "본문 미포함"이라고
+            # 적으면 CLI가 읽을 수 있는 첨부를 못 읽는다고 말하게 된다.
+            continue
         else:
             parts.append(f"[첨부: {name}] (본문 미포함)")
     return "\n\n".join(parts)
@@ -150,7 +156,8 @@ def _context_block(context: dict, markdown: str) -> str:
     return block
 
 
-def build_chat_prompt(message: str, context: dict, options: dict, markdown: str = "") -> str:
+def build_chat_prompt(message: str, context: dict, options: dict, markdown: str = "",
+                      images: str = "") -> str:
     effort = EFFORT_HINTS.get(options.get("effort", "medium"), EFFORT_HINTS["medium"])
     attachments = _attachment_block(options)
     raw_scope = str(context.get("marketScope") or "").strip()
@@ -169,11 +176,13 @@ def build_chat_prompt(message: str, context: dict, options: dict, markdown: str 
         render_collection_projection(context),
         f"현재 화면 컨텍스트:\n{_context_block(context, markdown)}",
         attachments,
+        images,
         f"사용자 질문:\n{message}",
     ]))
 
 
-def build_revision_prompt(message: str, context: dict, options: dict, markdown: str) -> str:
+def build_revision_prompt(message: str, context: dict, options: dict, markdown: str,
+                          images: str = "") -> str:
     effort = EFFORT_HINTS.get(options.get("effort", "medium"), EFFORT_HINTS["medium"])
     attachments = _attachment_block(options)
     return "\n\n".join(filter(None, [
@@ -187,6 +196,7 @@ def build_revision_prompt(message: str, context: dict, options: dict, markdown: 
         "- User notes and attachments are hypothesis, not evidence.",
         f"사용자 수정 요청:\n{message}",
         attachments,
+        images,
         f"현재 저장된 보고서 전체 markdown:\n<report>\n{markdown}\n</report>",
     ]))
 
@@ -270,6 +280,18 @@ def _revision_payload(output: str) -> dict:
     return {"summary": str(payload.get("summary") or "").strip(), "revisedMarkdown": revised}
 
 
+def _run_with_images(build_prompt, options: dict, *, model: str, job_id: str) -> dict:
+    """Run the CLI while the attached images exist on disk, then remove them.
+
+    The scratch files must outlive prompt building and the CLI call and nothing
+    else, so their lifetime is scoped to exactly this call — cleanup runs on
+    success, on CLI failure, and on cancellation alike.
+    """
+    with StagedImages(options.get("attachments")) as staged:
+        prompt = build_prompt(image_block(staged))
+        return bridge.run_agent_prompt(prompt, model=model, job_id=job_id)
+
+
 def run_agent_chat(message: str, context: dict | None = None, options: dict | None = None,
                    *, progress=None, job_id: str = "",
                    collection_service: SmartCollectionService | None = None,
@@ -292,7 +314,11 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
         )
         fallback["engine"] = "rules"
         fallback["reply"] = fallback.pop("message", "")
-        fallback["notice"] = status.get("message") or "Agent CLI를 사용할 수 없어 규칙 기반으로 답합니다."
+        fallback["notice"] = " ".join(filter(None, [
+            status.get("message") or "Agent CLI를 사용할 수 없어 규칙 기반으로 답합니다.",
+            # 이미지를 읽는 것은 CLI뿐이다. 조용히 무시하면 사용자는 첨부가 반영된 줄 안다.
+            image_block(StagedImages(normalized_options.get("attachments")), cli_available=False),
+        ]))
         return fallback
 
     kind = normalized.get("reportKind", "")
@@ -304,9 +330,13 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
     adapter = ""
     if intent == "task" and artifact is not None:
         progress("보고서 수정안을 작성하고 있습니다.", 20)
-        prompt = build_revision_prompt(message, normalized, normalized_options, markdown)
         try:
-            result = bridge.run_agent_prompt(prompt, model=normalized_options.get("model", ""), job_id=job_id)
+            result = _run_with_images(
+                lambda images: build_revision_prompt(message, normalized, normalized_options, markdown, images),
+                normalized_options,
+                model=normalized_options.get("model", ""),
+                job_id=job_id,
+            )
         except Exception as exc:
             # 수정안 생성 실패는 사용자가 알아야 하므로 정리된 메시지로 실패시킨다.
             raise RuntimeError(f"Agent 수정안 생성 실패: {_clean_cli_error(exc)}") from exc
@@ -320,7 +350,7 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
                 "adapter": adapter,
                 "reply": "요청을 검토했지만 실제로 바꿀 내용이 없다고 판단했습니다. 더 구체적으로 요청해 주세요.",
                 "context": normalized,
-                "options": normalized_options,
+                "options": public_options(normalized_options),
             }
         progress("수정 제안 diff를 준비하고 있습니다.", 80)
         proposal = create_revision_proposal(
@@ -349,13 +379,17 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
                 "marketScope": proposal["marketScope"],
             },
             "context": normalized,
-            "options": normalized_options,
+            "options": public_options(normalized_options),
         }
 
     progress("Agent가 답변을 작성하고 있습니다.", 30)
-    prompt = build_chat_prompt(message, normalized, normalized_options, markdown)
     try:
-        result = bridge.run_agent_prompt(prompt, model=normalized_options.get("model", ""), job_id=job_id)
+        result = _run_with_images(
+            lambda images: build_chat_prompt(message, normalized, normalized_options, markdown, images),
+            normalized_options,
+            model=normalized_options.get("model", ""),
+            job_id=job_id,
+        )
     except Exception as exc:
         # 질문형은 규칙 기반으로 답을 이어가고, CLI 실패 사유는 정리해서 알려준다.
         fallback = agent_companion_reply(
@@ -379,7 +413,7 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
         "reply": reply,
         "notice": notice,
         "context": normalized,
-        "options": normalized_options,
+        "options": public_options(normalized_options),
     }
 
 

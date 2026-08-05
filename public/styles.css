@@ -1695,6 +1695,14 @@ body:has(#folioReactRoot .react-shell) main.page {
   align-items: center;
 }
 
+/* 첨부가 실제로 읽히는지 알려주는 보조 라벨. 인접 화면의 meta 텍스트와 같은 규격. */
+.agent-attachment-note {
+  margin-left: 6px;
+  color: var(--folio-ink-muted, #6f6a60);
+  font-size: var(--fs-xs, 0.75rem);
+  font-style: normal;
+}
+
 .agent-home-composer {
   display: grid;
   gap: 10px;

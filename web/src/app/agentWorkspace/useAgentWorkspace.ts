@@ -34,6 +34,8 @@ import type {
 const ATTACHMENT_LIMIT = 3;
 const ATTACHMENT_MAX_BYTES = 200_000;
 const ATTACHMENT_TEXT_LIMIT = 4_000;
+// 서버의 attachment_files.MAX_IMAGE_BYTES와 같은 값. 넘으면 보내기 전에 거른다.
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
 function messageId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -43,7 +45,29 @@ export async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   return pollAgentJobBounded(job);
 }
 
+async function encodeBytes(file: File): Promise<string> {
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  // 큰 이미지를 한 번에 spread하면 인자 수 상한에 걸리므로 조각내 이어붙인다.
+  for (let offset = 0; offset < buffer.length; offset += 0x8000) {
+    binary += String.fromCharCode(...buffer.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
+}
+
 async function readAttachment(file: File): Promise<Attachment> {
+  // 이미지는 본문 텍스트가 없다. 예전에는 빈 문자열이 되어 프롬프트에 파일명만
+  // 실렸고, 이미지를 읽을 수 있는 Agent CLI에 파일이 닿지 못했다. 바이트를 보내면
+  // 서버가 임시 파일로 내리고 CLI가 그 경로를 직접 연다.
+  const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name);
+  if (isImage) {
+    return {
+      name: file.name.slice(0, 120),
+      size: file.size,
+      content: "",
+      imageData: file.size <= MAX_IMAGE_BYTES ? await encodeBytes(file) : "",
+    };
+  }
   const text = file.type.startsWith("text/") || /\.(md|txt|csv|json)$/i.test(file.name)
     ? await file.text()
     : "";
