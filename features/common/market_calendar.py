@@ -5,6 +5,7 @@ import re
 import time
 from functools import lru_cache
 from features.common.config_bootstrap import resolve_config
+from features.common.exchange_holidays import MARKET_EXCHANGES, market_exchange_status
 from features.common.markets import MarketCode, normalize_market_code
 from features.common.utils import normalize
 
@@ -13,6 +14,10 @@ _KR_STOCK_CODE_RE = re.compile(r"\[\d{6}\]")
 _KST = dt.timezone(dt.timedelta(hours=9))
 _KR_REGULAR_OPEN = dt.time(9, 0)
 _KR_REGULAR_CLOSE = dt.time(15, 30)
+# JST는 KST와 같은 시간대(UTC+9)라 한국 기준 생성 시각을 그대로 비교할 수 있다.
+# JPX는 2024-11-05 종가 연장 이후 09:00~15:30이다(11:30~12:30 점심 휴장은 세션 안이다).
+_JP_REGULAR_OPEN = dt.time(9, 0)
+_JP_REGULAR_CLOSE = dt.time(15, 30)
 
 
 def previous_calendar_date(date):
@@ -66,6 +71,31 @@ def kr_session_phase(briefing_day, is_open_on_date, as_of=None):
     if current_time < _KR_REGULAR_OPEN:
         return "pre_open"
     if current_time < _KR_REGULAR_CLOSE:
+        return "intraday"
+    return "closed"
+
+
+def jp_session_phase(briefing_day, is_open_on_date, as_of=None):
+    """Return holiday/pre_open/intraday/closed for a Japanese trading date.
+
+    Tokyo runs alongside Seoul rather than overnight, so the briefing-day session
+    can still be in progress when the briefing is generated — the same problem
+    ``kr_session_phase`` solves. ``as_of=None`` keeps the date-only behavior for
+    callers inspecting a calendar without a generation timestamp.
+    """
+    if not is_open_on_date:
+        return "holiday"
+    timestamp = parse_kst_datetime(as_of)
+    if timestamp is None:
+        return "intraday"
+    if briefing_day < timestamp.date():
+        return "closed"
+    if briefing_day > timestamp.date():
+        return "pre_open"
+    current_time = timestamp.timetz().replace(tzinfo=None)
+    if current_time < _JP_REGULAR_OPEN:
+        return "pre_open"
+    if current_time < _JP_REGULAR_CLOSE:
         return "intraday"
     return "closed"
 
@@ -250,6 +280,22 @@ def market_open_status(day, market, exchange_calendar_fetcher=None):
     if api_status is not None:
         api_status["source"] = "exchange_api"
         return api_status
+
+    if normalized_market in MARKET_EXCHANGES:
+        # 유럽·일본은 거래소별 표를 합쳐 판정한다. 유럽은 런던과 대륙이 갈리는 날이
+        # 연 십여 일 있어 하나의 "유럽 휴장" 플래그로는 틀린다.
+        status = market_exchange_status(normalized_market, day)
+        return {
+            "date": day.isoformat(),
+            "market": normalized_market,
+            "isOpen": status["isOpen"],
+            "provider": "static_calendar" if status["coverage"] != "coverage_expired" else "coverage_expired",
+            "source": "static" if status["coverage"] != "coverage_expired" else "unavailable",
+            "coverage": status["coverage"],
+            "divergent": status.get("divergent", False),
+            "openVenues": status.get("openVenues", []),
+            "closedVenues": status.get("closedVenues", []),
+        }
 
     if day.weekday() >= 5:
         is_open = False
@@ -460,6 +506,59 @@ def briefing_market_windows(date, exchange_calendar_fetcher=None, as_of=None):
     off_start = min(off_start, briefing_day)
     off_window = {"start": off_start.isoformat(), "end": briefing_day.isoformat()}
 
+    # 유럽·일본 세션. 두 시장은 한국시간 기준으로 성격이 정반대라 규칙을 따로 쓴다.
+    #
+    # 유럽은 미국과 같다. 런던 16:30 마감은 KST 00:30~01:30(다음 날)이라 브리핑일 D의
+    # 유럽 세션은 D 아침에 아직 끝나지 않았다. 그래서 미국처럼 항상 직전 완료 세션을 쓴다.
+    #
+    # 일본은 한국과 같다. JST가 KST와 같은 시간대라 09:00~15:30 세션이 한국 장중과
+    # 나란히 흐른다. 그래서 한국처럼 생성 시각으로 pre_open/intraday/closed를 가른다.
+    europe_status = market_open_status(briefing_day, "EUROPE", calendar_fetcher)
+    jp_status = market_open_status(briefing_day, "JP", calendar_fetcher)
+    europe_session = previous_trading_day(briefing_day, "EUROPE", calendar_fetcher)
+    jp_phase = jp_session_phase(briefing_day, jp_status["isOpen"], as_of)
+    jp_session = (
+        briefing_day
+        if jp_phase == "closed"
+        else previous_trading_day(briefing_day, "JP", calendar_fetcher)
+        if jp_status["isOpen"]
+        else latest_trading_day_on_or_before(briefing_day, "JP", calendar_fetcher)
+    )
+    market_sessions = {
+        "us": {
+            "market": "US", "timezone": "America/New_York",
+            "sessionDate": us_previous.isoformat(),
+            "openOnBriefingDate": us_open,
+            "provider": us_status["provider"],
+        },
+        "kr": {
+            "market": "KR", "timezone": "Asia/Seoul",
+            "sessionDate": (briefing_day if kr_phase == "closed" else kr_previous).isoformat(),
+            "openOnBriefingDate": kr_current_open,
+            "phase": kr_phase,
+            "provider": kr_status["provider"],
+        },
+        "europe": {
+            "market": "EUROPE", "timezone": "Europe/London",
+            "sessionDate": europe_session.isoformat(),
+            "openOnBriefingDate": europe_status["isOpen"],
+            "provider": europe_status["provider"],
+            "coverage": europe_status.get("coverage", ""),
+            # 런던과 대륙이 갈리는 날은 "유럽 휴장"으로 뭉뚱그리지 않는다.
+            "venuesDiverge": europe_status.get("divergent", False),
+            "openVenues": europe_status.get("openVenues", []),
+            "closedVenues": europe_status.get("closedVenues", []),
+        },
+        "jp": {
+            "market": "JP", "timezone": "Asia/Tokyo",
+            "sessionDate": jp_session.isoformat(),
+            "openOnBriefingDate": jp_status["isOpen"],
+            "phase": jp_phase,
+            "provider": jp_status["provider"],
+            "coverage": jp_status.get("coverage", ""),
+        },
+    }
+
     session_roles = _MODE_SESSION_ROLES[analysis_mode]
     primary_sessions = [t for t, r in session_roles.items() if r == "primary"]
     secondary_sessions = [t for t, r in session_roles.items() if r == "secondary"]
@@ -510,7 +609,12 @@ def briefing_market_windows(date, exchange_calendar_fetcher=None, as_of=None):
         "calendarProviders": {
             "US": us_status["provider"],
             "KR": kr_status["provider"],
+            "EUROPE": europe_status["provider"],
+            "JP": jp_status["provider"],
         },
+        # 0.5 시장별 세션 기술자. 기존 us*/kr* 키는 호환을 위해 그대로 두고,
+        # 새 시장은 여기에만 담는다 — 기존 소비자가 읽는 모양을 바꾸지 않기 위해서다.
+        "marketSessions": market_sessions,
         "primarySessions": primary_sessions,
         "secondarySessions": secondary_sessions,
         "sessionRoles": session_roles,

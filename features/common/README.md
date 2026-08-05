@@ -12,13 +12,28 @@
 | `company_lookup.py` | 기업명/티커 정규화, SEC CIK 조회, 마스터 데이터 |
 | `utils.py` | 텍스트 정규화, JSON 읽기/쓰기, 날짜 유틸 |
 | `dataframe_ops.py` | Polars 기반 필터링, 정렬, 집계 |
-| `market_calendar.py` | 브리핑 날짜 계산, 한미 시장 시간대 구분 |
+| `market_calendar.py` | 브리핑 날짜 계산, 시장별 세션 기술자(`marketSessions`) |
+| `exchange_holidays.py` | LSE/Xetra/Euronext/Borsa Italiana/BME/JPX 연간 휴장일 표와 거래소별 개장 판정 |
 | `market_data/providers.py` | provider 기반 시장 데이터 인터페이스와 한국장 수치 조회 |
 | `research_library/` | 자료 폴더 계약, RSS 수집, 증분 인덱싱, 하이브리드 검색 |
 | `research_schema/` | checkpoint/evidence/sourceLedger/dataGap 공통 스키마 |
 | `research_quality/` | 저장 산출물의 source grounding, hallucination risk, personal bias risk 평가 |
 | `quality_generation/` | 생성 전 품질 목표, preflight, 약한 섹션 1회 보강, telemetry |
 | `data_reliability/` | 공식자료 우선순위, provider 상태, 한국 수동 데이터 보강 경로 |
+
+## market_calendar.py / exchange_holidays.py
+
+`briefing_market_windows()`는 기존 `us*`/`kr*` 키를 그대로 두고, 시장별 세션을 `marketSessions.{us,kr,europe,jp}`에 따로 담습니다. 기존 소비자가 읽는 모양을 바꾸지 않기 위해서입니다.
+
+시장마다 한국시간 기준 성격이 달라 세션 기준일 규칙이 다릅니다.
+
+- **미국·유럽**: 한국시간 자정 이후에 마감하므로 브리핑일 `D`의 세션은 `D` 아침에 아직 끝나지 않았습니다. 항상 직전 완료 세션을 씁니다.
+- **한국·일본**: JST가 KST와 같은 시간대라 두 장이 나란히 흐릅니다. 생성 시각(`as_of`)으로 `pre_open | intraday | closed`를 가르고, 마감 후에만 브리핑일을 세션일로 씁니다.
+
+`exchange_holidays.py`는 각 거래소가 공시한 연간 휴장일을 전사한 표입니다(NYSE·KRX·FOMC와 같은 방식).
+
+- **유럽은 하나의 캘린더가 아닙니다.** 영국 은행휴일은 LSE만 닫고 Euronext·Xetra는 열립니다. 주현절은 반대로 마드리드만 닫습니다. 이런 날이 연 십여 일 있어 `divergent`/`openVenues`/`closedVenues`로 갈린 상태를 그대로 보고하고, 지역 `isOpen`은 한 곳이라도 열리면 참입니다.
+- **표가 없는 연도는 추측하지 않습니다.** `coverage_expired`를 반환하고 개장으로 간주하지 않습니다. 새 연도 공시가 나오면 `EXCHANGE_HOLIDAYS` 표만 갱신합니다.
 
 ## market_data/providers.py
 
