@@ -1052,6 +1052,10 @@ def build_company_analysis_charts(materials):
         ]
     }
     market = materials.get("marketFinancialData") or fetch_market_valuation_data(company)
+    # 재무 차트는 신고 통화, 주가 차트는 상장 통화다. 둘은 다를 수 있다
+    # (ASML: 재무 EUR, 나스닥 ADR 주가 USD).
+    reporting_currency = str(sec_summary.get("currency") or "USD")
+    price_currency = str(market.get("currency") or reporting_currency) if market.get("ok") else reporting_currency
     for row in market.get("cashflowRows", []) if market.get("ok") else []:
         year = str(row.get("year") or str(row.get("end", ""))[:4])
         if not re.fullmatch(r"\d{4}", year):
@@ -1084,6 +1088,7 @@ def build_company_analysis_charts(materials):
                 "operatingIncome": operating_income,
                 "netIncome": net_income,
                 "netMargin": net_margin,
+                "currency": reporting_currency,
             })
 
         cfo = _series_for_years(metric_maps["Operating Cash Flow"], years)
@@ -1105,6 +1110,7 @@ def build_company_analysis_charts(materials):
                 "capitalExpenditure": capex,
                 "freeCashFlow": free_cash_flow,
                 "fcfMargin": fcf_margin,
+                "currency": reporting_currency,
             })
 
         gross_margin = _ratio_series(gross_profit, revenue)
@@ -1149,7 +1155,8 @@ def build_company_analysis_charts(materials):
             "kind": "dcf",
             "scenarios": scenario_rows,
             "currentPrice": _finite_number(price),
-            "currency": "USD",
+            # 내재가치/주는 현재가와 나란히 읽히므로 주가 통화를 쓴다.
+            "currency": price_currency,
         })
 
     # PER scenario price chart
@@ -1177,6 +1184,7 @@ def build_company_analysis_charts(materials):
                     "scenarios": valid_per_scenarios,
                     "currentPrice": _finite_number(price),
                     "forwardEps": forward_eps,
+                    "currency": price_currency,
                 })
 
     # Price return vs benchmark chart

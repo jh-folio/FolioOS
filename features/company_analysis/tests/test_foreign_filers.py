@@ -305,3 +305,45 @@ def test_the_llm_guidance_does_not_promise_a_10k_to_every_filer(tmp_path):
     assert "SEC 10-K 공시 문단을" not in source
     assert "미국 SEC 10-K HTML은" not in source
     assert "20-F" in source and "연차보고서" in source
+
+
+# --- charts -------------------------------------------------------------
+
+
+def _charts(reporting, listing):
+    from features.company_analysis.service import build_company_analysis_charts
+
+    sec = {"ok": True, "currency": reporting, "rows": [
+        {"metric": "Revenue", "annual": [
+            {"end": "2025-12-31", "val": 36_800_000_000}, {"end": "2024-12-31", "val": 34_180_000_000}]},
+        {"metric": "Net Income", "annual": [
+            {"end": "2025-12-31", "val": 7_000_000_000}, {"end": "2024-12-31", "val": 6_000_000_000}]},
+        {"metric": "EPS Diluted", "annual": [{"end": "2025-12-31", "val": 6.0}]},
+    ]}
+    market = {"ok": True, "ticker": "X", "price": 280.0, "currency": listing,
+              "sharesOutstanding": 1_160_000_000, "cashflowRows": []}
+    payload = build_company_analysis_charts(
+        {"secFacts": sec, "company": {"ticker": "X"}, "marketFinancialData": market})
+    return {chart["id"]: chart for chart in payload["charts"]}
+
+
+def test_financial_charts_are_labelled_in_the_reporting_currency():
+    charts = _charts("EUR", "USD")
+    assert charts["performance"]["currency"] == "EUR"
+
+
+def test_price_charts_are_labelled_in_the_listing_currency():
+    """Intrinsic value per share sits beside the current price, so it follows it."""
+    charts = _charts("EUR", "USD")
+    assert charts["scenario_price"]["currency"] == "USD"
+
+
+def test_a_single_currency_company_labels_everything_the_same():
+    charts = _charts("USD", "USD")
+    assert charts["performance"]["currency"] == "USD"
+    assert charts["scenario_price"]["currency"] == "USD"
+
+
+def test_a_report_without_a_currency_falls_back_to_dollars():
+    charts = _charts("", "")
+    assert charts["performance"]["currency"] == "USD"
