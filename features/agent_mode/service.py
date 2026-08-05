@@ -55,9 +55,11 @@ from features.daily_briefing.issue_selection import (
     public_issue_coverage,
     session_modes_from_windows,
 )
+from features.daily_briefing.builder import _scope_session_date
 from features.daily_briefing.schema import (
     briefing_expected_titles,
     briefing_file_name,
+    market_keys_for_briefing_scope,
     briefing_scope_view,
     enrich_briefing_sections,
     merge_briefing_report,
@@ -256,16 +258,15 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
     market_drivers = derive_market_drivers(scoped_docs, market_windows, limit=4)
     session_modes = session_modes_from_windows(market_windows)
     issue_coverage_raw = []
-    for target in (["US", "KR"] if market_scope == "both" else [market_scope.upper()]):
+    for target in (key.upper() for key in market_keys_for_briefing_scope(market_scope)):
         issue_coverage_raw.extend(build_issue_coverage(scoped_docs, target, market_windows, limit=10))
     visual_scope_results = {}
-    for target in (["us", "kr"] if market_scope == "both" else [market_scope]):
+    for target in market_keys_for_briefing_scope(market_scope):
         target_docs = documents_for_scope(docs, target)
         visual_scope_results[target] = {
-            "marketSessionDate": (
-                market_windows.get("usRegularSessionDate") if target == "us"
-                else market_windows.get("krCurrentSessionDate") or market_windows.get("krPreviousSessionDate")
-            ),
+            # 세션 기준일은 빌더와 같은 규칙을 쓴다. 여기서 따로 고르면 Agent 경로만
+            # 유럽·일본에 한국 세션일을 찍는다.
+            "marketSessionDate": _scope_session_date(target, market_windows),
             "groups": prioritize_briefing_groups(group_docs(target_docs), market_windows, limit=6),
         }
     try:
@@ -502,7 +503,7 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
 
     if persist:
         BRIEFINGS_DIR.mkdir(parents=True, exist_ok=True)
-    requested_scopes = ["us", "kr"] if market_scope == "both" else [market_scope]
+    requested_scopes = list(market_keys_for_briefing_scope(market_scope))
     saved_reports = {}
     visuals = {}
     sidecar = (pack.get("internal") or {}).get("visualSidecar") or {}

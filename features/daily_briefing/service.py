@@ -1502,11 +1502,21 @@ def _with_leading_company_visuals(report):
         )
 
         subjects = leading_company_subjects_from_markdown(report.get("markdown", ""))
-        scoped_keys = [key for key in ("us", "kr") if subjects.get(key)]
+        scoped_keys = [key for key in SINGLE_MARKET_SCOPES if subjects.get(key)]
         if not scoped_keys:
             return report
         report_scope = normalize_market_scope(report.get("marketScope"))
-        collect_scope = report_scope if report_scope in {"us", "kr"} else ("both" if len(scoped_keys) > 1 else scoped_keys[0])
+        if report_scope in SINGLE_MARKET_SCOPES:
+            collect_scope = report_scope
+        elif len(scoped_keys) == 1:
+            collect_scope = scoped_keys[0]
+        else:
+            # 저장된 범위를 유지한다. `both` 보고서를 `all`로 채우면 담지 않은
+            # 시장의 차트를 수집하려 든다.
+            collect_scope = report_scope
+        scoped_keys = [key for key in scoped_keys if key in market_keys_for_briefing_scope(collect_scope)]
+        if not scoped_keys:
+            return report
         sections = report.get("briefings") or {}
         scope_results = {}
         for key in scoped_keys:

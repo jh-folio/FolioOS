@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from features.common.change_intelligence.basis import content_hash, normalize_basis, stable_id
+from features.common.markets import PRODUCT_MARKETS
 
 
 def _briefing_artifact_id(report: dict, scope: str) -> str:
@@ -11,7 +12,8 @@ def _briefing_artifact_id(report: dict, scope: str) -> str:
     unable to tell which briefing to open.
     """
     base = str(report.get("id") or report.get("date") or "").strip()
-    if not base or scope not in {"us", "kr"} or base.endswith(f".{scope}"):
+    markets = {market.value.lower() for market in PRODUCT_MARKETS}
+    if not base or scope not in markets or base.endswith(f".{scope}"):
         return base
     return f"{base}.{scope}"
 

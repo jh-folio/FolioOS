@@ -70,7 +70,7 @@ def _briefing_images_for_market(chart_images, market_scope, *, allow_legacy=Fals
         if not isinstance(image, dict):
             continue
         image_market = str(image.get("market") or "").upper()
-        if target == "BOTH" or image_market in {target, "BOTH"}:
+        if target in {"BOTH", "ALL"} or image_market in {target, "BOTH", "ALL"}:
             selected.append(image.get("dataUrl"))
     return [image for image in selected if isinstance(image, str) and image]
 

@@ -34,6 +34,7 @@ from features.common.markets import (
 from features.common.company_lookup import find_companies
 from features.common.utils import read_json, write_json
 from features.daily_briefing.schema import (
+    SINGLE_MARKET_SCOPES,
     briefing_file_name,
     briefing_scope_view,
     normalize_market_scope,
@@ -114,25 +115,28 @@ def _market_companies(market):
     return [row for row in _company_master() if str(row.get("market") or "").upper() == target]
 
 
+# 시장 라벨은 계약에서 파생한다. 여기에 시장 이름을 다시 적으면 새 시장의
+# 주도 기업 제목이 조용히 안 잡히고, 그 기업 차트만 보고서에서 빠진다.
+_LEADING_MARKET_LABELS = {"미국장": "us", "한국장": "kr", "유럽장": "europe", "일본장": "jp"}
 LEADING_COMPANY_HEADING_RE = re.compile(
-    r"^#{1,6}\s+[34]\.\s*((?:미국장|한국장)(?:을|를)|시장(?:을|를)?)\s*주도한 기업\s*([①②])"
-    r"\s*(?:[-—–:]\s*)?(.+?)\s*$",
+    r"^#{1,6}\s+[34]\.\s*((?:" + "|".join(_LEADING_MARKET_LABELS) + r")(?:을|를)|시장(?:을|를)?)"
+    r"\s*주도한 기업\s*([①②])\s*(?:[-—–:]\s*)?(.+?)\s*$",
     re.MULTILINE,
 )
 
 
 def leading_company_subjects_from_markdown(markdown):
-    result = {"us": [], "kr": [], "warnings": []}
+    result = {key: [] for key in SINGLE_MARKET_SCOPES}
+    result["warnings"] = []
     seen = set()
     for match in LEADING_COMPANY_HEADING_RE.finditer(str(markdown or "")):
         heading_market = match.group(1)
         ordinal = 1 if match.group(2) == "①" else 2
         company_text = match.group(3).strip().strip("[]")
-        market_key = None
-        if heading_market.startswith("미국장"):
-            market_key = "us"
-        elif heading_market.startswith("한국장"):
-            market_key = "kr"
+        market_key = next(
+            (key for label, key in _LEADING_MARKET_LABELS.items() if heading_market.startswith(label)),
+            None,
+        )
         candidates = find_companies(company_text)
         if market_key:
             market = MARKET_META[market_key]["market"]
@@ -142,13 +146,14 @@ def leading_company_subjects_from_markdown(markdown):
             ]
         else:
             market_counts = {}
+            known = {key.upper() for key in SINGLE_MARKET_SCOPES}
             for row in candidates:
                 market_value = str(row.get("market") or "").upper()
-                if market_value in {"US", "KR"}:
+                if market_value in known:
                     market_counts[market_value] = market_counts.get(market_value, 0) + 1
             if len(market_counts) == 1:
                 market = next(iter(market_counts))
-                market_key = "us" if market == "US" else "kr"
+                market_key = market.lower()
                 candidates = [
                     row for row in candidates
                     if str(row.get("market") or "").upper() == market
@@ -176,8 +181,8 @@ def leading_company_subjects_from_markdown(markdown):
             "sector": company.get("sector") or "Other",
             "market": market,
         })
-    result["us"].sort(key=lambda row: row["ordinal"])
-    result["kr"].sort(key=lambda row: row["ordinal"])
+    for key in SINGLE_MARKET_SCOPES:
+        result[key].sort(key=lambda row: row["ordinal"])
     return result
 
 
@@ -665,7 +670,7 @@ def load_visual_sidecar(date, base_dir=None, market_scope=None):
     root = Path(base_dir) if base_dir is not None else ROOT / "data" / "briefings"
     scope = str(market_scope or "").strip().lower()
     file_names = []
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKET_SCOPES:
         file_names.extend((
             visual_sidecar_gzip_file_name(date_text, scope),
             visual_sidecar_file_name(date_text, scope),
@@ -680,7 +685,7 @@ def load_visual_sidecar(date, base_dir=None, market_scope=None):
 
 def _load_visual_report(root, date_text, market_scope=""):
     scope = str(market_scope or "").strip().lower()
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKET_SCOPES:
         scoped = read_json(root / briefing_file_name(date_text, scope), None, root=root)
         if isinstance(scoped, dict):
             return briefing_scope_view(scoped, scope)
@@ -694,19 +699,23 @@ def _load_visual_report(root, date_text, market_scope=""):
         return legacy
     scoped_reports = {
         key: read_json(root / briefing_file_name(date_text, key), None, root=root)
-        for key in ("us", "kr")
+        for key in SINGLE_MARKET_SCOPES
     }
-    if not any(isinstance(value, dict) for value in scoped_reports.values()):
+    present = [key for key in SINGLE_MARKET_SCOPES if isinstance(scoped_reports.get(key), dict)]
+    if not present:
         return None
+    # 어느 시장이 실제로 있는지에 따라 범위를 정한다. 유럽·일본만 있는 날짜에
+    # `both`를 붙이면 담지도 않은 두 시장을 담았다고 말하게 된다.
     return {
         "date": date_text,
-        "marketScope": "both",
+        "marketScope": "all" if len(present) > 1 else present[0],
+        "includedMarkets": [key.upper() for key in present],
         "visualSnapshots": [
-            item for key in ("us", "kr")
+            item for key in present
             for item in ((scoped_reports.get(key) or {}).get("visualSnapshots") or [])
         ],
         "visualRecommendations": [
-            item for key in ("us", "kr")
+            item for key in present
             for item in ((scoped_reports.get(key) or {}).get("visualRecommendations") or [])
         ],
     }

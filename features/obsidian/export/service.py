@@ -157,7 +157,9 @@ def _briefing_images_for_market(chart_images, market_scope, *, allow_legacy=Fals
         if not isinstance(image, dict):
             continue
         image_market = str(image.get("market") or "").upper()
-        if target == "BOTH" or image_market in {target, "BOTH"}:
+        # 통합 범위(BOTH/ALL)는 모든 시장 이미지를 받는다. 시장 하나면 그 시장과
+        # 시장 공통 이미지만 받는다.
+        if target in {"BOTH", "ALL"} or image_market in {target, "BOTH", "ALL"}:
             selected.append(image)
     return selected
 

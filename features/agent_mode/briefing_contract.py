@@ -6,34 +6,35 @@ import re
 from collections import OrderedDict
 
 
+# 시장별 제목과 섹션 라벨. 네 시장이 같은 골격을 쓰므로 섹션은 라벨 하나로 만든다.
+MARKET_LABELS = {"us": "미국장", "kr": "한국장", "europe": "유럽장", "jp": "일본장"}
 TITLE_REQUIREMENTS = {
     "us": "US Market Briefing",
     "kr": "Korea Market Briefing",
+    "europe": "Europe Market Briefing",
+    "jp": "Japan Market Briefing",
 }
+SINGLE_MARKETS = tuple(TITLE_REQUIREMENTS)
+AGGREGATE_MARKETS = {"both": ("us", "kr"), "all": SINGLE_MARKETS}
 
-US_REQUIRED_SECTIONS = (
-    "US Market Briefing",
-    "0. 오늘의 미국장 성격",
-    "1. 미국장 시장 흐름",
-    "2. 미국장을 움직인 핵심 변수",
-    "3. 미국장을 주도한 기업 ①",
-    "4. 미국장을 주도한 기업 ②",
-    "5. 일반 투자자 관점",
-    "6. 다음 미국장 체크포인트",
-    "오늘의 결론",
-)
 
-KR_REQUIRED_SECTIONS = (
-    "Korea Market Briefing",
-    "0. 오늘의 한국장 성격",
-    "1. 한국장 시장 흐름",
-    "2. 한국장을 움직인 핵심 변수",
-    "3. 한국장을 주도한 기업 ①",
-    "4. 한국장을 주도한 기업 ②",
-    "5. 일반 투자자 관점",
-    "6. 다음 한국장 체크포인트",
-    "오늘의 결론",
-)
+def required_sections(market: str) -> tuple[str, ...]:
+    label = MARKET_LABELS[market]
+    return (
+        TITLE_REQUIREMENTS[market],
+        f"0. 오늘의 {label} 성격",
+        f"1. {label} 시장 흐름",
+        f"2. {label}을 움직인 핵심 변수",
+        f"3. {label}을 주도한 기업 ①",
+        f"4. {label}을 주도한 기업 ②",
+        "5. 일반 투자자 관점",
+        f"6. 다음 {label} 체크포인트",
+        "오늘의 결론",
+    )
+
+
+US_REQUIRED_SECTIONS = required_sections("us")
+KR_REQUIRED_SECTIONS = required_sections("kr")
 
 
 def briefing_output_contract(
@@ -43,27 +44,19 @@ def briefing_output_contract(
     expected_titles: dict | None = None,
 ) -> dict:
     scope = str(market_scope or "both").strip().lower()
-    if scope not in {"us", "kr", "both"}:
+    if scope not in {*SINGLE_MARKETS, *AGGREGATE_MARKETS}:
         scope = "both"
     normalized_type = str(briefing_type or "default").strip().lower()
     if normalized_type not in {"default", "market_focused", "concise"}:
         normalized_type = "default"
-    sections = []
-    market_count = 0
-    if scope in {"us", "both"}:
-        sections.extend(US_REQUIRED_SECTIONS)
-        market_count += 1
-    if scope in {"kr", "both"}:
-        sections.extend(KR_REQUIRED_SECTIONS)
-        market_count += 1
+    markets = AGGREGATE_MARKETS.get(scope, (scope,))
+    sections = [section for market in markets for section in required_sections(market)]
+    market_count = len(markets)
     sections.append("Source & Data Notes")
     return {
         "format": "markdown",
         "marketScope": scope,
-        "requiredMarketTitles": [
-            TITLE_REQUIREMENTS[key]
-            for key in (("us", "kr") if scope == "both" else (scope,))
-        ],
+        "requiredMarketTitles": [TITLE_REQUIREMENTS[key] for key in markets],
         "expectedTitles": dict(expected_titles or {}),
         "titleDatePattern": "YYYY.MM.DD 마감|장중",
         "requireImmediateSectionZeroAfterTitle": True,
@@ -79,18 +72,16 @@ def briefing_output_contract(
 
 def _market_keys_from_contract(contract: dict) -> list[str]:
     scope = str(contract.get("marketScope") or "").strip().lower()
-    if scope in {"us", "kr"}:
+    if scope in SINGLE_MARKETS:
         return [scope]
-    if scope == "both":
-        return ["us", "kr"]
+    if scope in AGGREGATE_MARKETS:
+        return list(AGGREGATE_MARKETS[scope])
     required = " ".join(str(section) for section in contract.get("requiredSections") or [])
     if not required:
         return []
-    keys = []
-    if "US Market Briefing" in required:
-        keys.append("us")
-    if "Korea Market Briefing" in required:
-        keys.append("kr")
+    keys = [key for key, title in TITLE_REQUIREMENTS.items() if title in required]
+    # 범위도 제목도 없으면 예전 두 시장 계약으로 본다. 네 시장으로 넓히면
+    # 만든 적 없는 시장의 섹션까지 요구하게 된다.
     return keys or ["us", "kr"]
 
 
