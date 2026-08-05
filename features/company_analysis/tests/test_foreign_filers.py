@@ -260,3 +260,48 @@ def test_a_single_currency_company_gets_no_warning():
     market = {"ok": True, "ticker": "AAPL", "price": 250.0, "marketCap": 3_700_000_000_000,
               "currency": "USD", "sharesOutstanding": 14_800_000_000}
     assert "통화 주의" not in build_valuation_metrics({"ticker": "AAPL"}, sec, market)
+
+
+# --- report and prompt wording -----------------------------------------
+
+
+def _rule_report(form):
+    from features.company_analysis.report_rules import build_rule_report
+
+    return build_rule_report({
+        "company": {"name": "X", "ticker": "X"},
+        "secFacts": {"ok": True, "currency": "EUR", "rows": []},
+        "marketData": {"ok": False},
+        "dartFacts": {"ok": False},
+        "docs": [], "supportDocs": [],
+        "rankedFiling": {"ok": True, "metadata": {"url": "http://x", "form": form}, "paragraphs": []},
+    }, "beginner")
+
+
+def test_the_rules_report_points_a_20f_filer_at_its_own_items():
+    """"10-K Item 1" names a section a foreign private issuer does not have."""
+    report = _rule_report("20-F")
+    assert "20-F Item 4" in report      # 사업 개요
+    assert "20-F Item 3.D" in report    # 위험 요소
+    assert "10-K Item 1" not in report
+
+
+def test_a_10k_filer_keeps_its_original_wording():
+    report = _rule_report("10-K")
+    assert "10-K Item 1 " in report or "10-K Item 1\n" in report
+    assert "10-K Item 1A" in report
+
+
+@pytest.mark.parametrize("form", ["10-K", "20-F"])
+def test_the_source_line_names_the_form_it_actually_read(form):
+    assert f"SEC {form} HTML" in _rule_report(form)
+
+
+def test_the_llm_guidance_does_not_promise_a_10k_to_every_filer(tmp_path):
+    from features.company_analysis import service
+
+    source = __import__("pathlib").Path(service.__file__).read_text(encoding="utf-8")
+    # 모델에게 없는 자료를 찾으라고 지시하면 안 된다.
+    assert "SEC 10-K 공시 문단을" not in source
+    assert "미국 SEC 10-K HTML은" not in source
+    assert "20-F" in source and "연차보고서" in source

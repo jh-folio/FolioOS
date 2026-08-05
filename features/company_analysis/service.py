@@ -458,7 +458,7 @@ def build_filing_item_context(filing_docs, max_filings=2):
             f"- Source file: {doc.get('path', '')}\n"
             f"- Date: {doc.get('date', '')}\n"
             f"- Extraction: {item_source}\n"
-            f"- Rule: 아래 로컬 공식자료 발췌는 SEC/DART 구조화 숫자와 SEC 10-K HTML 문단이 부족할 때 보조 공식자료로 사용하세요. 숫자는 SEC companyfacts/DART 또는 웹 검색 공식자료로 교차검증하세요.\n"
+            f"- Rule: 아래 로컬 공식자료 발췌는 SEC/DART 구조화 숫자와 SEC 연차보고서 HTML 문단이 부족할 때 보조 공식자료로 사용하세요. 숫자는 SEC companyfacts/DART 또는 웹 검색 공식자료로 교차검증하세요.\n"
         )
         for item in items:
             paragraphs.append(_filing_paragraph_from_item(doc, form_type, item))
@@ -593,8 +593,8 @@ def build_company_analysis_materials(query, docs, company=None):
         f"자료 우선순위별 개수: filings={counts['filings']}, reports={counts['reports']}, articles/rss={counts['articles']}, other={counts['other']}, local_ir_earnings={local_ir_count}",
         "",
         "컨텍스트 구성 방식:",
-        "1. 미국 기업은 SEC companyfacts 숫자와 SEC 10-K 공시 문단을, 국내 기업은 DART 재무제표 숫자와 DART 공시 목록을 1차 공식 자료로 사용합니다.",
-        "2. 미국 SEC 10-K HTML은 기업 섹터/GICS 프로필에 따라 문단 단위로 점수화하며, 국내 기업은 DART 사업보고서/분기보고서 및 로컬 filings 자료로 보완합니다.",
+        "1. SEC 등록기업은 companyfacts 숫자와 SEC 연차보고서(국내 제출사 10-K, 외국 민간 발행인 20-F) 공시 문단을, 국내 기업은 DART 재무제표 숫자와 DART 공시 목록을 1차 공식 자료로 사용합니다.",
+        "2. SEC 연차보고서 HTML은 기업 섹터/GICS 프로필에 따라 문단 단위로 점수화합니다. 20-F는 Item 번호 체계가 10-K와 달라(사업 개요 4, 위험 3.D, 경영진 논의 5, 시장위험 11, 재무제표 18) 발췌의 Item 표기는 그 보고서 체계를 따릅니다. 국내 기업은 DART 사업보고서/분기보고서 및 로컬 filings 자료로 보완합니다.",
         "3. 상위 공식자료가 부족하면 로컬 filings의 10-K/10-Q/S-1/20-F/8-K/prospectus/proxy 등 직접 관련 공식자료 발췌를 보조 공식자료로 사용합니다.",
         "4. 로컬 reports/articles/rss에 기업 IR, 실적발표, 컨퍼런스콜, 증권사 리포트, 관련 기사가 있으면 반드시 보조 근거로 사용합니다.",
         "5. 웹 검색이 허용되어 있고 로컬 공식자료나 IR/실적발표/리포트 자료의 수치 정확성 검증이 필요하면 회사 IR, SEC/EDGAR, DART, earnings release, transcript, 신뢰 가능한 금융 기사와 리포트로 교차검증하세요.",
@@ -617,7 +617,7 @@ def build_company_analysis_materials(query, docs, company=None):
         sec_facts.get("markdown", "Official financial data unavailable."),
         "",
         "## 공식 공시 상위 문단 또는 Item 발췌",
-        filing_context or ("DART 공시 본문 문단 추출은 아직 연결되지 않았습니다. 로컬 filings의 사업보고서/분기보고서 원문 또는 웹 검색 공식 공시로 보완하세요." if is_kr_company else "선별 가능한 10-K HTML 문단/10-K Item 발췌가 없습니다. 로컬 filings 원문 또는 웹 검색 공식 공시로 보완하세요."),
+        filing_context or ("DART 공시 본문 문단 추출은 아직 연결되지 않았습니다. 로컬 filings의 사업보고서/분기보고서 원문 또는 웹 검색 공식 공시로 보완하세요." if is_kr_company else "선별 가능한 SEC 연차보고서 HTML 문단/Item 발췌가 없습니다. 로컬 filings 원문 또는 웹 검색 공식 공시로 보완하세요."),
         "",
         support_context or "보조 리포트/기사 자료가 없습니다.",
     ]
@@ -666,7 +666,7 @@ def company_external_search_context(materials):
         "웹 검색이 허용되어 있습니다. 로컬 자료와 앱 계산 자료를 먼저 사용하되, 아래 항목이 부족하면 외부 검색으로 보완하세요.",
         f"- 대상 기업: {name} ({ticker}) | market={market}",
         f"- 로컬 IR/실적발표 자료 감지 수: {local_ir_count}",
-        "- 항상 사용해야 할 기초 자료: 미국 기업은 SEC companyfacts/10-K/10-Q, 국내 기업은 DART 재무제표/사업보고서/분기보고서, 그리고 yfinance/Yahoo Finance 시장 데이터.",
+        "- 항상 사용해야 할 기초 자료: SEC 등록기업은 companyfacts와 연차보고서(10-K 또는 20-F)·10-Q, 국내 기업은 DART 재무제표/사업보고서/분기보고서, 그리고 yfinance/Yahoo Finance 시장 데이터.",
         "- 로컬 자료에 IR presentation, earnings release, shareholder letter, transcript, investor day, 증권사 리포트, 관련 기사가 있으면 반드시 같이 반영하세요.",
         "- 로컬 IR/실적발표/리포트가 부족하면 공식 회사 IR 사이트, earnings release, earnings presentation, conference call transcript, SEC/EDGAR 또는 DART, Reuters/Bloomberg/WSJ/FT/AP/연합인포맥스/한국경제 등 신뢰 가능한 금융 기사 또는 리포트를 검색하세요.",
         "- 검색 결과는 보고서 본문에서 필요한 부분에만 사용하고, `Sources Used`에는 로컬 자료, SEC/yfinance, 웹 검색 자료를 구분해 URL과 함께 남기세요.",
@@ -889,7 +889,9 @@ def company_analysis_sources(materials, docs):
     metadata = ranked.get("metadata", {}) or {}
     if metadata.get("url"):
         add({
-            "title": metadata.get("title") or "SEC 10-K HTML",
+            # 출처 표기는 실제 form을 따른다. 20-F 제출사의 근거를 "10-K"로 적으면
+            # source ledger가 존재하지 않는 문서를 가리킨다.
+            "title": metadata.get("title") or f"SEC {metadata.get('form') or '10-K'} HTML",
             "source": "SEC EDGAR",
             "date": metadata.get("filingDate", ""),
             "url": metadata.get("url", ""),

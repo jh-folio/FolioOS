@@ -878,6 +878,13 @@ def render_report(context: dict) -> str:
 """
 
 
+# 안내 문구에 쓸 (사업 개요, 위험 요소) Item 번호. 20-F는 체계가 다르다.
+_ANNUAL_ITEM_HINTS = {
+    "10-K": ("Item 1", "Item 1A"),
+    "20-F": ("Item 4", "Item 3.D"),
+}
+
+
 def build_rule_report(analysis: dict, analysis_style: str = "beginner") -> str:
     style = normalize_analysis_style(analysis_style)
     company = analysis["company"]
@@ -887,8 +894,12 @@ def build_rule_report(analysis: dict, analysis_style: str = "beginner") -> str:
     sources = []
 
     metadata = ranked.get("metadata", {}) or {}
+    # 안내 문구도 실제 form을 따른다. 20-F 제출사에게 "10-K Item 1"을 보라고 하면
+    # 존재하지 않는 구획을 가리킨다 — 그 회사의 사업 개요는 Item 4다.
+    annual_form = str(metadata.get("form") or ranked.get("form") or "10-K").upper()
+    overview_item, risk_item = _ANNUAL_ITEM_HINTS.get(annual_form, _ANNUAL_ITEM_HINTS["10-K"])
     if metadata.get("url"):
-        sources.append(f"SEC 10-K HTML: {metadata.get('url')}")
+        sources.append(f"SEC {annual_form} HTML: {metadata.get('url')}")
     elif metadata.get("path"):
         sources.append(f"Local official filing fallback ({metadata.get('form', 'filing')}): {metadata.get('path')}")
     if analysis.get("dartFacts", {}).get("ok"):
@@ -907,7 +918,7 @@ def build_rule_report(analysis: dict, analysis_style: str = "beginner") -> str:
 
     overview = summarize_paragraphs(
         paragraphs_by_theme(paragraphs, ["business", "platform", "segment", "customer", "product", "service"], 3),
-        "사업 개요 문단이 충분히 구조화되지 않았습니다. 10-K Item 1 또는 회사 IR 자료를 추가하면 보강할 수 있습니다.",
+        f"사업 개요 문단이 충분히 구조화되지 않았습니다. {annual_form} {overview_item} 또는 회사 IR 자료를 추가하면 보강할 수 있습니다.",
     )
     financial_commentary = " ".join(
         [
@@ -933,7 +944,7 @@ def build_rule_report(analysis: dict, analysis_style: str = "beginner") -> str:
         ]
     )
     if len(risk_table.splitlines()) <= 2:
-        risk_table += "\n| 추가 확인 필요 | 10-K Item 1A 발췌가 충분하지 않습니다. | 중간 |"
+        risk_table += f"\n| 추가 확인 필요 | {annual_form} {risk_item} 발췌가 충분하지 않습니다. | 중간 |"
     risk_commentary = "규칙 기반 리스크 평가는 문단 키워드와 공식 공시 Item 출처를 기준으로 합니다. 실제 투자 판단 전에는 소송, 규제, 재무 레버리지, 경쟁 강도에 대한 최신 공시를 함께 확인해야 합니다."
     growth_outlook = summarize_paragraphs(
         paragraphs_by_theme(paragraphs, ["growth", "strategy", "investment", "margin", "cash flow", "ai", "international", "new products"], 4),
