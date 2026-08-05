@@ -44,3 +44,65 @@ def test_macro_coverage_gaps_name_the_missing_key_per_market():
     finally:
         client.fred_api_key, client.bok_api_key = saved_fred, saved_bok
         assert original is None or True
+
+
+def test_yf_economic_skips_us_unless_the_fred_fallback_is_requested():
+    """FRED 키가 있으면 미국은 confirmed 경로가 담당하므로 중복을 만들지 않는다."""
+    import datetime as dt
+    import sys
+    import types
+
+    import pandas as pd
+
+    from features.market_calendar.adapters import yf_economic
+
+    stamp = dt.datetime(2026, 8, 13, 12, 30, tzinfo=dt.timezone.utc)
+    frame = pd.DataFrame(
+        {"Region": ["US", "JP"], "Event Time": [stamp, stamp]},
+        index=["PPI Final Demand MM", "CPI, Core Nationwide YY"],
+    )
+
+    class _Calendars:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def get_economic_events_calendar(self, limit=100, offset=0, **kwargs):
+            return frame if offset == 0 else frame.iloc[0:0]
+
+    fake = types.ModuleType("yfinance")
+    fake.Calendars = _Calendars
+    saved = sys.modules.get("yfinance")
+    sys.modules["yfinance"] = fake
+    try:
+        without_us = yf_economic.fetch_yf_economic_events(
+            start="2026-08-01", end="2026-08-31", include_us=False
+        )
+        with_us = yf_economic.fetch_yf_economic_events(
+            start="2026-08-01", end="2026-08-31", include_us=True
+        )
+    finally:
+        if saved is not None:
+            sys.modules["yfinance"] = saved
+        else:
+            sys.modules.pop("yfinance", None)
+
+    assert {e["market"] for e in without_us} == {"JP"}
+    assert {e["market"] for e in with_us} == {"US", "JP"}
+    # 제3자 집계이므로 폴백도 confirmed로 올리지 않는다.
+    assert all(e["status"] == "estimated" for e in with_us)
+
+
+def test_yf_economic_returns_empty_when_yfinance_is_missing():
+    """yfinance가 없어도 캘린더 갱신 전체가 실패하면 안 된다."""
+    import sys
+    from features.market_calendar.adapters import yf_economic
+
+    saved = sys.modules.get("yfinance")
+    sys.modules["yfinance"] = None  # import 시 TypeError를 유발한다
+    try:
+        assert yf_economic.fetch_yf_economic_events(start="2026-08-01", end="2026-08-31") == []
+    finally:
+        if saved is not None:
+            sys.modules["yfinance"] = saved
+        else:
+            sys.modules.pop("yfinance", None)

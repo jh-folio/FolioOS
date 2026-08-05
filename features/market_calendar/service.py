@@ -74,14 +74,19 @@ MACRO_COVERAGE_GAPS = {
     "US": {
         "provider": "fred",
         "requires": "FRED_API_KEY",
-        "message": "미국 지표 발표일(CPI·PPI·고용)은 FRED API Key를 등록해야 수집됩니다.",
+        # 키가 없어도 화면이 비지는 않는다. yfinance 폴백이 추정 일정으로 채우므로,
+        # 공백이 아니라 정확도 차이임을 알린다.
+        "severity": "degraded",
+        "message": "미국 지표 일정을 Yahoo Finance 추정치로 표시하고 있습니다. FRED API Key를 등록하면 공식 확정일로 바뀝니다.",
         "settingsHint": "설정 > 외부 데이터에서 FRED API Key를 등록하세요.",
         "sourceUrl": "https://fred.stlouisfed.org/docs/api/api_key.html",
     },
     "KR": {
         "provider": "bok_ecos",
         "requires": "BOK_API_KEY",
-        "message": "한국 지표 발표일과 금통위 일정은 한국은행 ECOS API Key를 등록해야 수집됩니다.",
+        # 한국도 yfinance가 일부 지표를 주지만 금통위 일정은 ECOS 경로에서만 나온다.
+        "severity": "degraded",
+        "message": "한국 금통위 일정은 한국은행 ECOS API Key를 등록해야 수집됩니다. 일부 지표는 Yahoo Finance 추정치로 표시됩니다.",
         "settingsHint": "설정 > 외부 데이터에서 BOK API Key를 등록하세요.",
         "sourceUrl": "https://ecos.bok.or.kr/api/",
     },
@@ -202,12 +207,17 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
         providers["bok_macro"] = "bok_key_required"
 
     # 일본·유럽은 FRED가 다루지 않는다. yfinance 경제 캘린더는 키 없이 이 시장을 채우는
-    # 유일한 경로라 estimated로 넣는다. 미국은 FRED가 confirmed로 담당하므로 제외한다.
+    # 유일한 경로라 estimated로 넣는다. FRED 키가 없으면 미국까지 여기서 받아,
+    # 키를 발급받지 않은 사용자도 지표 일정을 빈 화면으로 보지 않게 한다.
     overseas = fetch_yf_economic_events(
-        start=today.isoformat(), end=(today + dt.timedelta(days=60)).isoformat()
+        start=today.isoformat(),
+        end=(today + dt.timedelta(days=60)).isoformat(),
+        include_us=not key,
     )
     events.extend(overseas)
     providers["yfinance_economic"] = len(overseas)
+    if not key:
+        providers["us_macro_source"] = "yfinance_fallback"
 
     if include_estimates and tickers:
         earnings = estimated_earnings_events(tickers)

@@ -6,9 +6,11 @@ had no macro calendar at all, and the plan needs one for the 0.5 markets.
 yfinance 1.4.x exposes an economic events calendar covering many countries with
 no API key — in a live probe it returned 13 Japanese, 21 UK, 8 German and 7
 Korean entries alongside 57 US ones. It is a third-party aggregation with terse
-event names and repeated rows, so everything here is `estimated` and US is left
-to FRED, which has the authoritative dates. This provider only fills the markets
-FRED cannot reach.
+event names and repeated rows, so everything here is `estimated`.
+
+It also doubles as the US fallback for anyone without a FRED key: FRED wins when
+a key exists, since it publishes the authoritative dates, but without one this is
+the difference between a macro calendar and an empty screen.
 """
 from __future__ import annotations
 
@@ -17,8 +19,11 @@ import datetime as dt
 from features.common.markets import MarketCode
 from features.market_calendar.schema import normalize_event
 
-# yfinance Region → (Folio 시장, 국가). 미국은 FRED가 confirmed로 담당하므로 제외한다.
+# yfinance Region → (Folio 시장, 국가).
+# 미국은 FRED 키가 있으면 그쪽이 confirmed 날짜를 주므로 기본 대상에서 빠지고,
+# 키가 없을 때만 호출자가 `include_us=True`로 폴백을 켠다.
 REGION_MARKETS: dict[str, tuple[str, str]] = {
+    "US": (MarketCode.US.value, "US"),
     "JP": (MarketCode.JP.value, "JP"),
     "GB": (MarketCode.EUROPE.value, "GB"),
     "DE": (MarketCode.EUROPE.value, "DE"),
@@ -66,8 +71,17 @@ def _clean_title(name: str) -> str:
     return " ".join(str(name or "").replace("*", " ").split())
 
 
-def fetch_yf_economic_events(*, start: str, end: str, limit: int = 400) -> list[dict]:
-    """Collect non-US macro releases. Returns [] when yfinance is unavailable."""
+def fetch_yf_economic_events(
+    *, start: str, end: str, limit: int = 400, include_us: bool = False
+) -> list[dict]:
+    """Collect macro releases for the 0.5 markets.
+
+    ``include_us`` is the FRED fallback. With a FRED key the US comes from there
+    with confirmed dates, so including it here would only duplicate rows under a
+    weaker status. Without a key the US would otherwise have no macro calendar at
+    all, and the dates line up — a live comparison put yfinance's PPI and retail
+    sales on the same days FRED reports.
+    """
     try:
         import yfinance as yf
     except Exception:
@@ -98,6 +112,8 @@ def fetch_yf_economic_events(*, start: str, end: str, limit: int = 400) -> list[
     for frame in frames:
         for name, record in zip(frame.index, frame.to_dict("records")):
             region = str(record.get("Region") or "").strip().upper()
+            if region == "US" and not include_us:
+                continue
             target = REGION_MARKETS.get(region)
             if not target:
                 continue
