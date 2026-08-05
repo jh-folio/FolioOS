@@ -966,18 +966,80 @@ _LINK_LLM_SYSTEM_PROMPT = (
     "- 인과를 단정하지 말고, 반드시 한계와 불확실성을 한국어로 명시합니다.\n"
     "- 한국어 Markdown만 출력합니다."
 )
+_CROSS_MARKET_LLM_SYSTEM_PROMPT = (
+    "당신은 다중 시장 연결 분석가입니다. 주어진 '연결 분석 초안'과 구조화된 동인 목록만으로 "
+    "여러 시장의 연결을 더 깊고 읽기 쉽게 다듬으세요.\n"
+    "규칙:\n"
+    "- 제목은 정확히 `## 시장 간 연결 요약` 으로 시작합니다.\n"
+    "- 새로운 수치·출처·종목을 지어내지 않습니다(주어진 동인·상태 범위 안에서만 해석).\n"
+    "- 초안에 없는 시장을 추가하지 않습니다. 초안에서 빠진 시장은 빠진 채로 둡니다.\n"
+    "- 모든 시장 쌍을 나열하지 말고, 주어진 세션 순서를 따라 중요한 전달 경로만 설명합니다.\n"
+    "- 구성: 공통 흐름, 세션 순서를 따른 전달 경로, 글로벌 채널(금리·환율·원자재), "
+    "시장별 고유 동인, 반론·디버전스, 그리고 마지막 `### 한계와 불확실성`.\n"
+    "- 인과를 단정하지 말고, 반드시 한계와 불확실성을 한국어로 명시합니다.\n"
+    "- 한국어 Markdown만 출력합니다."
+)
+
+
+# 두 시장 경로와 네 시장 경로의 제목이 다르다. 한쪽만 받으면 다른 쪽의 LLM 심화가
+# 매번 조용히 거부되고 규칙 초안만 남는다.
+_LINK_HEADINGS = ("## 한미 시장 연결 분석", "## 시장 간 연결 요약")
 
 
 def _valid_link_markdown(text):
-    if not text or "## 한미 시장 연결 분석" not in text:
+    if not text or not any(heading in text for heading in _LINK_HEADINGS):
         return False
     if not any(token in text for token in ("한계", "불확실")):
         return False
     return len(text.strip()) >= 80
 
 
+def _link_llm_context(link, windows):
+    """Describe the rule draft for the LLM without adding anything to it.
+
+    The two-market and N-market drafts carry different keys, so each is
+    described in its own terms rather than one shape being forced into the
+    other's and arriving mostly empty.
+    """
+    def _names(values):
+        rendered = [str(value) for value in values]
+        return ", ".join(rendered) if rendered else "(없음)"
+
+    lines = [f"연결 상태: {link.get('status', '')}"]
+    if link.get("sessionChain"):
+        session_dates = link.get("sessionDates") or {}
+        lines.append(
+            "세션 순서(한국시간 마감 기준): "
+            + " → ".join(f"{m}({session_dates.get(m, '')})" for m in link["sessionChain"])
+        )
+        lines.append("공통 동인: " + _names(
+            f"{row['driver']}({', '.join(row['markets'])})" for row in link.get("commonDrivers") or []
+        ))
+        lines.append("전달 경로: " + _names(
+            f"{row['from']}→{row['to']}: {', '.join(row['sharedDrivers'])}"
+            for row in link.get("transmissionPaths") or []
+        ))
+        lines.append("글로벌 채널: " + _names(
+            f"{row['channel']}({', '.join(row['markets'])})" for row in link.get("globalChannels") or []
+        ))
+        for market, names in (link.get("marketSpecificDrivers") or {}).items():
+            lines.append(f"{market} 고유 동인: {_names(names)}")
+        if link.get("decoupledMarkets"):
+            lines.append("공유 동인이 없는 시장: " + _names(link["decoupledMarkets"]))
+    else:
+        lines.extend([
+            "공통 동인: " + _names(link.get("sharedDrivers") or []),
+            "미국장 고유 동인: " + _names(link.get("usOnlyDrivers") or []),
+            "한국장 고유 동인: " + _names(link.get("krOnlyDrivers") or []),
+            f"미국 직전 정규장: {windows.get('usPreviousSessionDate', '')}",
+            f"한국 당일 세션: {windows.get('krCurrentSessionDate') or windows.get('krPreviousSessionDate', '')}",
+        ])
+    lines.extend(["", "연결 분석 초안:", str(link.get("markdown") or "")])
+    return "\n".join(lines)
+
+
 def llm_enhance_link_analysis(link, *, market_windows=None, llm_override=None, web_search_override=None):
-    """Deepen the rule-based US↔KR link analysis with the LLM.
+    """Deepen the rule-based cross-market analysis with the LLM.
 
     Returns enhanced Markdown, or None so the caller keeps the rule-based
     markdown (LLM off / no key / invalid or empty output / any error).
@@ -989,30 +1051,20 @@ def llm_enhance_link_analysis(link, *, market_windows=None, llm_override=None, w
     if not llm_on or not cfg.get("apiKey"):
         return None
     link = link or {}
-    windows = market_windows or {}
-
-    def _names(values):
-        return ", ".join(values) if values else "(없음)"
-
-    context = "\n".join([
-        f"연결 상태: {link.get('status', '')}",
-        f"공통 동인: {_names(link.get('sharedDrivers') or [])}",
-        f"미국장 고유 동인: {_names(link.get('usOnlyDrivers') or [])}",
-        f"한국장 고유 동인: {_names(link.get('krOnlyDrivers') or [])}",
-        f"미국 직전 정규장: {windows.get('usPreviousSessionDate', '')}",
-        f"한국 당일 세션: {windows.get('krCurrentSessionDate') or windows.get('krPreviousSessionDate', '')}",
-        "",
-        "연결 분석 초안:",
-        str(link.get("markdown") or ""),
-    ])
+    context = _link_llm_context(link, market_windows or {})
+    # 네 시장 초안은 세션 체인을 들고 있다. 두 시장용 프롬프트를 쓰면 모델이
+    # 미국·한국 이야기로 되돌리고, 그 출력은 제목 검증에서 다시 버려진다.
+    system_prompt = (
+        _CROSS_MARKET_LLM_SYSTEM_PROMPT if link.get("sessionChain") else _LINK_LLM_SYSTEM_PROMPT
+    )
     web_search = False if web_search_override is None else bool(web_search_override)
     try:
         if cfg["provider"] == "gemini":
-            text, _, _ = request_gemini(cfg, _LINK_LLM_SYSTEM_PROMPT, context, web_search=web_search, include_usage=True)
+            text, _, _ = request_gemini(cfg, system_prompt, context, web_search=web_search, include_usage=True)
         elif cfg["provider"] == "claude":
-            text, _, _ = request_claude(cfg, _LINK_LLM_SYSTEM_PROMPT, context, web_search=web_search, include_usage=True)
+            text, _, _ = request_claude(cfg, system_prompt, context, web_search=web_search, include_usage=True)
         else:
-            text, _, _ = request_openai(cfg, _LINK_LLM_SYSTEM_PROMPT, context, web_search=web_search, include_usage=True)
+            text, _, _ = request_openai(cfg, system_prompt, context, web_search=web_search, include_usage=True)
     except Exception:
         return None
     text = strip_llm_citation_markers(text or "").strip()

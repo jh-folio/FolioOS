@@ -35,7 +35,7 @@ from features.daily_briefing.issue_selection import (
     public_issue_coverage,
     session_modes_from_windows,
 )
-from features.daily_briefing.link_analysis import build_link_analysis
+from features.daily_briefing.link_analysis import build_cross_market_analysis, build_link_analysis
 from features.daily_briefing.schema import (
     AGGREGATE_SCOPES,
     briefing_expected_titles,
@@ -386,15 +386,23 @@ def build_briefing(
     link_status = "insufficient_evidence"
     link_analysis = None
     if market_scope in AGGREGATE_SCOPES and len(requested_scopes) > 1:
-        link_status = derive_link_status(
-            results[requested_scopes[0]]["issueCoverageRaw"],
-            results[requested_scopes[1]]["issueCoverageRaw"],
-        )
         # 연결 분석은 각 시장 Canonical 본문을 바꾸지 않는 별도 레이어다(읽기 시 결합).
-        link_analysis = build_link_analysis(
-            results["us"], results["kr"],
-            market_windows=market_windows, market_tape=market_tape, link_status=link_status,
-        )
+        if market_scope == "both":
+            # 저장된 `both` 보고서 독자는 usOnlyDrivers/krOnlyDrivers와 예전 제목을
+            # 읽으므로 두 시장 경로는 그대로 둔다.
+            link_status = derive_link_status(
+                results["us"]["issueCoverageRaw"], results["kr"]["issueCoverageRaw"],
+            )
+            link_analysis = build_link_analysis(
+                results["us"], results["kr"],
+                market_windows=market_windows, market_tape=market_tape, link_status=link_status,
+            )
+        else:
+            link_analysis = build_cross_market_analysis(
+                results, market_windows=market_windows, market_tape=market_tape,
+                aggregate_scope=market_scope,
+            ) or {}
+            link_status = link_analysis.get("status") or link_status
         # LLM이 켜져 있으면 규칙 초안을 심화한다. 실패/비활성/무효 출력이면 규칙 본문 유지.
         enhanced_link = llm_enhance_link_analysis(
             link_analysis, market_windows=market_windows,
