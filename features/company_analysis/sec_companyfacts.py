@@ -39,7 +39,45 @@ METRIC_CANDIDATES = {
     "Dividends Paid": ["PaymentsOfDividends", "PaymentsOfDividendsCommonStock"],
 }
 
-POINT_IN_TIME_METRICS = {"Cash & Equivalents", "Total Assets", "Total Liabilities", "Long-Term Debt", "Current Assets", "Current Liabilities", "Inventory", "Accounts Receivable", "Accounts Payable"}
+# IFRS concept 후보. us-gaap과 이름 체계가 달라 기존 표를 재사용할 수 없다.
+# 실측(2026-08-06, SAP·도요타 companyfacts)으로 확인한 이름만 넣는다.
+IFRS_METRIC_CANDIDATES = {
+    "Revenue": ["Revenue", "RevenueFromContractsWithCustomers"],
+    "Gross Profit": ["GrossProfit"],
+    "Operating Income": ["ProfitLossFromOperatingActivities"],
+    "Net Income": ["ProfitLoss", "ProfitLossAttributableToOwnersOfParent"],
+    "EPS Diluted": ["DilutedEarningsLossPerShare"],
+    "Operating Cash Flow": [
+        "CashFlowsFromUsedInOperatingActivities",
+        "CashFlowsFromUsedInOperatingActivitiesContinuingOperations",
+    ],
+    "Capital Expenditure": [
+        "PurchaseOfPropertyPlantAndEquipment",
+        "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets",
+        "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNonFinancialAssets",
+    ],
+    "Cash & Equivalents": ["CashAndCashEquivalents"],
+    "Total Assets": ["Assets"],
+    "Total Liabilities": ["Liabilities"],
+    "Long-Term Debt": ["NoncurrentPortionOfNoncurrentBorrowings", "Borrowings"],
+    "Current Assets": ["CurrentAssets"],
+    "Current Liabilities": ["CurrentLiabilities"],
+    "Inventory": ["Inventories"],
+    "Accounts Receivable": ["TradeAndOtherCurrentReceivables", "CurrentTradeReceivables"],
+    "Accounts Payable": ["TradeAndOtherCurrentPayables", "CurrentTradePayables"],
+    "Shares Diluted": ["WeightedAverageNumberOfDilutedSharesOutstanding"],
+    "Depreciation & Amortization": ["DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"],
+    "Pretax Income": ["ProfitLossBeforeTax"],
+    "Income Tax": ["IncomeTaxExpenseContinuingOperations"],
+    "Interest Expense": ["InterestExpense", "FinanceCosts"],
+    "Dividends Paid": ["DividendsPaidClassifiedAsFinancingActivities", "DividendsPaid"],
+    "Equity": ["Equity"],
+}
+# 연간 보고서 form. 20-F는 외국 민간 발행인의 연차보고서이고 10-K와 같은 자리를 차지한다.
+ANNUAL_FORMS = ("10-K", "20-F")
+QUARTERLY_FORMS = ("10-Q",)
+
+POINT_IN_TIME_METRICS = {"Cash & Equivalents", "Total Assets", "Total Liabilities", "Long-Term Debt", "Current Assets", "Current Liabilities", "Inventory", "Accounts Receivable", "Accounts Payable", "Equity"}
 PER_SHARE_METRICS = {"EPS Diluted"}
 SHARE_COUNT_METRICS = {"Shares Diluted"}
 
@@ -123,36 +161,54 @@ def resolve_cik(company: dict, cache_dir: Path) -> str:
     return load_ticker_cik_map(cache_dir).get(ticker, "")
 
 
-def _facts_for_metric(us_gaap: dict, metric: str) -> tuple[str, list[dict]]:
+def reporting_currency(concepts: dict) -> str:
+    """The currency this filer actually reports in, by weight of evidence.
+
+    A 20-F filer reports in its own currency — ASML in EUR, Toyota in JPY —
+    and some also publish a handful of USD convenience figures. Preferring USD
+    would take those few rows for the metrics that have them and the local
+    currency elsewhere, producing one table quietly mixing two currencies.
+    """
+    totals: dict[str, int] = {}
+    for meta in concepts.values():
+        for unit, rows in ((meta or {}).get("units") or {}).items():
+            if unit in {"shares", "Shares", "pure"} or "/" in unit:
+                continue
+            totals[unit] = totals.get(unit, 0) + len(rows)
+    if not totals:
+        return ""
+    return max(totals.items(), key=lambda row: (row[1], row[0]))[0]
+
+
+def _unit_rows(units: dict, metric: str, currency: str) -> list[dict]:
+    """Rows for one metric in the filer's reporting currency, or nothing."""
+    if metric in SHARE_COUNT_METRICS:
+        return units.get("shares") or units.get("Shares") or []
+    if metric in PER_SHARE_METRICS:
+        # 주당 단위는 `EUR/shares` 형태다. 통화가 같은 것만 받는다.
+        return units.get(f"{currency}/shares") or []
+    return units.get(currency) or []
+
+
+def _facts_for_metric(concepts: dict, metric: str, *, currency: str = "USD", table=None) -> tuple[str, list[dict]]:
     candidates = []
     point_in_time = metric in POINT_IN_TIME_METRICS
-    for concept in METRIC_CANDIDATES.get(metric, []):
-        units = (us_gaap.get(concept) or {}).get("units", {})
-        if metric in SHARE_COUNT_METRICS:
-            facts = units.get("shares") or units.get("Shares") or next(iter(units.values()), [])
-        elif "USD" in units:
-            facts = units["USD"]
-        elif "USD/shares" in units:
-            facts = units["USD/shares"]
-        elif units:
-            facts = next(iter(units.values()))
-        else:
-            facts = []
+    table = table if table is not None else METRIC_CANDIDATES
+    for concept in table.get(metric, []):
+        units = (concepts.get(concept) or {}).get("units", {})
+        facts = _unit_rows(units, metric, currency)
         if not facts:
             continue
-        annual = _best_rows(facts, "10-K", point_in_time)
-        quarterly = _best_rows(facts, "10-Q", point_in_time)
+        annual = _best_rows(facts, ANNUAL_FORMS, point_in_time)
+        quarterly = _best_rows(facts, QUARTERLY_FORMS, point_in_time)
         latest_end = max([r.get("end", "") for r in annual + quarterly] or [""])
         candidates.append((latest_end, len(annual), len(quarterly), concept, facts))
     if candidates:
         candidates.sort(reverse=True)
         _, _, _, concept, facts = candidates[0]
         return concept, facts
-    for concept in METRIC_CANDIDATES.get(metric, []):
-        units = (us_gaap.get(concept) or {}).get("units", {})
-        if units:
-            first = next(iter(units.values()))
-            return concept, first
+    # 신고 통화로 된 행이 없으면 결측으로 남긴다. 다른 통화 행을 끌어오면
+    # 한 표 안에서 통화가 섞이고, 그 사실이 어디에도 드러나지 않는다.
     return "", []
 
 
@@ -165,10 +221,20 @@ def _duration_days(row: dict) -> int:
         return 0
 
 
-def _best_rows(rows: list[dict], form: str, point_in_time: bool) -> list[dict]:
-    filtered = [r for r in rows if r.get("form") == form and r.get("val") is not None and r.get("end")]
+def _best_rows(rows: list[dict], forms, point_in_time: bool) -> list[dict]:
+    """Rows for the given report forms, newest first, one per period end.
+
+    ``forms`` is a set because the annual report is `10-K` for a domestic filer
+    and `20-F` for a foreign private issuer; both occupy the same slot and are
+    selected by the same annual duration rule.
+    """
+    if isinstance(forms, str):
+        forms = (forms,)
+    forms = tuple(forms)
+    annual = any(form in ANNUAL_FORMS for form in forms)
+    filtered = [r for r in rows if r.get("form") in forms and r.get("val") is not None and r.get("end")]
     if not point_in_time:
-        if form == "10-K":
+        if annual:
             filtered = [r for r in filtered if _duration_days(r) >= 250]
         else:
             filtered = [r for r in filtered if 45 <= _duration_days(r) <= 120]
@@ -186,7 +252,17 @@ def _best_rows(rows: list[dict], form: str, point_in_time: bool) -> list[dict]:
     return deduped
 
 
-def format_value(value, metric: str) -> str:
+# 통화 기호가 있는 통화만 기호를 쓰고, 나머지는 코드를 앞에 붙인다. 없는 기호를
+# 지어내는 것보다 "JPY 29.93T"가 정직하다.
+_CURRENCY_SYMBOLS = {"USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "KRW": "₩"}
+
+
+def currency_prefix(currency: str) -> str:
+    code = str(currency or "USD").strip().upper()
+    return _CURRENCY_SYMBOLS.get(code) or (f"{code} " if code else "$")
+
+
+def format_value(value, metric: str, currency: str = "USD") -> str:
     try:
         num = float(value)
     except Exception:
@@ -200,12 +276,58 @@ def format_value(value, metric: str) -> str:
             return f"{num / 1_000_000:.1f}M shares"
         return f"{num:,.0f} shares"
     sign = "-" if num < 0 else ""
+    prefix = currency_prefix(currency)
     num = abs(num)
+    if num >= 1_000_000_000_000:
+        # 엔·원처럼 자릿수가 큰 통화는 조 단위가 있어야 읽힌다.
+        return f"{sign}{prefix}{num / 1_000_000_000_000:.2f}T"
     if num >= 1_000_000_000:
-        return f"{sign}${num / 1_000_000_000:.2f}B"
+        return f"{sign}{prefix}{num / 1_000_000_000:.2f}B"
     if num >= 1_000_000:
-        return f"{sign}${num / 1_000_000:.1f}M"
-    return f"{sign}${num:,.0f}"
+        return f"{sign}{prefix}{num / 1_000_000:.1f}M"
+    return f"{sign}{prefix}{num:,.0f}"
+
+
+def _latest_fact_end(concepts: dict) -> str:
+    """The most recent period end anywhere in this taxonomy."""
+    latest = ""
+    for meta in concepts.values():
+        for rows in ((meta or {}).get("units") or {}).values():
+            for row in rows:
+                end = str(row.get("end") or "")
+                if end > latest:
+                    latest = end
+    return latest
+
+
+def select_taxonomy(data: dict) -> tuple[str, dict, dict]:
+    """Pick one taxonomy and never mix the two.
+
+    A 20-F filer may report under either, and some carry both: Toyota and Sony
+    publish `us-gaap` and `ifrs-full` side by side. Reading whichever concept
+    matches first would take revenue from one standard and assets from the
+    other, which is not a financial statement of anything. The taxonomy holding
+    the most recent data wins — a filer that moved to IFRS keeps a larger but
+    frozen us-gaap history, and counting concepts would serve that history as
+    current. The choice travels with the numbers.
+    """
+    facts = data.get("facts") or {}
+    options = [
+        ("us-gaap", facts.get("us-gaap") or {}, METRIC_CANDIDATES),
+        ("ifrs-full", facts.get("ifrs-full") or {}, IFRS_METRIC_CANDIDATES),
+    ]
+    ranked = []
+    for name, concepts, table in options:
+        if not concepts:
+            continue
+        # 최신성이 기준이다. 개념 수로 고르면 IFRS로 전환한 기업의 옛 us-gaap
+        # 이력이 더 커서 5년 전 재무를 현재로 내놓는다(도요타 실측).
+        ranked.append((_latest_fact_end(concepts), len(concepts), name, concepts, table))
+    if not ranked:
+        return "", {}, METRIC_CANDIDATES
+    ranked.sort(reverse=True)
+    _, _, name, concepts, table = ranked[0]
+    return name, concepts, table
 
 
 def build_companyfacts_summary(company: dict, cache_dir: Path) -> dict:
@@ -215,12 +337,13 @@ def build_companyfacts_summary(company: dict, cache_dir: Path) -> dict:
     data, error = fetch_json(SEC_FACTS_URL.format(cik=cik), cache_dir / "companyfacts" / f"CIK{cik}.json", ttl_hours=12)
     if not data:
         return {"ok": False, "reason": "fetch_failed", "cik": cik, "error": error, "markdown": f"SEC companyfacts fetch failed: {error}"}
-    us_gaap = ((data.get("facts") or {}).get("us-gaap") or {})
+    taxonomy, concepts, table = select_taxonomy(data)
+    currency = reporting_currency(concepts)
     rows = []
-    for metric in METRIC_CANDIDATES:
-        concept, facts = _facts_for_metric(us_gaap, metric)
-        annual = _best_rows(facts, "10-K", metric in POINT_IN_TIME_METRICS)
-        quarterly = _best_rows(facts, "10-Q", metric in POINT_IN_TIME_METRICS)
+    for metric in table:
+        concept, facts = _facts_for_metric(concepts, metric, currency=currency, table=table)
+        annual = _best_rows(facts, ANNUAL_FORMS, metric in POINT_IN_TIME_METRICS)
+        quarterly = _best_rows(facts, QUARTERLY_FORMS, metric in POINT_IN_TIME_METRICS)
         recent = annual[:3] if annual else quarterly[:3]
         rows.append(
             {
@@ -231,14 +354,25 @@ def build_companyfacts_summary(company: dict, cache_dir: Path) -> dict:
                 "recent": recent,
             }
         )
-    markdown = companyfacts_to_markdown({"ok": True, "cik": cik, "entityName": data.get("entityName", ""), "rows": rows, "warning": error})
-    return {"ok": True, "cik": cik, "entityName": data.get("entityName", ""), "rows": rows, "warning": error, "markdown": markdown}
+    summary = {
+        "ok": True, "cik": cik, "entityName": data.get("entityName", ""), "rows": rows,
+        "warning": error,
+        # 회계기준과 통화는 숫자와 함께 읽혀야 한다. 20-F 제출사의 매출을 USD로
+        # 읽으면 자릿수가 통째로 틀린다.
+        "taxonomy": taxonomy,
+        "accountingStandard": "IFRS" if taxonomy == "ifrs-full" else "US-GAAP",
+        "currency": currency,
+    }
+    summary["markdown"] = companyfacts_to_markdown(summary)
+    return summary
 
 
-def _row_values(items: list[dict], metric: str) -> str:
+def _row_values(items: list[dict], metric: str, currency: str = "USD") -> str:
     if not items:
         return "확인되지 않음"
-    return " / ".join(f"{item.get('end')}: {format_value(item.get('val'), metric)}" for item in items[:3])
+    return " / ".join(
+        f"{item.get('end')}: {format_value(item.get('val'), metric, currency)}" for item in items[:3]
+    )
 
 
 def companyfacts_to_markdown(summary: dict) -> str:
@@ -247,17 +381,24 @@ def companyfacts_to_markdown(summary: dict) -> str:
     lines = [
         f"SEC companyfacts structured data: {summary.get('entityName') or ''} (CIK {summary.get('cik')})",
     ]
+    # 회계기준과 통화가 숫자와 떨어지면 안 된다. 20-F 제출사의 매출을 달러로
+    # 읽으면 자릿수가 통째로 틀리고, 표만 봐서는 알 길이 없다.
+    standard = summary.get("accountingStandard") or ""
+    currency = summary.get("currency") or ""
+    if standard or currency:
+        parts = [part for part in (standard, f"보고 통화 {currency}" if currency else "") if part]
+        lines.append(f"회계기준·통화: {' · '.join(parts)}")
     if summary.get("warning"):
         lines.append(f"주의: {summary['warning']}")
     lines += [
         "",
-        "| Metric | Recent Annual / Point-in-time | Recent Quarter | SEC Concept |",
+        f"| Metric | Recent Annual / Point-in-time{f' ({currency})' if currency else ''} | Recent Quarter | SEC Concept |",
         "| --- | --- | --- | --- |",
     ]
     for row in summary.get("rows", []):
         metric = row["metric"]
         lines.append(
-            f"| {metric} | {_row_values(row.get('annual', []), metric)} | {_row_values(row.get('quarterly', []), metric)} | {row.get('concept') or 'n/a'} |"
+            f"| {metric} | {_row_values(row.get('annual', []), metric, currency)} | {_row_values(row.get('quarterly', []), metric, currency)} | {row.get('concept') or 'n/a'} |"
         )
     return "\n".join(lines)
 

@@ -13,6 +13,8 @@ from features.company_analysis.sec_companyfacts import normalize_cik, sec_user_a
 
 SEC_SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik}.json"
 SEC_ARCHIVES_BASE = "https://www.sec.gov/Archives/edgar/data"
+# 연차보고서 form. 국내 제출사는 10-K, 외국 민간 발행인은 20-F를 낸다.
+ANNUAL_REPORT_FORMS = ("10-K", "20-F")
 
 SECTOR_KEYWORDS = {
     "Semiconductors": {
@@ -111,7 +113,15 @@ def get_company_submissions(cik: str, cache_dir: Path) -> tuple[dict, str]:
         return {}, "SEC response parse failed"
 
 
-def latest_10k_metadata(cik: str, cache_dir: Path) -> dict:
+def latest_annual_report_metadata(cik: str, cache_dir: Path, forms=None) -> dict:
+    """Newest annual report of any accepted form.
+
+    A foreign private issuer files 20-F where a domestic filer files 10-K. The
+    old lookup matched `10-K` alone, so a 20-F filer had no document URL at all
+    and its narrative came back empty with `no_10k` — the failure looked like a
+    missing filing rather than an unsupported form.
+    """
+    accepted = tuple(forms or ANNUAL_REPORT_FORMS)
     data, error = get_company_submissions(cik, cache_dir)
     recent = data.get("filings", {}).get("recent", {}) if data else {}
     forms = recent.get("form", []) or []
@@ -120,7 +130,7 @@ def latest_10k_metadata(cik: str, cache_dir: Path) -> dict:
     dates = recent.get("filingDate", []) or []
     reports = recent.get("reportDate", []) or []
     for idx, form in enumerate(forms):
-        if form == "10-K" and idx < len(accessions) and idx < len(docs):
+        if form in accepted and idx < len(accessions) and idx < len(docs):
             accession = accessions[idx]
             accession_plain = accession.replace("-", "")
             cik_plain = str(int(cik))
@@ -139,27 +149,77 @@ def latest_10k_metadata(cik: str, cache_dir: Path) -> dict:
                 "url": url,
                 "error": error,
             }
-    return {"ok": False, "cik": cik, "error": error or "No recent 10-K found"}
+    return {"ok": False, "cik": cik, "error": error or f"No recent {'/'.join(accepted)} found"}
+
+
+def latest_10k_metadata(cik: str, cache_dir: Path) -> dict:
+    """Back-compatible alias; existing callers keep the 10-K-only behaviour."""
+    return latest_annual_report_metadata(cik, cache_dir, forms=("10-K",))
+
+
+def _clean_lines(markup: str) -> list[str]:
+    text = strip_html_text(markup, separator="\n")
+    text = re.sub(r"[ \t\xa0]+", " ", text)
+    return [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
+
+
+def _is_paragraph(line: str) -> bool:
+    return len(line) >= 80 and not re.fullmatch(r"[\d\s.,$%()/-]+", line)
 
 
 def html_to_paragraphs(markup: str) -> list[str]:
-    text = strip_html_text(markup, separator="\n")
-    text = re.sub(r"[ \t\xa0]+", " ", text)
-    lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
-    paragraphs = []
-    for line in lines:
-        if len(line) < 80:
-            continue
-        if re.fullmatch(r"[\d\s.,$%()/-]+", line):
-            continue
-        paragraphs.append(line)
-    return paragraphs
+    return [line for line in _clean_lines(markup) if _is_paragraph(line)]
 
 
-def item_for_paragraph(paragraph: str, current_item: str) -> str:
-    match = re.search(r"\bITEM\s+(1A|1B|1|7A|7|8|9A|9B|9)\b", paragraph, flags=re.I)
+def paragraphs_with_items(markup: str, form: str = "10-K"):
+    """Yield ``(item, paragraph)`` with section headings read before filtering.
+
+    Section headings are short by nature and the paragraph filter drops short
+    lines, so looking for `ITEM 5.` only inside kept paragraphs finds it only
+    when a filing happens to inline the heading with body text. ASML's 20-F puts
+    each heading on its own line, so every paragraph came back `Unknown` and the
+    section weighting never applied.
+    """
+    current = ""
+    for line in _clean_lines(markup):
+        current = item_for_paragraph(line, current, form)
+        if _is_paragraph(line):
+            yield current, line
+
+
+# 20-F는 10-K와 Item 번호 체계가 다르다. 같은 번호가 다른 내용을 가리키므로
+# form을 모르고 읽으면 사업 개요 자리에서 위험 요소를 읽게 된다.
+#   10-K: 1 사업 · 1A 위험 · 7 MD&A · 7A 시장위험 · 8 재무제표
+#   20-F: 3.D 위험 · 4 회사 정보 · 5 경영진 논의 · 11 시장위험 · 18/19 재무제표
+_ITEM_PATTERNS = {
+    "10-K": r"\bITEM\s+(1A|1B|1|7A|7|8|9A|9B|9)\b",
+    "20-F": r"\bITEM\s+(3\.?D|3|4A|4|5|11|18|19)\b",
+}
+FINANCIAL_DISCUSSION_ITEMS = {
+    "10-K": {"7", "7A", "8"},
+    "20-F": {"5", "11", "18"},
+}
+# 섹터 프로필의 `items`는 10-K 번호로 쓰여 있다. 20-F에 그대로 대면 사업 개요
+# 자리(10-K의 1)가 20-F의 Item 1(제출사 신원)에 가산되고, 정작 MD&A인 Item 5는
+# 아무 가산도 못 받는다. 같은 뜻의 구획끼리 옮긴다.
+_ITEM_EQUIVALENTS = {
+    "20-F": {"1": "4", "1A": "3D", "7": "5", "7A": "11", "8": "18"},
+}
+
+
+def equivalent_items(items, form: str) -> set[str]:
+    """Translate 10-K-numbered section lists into the given form's numbering."""
+    mapping = _ITEM_EQUIVALENTS.get(str(form or "").upper())
+    if not mapping:
+        return {str(item).upper() for item in items or ()}
+    return {mapping.get(str(item).upper(), str(item).upper()) for item in items or ()}
+
+
+def item_for_paragraph(paragraph: str, current_item: str, form: str = "10-K") -> str:
+    pattern = _ITEM_PATTERNS.get(str(form or "").upper(), _ITEM_PATTERNS["10-K"])
+    match = re.search(pattern, paragraph, flags=re.I)
     if match:
-        return match.group(1).upper()
+        return match.group(1).upper().replace(".", "")
     return current_item
 
 
@@ -173,12 +233,12 @@ def profile_for_sector(sector: str) -> dict:
     return DEFAULT_PROFILE
 
 
-def score_paragraph(paragraph: str, *, sector: str, item: str) -> tuple[int, list[str]]:
+def score_paragraph(paragraph: str, *, sector: str, item: str, form: str = "10-K") -> tuple[int, list[str]]:
     profile = profile_for_sector(sector)
     hay = paragraph.lower()
     hits = []
     score = 0
-    if item in profile["items"]:
+    if item in equivalent_items(profile["items"], form):
         score += 8
     for keyword in profile["keywords"]:
         if keyword.lower() in hay:
@@ -192,7 +252,8 @@ def score_paragraph(paragraph: str, *, sector: str, item: str) -> tuple[int, lis
         if keyword in hay and keyword not in hits:
             hits.append(keyword)
             score += 3
-    if item in {"7", "7A", "8"} and any(keyword in hay for keyword in VALUATION_KEYWORDS):
+    financial_items = FINANCIAL_DISCUSSION_ITEMS.get(str(form or "").upper(), FINANCIAL_DISCUSSION_ITEMS["10-K"])
+    if item in financial_items and any(keyword in hay for keyword in VALUATION_KEYWORDS):
         score += 5
     if 180 <= len(paragraph) <= 1800:
         score += 2
@@ -201,14 +262,18 @@ def score_paragraph(paragraph: str, *, sector: str, item: str) -> tuple[int, lis
     return score, hits
 
 
-def ranked_10k_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 14) -> dict:
+def ranked_annual_report_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 14) -> dict:
+    """Score the narrative sections of the newest 10-K or 20-F."""
     cik = normalize_cik(company.get("cik", ""))
     if not cik:
         return {"ok": False, "reason": "no_cik", "paragraphs": [], "metadata": {}}
-    metadata = latest_10k_metadata(cik, cache_dir)
+    metadata = latest_annual_report_metadata(cik, cache_dir)
     if not metadata.get("ok"):
-        return {"ok": False, "reason": "no_10k", "paragraphs": [], "metadata": metadata}
-    html_text, error = fetch_text(metadata["url"], cache_dir / "html_10k" / f"{cik}_{metadata['accession']}.json", ttl_hours=24 * 30)
+        return {"ok": False, "reason": "no_annual_report", "paragraphs": [], "metadata": metadata}
+    form = str(metadata.get("form") or "10-K").upper()
+    # 캐시 키에 form을 넣는다. 같은 회사가 form을 바꾸면 예전 문서를 계속 읽는다.
+    cache_name = f"{cik}_{form.replace('/', '-')}_{metadata['accession']}.json"
+    html_text, error = fetch_text(metadata["url"], cache_dir / "html_10k" / cache_name, ttl_hours=24 * 30)
     if not html_text:
         metadata["error"] = error
         return {"ok": False, "reason": "fetch_failed", "paragraphs": [], "metadata": metadata}
@@ -216,10 +281,8 @@ def ranked_10k_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 
     if not sector or sector == "Unclassified":
         sector = metadata.get("sicDescription", "")
     rows = []
-    current_item = ""
-    for para in html_to_paragraphs(html_text):
-        current_item = item_for_paragraph(para, current_item)
-        score, hits = score_paragraph(para, sector=sector, item=current_item)
+    for current_item, para in paragraphs_with_items(html_text, form):
+        score, hits = score_paragraph(para, sector=sector, item=current_item, form=form)
         if score <= 0:
             continue
         rows.append(
@@ -231,7 +294,15 @@ def ranked_10k_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 
             }
         )
     rows.sort(key=lambda row: (row["score"], len(row["keywords"])), reverse=True)
-    return {"ok": True, "metadata": metadata, "paragraphs": rows[:max_paragraphs], "count": len(rows)}
+    return {
+        "ok": True, "metadata": metadata, "form": form,
+        "paragraphs": rows[:max_paragraphs], "count": len(rows),
+    }
+
+
+def ranked_10k_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 14) -> dict:
+    """Back-compatible alias. 20-F filers now resolve through the same path."""
+    return ranked_annual_report_paragraphs(company, cache_dir, max_paragraphs=max_paragraphs)
 
 
 def ranked_paragraphs_to_markdown(result: dict) -> str:
