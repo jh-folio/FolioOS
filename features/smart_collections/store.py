@@ -10,6 +10,7 @@ from threading import RLock
 from pydantic import ValidationError
 
 from features.smart_collections.schema import Collection, CollectionStoreFile
+from features.common.atomic_replace import replace_with_retry
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +52,7 @@ class CollectionStore:
         temporary = path.with_name(path.name + suffix)
         try:
             temporary.write_text(payload, encoding="utf-8")
-            os.replace(temporary, path)
+            replace_with_retry(temporary, path)
         except OSError as error:
             raise CollectionStoreUnavailableError from error
 

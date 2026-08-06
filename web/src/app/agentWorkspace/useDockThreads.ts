@@ -3,6 +3,7 @@ import { deleteJson, getJson, postJson } from "../../api";
 import {
   AGENT_HOME_THREAD_STORAGE_KEY,
   getAgentThreadMessages,
+  isGreeting,
   resetAgentThreadMessages,
 } from "./storage";
 import type { AgentMessage, ConsultationMessage, ConsultationSession } from "./types";
@@ -22,8 +23,12 @@ function toAgentMessage(row: ConsultationMessage, index: number): AgentMessage {
   };
 }
 
+/** 아직 서버에 만들지 않은 대화의 주제와 제목. 첫 메시지에서 실제 스레드가 된다. */
+export type PendingThread = { title?: string; scope?: ConsultationSession["scope"] };
+
 export function useDockThreads(welcome: AgentMessage) {
   const [threadId, setThreadId] = useState("");
+  const [pending, setPending] = useState<PendingThread | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [scope, setScope] = useState<ConsultationSession["scope"] | null>(null);
   const migratedRef = useRef(false);
@@ -39,6 +44,7 @@ export function useDockThreads(welcome: AgentMessage) {
     });
     setThreadId(created.id);
     setScope(created.scope || null);
+    setPending(null);
     bumpList();
     return created;
   }, [bumpList]);
@@ -47,6 +53,7 @@ export function useDockThreads(welcome: AgentMessage) {
     const session = await getJson<ConsultationSession>(`/api/agent/threads/${encodeURIComponent(id)}`);
     setThreadId(session.id);
     setScope(session.scope || null);
+    setPending(null);
     const rows = session.messages || [];
     return rows.length ? rows.map(toAgentMessage) : [{ ...welcome, createdAt: new Date().toISOString() }];
   }, [welcome]);
@@ -56,7 +63,7 @@ export function useDockThreads(welcome: AgentMessage) {
     if (migratedRef.current) return;
     migratedRef.current = true;
     if (window.localStorage.getItem(MIGRATED_KEY)) return;
-    const local = getAgentThreadMessages().filter((row) => row.text && row.variant !== "welcome");
+    const local = getAgentThreadMessages().filter((row) => row.text && !isGreeting(row));
     if (!local.length) {
       window.localStorage.setItem(MIGRATED_KEY, new Date().toISOString());
       return;
@@ -101,5 +108,5 @@ export function useDockThreads(welcome: AgentMessage) {
 
   useEffect(() => { void migrateLocalThread(); }, [migrateLocalThread]);
 
-  return { threadId, setThreadId, scope, setScope, refreshKey, bumpList, createThread, openThread, latestReply };
+  return { threadId, setThreadId, scope, setScope, pending, setPending, refreshKey, bumpList, createThread, openThread, latestReply };
 }

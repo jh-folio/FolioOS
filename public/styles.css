@@ -15482,3 +15482,89 @@ select { min-height: 36px; padding: 0 12px; }
 
 /* 워치리스트 추가 입력. 자동완성이 라벨 안에서 뜬다. */
 .watchlist-add-field { position: relative; flex: 1 1 220px; min-width: 0; }
+
+/* ============================================================
+   Agent 도크 대화 목록
+   목록은 자기 높이 안에서 스크롤한다. 대화를 화면 밖으로 밀지 않는다.
+   모양은 프리미티브에서 읽고 여기서는 배치만 갖는다.
+   ============================================================ */
+.agent-threads {
+  display: grid;
+  gap: var(--sp-1, 4px);
+  max-height: 42vh;
+  overflow-y: auto;
+  padding: var(--sp-2) var(--sp-4) var(--sp-3);
+}
+.agent-threads > ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.agent-threads__summary {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-label);
+}
+.agent-threads__empty, .agent-threads__error {
+  margin: var(--sp-2) 0 0;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-meta);
+}
+.agent-threads__error { color: var(--folio-danger, var(--folio-ink)); }
+
+.agent-threads > ul > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-2);
+  border-radius: var(--r-control);
+}
+.agent-threads > ul > li:hover { background: var(--surface-group); }
+/* 열려 있는 대화. 왼쪽 선으로 표시하고 배경은 은은하게 둔다. */
+.agent-threads > ul > li[data-active="true"] {
+  background: var(--surface-group);
+  box-shadow: inset 2px 0 0 var(--folio-accent);
+}
+
+.agent-threads__open {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.agent-threads__title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--folio-ink);
+  font-size: var(--fs-body-sm, 13px);
+  font-weight: var(--fw-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-threads__meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-label);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 조작은 오른쪽에 모은다. 마우스가 없는 환경에서도 항상 닿게 둔다. */
+.agent-threads__actions { display: flex; gap: 0; padding-right: 2px; }
+.agent-threads__actions .btn { min-width: 32px; min-height: 44px; padding: 0 4px; color: var(--folio-ink-subtle); }
+.agent-threads > ul > li:hover .agent-threads__actions .btn,
+.agent-threads__actions .btn:focus-visible { color: var(--folio-ink-muted); }
+.agent-threads__rename { padding: var(--sp-1, 4px) 0; }
+.agent-threads__rename input { width: 100%; }
+
+@media (max-width: 760px) {
+  .agent-threads { max-height: 50vh; }
+}

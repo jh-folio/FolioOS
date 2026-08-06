@@ -16,6 +16,7 @@ from features.smart_collections.schema import (
     CollectionSnapshotFile,
     SnapshotProviderGenerations,
 )
+from features.common.atomic_replace import replace_with_retry
 
 
 SNAPSHOT_HISTORY_LIMIT = 8
@@ -69,7 +70,7 @@ class SnapshotStore:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             temporary.write_text(payload, encoding="utf-8")
-            os.replace(temporary, path)
+            replace_with_retry(temporary, path)
         except OSError as error:
             raise SnapshotStoreUnavailableError() from error
 

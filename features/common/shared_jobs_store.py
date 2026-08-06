@@ -28,6 +28,7 @@ from features.common.shared_jobs_schema import (
     SharedJob,
     TERMINAL_STATUSES,
 )
+from features.common.atomic_replace import write_bytes_atomic
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,11 +123,8 @@ class SharedJobStore:
             raise JobsStoreUnavailableError() from error
 
     def _replace(self, path: Path, data: bytes, suffix: str) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_name(path.name + suffix)
         try:
-            temporary.write_bytes(data)
-            os.replace(temporary, path)
+            write_bytes_atomic(path, data, suffix=suffix)
         except OSError as error:
             raise JobsStoreUnavailableError() from error
 

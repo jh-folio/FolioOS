@@ -14,6 +14,7 @@ from uuid import uuid4
 from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, ValidationError, model_validator
 
 from features.common.markets import MarketCode
+from features.common.atomic_replace import replace_with_retry
 
 
 class AttemptScope(StrEnum):
@@ -193,7 +194,7 @@ class AttemptStore:
                 handle.write(ledger.model_dump_json(indent=2))
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            replace_with_retry(temporary, path)
         except OSError as error:
             temporary.unlink(missing_ok=True)
             raise AttemptStoreUnavailableError() from error

@@ -186,3 +186,32 @@ def test_submit_consultation_job_runs_for_real_not_only_as_a_stub(tmp_path, monk
     assert job["generationMode"] == "llm_cli"
     assert captured["args"][0] == Path(tmp_path)
     assert captured["args"][1] == session["id"]
+
+
+def test_the_first_question_becomes_the_title(tmp_path):
+    """목록에서 대화를 알아볼 단서는 제목뿐이다. 전부 "새 대화"면 읽히지 않는다."""
+    session = create_session(tmp_path, {"scope": {"kind": "general"}})
+    assert session["title"] == "새 대화"
+
+    append_user_message(tmp_path, session["id"], "HWM 공시 서술이 왜 비었는지 확인해줘", operation_id="op-title")
+
+    from features.agent_mode.consultation_store import get_session
+
+    assert get_session(tmp_path, session["id"])["title"] == "HWM 공시 서술이 왜 비었는지 확인해줘"
+
+
+def test_a_title_the_user_set_is_not_overwritten(tmp_path):
+    from features.agent_mode.consultation_store import get_session
+
+    session = create_session(tmp_path, {"title": "내가 정한 제목", "scope": {"kind": "general"}})
+    append_user_message(tmp_path, session["id"], "질문", operation_id="op-keep")
+    assert get_session(tmp_path, session["id"])["title"] == "내가 정한 제목"
+
+
+def test_a_long_question_is_trimmed_for_the_list(tmp_path):
+    from features.agent_mode.consultation_store import get_session
+
+    session = create_session(tmp_path, {"scope": {"kind": "general"}})
+    append_user_message(tmp_path, session["id"], "가" * 200, operation_id="op-long")
+    title = get_session(tmp_path, session["id"])["title"]
+    assert len(title) <= 40 and title.endswith("…")

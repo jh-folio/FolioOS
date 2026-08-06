@@ -269,6 +269,14 @@ features/company_analysis/financial_quality_prompt.md
 
 ## 10. 주요 기능 경계 (구현 디테일)
 
+### 파일 저장 (원자적 교체)
+
+- durable write는 전부 `features/common/atomic_replace.py`를 거친다. `os.replace()`를 직접 부르지 않는다.
+- **이유**: `os.replace()`는 POSIX에서 대상이 열려 있어도 성공하지만 Windows는 `WinError 5`(액세스 거부)나 `WinError 32`(사용 중)로 거부한다. 백신 실시간 검사·검색 색인기·탐색기 미리보기가 잡고 있을 때 나며, 보통 수십 밀리초 안에 풀린다. 한 번 거부됐다고 실패로 끝내면 사용자가 작업 상태나 보고서 저장을 잃는다.
+- `replace_with_retry()`는 `PermissionError`만 최대 6회(총 0.31초) 물러나며 재시도하고, 끝내 안 되면 원래 예외를 올린다. 경로 없음처럼 기다려도 안 풀리는 오류는 즉시 올린다.
+- `write_bytes_atomic()`은 임시 파일에 쓰고 제자리로 옮기며, 실패 시 임시 파일을 남기지 않는다.
+- 전체 테스트를 반복 실행해 잡은 실제 오류가 근거다. 파일을 쓰는 테스트라면 어느 것이든 드물게 걸렸고 단독 실행 시에는 통과해, 오래 `간헐적 실패`로만 남아 있었다.
+
 ### 서버 재시작
 
 - 웹 UI 상단의 `서버 재시작` 버튼은 `POST /api/server/restart`를 호출한다.
@@ -540,6 +548,9 @@ features/company_analysis/financial_quality_prompt.md
 - 모델 입력은 전체 transcript가 아니라 rolling summary + 최근 8개 메시지 + 서버가 **매번 다시 조회한** 최신 리서치 context로 구성한 32,000자 이하 pack이다. 저장된 옛 시세/브리핑을 재생하지 않는다.
 - **답변 본문은 잡 결과가 아니라 스레드에서 읽는다.** 잡 결과는 `data/jobs.json`과 Work Log에 남으므로 transcript를 담지 않는다.
 - user turn을 먼저 저장한 뒤 Agent job을 실행하므로 재시작 후에도 질문이 남고 retry할 수 있다. `operationId`로 중복 응답을 막는다. 저장 성공 후 폴링이 실패해도 작성칸을 되돌리지 않는다(재전송이 새 `operationId`로 같은 질문을 두 번 저장한다).
+- **빈 대화는 저장하지 않는다.** 스레드는 첫 메시지에서 만들어진다. `새 대화`와 `짚어보기`는 화면 상태만 바꾸고 주제는 `pending`으로 들고 있다가 첫 질문에서 함께 넘긴다. 예전에는 도크를 열 때마다 만들어서, 아무것도 묻지 않고 떠난 대화가 목록에 남았다.
+- **인사말은 대화가 아니다.** 저장·이관 모두 `storage.ts::isGreeting()` 하나로 거른다. 저장은 `id`로, 이관은 `variant`로 걸렀던 적이 있는데 인사말에는 `variant`가 없어 이관 필터가 한 번도 걸리지 않았고, 브라우저가 새로 열릴 때마다 인사말 한 줄짜리 스레드가 저장됐다(실제로 54개가 쌓였다).
+- **제목은 첫 질문에서 만든다.** 기본 제목일 때만 40자로 잘라 넣고 사용자가 붙인 제목은 건드리지 않는다. 전부 `새 대화`면 목록에서 대화를 구분할 단서가 없다.
 - 대화 관리(목록·전환·제목·보관·삭제)는 도크가 소유한다. 삭제는 확인을 받고 저장소도 `confirmed` 없이는 지우지 않는다.
 - memory 갱신은 규칙 기반 rolling summary다. 계획의 구조화 memoryPatch 계약은 미도입 상태이며 상세는 `.planning/folio-os-0.4-x-research-intelligence/task_plan.md`의 구현 편차 기록을 본다.
 - `노트로 정리` 명시적 action만 Native Investment Note snapshot을 만들며 노트에도 `consultationRef`와 hypothesis 경계가 유지된다.

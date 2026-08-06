@@ -17,6 +17,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from features.topic_report.approved_schema import ApprovalGrant, validate_utc_z
+from features.common.atomic_replace import replace_with_retry
 
 
 _APPROVAL_ID = re.compile(
@@ -137,7 +138,7 @@ class ApprovalStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_name(path.name + ".restore.tmp")
         temporary.write_text(ledger.model_dump_json(indent=2), encoding="utf-8")
-        os.replace(temporary, path)
+        replace_with_retry(temporary, path)
         return self._parse(path)
 
     def _load(self) -> ApprovalLedger:
@@ -162,11 +163,11 @@ class ApprovalStore:
             current = self._parse(path)
             backup_tmp = backup.with_name(backup.name + ".tmp")
             backup_tmp.write_text(current.model_dump_json(indent=2), encoding="utf-8")
-            os.replace(backup_tmp, backup)
+            replace_with_retry(backup_tmp, backup)
             self._parse(backup)
         temporary = path.with_name(path.name + ".tmp")
         temporary.write_text(ledger.model_dump_json(indent=2), encoding="utf-8")
-        os.replace(temporary, path)
+        replace_with_retry(temporary, path)
         return self._parse(path)
 
     def _new_entry(self, plan_hash: str) -> tuple[ApprovalEntry, str]:

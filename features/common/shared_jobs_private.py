@@ -17,6 +17,7 @@ from features.common.shared_jobs_completion import ArtifactCompletionProof
 from features.common.shared_jobs_projection import utc_z
 from features.common.shared_jobs_schema import ErrorCode, JOB_ID_PATTERN, JobStatus, TERMINAL_STATUSES
 from features.common.shared_jobs_store import JobsStoreUnavailableError, SharedJobStore
+from features.common.atomic_replace import replace_with_retry
 
 
 PACK_ID_PATTERN: Final = re.compile(r"^[A-Za-z0-9_.-]{1,120}$")
@@ -101,7 +102,7 @@ class JobPrivateLifecycle:
         temporary = target.with_name(target.name + ".tmp")
         payload = {**pack, "ownerJobId": job_id}
         temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        os.replace(temporary, target)
+        replace_with_retry(temporary, target)
         return target
 
     def cleanup_owner(self, job_id: str) -> bool:

@@ -31,6 +31,7 @@ from features.agent_mode.work_log_view import WorkLogView
 from features.common.jcs import JsonValue
 from features.common.shared_jobs_projection import utc_z
 from features.common.shared_jobs_store import JobsStoreUnavailableError, LegacyJobCollisionError, SharedJobStore
+from features.common.atomic_replace import replace_with_retry
 
 
 type JsonObject = dict[str, JsonValue]
@@ -208,7 +209,7 @@ class WorkLogService:
         journal.write_text(journal_record.model_dump_json(), encoding="utf-8")
         try:
             if action == "migrate_delete_original" and self.job_store.legacy_path.exists():
-                os.replace(self.job_store.legacy_path, quarantine)
+                replace_with_retry(self.job_store.legacy_path, quarantine)
                 source = quarantine
             else:
                 source = self.job_store.legacy_path
@@ -227,9 +228,9 @@ class WorkLogService:
             else:
                 temporary = self.job_store.path.with_name(self.job_store.path.name + ".rollback.tmp")
                 temporary.write_bytes(before)
-                os.replace(temporary, self.job_store.path)
+                replace_with_retry(temporary, self.job_store.path)
             if quarantine.exists() and not self.job_store.legacy_path.exists():
-                os.replace(quarantine, self.job_store.legacy_path)
+                replace_with_retry(quarantine, self.job_store.legacy_path)
             journal.unlink(missing_ok=True)
             expires_at = datetime.fromisoformat(claimed.expiresAt.replace("Z", "+00:00"))
             replacement = (

@@ -22,7 +22,10 @@ test("submit does not restore the composer after the turn is persisted", async (
 test("a conversation is created before the turn is sent", async () => {
   const source = await readFile(DOCK, "utf8");
   // 서버가 user turn을 먼저 저장해야 재시작 후에도 질문이 남고 재시도할 수 있다.
-  assert.match(source, /threads\.threadId \|\| \(await threads\.createThread/);
+  // 대화는 첫 메시지에서 만들어지지만, 그 저장은 Agent 실행보다 앞서야 한다.
+  const create = source.indexOf("threads.createThread(");
+  const post = source.indexOf("/messages`");
+  assert.ok(create > 0 && post > create, "메시지를 보내기 전에 대화를 만들어야 한다");
   assert.match(source, /operationId: messageId\(\)/);
 });
 
@@ -32,4 +35,19 @@ test("migration keeps the browser copy until the server confirms the count", asy
   assert.match(source, /created\.messageCount \|\| 0\) < local\.length/);
   const guard = source.indexOf("< local.length");
   assert.ok(guard < source.indexOf("resetAgentThreadMessages()"), "확인이 원본 삭제보다 앞서야 한다");
+});
+
+test("an empty conversation is never saved", async () => {
+  const dock = await readFile(DOCK, "utf8");
+  // 인사말만 든 대화가 54개 저장된 적이 있다. 첫 메시지에서 만들면 그런 게 안 생긴다.
+  assert.match(dock, /빈 대화는 저장하지 않는다/);
+  assert.doesNotMatch(dock, /startNewChat[\s\S]{0,220}createThread\(/);
+});
+
+test("the greeting is filtered by the same rule the store writes with", async () => {
+  const storage = await readFile(new URL("../src/app/agentWorkspace/storage.ts", import.meta.url), "utf8");
+  const hook = await readFile(new URL("../src/app/agentWorkspace/useDockThreads.ts", import.meta.url), "utf8");
+  // 저장은 id로, 이관은 variant로 걸렀다. 인사말에 variant가 없어 이관 필터가 안 걸렸다.
+  assert.match(storage, /export function isGreeting/);
+  assert.match(hook, /!isGreeting\(row\)/);
 });

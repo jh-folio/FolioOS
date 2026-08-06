@@ -29,6 +29,7 @@ from features.common.shared_jobs_completion import (
 )
 from features.common.shared_jobs_schema import CommitIntent, JobMarker, JobStatus, StorageKind
 from features.common.shared_jobs_store import JobCommitClaimError, SharedJobStore
+from features.common.atomic_replace import replace_with_retry
 
 
 def _call(hook: FaultHook | None, phase: str) -> None:
@@ -92,7 +93,7 @@ class JobArtifactCommitter:
             if storage_hash(staged) != expected.targetHash or marker(staged) != target_marker:
                 raise JobArtifactConflictError("staged artifact hash or marker is invalid")
             artifact.exact_path.parent.mkdir(parents=True, exist_ok=True)
-            os.replace(artifact.staged_path, artifact.exact_path)
+            replace_with_retry(artifact.staged_path, artifact.exact_path)
             committed = read_logical(artifact.exact_path, expected.storage)
             if committed is None or storage_hash(committed) != expected.targetHash or marker(committed) != target_marker:
                 raise JobArtifactConflictError("promoted artifact verification failed")

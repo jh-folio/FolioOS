@@ -14,6 +14,7 @@ from features.topic_report.approval_store import (
     ApprovalStore,
     ApprovalStoreUnavailableError,
 )
+from features.common.atomic_replace import replace_with_retry
 
 
 Boundary = Literal["prepared", "job_written", "journal_job_written", "approval_consumed"]
@@ -89,7 +90,7 @@ class SubmissionCoordinator:
         path = self._path(journal.approvalId)
         temporary = path.with_name(path.name + ".tmp")
         temporary.write_text(journal.model_dump_json(indent=2), encoding="utf-8")
-        os.replace(temporary, path)
+        replace_with_retry(temporary, path)
         reread = self._read(path)
         if reread != journal:
             raise SubmissionRecoveryError

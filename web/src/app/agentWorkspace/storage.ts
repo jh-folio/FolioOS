@@ -13,9 +13,18 @@ export const WELCOME_MESSAGE: AgentMessage = {
 
 type ThreadListener = (messages: AgentMessage[]) => void;
 
+/** 인사말은 앱이 띄우는 안내이지 사용자의 대화가 아니다. 저장·이관에서 모두 뺀다.
+ *
+ * 저장은 `id`로, 이관은 `variant`로 걸렀던 적이 있다. 인사말에는 `variant`가 없어
+ * 이관 필터가 한 번도 걸리지 않았고, 브라우저가 새로 열릴 때마다 인사말 한 줄짜리
+ * 스레드가 하나씩 저장됐다. 판정을 한 곳으로 모은다. */
+export function isGreeting(message: AgentMessage): boolean {
+  return message.id === "welcome" || message.variant === "welcome";
+}
+
 function messagesForStorage(messages: AgentMessage[]) {
   return messages
-    .filter((message) => message.id !== "welcome")
+    .filter((message) => !isGreeting(message))
     .map((message) => ({
       ...message,
       pending: false,

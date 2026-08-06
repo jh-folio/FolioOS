@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Final, TypedDict
 
 from features.common.markets import PRODUCT_MARKETS
+from features.common.atomic_replace import replace_with_retry
 
 
 _SAFE_ID: Final = re.compile(r"^[A-Za-z0-9:_-]+$")
@@ -117,7 +118,7 @@ def _journal_path(root: Path, identity: str) -> Path:
 def _write_journal(path: Path, payload: _Journal) -> None:
     staging = path.with_suffix(".tmp")
     staging.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-    os.replace(staging, path)
+    replace_with_retry(staging, path)
 
 
 def _parse_journal(path: Path) -> _Journal | None:
@@ -163,7 +164,7 @@ def _recover_journal(path: Path, journal: _Journal, refresh: Callable[[], None] 
         original = root / entry["original"]
         temporary = root / entry["temporary"]
         if original.exists() and not temporary.exists():
-            os.replace(original, temporary)
+            replace_with_retry(original, temporary)
         if temporary.exists():
             temporary.unlink()
     if refresh is not None:
@@ -217,7 +218,7 @@ def execute_report_delete(request: DeleteRequest) -> DeleteOutcome:
     _fault(request, "journaled")
 
     for index, entry in enumerate(entries):
-        os.replace(root / entry["original"], root / entry["temporary"])
+        replace_with_retry(root / entry["original"], root / entry["temporary"])
         _fault(request, f"renamed:{index}")
     journal["stage"] = "renamed"
     _write_journal(journal_path, journal)

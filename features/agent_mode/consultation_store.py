@@ -18,6 +18,7 @@ from features.agent_mode.consultation_schema import (
     normalize_scope,
     public_session,
 )
+from features.common.atomic_replace import replace_with_retry
 
 _LOCKS: dict[str, threading.RLock] = {}
 _LOCKS_GUARD = threading.Lock()
@@ -109,10 +110,24 @@ def _atomic_write(path: Path, payload: dict) -> None:
             handle.write(encoded)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, path)
+        replace_with_retry(temporary, path)
     finally:
         if temporary and temporary.exists():
             temporary.unlink(missing_ok=True)
+
+
+DEFAULT_TITLE = "새 대화"
+
+
+def _title_from(text: str) -> str:
+    """첫 질문에서 제목을 만든다. 목록에서 대화를 알아볼 유일한 단서다.
+
+    문장 첫 줄만 쓰고 40자에서 자른다. 제목이 전부 "새 대화"면 목록이 읽히지 않는다.
+    """
+    line = " ".join(str(text or "").strip().splitlines()[:1]).strip()
+    if len(line) <= 40:
+        return line
+    return line[:39].rstrip() + "…"
 
 
 def create_session(data_dir: Path, payload: dict | None = None) -> dict:
@@ -122,7 +137,7 @@ def create_session(data_dir: Path, payload: dict | None = None) -> dict:
     session = {
         "schemaVersion": 1,
         "id": session_id,
-        "title": clean_text(payload.get("title") or "새 투자 상담", 120),
+        "title": clean_text(payload.get("title") or DEFAULT_TITLE, 120),
         "scope": normalize_scope(payload.get("scope")),
         "status": "active",
         "revision": 1,
@@ -251,6 +266,11 @@ def append_user_message(data_dir: Path, session_id: str, content: str, *, operat
         message = {"id": "msg-" + uuid.uuid4().hex, "role": "user", "content": text, "createdAt": _now(), "status": "awaiting_agent", "operationId": operation_id, "sourceLayer": "user_consultation", "reuseAsEvidence": False}
         session.setdefault("messages", []).append(message)
         session["messageCount"] = len(session["messages"])
+        # 사용자가 직접 붙인 제목은 건드리지 않는다. 기본 제목일 때만 첫 질문으로 바꾼다.
+        if str(session.get("title") or "").strip() in {"", DEFAULT_TITLE, "새 투자 상담"}:
+            derived = _title_from(text)
+            if derived:
+                session["title"] = derived
         session["operationIds"] = (session.get("operationIds") or [])[-199:] + [operation_id]
         session["revision"] = int(session.get("revision") or 0) + 1
         session["updatedAt"] = _now()

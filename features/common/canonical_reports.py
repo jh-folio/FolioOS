@@ -34,6 +34,7 @@ from features.common.canonical_report_types import (
     PreparedCanonicalWrite,
     WriteKind,
 )
+from features.common.atomic_replace import replace_with_retry
 
 
 def _parse_prepare_request(
@@ -224,7 +225,7 @@ def promote_job(
             raise CanonicalConflictError("staged_bytes_mismatch", "staged canonical bytes do not match prepare")
         verify_base(current, prepared)
         prepared.exact_path.parent.mkdir(parents=True, exist_ok=True)
-        os.replace(staged_path, prepared.exact_path)
+        replace_with_retry(staged_path, prepared.exact_path)
         verify_committed(prepared)
         return prepared
 

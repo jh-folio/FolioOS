@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from features.agent_mode.work_log_schema import MigrationJournal, TokenStatus
 from features.agent_mode.work_log_store import WorkLogStore, WorkLogStoreUnavailableError
 from features.common.shared_jobs_store import SharedJobStore
+from features.common.atomic_replace import replace_with_retry
 
 
 def recover_migration_journals(
@@ -44,7 +45,7 @@ def recover_migration_journals(
         else:
             job_store.rollback_migration(had_v2=journal.hadV2, before_hash=journal.beforeHash)
             if quarantine.exists() and not job_store.legacy_path.exists():
-                os.replace(quarantine, job_store.legacy_path)
+                replace_with_retry(quarantine, job_store.legacy_path)
             expires_at = datetime.fromisoformat(token.expiresAt.replace("Z", "+00:00"))
             replacement = (
                 token.model_copy(update={"status": TokenStatus.ISSUED, "operationId": None})

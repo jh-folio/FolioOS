@@ -1,4 +1,5 @@
 from __future__ import annotations
+from features.common.atomic_replace import replace_with_retry
 
 import os
 import threading
@@ -81,6 +82,6 @@ def atomic_write(path: Path, content: bytes) -> None:
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        replace_with_retry(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)

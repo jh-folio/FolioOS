@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from features.agent_mode.work_log_schema import HiddenJob, PreviewTokenRecord, WorkLogStoreFile
 from features.common.shared_jobs_projection import utc_z
+from features.common.atomic_replace import replace_with_retry
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +58,7 @@ class WorkLogStore:
         temporary = path.with_name(path.name + suffix)
         try:
             temporary.write_bytes(data)
-            os.replace(temporary, path)
+            replace_with_retry(temporary, path)
         except OSError as error:
             raise WorkLogStoreUnavailableError() from error
 

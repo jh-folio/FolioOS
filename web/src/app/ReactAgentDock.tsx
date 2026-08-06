@@ -386,7 +386,12 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     try {
       // 대화는 스레드 경로로 보낸다. 서버가 user turn을 먼저 저장하므로 재시작 후에도
       // 질문이 남고, 다음 세션의 Agent가 이 대화를 context로 읽는다.
-      const threadId = threads.threadId || (await threads.createThread({ title: text.slice(0, 40) })).id;
+      const threadId =
+        threads.threadId
+        || (await threads.createThread({
+          title: threads.pending?.title || text.slice(0, 40),
+          scope: threads.pending?.scope,
+        })).id;
       const submitted = await postJson<{ job: AgentJob }>(
         `/api/agent/threads/${encodeURIComponent(threadId)}/messages`,
         { message: text, operationId: messageId(), context: requestContext, options: { model, effort } },
@@ -512,14 +517,13 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     async function handleScopedThread(event: Event) {
       const detail = (event as CustomEvent<ScopedThreadRequest>).detail || ({} as ScopedThreadRequest);
       if (!detail.scope) return;
-      try {
-        await threads.createThread({ title: detail.title, scope: detail.scope });
-        setMessages([{ ...WELCOME_AGENT_MESSAGE, createdAt: new Date().toISOString() }]);
-        setThreadsOpen(false);
-        if (detail.initialMessage) setInput(detail.initialMessage);
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : "대화를 시작하지 못했습니다.");
-      }
+      // 주제만 들고 있다가 첫 메시지에서 만든다. 여기서 만들면 사용자가 아무것도
+      // 묻지 않고 화면을 떠났을 때 빈 대화가 목록에 남는다.
+      threads.setThreadId("");
+      threads.setPending({ title: detail.title, scope: detail.scope });
+      setMessages([{ ...WELCOME_AGENT_MESSAGE, createdAt: new Date().toISOString() }]);
+      setThreadsOpen(false);
+      if (detail.initialMessage) setInput(detail.initialMessage);
     }
     window.addEventListener("folio:open-agent-thread", handleScopedThread);
     return () => window.removeEventListener("folio:open-agent-thread", handleScopedThread);
@@ -530,15 +534,14 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     await submitAgentMessage(input);
   }
 
-  async function startNewChat() {
+  function startNewChat() {
+    // 빈 대화는 저장하지 않는다. 첫 메시지를 보낼 때 만들어진다.
     setMessages([{ ...WELCOME_AGENT_MESSAGE, createdAt: new Date().toISOString() }]);
     setInput("");
     setError("");
-    try {
-      await threads.createThread();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "새 대화를 만들지 못했습니다.");
-    }
+    threads.setThreadId("");
+    threads.setPending(null);
+    setThreadsOpen(false);
   }
 
   async function openThread(id: string) {
@@ -618,7 +621,7 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
             aria-expanded={threadsOpen}
             onClick={() => setThreadsOpen((value) => !value)}
           >대화 목록</button>
-          <button className="react-agent-new-chat" type="button" onClick={() => void startNewChat()}>
+          <button className="react-agent-new-chat" type="button" onClick={startNewChat}>
             새 대화
           </button>
           <button className="icon-btn" type="button" aria-label="AI Agent 닫기" data-tooltip="닫기" data-tooltip-pos="left" onClick={onClose}>×</button>
