@@ -15392,3 +15392,14 @@ select { min-height: 36px; padding: 0 12px; }
   font-size: var(--fs-label);
 }
 .react-agent-scope { margin: var(--sp-2) var(--sp-4) 0; color: var(--folio-ink-muted); font-size: var(--fs-meta); }
+
+/* ============================================================
+   가로 스크롤 영역의 오버플로 격리
+   overflow-x: auto만으로는 스크롤 영역의 넘치는 폭이 페이지의 스크롤 영역까지
+   올라간다. Portfolio 보유 표(516px)가 375px 화면에서 문서를 117px 넓혔다.
+   화면은 body의 overflow-x: hidden이 가려 멀쩡해 보였고, 그래서 사람 눈으로도
+   e2e 게이트로도 잡히지 않았다(게이트는 API를 404로 막아 빈 표만 봤다).
+   contain: paint가 넘치는 폭을 자기 안에 묶는다. 표는 그대로 스크롤된다.
+   ============================================================ */
+.table-wrap,
+.portfolio-holdings-table-wrap { contain: paint; }

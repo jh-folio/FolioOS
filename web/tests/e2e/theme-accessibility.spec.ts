@@ -5,6 +5,9 @@ const PUBLIC_ROUTES = [
   "home",
   "dashboard",
   "watchlist",
+  // 0.4에서 공개로 복귀한 화면. 목록에서 빠져 있어 axe 검사도 모바일 오버플로
+  // 게이트도 한 번도 이 화면을 보지 않았다.
+  "portfolio",
   "briefing",
   "rss",
   "market-memory",
