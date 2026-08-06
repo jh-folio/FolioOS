@@ -137,7 +137,13 @@ class AgentCompanionBoundary:
             raise HTTPException(status_code=404, detail="consultation_not_found") from exc
         except ValueError as exc:
             raise HTTPException(status_code=409 if str(exc) == "consultation_archived" else 400, detail=str(exc)) from exc
-        job = submit_consultation_job(self._consultation_data_dir(), appended["session"]["id"], appended["message"]["id"])
+        # 도크가 보내는 화면 맥락·첨부·모델 옵션을 그대로 넘긴다. 이게 있어야 보고서
+        # 수정 제안과 이미지 첨부가 스레드 경로에서도 동작한다.
+        job = submit_consultation_job(
+            self._consultation_data_dir(), appended["session"]["id"], appended["message"]["id"],
+            screen_context=body.get("context") if isinstance(body.get("context"), dict) else None,
+            options=body.get("options") if isinstance(body.get("options"), dict) else None,
+        )
         return {"sessionId": appended["session"]["id"], "messageId": appended["message"]["id"], "revision": appended["session"].get("revision"), "job": job, "idempotent": appended["idempotent"]}
 
     def archive_consultation(self, consultation_id: str):

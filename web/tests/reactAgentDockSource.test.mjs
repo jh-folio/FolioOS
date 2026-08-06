@@ -35,7 +35,13 @@ test("React Agent Dock accepts contextual ask events and submits to chat", async
   assert.match(dockSource, /requestSubmit/);
   assert.match(dockSource, /WELCOME_AGENT_MESSAGE/);
   assert.match(dockSource, /react-agent-welcome-card/);
-  assert.match(dockSource, /새 채팅/);
+  // 화면에서는 전부 "대화"라 부른다. 주제는 별도 이름이 아니라 칩으로 보여준다.
+  assert.match(dockSource, /새 대화/);
+  assert.match(dockSource, /대화 목록/);
+  // 대화는 서버에 저장되는 스레드 경로로 나간다 — chat 경로는 저장하지 않아
+  // 세션이 끊기면 맥락이 사라진다(Task 7.6).
+  assert.match(dockSource, /agent\/threads/);
+  assert.doesNotMatch(dockSource, /"\/api\/agent\/chat"/);
   assert.match(contextSource, /window\.FolioAgent/);
   assert.match(contextSource, /setReactAgentContextScope/);
   assert.match(contextSource, /activateReactAgentContextScope/);

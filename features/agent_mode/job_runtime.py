@@ -274,14 +274,17 @@ def run_consultation_job(data_dir: Path, session_id: str, user_message_id: str, 
     return {"sessionId": session_id, "messageId": user_message_id, "status": "answered", "proposalId": proposal_id}
 
 
-def submit_consultation_job(data_dir: Path, session_id: str, user_message_id: str) -> dict:
+def submit_consultation_job(data_dir: Path, session_id: str, user_message_id: str,
+                            *, screen_context: dict | None = None, options: dict | None = None) -> dict:
     job = jobs.submit_job(
         "agent_bridge",
-        "투자 상담",
+        "Agent 대화",
         run_consultation_job,
         Path(data_dir),
         session_id,
         user_message_id,
+        screen_context=screen_context,
+        options=options,
         pass_job_id=True,
         dedicated_thread=True,
     )

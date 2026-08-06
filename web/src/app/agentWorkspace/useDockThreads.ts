@@ -78,7 +78,21 @@ export function useDockThreads(welcome: AgentMessage) {
     }
   }, [bumpList]);
 
+  /** 마지막 Agent 답변. 잡 결과에는 transcript를 담지 않으므로 스레드에서 읽는다. */
+  const latestReply = useCallback(async (id: string): Promise<string> => {
+    try {
+      const session = await getJson<ConsultationSession>(`/api/agent/threads/${encodeURIComponent(id)}`);
+      const rows = session.messages || [];
+      for (let index = rows.length - 1; index >= 0; index -= 1) {
+        if (rows[index].role === "assistant") return String(rows[index].content || "");
+      }
+    } catch {
+      // 답변을 못 읽어도 대화는 서버에 남아 있다. 호출부가 안내 문구를 쓴다.
+    }
+    return "";
+  }, []);
+
   useEffect(() => { void migrateLocalThread(); }, [migrateLocalThread]);
 
-  return { threadId, setThreadId, scope, setScope, refreshKey, bumpList, createThread, openThread };
+  return { threadId, setThreadId, scope, setScope, refreshKey, bumpList, createThread, openThread, latestReply };
 }

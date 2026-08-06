@@ -243,3 +243,33 @@ Home, Market Memory, Smart Collection, Deep Research에 동일한 read-only proj
 Agent는 선택 ticker를 서버 저장소에서 다시 조회하고 추천 없는 controlled 설명만
 반환한다. 결과는 저장 보고서, 포트폴리오, 워치리스트, checkpoint를 자동 변경하지
 않으며 Work Log에도 ticker, context, prompt, reply를 남기지 않는다.
+
+## Agent 대화 (스레드) — 0.5
+
+**도크가 대화의 집이다.** 주제가 붙은 대화(워치리스트·포트폴리오·보고서)는 도크 아래 한 종류이며, 별도 상담 패널은 없다. 화면에서는 전부 **대화**라 부르고 주제는 칩으로 보여준다.
+
+`상담`이라는 말은 화면에서 뺐다 — 전문가가 조언한다는 뜻을 담는데 §5 원칙 3은 "사용자 생각을 옹호하지 말고 검증한다"이고 Agent는 투자 조언을 하지 않는다. 내부 식별자(`sourceLayer: user_consultation`, `consultationRef`)는 저장된 데이터와의 계약이라 그대로 둔다.
+
+| | 값 |
+|---|---|
+| 저장 | `data/agent-threads/{id}.json` (JSON-per-thread) |
+| API | `/api/agent/threads*` |
+| 이관 | `agent-consultations/` → `agent-threads/` 첫 사용 시 1회. 복사 후 삭제라 실패해도 원본이 남고, 이름이 겹치면 양쪽 다 보존한다 |
+| 브라우저 대화 | 첫 실행 시 서버 스레드로 1회 이관(`importMessages`). 옛 질문을 Agent로 재실행하지 않고 기록만 옮긴다 |
+
+### 왜 서버에 저장하나
+
+도크 대화가 `localStorage`에만 있으면 **Agent가 읽을 방법이 없다.** 세션이 끊겼다 돌아왔을 때 앞 맥락을 쓰는 것이 요구인데, 서버에 기록이 없으면 원천적으로 불가능하다.
+
+### 생성과 저장이 한 경로다
+
+스레드 러너(`job_runtime.run_consultation_job`)는 **맥락 조립과 저장만** 하고 생성은 도크와 같은 `chat.run_agent_chat`에 맡긴다. 두 경로로 나누면 같은 대화가 갈라져, 제안을 만들거나 거절한 사실이 대화 기록에 남지 않고 다음 세션의 Agent가 같은 제안을 다시 한다.
+
+- 모델 입력은 전체 transcript가 아니라 **상한 있는 pack**이다: rolling summary + 최근 turn + 서버가 **매번 다시 읽은** 리서치 자료(32,000자, 넘치면 4단계 축약). 저장된 옛 시세·옛 브리핑을 재생하면 오래 쉬었다 돌아온 사용자에게 낡은 사실로 답하게 된다.
+- **답변 본문은 잡 결과가 아니라 스레드에서 읽는다.** 잡 결과는 `data/jobs.json`과 Work Log에 저장되므로 transcript를 담지 않는다.
+- 대화는 계속 hypothesis다. `layer=hypothesis`, `sourceLayer=user_consultation`, `reuseAsEvidence=false`가 코드 상수로 강제되고 화면에도 그 경계를 표시한다.
+- scope를 주지 않으면 `general`이다. 예전에는 알 수 없는 kind가 조용히 `portfolio`로 떨어져, 주제 없는 도크 대화가 포트폴리오 대화로 둔갑하며 무관한 맥락을 끌어왔다.
+
+### 대화 관리
+
+목록·전환·제목 수정·보관·삭제를 도크가 소유한다. 삭제는 되돌릴 수 없어 확인을 받으며, 저장소도 `delete_session(confirmed=True)` 없이는 지우지 않는다.

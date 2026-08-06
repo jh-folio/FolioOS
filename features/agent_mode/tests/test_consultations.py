@@ -132,7 +132,7 @@ def test_consultation_canary_remains_outside_research_and_canonical_paths(tmp_pa
 def test_consultation_http_contract_and_explicit_delete(tmp_path, monkeypatch):
     from features.agent_mode import routes
 
-    monkeypatch.setattr(routes, "submit_consultation_job", lambda _data, session_id, message_id: {"id": "job-1", "status": "queued", "sessionId": session_id, "messageId": message_id})
+    monkeypatch.setattr(routes, "submit_consultation_job", lambda _data, session_id, message_id, **_kwargs: {"id": "job-1", "status": "queued", "sessionId": session_id, "messageId": message_id})
     boundary = routes.AgentCompanionBoundary(object(), data_dir=tmp_path)
     created = boundary.create_consultation({"title": "NVDA 상담", "scope": {"kind": "watchlist", "id": "NVDA", "tickers": ["NVDA"]}})
     session_id = created["id"]

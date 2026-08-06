@@ -3,6 +3,7 @@ import { getJson, postJson, type JobStatus } from "../api";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
 import { ThreadList, scopeChipLabel } from "./agentWorkspace/ThreadList";
 import { useDockThreads } from "./agentWorkspace/useDockThreads";
+import type { ScopedThreadRequest } from "./agentWorkspace/openScopedThread";
 import { AgentPollTimeout, pollAgentJobBounded, releasePollController, replacePollController } from "./agentPolling";
 import { actOnProposal, boundedProposalDiff, boundedProposalSummary, hydrateAgentProposalFromResult, notifyProposalLifecycle } from "./agentProposalLifecycle";
 
@@ -383,17 +384,22 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
 
     let controller: AbortController | null = null;
     try {
-      const job = await postJson<AgentJob>("/api/agent/chat", {
-        message: text,
-        context: requestContext,
-        options: { model, effort },
-      });
+      // 대화는 스레드 경로로 보낸다. 서버가 user turn을 먼저 저장하므로 재시작 후에도
+      // 질문이 남고, 다음 세션의 Agent가 이 대화를 context로 읽는다.
+      const threadId = threads.threadId || (await threads.createThread({ title: text.slice(0, 40) })).id;
+      const submitted = await postJson<{ job: AgentJob }>(
+        `/api/agent/threads/${encodeURIComponent(threadId)}/messages`,
+        { message: text, operationId: messageId(), context: requestContext, options: { model, effort } },
+      );
       controller = new AbortController();
       replacePollController(pollControllers.current, assistantId, controller);
-      const done = await pollAgentJobBounded(job, { signal: controller.signal });
+      const done = await pollAgentJobBounded(submitted.job, { signal: controller.signal });
       releasePollController(pollControllers.current, assistantId, controller);
-      const result = done.result || {};
+      // 답변 본문은 잡 결과가 아니라 스레드에서 읽는다 — 잡 결과는 Work Log에 저장되므로
+      // transcript를 담지 않는다(0.4 상담 계약).
+      const result = { ...(done.result || {}), reply: await threads.latestReply(threadId) };
       const proposalHydration = await hydrateAgentProposalFromResult(result);
+      threads.bumpList();
       setMessages((current) =>
         current.map((message) =>
           message.id === assistantId
@@ -499,6 +505,25 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     window.addEventListener("folio:react-agent-request", handleAgentRequest);
     return () => window.removeEventListener("folio:react-agent-request", handleAgentRequest);
   }, [submitAgentMessage, surface]);
+
+  // 워치리스트·포트폴리오에서 `짚어보기`를 누르면 주제가 붙은 대화를 새로 시작한다.
+  // 예전에는 별도 상담 패널이 떠서 대화 목록이 둘로 갈렸다.
+  useEffect(() => {
+    async function handleScopedThread(event: Event) {
+      const detail = (event as CustomEvent<ScopedThreadRequest>).detail || ({} as ScopedThreadRequest);
+      if (!detail.scope) return;
+      try {
+        await threads.createThread({ title: detail.title, scope: detail.scope });
+        setMessages([{ ...WELCOME_AGENT_MESSAGE, createdAt: new Date().toISOString() }]);
+        setThreadsOpen(false);
+        if (detail.initialMessage) setInput(detail.initialMessage);
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "대화를 시작하지 못했습니다.");
+      }
+    }
+    window.addEventListener("folio:open-agent-thread", handleScopedThread);
+    return () => window.removeEventListener("folio:open-agent-thread", handleScopedThread);
+  }, [threads]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -609,6 +634,8 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
         />
       )}
       {scopeChip && <p className="react-agent-scope"><em className="chip">{scopeChip}</em> 대화</p>}
+      {/* 상담 패널이 갖고 있던 계층 경계. 대화는 hypothesis라 근거로 승격되지 않는다. */}
+      <p className="react-agent-layer-note">이 대화는 내 생각(가설)이며 보고서·Market Memory·근거 평가에 사용되지 않습니다.</p>
 
       <div className="react-agent-dock-body" ref={bodyRef}>
         <div className="react-agent-watermark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: meta.monoLogo }} />

@@ -15,7 +15,6 @@ import { preferredHomeRoute, useUiPreferences } from "./homePreference";
 import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } from "./routes";
 import { useShellStatus } from "./statusStore";
 import { activateReactAgentContextScope } from "./agentContext";
-import { ConsultationPanel } from "./agentWorkspace/ConsultationPanel";
 import { FolioWordmark } from "./FolioWordmark";
 
 const NAV_GROUPS: Array<{ id: string; title: string; routes: RouteId[] }> = [
@@ -406,7 +405,6 @@ export function AppShell() {
           onClose={() => setAgentOpen(false)}
         />
       )}
-      <ConsultationPanel />
       <CommandPalette />
     </div>
   );

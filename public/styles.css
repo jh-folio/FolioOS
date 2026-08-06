@@ -15371,3 +15371,11 @@ select { min-height: 36px; padding: 0 12px; }
 .chart-picker__add { display: flex; gap: 6px; width: 100%; margin-top: 2px; }
 .chart-picker__add input { min-width: 0; }
 .chart-picker__error { width: 100%; margin: 0; color: var(--folio-burgundy); font-size: var(--fs-meta); }
+
+/* 대화의 계층 경계 안내. 도크가 상담 패널을 흡수하면서 함께 옮겨왔다. */
+.react-agent-layer-note {
+  margin: 0 var(--sp-4) var(--sp-2);
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-label);
+}
+.react-agent-scope { margin: var(--sp-2) var(--sp-4) 0; color: var(--folio-ink-muted); font-size: var(--fs-meta); }

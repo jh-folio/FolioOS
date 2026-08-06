@@ -50,7 +50,7 @@ export function PortfolioRoute() {
           <div className="cockpit-panel__head"><div><span>RESEARCH</span><h2 id="portfolio-research-title">Agent와 검토</h2></div></div>
           <p>현재 보유 종목을 기준으로 최근 뉴스, 브리핑, 시장 내러티브의 변화와 반대 근거를 함께 살펴봅니다.</p>
           <ConsultationEntry tickers={positions.map((row) => row.ticker).filter(Boolean)} />
-          <small>상담 내용은 보고서 근거로 사용되지 않습니다.</small>
+          <small>대화 내용은 보고서 근거로 사용되지 않습니다.</small>
         </aside>
       </div>
       {showImport && <ImportPositionsDialog current={positions} onApply={(next) => { setPositions(next); setShowImport(false); setStatus("이미지 인식 결과를 편집표에 적용했습니다. 아직 저장되지 않았습니다."); }} onClose={() => setShowImport(false)} />}
