@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 
 from features.common.research_schema.checkpoints import checkpoints_from_markdown
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 def should_repair(quality: dict | None, preflight: dict | None, mode: str) -> bool:
@@ -42,7 +43,7 @@ def repair_markdown(artifact_type: str, artifact: dict, quality: dict | None, pr
     markdown = str(artifact.get("markdown") or "").rstrip()
     preflight = preflight or {}
     quality = quality or {}
-    gaps = list(artifact.get("dataGaps") or []) + list(preflight.get("derivedDataGaps") or [])
+    gaps = data_gap_rows(artifact.get("dataGaps")) + list(preflight.get("derivedDataGaps") or [])
     risks = [str(x).strip() for x in preflight.get("risks") or [] if str(x).strip()]
     fixes = [str(x).strip() for x in quality.get("suggestedFixes") or [] if str(x).strip()]
 

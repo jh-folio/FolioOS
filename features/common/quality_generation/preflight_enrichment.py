@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from features.common.quality_generation.telemetry import evidence_coverage
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 def _clip(value: str, limit: int = 260) -> str:
@@ -47,7 +48,7 @@ def build_preflight_evidence_context(
     coverage = evidence_coverage(artifact)
     risks = [str(x).strip() for x in preflight.get("risks") or [] if str(x).strip()]
     required = preflight.get("requiredInputs") or {}
-    gaps = list(artifact.get("dataGaps") or []) + list(preflight.get("derivedDataGaps") or [])
+    gaps = data_gap_rows(artifact.get("dataGaps")) + list(preflight.get("derivedDataGaps") or [])
     ledger = list(artifact.get("sourceLedger") or artifact.get("sources") or [])
     evidence = list(artifact.get("evidenceItems") or [])
 

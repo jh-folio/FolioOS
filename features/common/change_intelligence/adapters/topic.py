@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from features.common.change_intelligence.basis import content_hash, normalize_basis, stable_id
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 def build_topic_basis(report: dict) -> dict:
@@ -45,6 +46,6 @@ def build_topic_basis(report: dict) -> dict:
         "artifactKind": "topic_report", "artifactId": report.get("id"), "lineageId": lineage,
         "scope": {"reportType": report.get("reportType")}, "asOf": report.get("generatedAt"),
         "changeUnits": units, "sourceRefs": refs, "counterSignals": counter,
-        "uncertainties": [str(row.get("message") or row.get("title") or row.get("id")) for row in report.get("dataGaps") or [] if isinstance(row, dict)],
+        "uncertainties": [str(row.get("message") or row.get("title") or row.get("id")) for row in data_gap_rows(report.get("dataGaps"))],
         "metrics": (report.get("marketTape") or {}).get("items") or [], "coverage": {"comparison": 1 if units else 0, "market": 1 if report.get("marketTape") else 0},
     })

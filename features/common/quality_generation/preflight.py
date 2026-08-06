@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from features.common.research_schema.data_gaps import normalize_data_gap
+from features.common.research_schema.data_gaps import normalize_data_gap, data_gap_rows
 from features.common.utils import now_iso
 
 
@@ -82,7 +82,7 @@ def preflight_from_context(artifact_type: str, artifact: dict | None = None, con
     context = context or {}
     artifact_id = str(artifact.get("id") or artifact.get("date") or context.get("artifactId") or "")
     source_count = _count_sources(artifact, context)
-    data_gaps = list(artifact.get("dataGaps") or context.get("dataGaps") or [])
+    data_gaps = data_gap_rows(artifact.get("dataGaps")) or data_gap_rows(context.get("dataGaps"))
     checkpoints = list(artifact.get("checkpoints") or context.get("checkpoints") or [])
     evidence = list(artifact.get("evidenceItems") or context.get("evidenceItems") or [])
     source_ledger = list(artifact.get("sourceLedger") or context.get("sourceLedger") or [])

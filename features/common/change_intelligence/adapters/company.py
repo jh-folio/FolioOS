@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from features.common.change_intelligence.basis import content_hash, normalize_basis, stable_id
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 def _latest_value(row: dict):
@@ -50,7 +51,7 @@ def build_company_basis(report: dict, *, materials: dict | None = None) -> dict:
     for key in ("secFactsOk", "rankedFilingOk", "rankedParagraphs"):
         if key in inputs:
             units.append({"id": stable_id("input", ticker, key), "kind": "analysis_input", "subject": key, "currentValue": inputs.get(key), "direction": "observed", "magnitude": 0.2, "horizon": "medium_term", "sourceRefIds": []})
-    uncertainties = [str(gap.get("message") or gap.get("title") or gap.get("id")) for gap in report.get("dataGaps") or [] if isinstance(gap, dict)]
+    uncertainties = [str(gap.get("message") or gap.get("title") or gap.get("id")) for gap in data_gap_rows(report.get("dataGaps"))]
     return normalize_basis({
         "artifactKind": "company_analysis", "artifactId": report.get("id") or f"{ticker}:{str(report.get('generatedAt') or '')[:10]}",
         "lineageId": f"company:{ticker}", "scope": {"ticker": ticker}, "asOf": report.get("generatedAt"),

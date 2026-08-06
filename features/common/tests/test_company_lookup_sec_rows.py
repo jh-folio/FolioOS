@@ -42,3 +42,28 @@ if __name__ == "__main__":
         print(f"PASS {test.__name__}")
         passed += 1
     print(f"\n{passed}/{len(tests)} tests passed")
+
+
+def test_sec_company_rows_unwraps_the_fetch_json_envelope():
+    """sec_companyfacts와 company_lookup이 같은 캐시 파일을 다른 형식으로 쓴다.
+
+    봉투를 못 벗기면 values()가 문자열 두 개와 dict 하나를 내놓아 "행 1개"가 되고,
+    재조회 조건이 `행이 없을 때`뿐이라 못 쓰는 캐시가 영구히 남는다. 그 상태에서
+    미국 상장사는 20개짜리 수동 사전에 있는 종목만 CIK를 얻어, 나머지는 10-K 서술
+    없이 숫자만으로 분석된다.
+    """
+    envelope = {
+        "fetchedAt": "2026-08-04T05:39:40+00:00",
+        "error": "",
+        "data": {
+            "0": {"cik_str": 4281, "ticker": "HWM", "title": "Howmet Aerospace Inc."},
+            "1": {"cik_str": 723125, "ticker": "MU", "title": "MICRON TECHNOLOGY INC"},
+        },
+    }
+    rows = list(_sec_company_rows(envelope))
+    assert [r["ticker"] for r in rows] == ["HWM", "MU"]
+
+
+def test_sec_company_rows_still_reads_the_raw_sec_shape():
+    raw = {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."}}
+    assert [r["ticker"] for r in _sec_company_rows(raw)] == ["AAPL"]

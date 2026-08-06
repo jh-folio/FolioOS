@@ -13,16 +13,28 @@ _STATUS_RANK = {"fail": 0, "warn": 1, "pass": 2}
 
 
 def _merge_gaps(artifact: dict, preflight: dict) -> dict:
-    existing = list(artifact.get("dataGaps") or [])
+    """Add preflight-derived gaps without destroying the artifact's own shape.
+
+    기업분석은 dataGaps를 {"gaps": [...], "summary": {...}} dict로 저장하고 나머지는
+    list로 저장한다. dict를 list()로 감싸면 키 이름만 남아("gaps", "summary")
+    resolutionAttempts에 남아 있던 진짜 gap이 통째로 사라진다. 실제로 저장된
+    보고서가 그 상태였다.
+    """
+    raw = artifact.get("dataGaps")
+    nested = isinstance(raw, dict)
+    existing = list(raw.get("gaps") or []) if nested else list(raw or [])
     seen = {str(g.get("message") or "").lower() for g in existing if isinstance(g, dict)}
+    added = False
     for gap in preflight.get("derivedDataGaps") or []:
         message = str(gap.get("message") or "").lower()
         if message and message not in seen:
             existing.append(gap)
             seen.add(message)
-    if existing:
-        artifact = {**artifact, "dataGaps": existing}
-    return artifact
+            added = True
+    if not existing or (nested and not added):
+        return artifact
+    merged = {**raw, "gaps": existing} if nested else existing
+    return {**artifact, "dataGaps": merged}
 
 
 def _quality_regressed(before: dict | None, after: dict | None, weak_before: list[dict], weak_after: list[dict]) -> bool:

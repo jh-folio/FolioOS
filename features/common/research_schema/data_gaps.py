@@ -84,3 +84,17 @@ def data_gaps_from_messages(
         if len(rows) >= limit:
             break
     return rows
+
+
+def data_gap_rows(value) -> list[dict]:
+    """Return gap dicts from either stored shape.
+
+    기업분석은 {"gaps": [...], "summary": {...}}로, 나머지 산출물은 list로 저장한다.
+    dict를 그대로 순회하면 키 문자열("gaps", "summary")이 나와 isinstance 필터에
+    전부 걸러지므로, 읽는 쪽마다 기업분석의 gap이 조용히 사라진다.
+    """
+    if isinstance(value, dict):
+        value = value.get("gaps")
+    if not isinstance(value, list):
+        return []
+    return [row for row in value if isinstance(row, dict)]

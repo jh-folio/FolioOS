@@ -11,6 +11,7 @@ import re
 from features.common.utils import now_iso
 from features.common.research_quality.schema import grade_from_score, level_from_ratio, risk_level, status_from_score
 from features.common.research_quality.source_grounding import evaluate_source_grounding
+from features.common.research_schema.data_gaps import data_gap_rows
 
 _WEIGHTS = {
     "topic_answered": 12,
@@ -294,7 +295,7 @@ def evaluate_artifact(artifact_type: str, artifact: dict) -> dict:
         checkpoints=artifact.get("checkpoints") or [],
         source_ledger=artifact.get("sourceLedger") or artifact.get("sources") or [],
         evidence_items=artifact.get("evidenceItems") or [],
-        data_gaps=artifact.get("dataGaps") or [],
+        data_gaps=data_gap_rows(artifact.get("dataGaps")),
         market_tape=artifact.get("marketTape") or {},
         artifact_type=artifact_type,
     )

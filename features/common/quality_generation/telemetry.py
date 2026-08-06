@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 from typing import Any
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 def estimate_tokens(text: str | None) -> int:
@@ -47,7 +48,7 @@ def evidence_coverage(artifact: dict | None) -> dict:
     artifact = artifact or {}
     items = list(artifact.get("evidenceItems") or [])
     ledger = list(artifact.get("sourceLedger") or artifact.get("sources") or [])
-    gaps = list(artifact.get("dataGaps") or [])
+    gaps = data_gap_rows(artifact.get("dataGaps"))
     type_counts: Counter[str] = Counter()
     role_counts: Counter[str] = Counter()
     source_counts: Counter[str] = Counter()

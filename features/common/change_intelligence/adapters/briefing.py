@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from features.common.change_intelligence.basis import content_hash, normalize_basis, stable_id
 from features.common.markets import PRODUCT_MARKETS
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 def _briefing_artifact_id(report: dict, scope: str) -> str:
@@ -98,7 +99,7 @@ def build_briefing_basis(report: dict, *, generation_docs: list[dict] | None = N
                 "currentValue": value, "direction": "observed", "magnitude": min(1.0, abs(float(item.get("changePct") or 0)) / 5),
                 "horizon": "short_term", "sourceRefIds": ref_ids[:4],
             })
-    counter = [gap.get("message") or gap.get("title") for gap in report.get("dataGaps") or [] if isinstance(gap, dict)]
+    counter = [gap.get("message") or gap.get("title") for gap in data_gap_rows(report.get("dataGaps"))]
     scope = str(report.get("marketScope") or "both").strip().lower() or "both"
     return normalize_basis({
         "artifactKind": "briefing", "artifactId": _briefing_artifact_id(report, scope),

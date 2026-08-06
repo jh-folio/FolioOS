@@ -202,6 +202,12 @@ def _sec_company_rows(data):
     files can be malformed or manually edited. Invalid rows are ignored so
     startup indexing never fails on a single bad cache value.
     """
+    # 같은 파일을 두 모듈이 서로 다른 형식으로 쓴다. sec_companyfacts.fetch_json은
+    # {"fetchedAt", "data", "error"} 봉투로 저장하고 여기서는 원본 형식으로 읽었다.
+    # 봉투를 못 벗기면 values()가 문자열 두 개와 dict 하나를 내놓아 "행 1개"가 되고,
+    # 재조회 조건이 `행이 없을 때`뿐이라 못 쓰는 캐시가 영구히 남는다.
+    if isinstance(data, dict) and isinstance(data.get("data"), (dict, list)) and "fetchedAt" in data:
+        data = data["data"]
     if isinstance(data, dict):
         if any(key in data for key in ("ticker", "title", "cik_str")):
             rows = [data]

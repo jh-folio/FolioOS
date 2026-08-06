@@ -10,6 +10,7 @@ from features.llm_settings.client import extract_json_object, request_llm_text, 
 from features.common.quality_generation.preflight_enrichment import build_preflight_evidence_context
 from features.common.quality_generation.report_format import enforce_report_format, unwrap_markdown_payload
 from features.common.quality_generation.telemetry import normalize_token_usage
+from features.common.research_schema.data_gaps import data_gap_rows
 
 
 PROMPT = """당신은 Folio OS의 투자 리서치 품질 편집자입니다.
@@ -79,7 +80,7 @@ def _rewrite_context(artifact_type: str, artifact: dict, quality: dict, prefligh
         "sources": (artifact.get("sources") or [])[:12],
         "sourceLedger": (artifact.get("sourceLedger") or [])[:18],
         "evidenceItems": (artifact.get("evidenceItems") or [])[:18],
-        "dataGaps": (artifact.get("dataGaps") or [])[:10],
+        "dataGaps": data_gap_rows(artifact.get("dataGaps"))[:10],
         "marketTape": artifact.get("marketTape") or {},
     }
     evidence_block = build_preflight_evidence_context(
