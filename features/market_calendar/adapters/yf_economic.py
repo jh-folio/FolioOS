@@ -51,8 +51,9 @@ def normalize_yf_economic_events(rows: list[dict]) -> list[dict]:
             "kind": "macro",
             "provider": "yfinance_economic",
             "source": row.get("source") or "Yahoo Finance economic calendar",
-            # 제3자 집계다. 공식 기관이 발표한 일정이 아니므로 confirmed로 올리지 않는다.
-            "status": "estimated",
+            # 제3자 집계다. 공식 기관이 발표한 일정이 아니므로 confirmed로 올리지
+            # 않는다. 다만 결과가 실린 건은 이미 발표된 것이라 `actual`을 유지한다.
+            "status": row.get("status") or "estimated",
         })
         for row in rows
         if isinstance(row, dict)
@@ -62,6 +63,22 @@ def normalize_yf_economic_events(rows: list[dict]) -> list[dict]:
 def _is_important(name: str) -> bool:
     text = str(name or "").lower()
     return any(term in text for term in IMPORTANT_EVENT_TERMS)
+
+
+def _reading(value: object) -> str:
+    """A released figure, or "" when the aggregation has none.
+
+    pandas가 결측을 NaN으로 주는데, 그대로 두면 "nan"이 화면에 찍힌다. 없는 값은
+    빈 문자열이며 0으로 바꾸지 않는다 — 발표되지 않은 것과 0은 다르다.
+    """
+    if value is None:
+        return ""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        text = str(value).strip()
+        return "" if text.lower() in {"", "nan", "none"} else text
+    return "" if number != number else f"{number:g}"
 
 
 def _clean_title(name: str) -> str:
@@ -129,6 +146,11 @@ def fetch_yf_economic_events(
             if key in seen:
                 continue
             seen.add(key)
+            # 집계에 발표 결과가 함께 온다(지난 10일 실측 300건 중 259건에 Actual).
+            # 예정만 남기면 발표 뒤에 캘린더를 다시 열 이유가 없다.
+            actual = _reading(record.get("Actual"))
+            # `Revised`는 직전 값의 정정치다. 있으면 그쪽이 더 정확한 비교 기준이다.
+            previous = _reading(record.get("Revised")) or _reading(record.get("Last"))
             rows.append({
                 "title": f"{country} {title}",
                 "market": market,
@@ -136,6 +158,11 @@ def fetch_yf_economic_events(
                 "startsAt": stamp.isoformat(),
                 "timezone": "UTC",
                 "importance": 2,
+                # 발표가 끝난 건은 예정이 아니다. 값이 없으면 집계 상태를 유지한다.
+                "status": "actual" if actual else "estimated",
+                "actualValue": actual,
+                "previousValue": previous,
+                "observedAt": str(record.get("For") or "").strip(),
                 # 링크를 붙이지 않는다. yfinance는 수집 경로일 뿐 사용자가 읽을
                 # 원문이 아니라, 클릭하면 제3자 캘린더 페이지로 나가버린다.
             })

@@ -38,3 +38,18 @@ API: `GET /api/market-calendar`, `POST /api/market-calendar/refresh`.
 - 시총이 없는 행은 순위를 매길 수 없으므로 제외한다. 결측은 크기 0이 아니라 미상이다.
 - 한국은 6자리 코드로 저장돼 있어 `.KS`를 붙여야 provider가 조회한다.
 - 화면 필터(유형·시장)는 다중 선택이며 **빈 집합이 전체**를 뜻한다. 설정은 `calendarKinds`/`calendarMarkets` 배열이고, 예전 단일 설정(`calendarKind`/`calendarMarket`)은 한 개짜리 배열로 승격해 기존 선택을 잃지 않는다.
+
+## 발표 결과 (0.5)
+
+지표 일정은 예정 날짜만이 아니라 **발표된 결과**를 함께 싣는다. 예정만 남기면 발표 뒤에 캘린더를 다시 열 이유가 없다. 이벤트 필드는 `actualValue` / `previousValue` / `unit` / `observedAt`이다.
+
+| provider | 결과 출처 | 비고 |
+|---|---|---|
+| yfinance economic | 집계 프레임의 `Actual`·`Revised`·`Last`·`For` | 지난 10일 실측 300건 중 259건에 값이 있었다. `Revised`가 있으면 직전값으로 그쪽을 쓴다 |
+| FRED | 릴리즈별 대표 시리즈 관측값(`FRED_HEADLINE_SERIES`) | 릴리즈 하나에 시리즈가 여럿이라 헤드라인으로 읽히는 것 하나만 지정한다. 지난 일정에 한해 조회 |
+| BOK ECOS | `StatisticSearch` 관측값 | 이미 받아오면서 마지막 달만 쓰고 버리던 값이다 |
+
+- **결측은 빈 문자열이며 0으로 바꾸지 않는다.** 발표되지 않은 것과 0은 다르다. pandas 결측(NaN)이 화면에 `nan`으로 찍히지 않도록 `_reading()`이 거른다.
+- 결과가 실린 건은 `status=actual`, 아직 오지 않은 일정은 `estimated`를 유지한다.
+- 미래 일정도 **직전값은 미리 보인다** — 발표 때 비교할 기준이 된다.
+- **링크는 사용자가 읽을 원문이 있을 때만 단다.** yfinance 경제지표는 링크를 붙이지 않는다(수집 경로일 뿐 원문이 아니고, 클릭하면 제3자 캘린더로 나간다). ECOS는 API 엔드포인트가 아니라 통계 포털을 가리킨다.
