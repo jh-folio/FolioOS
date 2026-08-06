@@ -611,49 +611,36 @@ export function CompanyAnalysisRoute() {
       {error && <p className="react-dashboard-error">{error}</p>}
       {status && <p className="react-dashboard-warning">{status}</p>}
 
-      <section className="input-panel react-analysis-feed-controls report-feed-controls" aria-label="저장 기업 분석 검색">
-        <div className="briefing-archive-filters">
-          <label>
-            <span>검색</span>
-            <input
-              type="search"
-              value={reportQuery}
-              onChange={(event) => setReportQuery(event.currentTarget.value)}
-              placeholder="티커·회사명·보고서 검색"
-            />
-          </label>
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              setReportQuery("");
-              setReportView("recent");
-            }}
-          >
-            초기화
-          </button>
-        </div>
-        <div className="briefing-archive-summary">
-          <span>{filteredReports.length}건</span>
-          <span aria-live="polite">{loading ? "불러오는 중..." : reportQuery ? "검색 결과" : ""}</span>
-        </div>
-      </section>
-      <div className="report-feed-outside-controls" aria-label="기업 분석 표시 옵션">
-        <div className="report-feed-view-row">
+      {/* 찾기 바(zone ②). 검색은 패널 안, `보기`는 패널 밖에 떠 있었다. */}
+      <section className="find-bar" aria-label="저장 기업 분석 검색">
+        <input
+          className="find-bar__search"
+          type="search"
+          value={reportQuery}
+          onChange={(event) => setReportQuery(event.currentTarget.value)}
+          placeholder="티커·회사명·보고서 검색"
+          aria-label="저장 기업 분석 검색"
+        />
+        <label className="find-bar__field">
           <span>보기</span>
-          <label className="report-feed-view-pill">
-            <select
-              aria-label="기업 분석 보기 방식"
-              value={reportView}
-              onChange={(event) => setReportView(event.currentTarget.value as AnalysisViewMode)}
-            >
-              <option value="recent">최근</option>
-              <option value="company">기업별</option>
-              <option value="month">월별</option>
-            </select>
-          </label>
-        </div>
-      </div>
+          <select
+            aria-label="기업 분석 보기 방식"
+            value={reportView}
+            onChange={(event) => setReportView(event.currentTarget.value as AnalysisViewMode)}
+          >
+            <option value="recent">최근</option>
+            <option value="company">기업별</option>
+            <option value="month">월별</option>
+          </select>
+        </label>
+        <button
+          className="btn btn--text find-bar__reset"
+          type="button"
+          onClick={() => { setReportQuery(""); setReportView("recent"); }}
+        >
+          초기화
+        </button>
+      </section>
 
       <section className="react-analysis-feed" aria-label="저장된 기업 분석">
         <div className="react-section-heading">
@@ -661,7 +648,7 @@ export function CompanyAnalysisRoute() {
             <p className="section-kicker">Saved Reports</p>
             <h2>저장된 기업 분석</h2>
           </div>
-          <span>{reports.length} reports</span>
+          <span aria-live="polite">{loading ? "불러오는 중..." : `${filteredReports.length}건${reportQuery ? " · 검색 결과" : ""}`}</span>
         </div>
         {visibleReportGroups.length ? visibleReportGroups.map((group) => (
           <section className="report-feed-group" key={group.key}>

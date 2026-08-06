@@ -573,7 +573,12 @@ export function BriefingRoute() {
       <RouteHero
         eyebrow="Briefing"
         title="브리핑"
-        description="수집된 최신 뉴스와 시장 데이터를 바탕으로 미국장과 한국장 흐름을 요약합니다."
+        description="수집된 최신 뉴스와 시장 데이터로 미국·한국·유럽·일본장 흐름을 요약합니다."
+        actions={(
+          <button className="btn" type="button" onClick={loadArchive} disabled={loading}>
+            {loading ? "불러오는 중" : "새로고침"}
+          </button>
+        )}
       />
 
       <section className="brief-gen-box input-panel react-briefing-generation" aria-label="브리핑 생성">
@@ -609,13 +614,6 @@ export function BriefingRoute() {
             </label>
           </div>
           <div className="brief-gen-actionbar">
-            <button className="btn btn--icon" type="button" onClick={loadArchive} disabled={loading} aria-label="새로고침" data-tooltip="새로고침">
-              ↻
-            </button>
-            <button className="btn btn--primary" type="button" onClick={() => generateBriefing()} disabled={generating}>
-              {generating ? "생성 중" : "오늘 브리핑 생성"}
-            </button>
-            <span className="brief-gen-actionbar-divider" aria-hidden="true" />
             {/* 발행일이 아니라 시장 세션일이다. 미국장 8/3 세션은 8/4에 발행되므로
                 예전 라벨("브리핑 날짜")은 어느 장을 받게 되는지 알 수 없었다. */}
             <input
@@ -628,98 +626,93 @@ export function BriefingRoute() {
             <button className="btn" type="button" onClick={() => generateBriefing(briefingDate)} disabled={generating || !briefingDate}>
               이 기준일로 생성
             </button>
+            {/* primary는 행의 오른쪽 끝에 둔다(전 탭 공통 규칙). */}
+            <button className="btn btn--primary brief-gen-primary" type="button" onClick={() => generateBriefing()} disabled={generating}>
+              {generating ? "생성 중" : "오늘 브리핑 생성"}
+            </button>
           </div>
         </section>
       </section>
 
       {error && <p className="react-dashboard-error">{error}</p>}
 
-      <section className="input-panel react-briefing-archive-panel report-feed-controls" aria-label="저장 브리핑 검색">
-        <div className="briefing-archive-filters">
-          <label>
-            <span>검색</span>
-            <input
-              type="search"
-              value={archiveQuery}
-              onChange={(event) => setArchiveQuery(event.currentTarget.value)}
-              placeholder="제목·요약·본문 검색"
-            />
-          </label>
-          <label>
-            <span>시작일</span>
-            <input type="date" value={archiveStart} onChange={(event) => setArchiveStart(event.currentTarget.value)} />
-          </label>
-          <label>
-            <span>종료일</span>
-            <input type="date" value={archiveEnd} onChange={(event) => setArchiveEnd(event.currentTarget.value)} />
-          </label>
-          <button
-            className="btn"
-            type="button"
-            onClick={() => {
-              setArchiveQuery("");
-              setArchiveMarket("all");
-              setArchiveType("all");
-              setArchiveStart("");
-              setArchiveEnd("");
-              setArchiveView("recent");
-            }}
-          >
-            초기화
-          </button>
-        </div>
-        <div className="briefing-archive-summary">
-          <span>{filteredItems.length}건</span>
-          <span aria-live="polite">{loading ? "불러오는 중..." : archiveQuery ? "검색 결과" : ""}</span>
-        </div>
-      </section>
-      <div className="report-feed-outside-controls" aria-label="브리핑 표시 옵션">
-        <div className="report-feed-view-row">
+      {/* 찾기 바. 필터가 패널 안(검색·날짜)과 패널 밖(시장·유형·보기)으로 갈라져 있었다.
+          한 줄에 모으고 건수는 목록 헤더로 올린다. */}
+      <section className="find-bar" aria-label="저장 브리핑 검색">
+        <input
+          className="find-bar__search"
+          type="search"
+          value={archiveQuery}
+          onChange={(event) => setArchiveQuery(event.currentTarget.value)}
+          placeholder="제목·요약·본문 검색"
+          aria-label="저장 브리핑 검색"
+        />
+        <label className="find-bar__field">
           <span>시장</span>
-          <label className="report-feed-view-pill">
-            <select
-              aria-label="브리핑 시장"
-              value={archiveMarket}
-              onChange={(event) => setArchiveMarket(event.currentTarget.value as ArchiveMarketFilter)}
-            >
-              <option value="all">전체</option>
-              <option value="us">미국장</option>
-              <option value="kr">한국장</option>
-              <option value="europe">유럽장</option>
-              <option value="jp">일본장</option>
-              <option value="aggregate">종합 보고서</option>
-            </select>
-          </label>
+          <select
+            aria-label="브리핑 시장"
+            value={archiveMarket}
+            onChange={(event) => setArchiveMarket(event.currentTarget.value as ArchiveMarketFilter)}
+          >
+            <option value="all">전체</option>
+            <option value="us">미국장</option>
+            <option value="kr">한국장</option>
+            <option value="europe">유럽장</option>
+            <option value="jp">일본장</option>
+            <option value="aggregate">종합 보고서</option>
+          </select>
+        </label>
+        <label className="find-bar__field">
           <span>유형</span>
-          <label className="report-feed-view-pill">
-            <select
-              aria-label="브리핑 유형"
-              value={archiveType}
-              onChange={(event) => setArchiveType(event.currentTarget.value)}
-            >
-              <option value="all">전체</option>
-              {Object.entries(BRIEFING_TYPE_LABELS).map(([value, label]) => (
-                <option value={value} key={value}>{label}</option>
-              ))}
-            </select>
-          </label>
+          <select
+            aria-label="브리핑 유형"
+            value={archiveType}
+            onChange={(event) => setArchiveType(event.currentTarget.value)}
+          >
+            <option value="all">전체</option>
+            {Object.entries(BRIEFING_TYPE_LABELS).map(([value, label]) => (
+              <option value={value} key={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+        <label className="find-bar__field">
+          <span>기간</span>
+          <input type="date" aria-label="시작일" value={archiveStart} onChange={(event) => setArchiveStart(event.currentTarget.value)} />
+          <input type="date" aria-label="종료일" value={archiveEnd} onChange={(event) => setArchiveEnd(event.currentTarget.value)} />
+        </label>
+        <label className="find-bar__field">
           <span>보기</span>
-          <label className="report-feed-view-pill">
-            <select
-              aria-label="브리핑 보기 방식"
-              value={archiveView}
-              onChange={(event) => setArchiveView(event.currentTarget.value as ArchiveViewMode)}
-            >
-              <option value="recent">최근</option>
-              <option value="month">월별</option>
-              <option value="market">시장별</option>
-            </select>
-          </label>
-        </div>
-      </div>
+          <select
+            aria-label="브리핑 보기 방식"
+            value={archiveView}
+            onChange={(event) => setArchiveView(event.currentTarget.value as ArchiveViewMode)}
+          >
+            <option value="recent">최근</option>
+            <option value="month">월별</option>
+            <option value="market">시장별</option>
+          </select>
+        </label>
+        <button
+          className="btn btn--text find-bar__reset"
+          type="button"
+          onClick={() => {
+            setArchiveQuery("");
+            setArchiveMarket("all");
+            setArchiveType("all");
+            setArchiveStart("");
+            setArchiveEnd("");
+            setArchiveView("recent");
+          }}
+        >
+          초기화
+        </button>
+      </section>
 
       {/* 레거시 briefing-archive-card 클래스를 그대로 재사용해 디자인 언어를 통일한다. */}
       <section className="briefing-archive-feed" aria-label="저장 브리핑">
+        <p className="feed-count" aria-live="polite">
+          {loading ? "불러오는 중..." : `${filteredItems.length}건${archiveQuery ? " · 검색 결과" : ""}`}
+        </p>
         {visibleGroups.length ? visibleGroups.map((group) => (
           <div className="briefing-archive-date-group" key={group.label}>
             <h3>{group.label}</h3>

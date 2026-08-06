@@ -304,7 +304,7 @@ export function RssRoute() {
       <RouteHero
         eyebrow="RSS Feed"
         title="RSS 피드"
-        description="수집한 기사와 원천 자료를 시간, 출처, 키워드로 빠르게 훑습니다."
+        description="시장·국가·언어·기간·소스로 좁히거나 본문까지 검색합니다. 시간은 UTC+9 기준입니다."
         actions={(
           <div className="react-rss-hero-actions">
             <span className="react-rss-stat-pill">
@@ -329,13 +329,6 @@ export function RssRoute() {
           적용되던 시장 드롭다운. 한 패널로 모으되 두 동작은 구분해 둔다 — 검색은 본문까지
           훑어 다른 결과 목록을 만들고, 필터는 지금 보는 피드를 좁힌다. */}
       <section className="react-rss-control-panel react-rss-filter-panel" aria-label="RSS 필터와 검색">
-        <div className="react-rss-panel-head">
-          <div>
-            <h2>피드 탐색</h2>
-            <p>시장·국가·언어·기간·소스로 좁히거나, 본문까지 검색합니다. 시간은 UTC+9 기준입니다.</p>
-          </div>
-        </div>
-
         <div className="react-rss-searchbar">
           <input
             type="search"
