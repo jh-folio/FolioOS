@@ -8282,8 +8282,13 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   align-self: stretch;
 }
 .brief-gen-primary { flex: 0 0 auto; }
-/* 기준일 그룹은 왼쪽, primary는 오른쪽 끝. 구분선 요소는 간격이 대신한다. */
-.brief-gen-primary { margin-left: auto; }
+/* 주 동작이 앞, 날짜 지정이 그 대안. 양 끝으로 떼어놓으면 둘이 같은 일을 하는
+   두 경로라는 것이 보이지 않고 자주 쓰는 쪽이 눈에 늦게 들어온다. */
+.brief-gen-alt {
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-meta);
+  padding: 0 var(--sp-1);
+}
 .brief-gen-actionbar input[type="date"] {
   flex: 0 0 auto;
   width: 160px;
@@ -15278,6 +15283,29 @@ select { min-height: 36px; padding: 0 12px; }
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
+
+/* 검색과 필터가 각각 한 줄인 형태(RSS). 전문 검색은 목록 필터가 아니라 다른 결과
+   집합을 만드는 별개 동작이라 버튼을 유지하고, 선택 필터는 즉시 적용한다. */
+.find-bar--stacked { flex-direction: column; align-items: stretch; }
+.find-bar__row { display: flex; align-items: center; gap: var(--sp-2); }
+.find-bar__more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
+.find-bar__detail { flex: 0 0 auto; }
+.find-bar__detail > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  list-style: none;
+}
+.find-bar__detail > summary::-webkit-details-marker { display: none; }
+.find-bar__detail > summary:hover { background: var(--surface-control-hover); }
+.find-bar__detail[open] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
 
 @media (max-width: 760px) {
   .find-bar__search { flex: 1 1 100%; }

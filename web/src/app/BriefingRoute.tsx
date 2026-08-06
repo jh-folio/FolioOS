@@ -614,6 +614,10 @@ export function BriefingRoute() {
             </label>
           </div>
           <div className="brief-gen-actionbar">
+            <button className="btn btn--primary" type="button" onClick={() => generateBriefing()} disabled={generating}>
+              {generating ? "생성 중" : "오늘 브리핑 생성"}
+            </button>
+            <span className="brief-gen-alt">또는</span>
             {/* 발행일이 아니라 시장 세션일이다. 미국장 8/3 세션은 8/4에 발행되므로
                 예전 라벨("브리핑 날짜")은 어느 장을 받게 되는지 알 수 없었다. */}
             <input
@@ -625,10 +629,6 @@ export function BriefingRoute() {
             />
             <button className="btn" type="button" onClick={() => generateBriefing(briefingDate)} disabled={generating || !briefingDate}>
               이 기준일로 생성
-            </button>
-            {/* primary는 행의 오른쪽 끝에 둔다(전 탭 공통 규칙). */}
-            <button className="btn btn--primary brief-gen-primary" type="button" onClick={() => generateBriefing()} disabled={generating}>
-              {generating ? "생성 중" : "오늘 브리핑 생성"}
             </button>
           </div>
         </section>

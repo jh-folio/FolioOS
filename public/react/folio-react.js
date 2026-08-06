@@ -9617,6 +9617,17 @@ function Qr() {
 						/* @__PURE__ */ (0, C.jsxs)("div", {
 							className: "brief-gen-actionbar",
 							children: [
+								/* @__PURE__ */ (0, C.jsx)("button", {
+									className: "btn btn--primary",
+									type: "button",
+									onClick: () => G(),
+									disabled: u,
+									children: u ? "생성 중" : "오늘 브리핑 생성"
+								}),
+								/* @__PURE__ */ (0, C.jsx)("span", {
+									className: "brief-gen-alt",
+									children: "또는"
+								}),
 								/* @__PURE__ */ (0, C.jsx)("input", {
 									type: "date",
 									value: E,
@@ -9630,13 +9641,6 @@ function Qr() {
 									onClick: () => G(E),
 									disabled: u || !E,
 									children: "이 기준일로 생성"
-								}),
-								/* @__PURE__ */ (0, C.jsx)("button", {
-									className: "btn btn--primary brief-gen-primary",
-									type: "button",
-									onClick: () => G(),
-									disabled: u,
-									children: u ? "생성 중" : "오늘 브리핑 생성"
 								})
 							]
 						})
@@ -14162,10 +14166,7 @@ function So({ resolution: e }) {
 		]
 	});
 }
-var Co = [{
-	key: "custom",
-	label: "질문 중심"
-}], wo = { custom: "질문 중심" }, To = [
+var Co = "custom", wo = { custom: "질문 중심" }, To = [
 	"queued",
 	"running",
 	"cancel_requested",
@@ -14472,7 +14473,7 @@ function Uo({ envelope: e, executionMode: t, cliAdapter: n, onExecutionMode: r, 
 	});
 }
 function Wo() {
-	let [e, t] = (0, S.useState)(0), [i, a] = (0, S.useState)([]), [o, s] = (0, S.useState)(null), c = (0, S.useMemo)(() => Tn(window.location.hash), []), [l, d] = (0, S.useState)(c.kind === "report" ? c.id : ""), [f, m] = (0, S.useState)(c.kind === "collection" ? c.id : ""), [h, g] = (0, S.useState)(c.malformed), [_, v] = (0, S.useState)(""), [y, b] = (0, S.useState)(""), [x, w] = (0, S.useState)("include_current"), [T, E] = (0, S.useState)("AUTO"), [D, O] = (0, S.useState)(null), [k, j] = (0, S.useState)(!1), [M, N] = (0, S.useState)("readiness"), [P, F] = (0, S.useState)(null), [ee, I] = (0, S.useState)("direct"), [L, R] = (0, S.useState)("auto"), [z, B] = (0, S.useState)(!1), [V, H] = (0, S.useState)(!1), [U, W] = (0, S.useState)(""), [te, G] = (0, S.useState)(null), [ne, re] = (0, S.useState)(""), [ie, ae] = (0, S.useState)(null), [oe, se] = (0, S.useState)(""), [ce, le] = (0, S.useState)(""), [ue, de] = (0, S.useState)(0), fe = (0, S.useRef)(0), pe = (0, S.useRef)(null), me = (0, S.useRef)(null), ge = (0, S.useRef)(""), _e = (0, S.useRef)(!1), ve = Co[0].key, ye = _, be = (0, S.useCallback)(() => {
+	let [e, t] = (0, S.useState)(0), [i, a] = (0, S.useState)([]), [o, s] = (0, S.useState)(null), c = (0, S.useMemo)(() => Tn(window.location.hash), []), [l, d] = (0, S.useState)(c.kind === "report" ? c.id : ""), [f, m] = (0, S.useState)(c.kind === "collection" ? c.id : ""), [h, g] = (0, S.useState)(c.malformed), [_, v] = (0, S.useState)(""), [y, b] = (0, S.useState)(""), [x, w] = (0, S.useState)("include_current"), [T, E] = (0, S.useState)("AUTO"), [D, O] = (0, S.useState)(null), [k, j] = (0, S.useState)(!1), [M, N] = (0, S.useState)("readiness"), [P, F] = (0, S.useState)(null), [ee, I] = (0, S.useState)("direct"), [L, R] = (0, S.useState)("auto"), [z, B] = (0, S.useState)(!1), [V, H] = (0, S.useState)(!1), [U, W] = (0, S.useState)(""), [te, G] = (0, S.useState)(null), [ne, re] = (0, S.useState)(""), [ie, ae] = (0, S.useState)(null), [oe, se] = (0, S.useState)(""), [ce, le] = (0, S.useState)(""), [ue, de] = (0, S.useState)(0), fe = (0, S.useRef)(0), pe = (0, S.useRef)(null), me = (0, S.useRef)(null), ge = (0, S.useRef)(""), _e = (0, S.useRef)(!1), ve = Co, ye = _, be = (0, S.useCallback)(() => {
 		pe.current?.abort();
 		let e = new AbortController();
 		return pe.current = e, fe.current += 1, {
@@ -14966,18 +14967,6 @@ function Wo() {
 							/* @__PURE__ */ (0, C.jsx)("h2", { children: "무엇을 투자 판단으로 확인하고 싶나요?" }),
 							/* @__PURE__ */ (0, C.jsx)("p", { children: "질문은 1~500자로 입력하세요. 추가로 적는 조건은 내 생각(가설)로만 전달되며 외부 근거로 쓰이지 않습니다." })
 						]
-					}),
-					/* @__PURE__ */ (0, C.jsx)("div", {
-						className: "topicrpt-topic-row",
-						children: /* @__PURE__ */ (0, C.jsx)("div", {
-							className: "topicrpt-preset-btns",
-							"aria-label": "리서치 모드",
-							children: Co.map((e) => /* @__PURE__ */ (0, C.jsx)("span", {
-								className: "btn topicrpt-preset active",
-								"data-topic": e.key,
-								children: e.label
-							}, e.key))
-						})
 					}),
 					/* @__PURE__ */ (0, C.jsxs)("label", {
 						className: "field topicrpt-question-field",
@@ -16718,11 +16707,15 @@ function oc() {
 		M(1, c), N();
 	}, []);
 	async function P(e) {
-		if (e.preventDefault(), u.start && u.end && u.start > u.end) {
+		let t = {
+			...u,
+			...e
+		};
+		if (d(t), t.start && t.end && t.start > t.end) {
 			x("시작 시간은 종료 시간보다 앞서야 합니다.");
 			return;
 		}
-		T(""), await M(1, u);
+		x(""), T(""), await M(1, t);
 	}
 	async function F() {
 		T(""), p(""), d(qs), await M(1, qs);
@@ -16801,10 +16794,10 @@ function oc() {
 				})
 			}),
 			/* @__PURE__ */ (0, C.jsxs)("section", {
-				className: "react-rss-control-panel react-rss-filter-panel",
+				className: "find-bar find-bar--stacked",
 				"aria-label": "RSS 필터와 검색",
 				children: [/* @__PURE__ */ (0, C.jsxs)("div", {
-					className: "react-rss-searchbar",
+					className: "find-bar__row",
 					children: [/* @__PURE__ */ (0, C.jsx)("input", {
 						type: "search",
 						"aria-label": "본문 검색어",
@@ -16813,7 +16806,8 @@ function oc() {
 						onChange: (e) => p(e.currentTarget.value),
 						onKeyDown: (e) => {
 							e.key === "Enter" && (e.preventDefault(), ee());
-						}
+						},
+						className: "find-bar__search"
 					}), /* @__PURE__ */ (0, C.jsx)("button", {
 						className: "btn",
 						type: "button",
@@ -16821,111 +16815,92 @@ function oc() {
 						disabled: v,
 						children: v ? "검색 중" : "본문 검색"
 					})]
-				}), /* @__PURE__ */ (0, C.jsxs)("form", {
-					className: "react-rss-filter-grid",
-					onSubmit: P,
+				}), /* @__PURE__ */ (0, C.jsxs)("div", {
+					className: "find-bar__more",
 					children: [
-						/* @__PURE__ */ (0, C.jsxs)("label", { children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "시장" }), /* @__PURE__ */ (0, C.jsx)("select", {
-							value: u.market,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									market: t
-								}));
-							},
-							children: Ys.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
-								value: e.value,
-								children: e.label
-							}, e.value || "all-market"))
-						})] }),
-						/* @__PURE__ */ (0, C.jsxs)("label", { children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "국가" }), /* @__PURE__ */ (0, C.jsxs)("select", {
-							value: u.country,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									country: t
-								}));
-							},
-							children: [/* @__PURE__ */ (0, C.jsx)("option", {
-								value: "",
-								children: "전체 국가"
-							}), A.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
-								value: e,
-								children: Xs[e] || e
-							}, e))]
-						})] }),
-						/* @__PURE__ */ (0, C.jsxs)("label", { children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "언어" }), /* @__PURE__ */ (0, C.jsxs)("select", {
-							value: u.language,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									language: t
-								}));
-							},
-							children: [/* @__PURE__ */ (0, C.jsx)("option", {
-								value: "",
-								children: "전체 언어"
-							}), j.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
-								value: e,
-								children: Zs[e] || e
-							}, e))]
-						})] }),
-						/* @__PURE__ */ (0, C.jsxs)("label", { children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "소스" }), /* @__PURE__ */ (0, C.jsxs)("select", {
-							value: u.source,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									source: t
-								}));
-							},
-							children: [/* @__PURE__ */ (0, C.jsx)("option", {
-								value: "",
-								children: "전체 소스"
-							}), k.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
-								value: e,
-								children: e
-							}, e))]
-						})] }),
-						/* @__PURE__ */ (0, C.jsxs)("label", { children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "시작" }), /* @__PURE__ */ (0, C.jsx)("input", {
-							type: "datetime-local",
-							value: u.start,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									start: t
-								}));
-							}
-						})] }),
-						/* @__PURE__ */ (0, C.jsxs)("label", { children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "종료" }), /* @__PURE__ */ (0, C.jsx)("input", {
-							type: "datetime-local",
-							value: u.end,
-							onChange: (e) => {
-								let t = e.currentTarget.value;
-								d((e) => ({
-									...e,
-									end: t
-								}));
-							}
-						})] }),
-						/* @__PURE__ */ (0, C.jsxs)("div", {
-							className: "react-rss-filter-actions",
-							children: [/* @__PURE__ */ (0, C.jsx)("button", {
-								className: "btn btn--primary",
-								type: "submit",
-								disabled: m,
-								children: "필터 적용"
-							}), /* @__PURE__ */ (0, C.jsx)("button", {
-								className: "btn btn--text",
-								type: "button",
-								onClick: F,
-								disabled: m,
-								children: "초기화"
+						/* @__PURE__ */ (0, C.jsxs)("label", {
+							className: "find-bar__field",
+							children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "시장" }), /* @__PURE__ */ (0, C.jsx)("select", {
+								value: u.market,
+								onChange: (e) => void P({ market: e.currentTarget.value }),
+								children: Ys.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
+									value: e.value,
+									children: e.label
+								}, e.value || "all-market"))
 							})]
+						}),
+						/* @__PURE__ */ (0, C.jsxs)("label", {
+							className: "find-bar__field",
+							children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "소스" }), /* @__PURE__ */ (0, C.jsxs)("select", {
+								value: u.source,
+								onChange: (e) => void P({ source: e.currentTarget.value }),
+								children: [/* @__PURE__ */ (0, C.jsx)("option", {
+									value: "",
+									children: "전체 소스"
+								}), k.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
+									value: e,
+									children: e
+								}, e))]
+							})]
+						}),
+						/* @__PURE__ */ (0, C.jsxs)("label", {
+							className: "find-bar__field",
+							children: [
+								/* @__PURE__ */ (0, C.jsx)("span", { children: "기간" }),
+								/* @__PURE__ */ (0, C.jsx)("input", {
+									type: "datetime-local",
+									"aria-label": "시작",
+									value: u.start,
+									onChange: (e) => void P({ start: e.currentTarget.value })
+								}),
+								/* @__PURE__ */ (0, C.jsx)("input", {
+									type: "datetime-local",
+									"aria-label": "종료",
+									value: u.end,
+									onChange: (e) => void P({ end: e.currentTarget.value })
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, C.jsxs)("details", {
+							className: "find-bar__detail",
+							children: [
+								/* @__PURE__ */ (0, C.jsx)("summary", { children: "상세" }),
+								/* @__PURE__ */ (0, C.jsxs)("label", {
+									className: "find-bar__field",
+									children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "국가" }), /* @__PURE__ */ (0, C.jsxs)("select", {
+										value: u.country,
+										onChange: (e) => void P({ country: e.currentTarget.value }),
+										children: [/* @__PURE__ */ (0, C.jsx)("option", {
+											value: "",
+											children: "전체 국가"
+										}), A.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
+											value: e,
+											children: Xs[e] || e
+										}, e))]
+									})]
+								}),
+								/* @__PURE__ */ (0, C.jsxs)("label", {
+									className: "find-bar__field",
+									children: [/* @__PURE__ */ (0, C.jsx)("span", { children: "언어" }), /* @__PURE__ */ (0, C.jsxs)("select", {
+										value: u.language,
+										onChange: (e) => void P({ language: e.currentTarget.value }),
+										children: [/* @__PURE__ */ (0, C.jsx)("option", {
+											value: "",
+											children: "전체 언어"
+										}), j.map((e) => /* @__PURE__ */ (0, C.jsx)("option", {
+											value: e,
+											children: Zs[e] || e
+										}, e))]
+									})]
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, C.jsx)("button", {
+							className: "btn btn--text find-bar__reset",
+							type: "button",
+							onClick: F,
+							disabled: m,
+							children: "초기화"
 						})
 					]
 				})]

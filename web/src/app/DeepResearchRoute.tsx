@@ -236,7 +236,9 @@ export function MarketStateReportContext({ resolution }: { resolution?: MarketSt
   );
 }
 
-const TOPIC_PRESETS = [{ key: "custom", label: "질문 중심" }] as const;
+// 저장 보고서 호환용 topicKey. 0.5 기준 딥 리서치는 질문 중심 하나뿐이라
+// 사용자가 고를 프리셋이 없다(선택지 하나짜리 컨트롤은 두지 않는다).
+const DEFAULT_TOPIC_KEY = "custom";
 const PRESET_LABELS: Record<string, string> = { custom: "질문 중심" };
 const JOB_STATUS_VALUES = [
   "queued",
@@ -515,7 +517,7 @@ export function DeepResearchRoute() {
   const openingReportId = useRef("");
   const restoreFocusPending = useRef(false);
 
-  const topicKey = TOPIC_PRESETS[0].key;
+  const topicKey = DEFAULT_TOPIC_KEY;
   const customLabel = question;
   const deepResearch = true;
 
@@ -1003,11 +1005,6 @@ export function DeepResearchRoute() {
             <span className="section-kicker">투자 질문</span>
             <h2>무엇을 투자 판단으로 확인하고 싶나요?</h2>
             <p>질문은 1~500자로 입력하세요. 추가로 적는 조건은 내 생각(가설)로만 전달되며 외부 근거로 쓰이지 않습니다.</p>
-          </div>
-          <div className="topicrpt-topic-row">
-            <div className="topicrpt-preset-btns" aria-label="리서치 모드">
-              {TOPIC_PRESETS.map((preset) => <span className="btn topicrpt-preset active" data-topic={preset.key} key={preset.key}>{preset.label}</span>)}
-            </div>
           </div>
           <label className="field topicrpt-question-field">
             <span>투자 질문</span>

@@ -226,14 +226,16 @@ export function RssRoute() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function applyFilters(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (draftFilters.start && draftFilters.end && draftFilters.start > draftFilters.end) {
+  async function updateFilter(patch: Partial<RssFilters>) {
+    const next = { ...draftFilters, ...patch };
+    setDraftFilters(next);
+    if (next.start && next.end && next.start > next.end) {
       setError("시작 시간은 종료 시간보다 앞서야 합니다.");
       return;
     }
+    setError("");
     setStatus("");
-    await loadItems(1, draftFilters);
+    await loadItems(1, next);
   }
 
   async function clearFilters() {
@@ -328,8 +330,8 @@ export function RssRoute() {
       {/* 필터 표면이 셋으로 흩어져 있었다: 기간·소스 폼, 별도 검색 폼, 목록 옆에서 즉시
           적용되던 시장 드롭다운. 한 패널로 모으되 두 동작은 구분해 둔다 — 검색은 본문까지
           훑어 다른 결과 목록을 만들고, 필터는 지금 보는 피드를 좁힌다. */}
-      <section className="react-rss-control-panel react-rss-filter-panel" aria-label="RSS 필터와 검색">
-        <div className="react-rss-searchbar">
+      <section className="find-bar find-bar--stacked" aria-label="RSS 필터와 검색">
+        <div className="find-bar__row">
           <input
             type="search"
             aria-label="본문 검색어"
@@ -337,84 +339,55 @@ export function RssRoute() {
             placeholder="기업, 티커, 섹터 또는 이슈"
             onChange={(event) => setSearchQuery(event.currentTarget.value)}
             onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); searchNews(); } }}
+            className="find-bar__search"
           />
           <button className="btn" type="button" onClick={() => searchNews()} disabled={searching}>
             {searching ? "검색 중" : "본문 검색"}
           </button>
         </div>
 
-        <form className="react-rss-filter-grid" onSubmit={applyFilters}>
-          <label>
+        <div className="find-bar__more">
+          <label className="find-bar__field">
             <span>시장</span>
-            <select
-              value={draftFilters.market}
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, market: value })); }}
-            >
+            <select value={draftFilters.market} onChange={(event) => void updateFilter({ market: event.currentTarget.value })}>
               {MARKET_OPTIONS.map((option) => (
                 <option key={option.value || "all-market"} value={option.value}>{option.label}</option>
               ))}
             </select>
           </label>
-          <label>
-            <span>국가</span>
-            <select
-              value={draftFilters.country}
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, country: value })); }}
-            >
-              <option value="">전체 국가</option>
-              {countries.map((code) => (
-                <option key={code} value={code}>{COUNTRY_LABELS[code] || code}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>언어</span>
-            <select
-              value={draftFilters.language}
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, language: value })); }}
-            >
-              <option value="">전체 언어</option>
-              {languages.map((code) => (
-                <option key={code} value={code}>{LANGUAGE_LABELS[code] || code}</option>
-              ))}
-            </select>
-          </label>
-          <label>
+          <label className="find-bar__field">
             <span>소스</span>
-            <select
-              value={draftFilters.source}
-              // 상태 업데이터는 렌더 시점에 실행되는데 그때 React는 currentTarget을 이미 비운다.
-              // 이벤트 값을 핸들러 안에서 먼저 읽어야 한다.
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, source: value })); }}
-            >
+            <select value={draftFilters.source} onChange={(event) => void updateFilter({ source: event.currentTarget.value })}>
               <option value="">전체 소스</option>
-              {sources.map((source) => (
-                <option key={source} value={source}>{source}</option>
-              ))}
+              {sources.map((source) => <option key={source} value={source}>{source}</option>)}
             </select>
           </label>
-          <label>
-            <span>시작</span>
-            <input
-              type="datetime-local"
-              value={draftFilters.start}
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, start: value })); }}
-            />
+          <label className="find-bar__field">
+            <span>기간</span>
+            <input type="datetime-local" aria-label="시작" value={draftFilters.start} onChange={(event) => void updateFilter({ start: event.currentTarget.value })} />
+            <input type="datetime-local" aria-label="종료" value={draftFilters.end} onChange={(event) => void updateFilter({ end: event.currentTarget.value })} />
           </label>
-          <label>
-            <span>종료</span>
-            <input
-              type="datetime-local"
-              value={draftFilters.end}
-              onChange={(event) => { const value = event.currentTarget.value; setDraftFilters((current) => ({ ...current, end: value })); }}
-            />
-          </label>
-          <div className="react-rss-filter-actions">
-            <button className="btn btn--primary" type="submit" disabled={loading}>필터 적용</button>
-            {/* 이전 `전체 기간` 버튼은 초기화와 같은 clearFilters를 호출하는 중복이라 없앴다. */}
-            <button className="btn btn--text" type="button" onClick={clearFilters} disabled={loading}>초기화</button>
-          </div>
-        </form>
+          {/* 국가·언어는 시장과 겹치는 좁힘 조건이라 평소에는 접어 둔다.
+              여섯 개를 한 줄에 늘어놓으면 매일 쓰는 시장·소스가 묻힌다. */}
+          <details className="find-bar__detail">
+            <summary>상세</summary>
+            <label className="find-bar__field">
+              <span>국가</span>
+              <select value={draftFilters.country} onChange={(event) => void updateFilter({ country: event.currentTarget.value })}>
+                <option value="">전체 국가</option>
+                {countries.map((code) => <option key={code} value={code}>{COUNTRY_LABELS[code] || code}</option>)}
+              </select>
+            </label>
+            <label className="find-bar__field">
+              <span>언어</span>
+              <select value={draftFilters.language} onChange={(event) => void updateFilter({ language: event.currentTarget.value })}>
+                <option value="">전체 언어</option>
+                {languages.map((code) => <option key={code} value={code}>{LANGUAGE_LABELS[code] || code}</option>)}
+              </select>
+            </label>
+          </details>
+          <button className="btn btn--text find-bar__reset" type="button" onClick={clearFilters} disabled={loading}>초기화</button>
+        </div>
       </section>
 
       <div className="react-rss-summary">
