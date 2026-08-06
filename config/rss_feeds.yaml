@@ -72,10 +72,13 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+  # MarketPulse는 2026-08-06 확인 시 최신 항목이 2025-07-03이다. 옛 호스트
+  # (feeds.marketwatch.com)와 현행 호스트 양쪽이 같은 낡은 30건을 200 OK로 돌려준다.
+  # 발행이 끊긴 코너이며, 켜 두면 건수만 늘고 새 기사는 들어오지 않는다.
   - media: "MarketWatch"
     url: "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"
     category: "markets"
-    enabled: true
+    enabled: false
     priority: 3
     allow_full_text: false
     reliability_tier: 2

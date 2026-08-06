@@ -7,9 +7,18 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
-  - media: "Dow Jones"
-    url: "https://rss.app/feeds/_m6HwVpkVbkV6H1V6.xml"
+  # Bloomberg 공식 피드. 유료벽으로 본문은 오지 않지만 제목·요약은 0.3~1.7시간 내로 신선하다.
+  - media: "Bloomberg"
+    url: "https://feeds.bloomberg.com/markets/news.rss"
     category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Bloomberg"
+    url: "https://feeds.bloomberg.com/technology/news.rss"
+    category: "technology"
     enabled: true
     priority: 4
     allow_full_text: false
@@ -56,119 +65,38 @@ feeds:
     reliability_tier: 2
     default_market: "US"
   - media: "MarketWatch"
-    url: "https://feeds.marketwatch.com/marketwatch/topstories/"
+    url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"
     category: "markets"
     enabled: true
     priority: 3
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+  # MarketPulse는 2026-08-06 확인 시 최신 항목이 2025-07-03이다. 옛 호스트
+  # (feeds.marketwatch.com)와 현행 호스트 양쪽이 같은 낡은 30건을 200 OK로 돌려준다.
+  # 발행이 끊긴 코너이며, 켜 두면 건수만 늘고 새 기사는 들어오지 않는다.
   - media: "MarketWatch"
-    url: "https://feeds.marketwatch.com/marketwatch/marketpulse/"
+    url: "https://feeds.content.dowjones.io/public/rss/mw_marketpulse"
     category: "markets"
-    enabled: true
+    enabled: false
     priority: 3
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
-  - media: "Reuters"
-    url: "https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
-    category: "top"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "GLOBAL"
-  - media: "Reuters"
-    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fmarkets%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+  # 직접 피드(본문 확보 가능). Google 뉴스 경유는 제목만 남으므로 본문이 필요한 미국/영미권
+  # 커버리지는 아래 공식 피드에서 받는다. 2026-08-03 확인: 최신 0.1~3.1시간, 본문 7~18k자.
+  # Yahoo는 여러 발행처를 섞어 내보낸다(개인재테크 콘텐츠가 60% 이상). 아래 발행처만 남기고
+  # 저장 시에는 원 발행처 이름으로 태그한다. Google 경유로는 제목만 오는 매체를 본문까지 받는 경로다.
+  - media: "Yahoo Finance"
+    url: "https://finance.yahoo.com/news/rssindex"
     category: "markets"
     enabled: true
     priority: 5
-    allow_full_text: false
+    allow_full_text: true
     reliability_tier: 2
     default_market: "US"
-  - media: "Reuters"
-    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fbusiness%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
-    category: "business"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "US"
-  - media: "Reuters"
-    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fworld%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
-    category: "world"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "GLOBAL"
-  - media: "Reuters"
-    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Ftechnology%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
-    category: "technology"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "US"
-  - media: "WSJ"
-    url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml"
-    category: "markets"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "US"
-  - media: "WSJ"
-    url: "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml"
-    category: "business"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "US"
-  - media: "WSJ"
-    url: "https://feeds.a.dj.com/rss/RSSWSJD.xml"
-    category: "markets"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "US"
-  - media: "Financial Times"
-    url: "https://www.ft.com/markets?format=rss"
-    category: "markets"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "GLOBAL"
-  - media: "Financial Times"
-    url: "https://www.ft.com/companies?format=rss"
-    category: "companies"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "GLOBAL"
-  - media: "Financial Times"
-    url: "https://www.ft.com/global-economy?format=rss"
-    category: "macro"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "GLOBAL"
-  - media: "Financial Times"
-    url: "https://www.ft.com/technology?format=rss"
-    category: "technology"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "GLOBAL"
-  # 0.5 Europe/Japan feeds. Local-language titles remain untranslated; Google News
-  # entries retain RSS summaries and never trigger aggregator-page body fetching.
+    only_publishers:
+      - "Reuters"
   - media: "The Guardian"
     url: "https://www.theguardian.com/uk/business/rss"
     category: "business"
@@ -412,6 +340,122 @@ feeds:
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T10:30:00Z"
     freshness_item_count: 30
+  # 보도자료 와이어. source_type=press_release로 분리해 브리핑 입력에서는 제외하고,
+  # 워치리스트 종목 뉴스와 기업분석 보조자료로만 쓴다. 기업이 직접 낸 1차 자료다.
+  - media: "PR Newswire"
+    url: "https://www.prnewswire.com/rss/financial-services-latest-news/financial-services-latest-news-list.rss"
+    category: "press_release"
+    source_type: "press_release"
+    enabled: true
+    priority: 3
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "US"
+  - media: "GlobeNewswire"
+    url: "https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies"
+    category: "press_release"
+    source_type: "press_release"
+    enabled: true
+    priority: 3
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "top"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fmarkets%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "markets"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fbusiness%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "business"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fworld%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "world"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Reuters"
+    url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Ftechnology%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+    category: "technology"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "WSJ"
+    url: "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain"
+    category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "WSJ"
+    url: "https://feeds.content.dowjones.io/public/rss/WSJcomUSBusiness"
+    category: "business"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "WSJ"
+    url: "https://feeds.content.dowjones.io/public/rss/RSSWorldNews"
+    category: "markets"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "US"
+  - media: "Financial Times"
+    url: "https://www.ft.com/markets?format=rss"
+    category: "markets"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Financial Times"
+    url: "https://www.ft.com/companies?format=rss"
+    category: "companies"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Financial Times"
+    url: "https://www.ft.com/global-economy?format=rss"
+    category: "macro"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
+  - media: "Financial Times"
+    url: "https://www.ft.com/technology?format=rss"
+    category: "technology"
+    enabled: true
+    priority: 5
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "GLOBAL"
   - media: "한국경제"
     url: "https://www.hankyung.com/feed/finance"
     category: "kr_markets"

@@ -13,11 +13,15 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import zipfile
 from pathlib import Path
 
 from verify_release import load_manifest, verify_release
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,24 +30,15 @@ DEFAULT_MANIFEST = ROOT / "release-manifest.json"
 RELEASE_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 DEFAULT_VERSION = f"v{RELEASE_VERSION}"
 
+# 두 목록은 config_bootstrap에서 파생한다. 손으로 관리하던 시절 유럽/일본
+# 구성종목 파일이 여기에만 빠져서, 부트스트랩은 그 파일을 아는데 패키지에는
+# 없는 상태로 0.5가 나갈 뻔했다.
 ADDITIONAL_SOURCE_FILES = {
     "features/common/config_bootstrap.py",
-    "defaults/config/company_aliases.json",
-    "defaults/config/company_master.json",
-    "defaults/config/evidence_sources.yaml",
-    "defaults/config/kospi200_constituents.json",
-    "defaults/config/rss_feeds.yaml",
-    "defaults/config/sp500_constituents.json",
+    *(f"defaults/config/{name}" for name in DEFAULT_CONFIG_NAMES),
 }
 
-ALLOWED_LOCAL_CONFIG_PATHS = {
-    "company_aliases.json",
-    "company_master.json",
-    "evidence_sources.yaml",
-    "kospi200_constituents.json",
-    "rss_feeds.yaml",
-    "sp500_constituents.json",
-}
+ALLOWED_LOCAL_CONFIG_PATHS = set(DEFAULT_CONFIG_NAMES)
 
 EXCLUDED_DIR_NAMES = {
     "__pycache__",

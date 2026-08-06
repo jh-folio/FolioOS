@@ -9,15 +9,17 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_COMMIT = "73a8a3a40de51cc482ae6c28a446ffc8f0492410"
-DEFAULT_NAMES = (
-    "company_aliases.json",
-    "company_master.json",
-    "evidence_sources.yaml",
-    "kospi200_constituents.json",
-    "rss_feeds.yaml",
-    "sp500_constituents.json",
-)
+# 패키지에 들어가는 기본 설정은 사람이 검토한 바이트 그대로여야 한다. 핀을 옮기는
+# 커밋이 곧 "다시 봤다"는 기록이므로, 기본값을 바꾸면 이 테스트가 빨개진다.
+#
+# 예전에는 config/의 blob과 비교했는데 config/는 .gitignore 대상이라 새 파일이
+# 추적되지 않는다. 그래서 유럽/일본 구성종목 파일은 목록에도 못 들어가고 검사도
+# 받지 못했다. 이제 defaults/ 자신의 검토 시점 blob과 비교한다.
+BASE_COMMIT = "REVIEWED_DEFAULTS_PIN"
+sys.path.insert(0, str(ROOT))
+from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
+
+DEFAULT_NAMES = tuple(sorted(DEFAULT_CONFIG_NAMES))
 sys.path.insert(0, str(ROOT / "scripts"))
 import public_release_audit as release_audit  # noqa: E402
 
@@ -73,13 +75,28 @@ def _audit(root: Path) -> list[str]:
 def test_defaults_are_exact_reviewed_git_blobs() -> None:
     for name in DEFAULT_NAMES:
         result = subprocess.run(
-            ["git", "cat-file", "blob", f"{BASE_COMMIT}:config/{name}"],
+            ["git", "cat-file", "blob", f"{BASE_COMMIT}:defaults/config/{name}"],
             cwd=ROOT,
             capture_output=True,
             check=False,
         )
-        assert result.returncode == 0
+        assert result.returncode == 0, f"{name} is not in the reviewed pin {BASE_COMMIT}"
         assert (ROOT / "defaults" / "config" / name).read_bytes() == result.stdout
+
+
+def test_every_bootstrapped_config_ships_and_is_reviewed() -> None:
+    """부트스트랩이 아는 파일과 패키지·검토 목록이 갈라지면 안 된다.
+
+    갈라졌을 때 조용히 깨진다: 첫 실행이 defaults에서 파일을 읽는데 패키지에
+    그 파일이 없다. 0.5의 유럽/일본 구성종목이 그 상태였다.
+    """
+    import package_release
+
+    for name in DEFAULT_CONFIG_NAMES:
+        assert (ROOT / "defaults" / "config" / name).exists(), name
+        assert f"defaults/config/{name}" in package_release.ADDITIONAL_SOURCE_FILES, name
+        assert name in package_release.ALLOWED_LOCAL_CONFIG_PATHS, name
+        assert name in DEFAULT_NAMES, name
 
 
 def test_audit_refuses_to_read_user_roots(
