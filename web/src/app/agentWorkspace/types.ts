@@ -53,6 +53,8 @@ export type AgentMessage = {
   // 폴링이 시간 안에 끝나지 않았을 때만 남는다. 사용자가 같은 작업을 다시 확인할 수 있게 한다.
   jobId?: string;
   createdAt?: string;
+  /** 안내 문구는 대화 기록이 아니다. 저장·이관에서 제외한다. */
+  variant?: "welcome";
 };
 
 export type Attachment = {

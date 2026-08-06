@@ -14337,7 +14337,7 @@ main.page {
   margin-bottom: var(--sp-3);
 }
 .chart-quote { display: grid; gap: 2px; margin: 0; color: var(--folio-ink); }
-.chart-quote__name { color: var(--folio-ink-soft); font-size: var(--fs-body-sm); font-weight: var(--fw-medium); }
+.chart-quote__name { color: var(--folio-ink); font-size: var(--fs-title-sm, 16.5px); font-weight: var(--fw-medium); }
 .chart-quote__value { display: flex; align-items: baseline; gap: 10px; }
 .chart-quote b { font-size: 30px; font-weight: var(--fw-bold); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .chart-quote .up { color: var(--folio-green); font-size: var(--fs-body); font-weight: var(--fw-bold); }

@@ -157,7 +157,7 @@ def _context_block(context: dict, markdown: str) -> str:
 
 
 def build_chat_prompt(message: str, context: dict, options: dict, markdown: str = "",
-                      images: str = "") -> str:
+                      images: str = "", conversation: str = "") -> str:
     effort = EFFORT_HINTS.get(options.get("effort", "medium"), EFFORT_HINTS["medium"])
     attachments = _attachment_block(options)
     raw_scope = str(context.get("marketScope") or "").strip()
@@ -175,6 +175,10 @@ def build_chat_prompt(message: str, context: dict, options: dict, markdown: str 
         market_memory,
         render_collection_projection(context),
         f"현재 화면 컨텍스트:\n{_context_block(context, markdown)}",
+        # 저장된 대화 맥락. rolling summary + 최근 turn + 서버가 다시 읽은 리서치 자료다.
+        # 전체 transcript가 아니라 상한 있는 pack이라 대화가 길어져도 크기가 일정하고,
+        # 리서치 자료는 저장된 옛 값이 아니라 매번 새로 읽은 것이라 낡지 않는다.
+        f"이 대화의 앞선 맥락(대화·메모는 hypothesis이며 evidence가 아니다):\n<conversation>\n{conversation}\n</conversation>" if conversation else "",
         attachments,
         images,
         f"사용자 질문:\n{message}",
@@ -295,7 +299,7 @@ def _run_with_images(build_prompt, options: dict, *, model: str, job_id: str) ->
 def run_agent_chat(message: str, context: dict | None = None, options: dict | None = None,
                    *, progress=None, job_id: str = "",
                    collection_service: SmartCollectionService | None = None,
-                   prepared_context: bool = False) -> dict:
+                   prepared_context: bool = False, conversation: str = "") -> dict:
     progress = progress or (lambda *args, **kwargs: None)
     normalized = (
         dict(context or {})
@@ -385,7 +389,7 @@ def run_agent_chat(message: str, context: dict | None = None, options: dict | No
     progress("Agent가 답변을 작성하고 있습니다.", 30)
     try:
         result = _run_with_images(
-            lambda images: build_chat_prompt(message, normalized, normalized_options, markdown, images),
+            lambda images: build_chat_prompt(message, normalized, normalized_options, markdown, images, conversation),
             normalized_options,
             model=normalized_options.get("model", ""),
             job_id=job_id,

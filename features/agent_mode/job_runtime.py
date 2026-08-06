@@ -218,36 +218,60 @@ def _market_connection():
     return connection
 
 
-def run_consultation_job(data_dir: Path, session_id: str, user_message_id: str, *, progress=None, job_id: str = "") -> dict[str, str]:
-    """Answer one saved consultation turn and persist the reply outside job telemetry."""
+def run_consultation_job(data_dir: Path, session_id: str, user_message_id: str, *, progress=None, job_id: str = "",
+                         screen_context: dict | None = None, options: dict | None = None) -> dict[str, str]:
+    """Answer one saved turn and persist the reply outside job telemetry.
+
+    생성은 도크와 같은 경로(`run_agent_chat`)가 맡는다. 저장 경로만 따로 두면 같은
+    대화가 두 길로 다니게 되고, 제안을 승인·거절한 사실이 대화 기록에 남지 않아
+    다음 세션의 Agent가 같은 제안을 다시 하게 된다. 여기는 맥락 조립과 저장만 한다.
+    """
     progress = progress or (lambda *_args, **_kwargs: None)
-    from features.agent_mode import bridge
+    from features.agent_mode.chat import run_agent_chat
     from features.agent_mode.consultation_context import assemble_consultation_context
-    from features.agent_mode.consultation_prompt import build_consultation_prompt, rules_fallback
+    from features.agent_mode.consultation_prompt import rules_fallback
     from features.agent_mode.consultation_store import append_assistant_message, get_session
 
     session = get_session(data_dir, session_id)
     user_message = next((row for row in session.get("messages") or [] if row.get("id") == user_message_id and row.get("role") == "user"), None)
     if not user_message:
         raise ValueError("consultation_user_message_not_found")
-    progress("상담 문맥을 조립하고 있습니다.", 20)
+    question = str(user_message.get("content") or "")
+    progress("대화 맥락을 조립하고 있습니다.", 20)
     context = assemble_consultation_context(data_dir, session_id)
-    prompt = build_consultation_prompt(context["serialized"], str(user_message.get("content") or ""))
+
+    # 화면 맥락은 요청이 준 것을 쓰고, 없으면 대화 주제에서 만든다.
+    scope = session.get("scope") or {}
+    screen = dict(screen_context or {})
+    screen.setdefault("surface", "agent_dock")
+    if scope.get("kind") and scope["kind"] != "general":
+        screen.setdefault("viewId", str(scope["kind"]))
+
     engine = "rules"
-    reply = rules_fallback(str(user_message.get("content") or ""))
+    reply = rules_fallback(question)
+    proposal_id = ""
     try:
-        if bridge.bridge_status().get("available"):
-            progress("Agent가 상담 답변을 작성하고 있습니다.", 50)
-            result = bridge.run_agent_prompt(prompt, job_id=job_id)
-            output = str(result.get("output") or "").strip()
-            if output:
-                reply = output
-                engine = str(result.get("adapter") or "cli")[:30]
+        progress("Agent가 답변을 작성하고 있습니다.", 50)
+        result = run_agent_chat(
+            question, screen, options or {},
+            progress=progress, job_id=job_id, conversation=context["serialized"],
+        )
+        answer = str(result.get("reply") or "").strip()
+        if answer:
+            reply = answer
+            engine = str(result.get("adapter") or result.get("engine") or "cli")[:30]
+        notice = str(result.get("notice") or "").strip()
+        if notice:
+            reply = "\n\n".join([reply, notice])
+        # 제안을 만들었다는 사실은 대화 기록에 남아야 한다. diff 본문은 제안 저장소가 갖는다.
+        proposal_id = str(((result.get("proposal") or {}) or {}).get("id") or "")
+        if proposal_id:
+            reply = "\n\n".join([reply, f"(수정 제안 {proposal_id} 을 만들었습니다. 승인해야 보고서가 바뀝니다.)"])
     except Exception:
         # Transcript and private provider errors never enter job result or telemetry.
         engine = "rules"
     append_assistant_message(data_dir, session_id, user_message_id, reply, engine=engine)
-    return {"sessionId": session_id, "messageId": user_message_id, "status": "answered"}
+    return {"sessionId": session_id, "messageId": user_message_id, "status": "answered", "proposalId": proposal_id}
 
 
 def submit_consultation_job(data_dir: Path, session_id: str, user_message_id: str) -> dict:

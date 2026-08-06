@@ -139,6 +139,28 @@ def create_session(data_dir: Path, payload: dict | None = None) -> dict:
         "reuseAsHypothesis": True,
         "reuseAsEvidence": False,
     }
+    # 이관용 초기 메시지. 브라우저에만 있던 대화를 옮길 때 쓴다 — 메시지 API로
+    # 재생하면 옛 질문이 전부 Agent 잡으로 다시 실행된다. 기록만 남긴다.
+    for row in (payload.get("importMessages") or [])[:MAX_MESSAGES]:
+        if not isinstance(row, dict):
+            continue
+        content = clean_text(row.get("content") or row.get("text"), MAX_MESSAGE_CHARS)
+        if not content:
+            continue
+        session["messages"].append({
+            "id": "msg-" + uuid.uuid4().hex,
+            "role": "assistant" if row.get("role") == "assistant" else "user",
+            "content": content,
+            "createdAt": clean_text(row.get("createdAt"), 40) or now,
+            "status": "imported",
+            "engine": "imported",
+            "layer": "hypothesis",
+            "sourceLayer": "user_consultation",
+            "reuseAsEvidence": False,
+        })
+    session["messageCount"] = len(session["messages"])
+    if session["messages"]:
+        _update_memory(session)
     _atomic_write(_path(data_dir, session_id), session)
     return public_session(session)
 

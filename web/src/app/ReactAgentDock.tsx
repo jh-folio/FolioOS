@@ -1,6 +1,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getJson, postJson, type JobStatus } from "../api";
 import { AgentMessageContent, AgentRunCard } from "./AgentMessageContent";
+import { ThreadList, scopeChipLabel } from "./agentWorkspace/ThreadList";
+import { useDockThreads } from "./agentWorkspace/useDockThreads";
 import { AgentPollTimeout, pollAgentJobBounded, releasePollController, replacePollController } from "./agentPolling";
 import { actOnProposal, boundedProposalDiff, boundedProposalSummary, hydrateAgentProposalFromResult, notifyProposalLifecycle } from "./agentProposalLifecycle";
 
@@ -244,6 +246,11 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
   const [settings, setSettings] = useState<AgentSettings | null>(null);
   const [preflight, setPreflight] = useState<AgentPreflight | null>(null);
   const [messages, setMessages] = useState<AgentMessage[]>([WELCOME_AGENT_MESSAGE]);
+  const [threadsOpen, setThreadsOpen] = useState(false);
+  // 대화는 서버에 저장된다 — 브라우저를 닫아도, 기기를 바꿔도 남고 Agent가 다음
+  // 세션에서 context로 읽는다. localStorage에만 있던 예전 구조에서는 불가능했다.
+  const threads = useDockThreads(WELCOME_AGENT_MESSAGE);
+  const scopeChip = scopeChipLabel(threads.scope || undefined);
   const [input, setInput] = useState("");
   const [model, setModel] = useState("");
   const [effort, setEffort] = useState("medium");
@@ -498,10 +505,33 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     await submitAgentMessage(input);
   }
 
-  function startNewChat() {
+  async function startNewChat() {
     setMessages([{ ...WELCOME_AGENT_MESSAGE, createdAt: new Date().toISOString() }]);
     setInput("");
     setError("");
+    try {
+      await threads.createThread();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "새 대화를 만들지 못했습니다.");
+    }
+  }
+
+  async function openThread(id: string) {
+    setError("");
+    try {
+      setMessages(await threads.openThread(id));
+      setThreadsOpen(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "대화를 불러오지 못했습니다.");
+    }
+  }
+
+  function afterThreadDeleted(id: string) {
+    // 지금 보고 있던 대화를 지웠으면 빈 화면으로 돌아간다.
+    if (id !== threads.threadId) return;
+    threads.setThreadId("");
+    threads.setScope(null);
+    setMessages([{ ...WELCOME_AGENT_MESSAGE, createdAt: new Date().toISOString() }]);
   }
 
   async function persistModel(nextModel: string) {
@@ -558,12 +588,27 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
           </div>
         </div>
         <div className="react-agent-header-actions">
-          <button className="react-agent-new-chat" type="button" onClick={startNewChat}>
-            새 채팅
+          <button
+            className="react-agent-new-chat" type="button"
+            aria-expanded={threadsOpen}
+            onClick={() => setThreadsOpen((value) => !value)}
+          >대화 목록</button>
+          <button className="react-agent-new-chat" type="button" onClick={() => void startNewChat()}>
+            새 대화
           </button>
           <button className="icon-btn" type="button" aria-label="AI Agent 닫기" data-tooltip="닫기" data-tooltip-pos="left" onClick={onClose}>×</button>
         </div>
       </header>
+
+      {threadsOpen && (
+        <ThreadList
+          activeId={threads.threadId}
+          refreshKey={threads.refreshKey}
+          onSelect={(id) => void openThread(id)}
+          onDeleted={afterThreadDeleted}
+        />
+      )}
+      {scopeChip && <p className="react-agent-scope"><em className="chip">{scopeChip}</em> 대화</p>}
 
       <div className="react-agent-dock-body" ref={bodyRef}>
         <div className="react-agent-watermark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: meta.monoLogo }} />
