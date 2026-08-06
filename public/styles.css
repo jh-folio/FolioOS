@@ -1012,7 +1012,8 @@ body:has(#folioReactRoot .react-shell) main.page {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* 머리말 / 가변 안내 / 본문 / 입력. 본문만 남는 높이를 갖는다. */
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   border-left: 1px solid var(--folio-border, #dde2e9);
   background: var(--folio-surface-clean, #ffffff);
   overflow: hidden;
@@ -15461,3 +15462,11 @@ select { min-height: 36px; padding: 0 12px; }
 
 /* 자동완성은 라벨 안에서 뜬다. 라벨이 기준 상자를 갖는다. */
 .react-analysis-query .portfolio-ticker-field { position: relative; display: grid; gap: var(--sp-2); }
+
+/* 머리말과 본문 사이의 가변 안내. 자기 내용만큼만 차지한다. */
+.react-agent-dock-chrome {
+  display: grid;
+  gap: var(--sp-2);
+  min-height: 0;
+}
+.react-agent-dock-chrome:empty { display: none; }

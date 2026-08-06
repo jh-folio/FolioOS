@@ -625,17 +625,22 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
         </div>
       </header>
 
-      {threadsOpen && (
-        <ThreadList
-          activeId={threads.threadId}
-          refreshKey={threads.refreshKey}
-          onSelect={(id) => void openThread(id)}
-          onDeleted={afterThreadDeleted}
-        />
-      )}
-      {scopeChip && <p className="react-agent-scope"><em className="chip">{scopeChip}</em> 대화</p>}
-      {/* 상담 패널이 갖고 있던 계층 경계. 대화는 hypothesis라 근거로 승격되지 않는다. */}
-      <p className="react-agent-layer-note">이 대화는 내 생각(가설)이며 보고서·Market Memory·근거 평가에 사용되지 않습니다.</p>
+      {/* 머리말과 본문 사이의 가변 요소는 한 칸에 묶는다. 도크 그리드는 세 칸
+          (머리말/본문/입력)이라, 여기에 형제를 늘리면 본문용 유연 칸을 빼앗아
+          대화가 아래로 밀리고 위가 빈다. */}
+      <div className="react-agent-dock-chrome">
+        {threadsOpen && (
+          <ThreadList
+            activeId={threads.threadId}
+            refreshKey={threads.refreshKey}
+            onSelect={(id) => void openThread(id)}
+            onDeleted={afterThreadDeleted}
+          />
+        )}
+        {scopeChip && <p className="react-agent-scope"><em className="chip">{scopeChip}</em> 대화</p>}
+        {/* 상담 패널이 갖고 있던 계층 경계. 대화는 hypothesis라 근거로 승격되지 않는다. */}
+        <p className="react-agent-layer-note">이 대화는 내 생각(가설)이며 보고서·Market Memory·근거 평가에 사용되지 않습니다.</p>
+      </div>
 
       <div className="react-agent-dock-body" ref={bodyRef}>
         <div className="react-agent-watermark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: meta.monoLogo }} />

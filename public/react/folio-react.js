@@ -16587,22 +16587,27 @@ function ac({ surface: e, open: t, onOpen: n, onClose: r }) {
 					]
 				})]
 			}),
-			u && /* @__PURE__ */ (0, f.jsx)(Os, {
-				activeId: m.threadId,
-				refreshKey: m.refreshKey,
-				onSelect: (e) => void V(e),
-				onDeleted: H
-			}),
-			h && /* @__PURE__ */ (0, f.jsxs)("p", {
-				className: "react-agent-scope",
-				children: [/* @__PURE__ */ (0, f.jsx)("em", {
-					className: "chip",
-					children: h
-				}), " 대화"]
-			}),
-			/* @__PURE__ */ (0, f.jsx)("p", {
-				className: "react-agent-layer-note",
-				children: "이 대화는 내 생각(가설)이며 보고서·Market Memory·근거 평가에 사용되지 않습니다."
+			/* @__PURE__ */ (0, f.jsxs)("div", {
+				className: "react-agent-dock-chrome",
+				children: [
+					u && /* @__PURE__ */ (0, f.jsx)(Os, {
+						activeId: m.threadId,
+						refreshKey: m.refreshKey,
+						onSelect: (e) => void V(e),
+						onDeleted: H
+					}),
+					h && /* @__PURE__ */ (0, f.jsxs)("p", {
+						className: "react-agent-scope",
+						children: [/* @__PURE__ */ (0, f.jsx)("em", {
+							className: "chip",
+							children: h
+						}), " 대화"]
+					}),
+					/* @__PURE__ */ (0, f.jsx)("p", {
+						className: "react-agent-layer-note",
+						children: "이 대화는 내 생각(가설)이며 보고서·Market Memory·근거 평가에 사용되지 않습니다."
+					})
+				]
 			}),
 			/* @__PURE__ */ (0, f.jsxs)("div", {
 				className: "react-agent-dock-body",
