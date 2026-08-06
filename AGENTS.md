@@ -517,6 +517,18 @@ features/company_analysis/financial_quality_prompt.md
 - `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
 - 기존 `/api/dashboard` 응답은 기존 consumer 호환을 위해 유지한다.
 
+### 입력 기업 판단 (Company Resolution)
+
+- 로직은 `features/common/company_resolution.py`에 둔다. `GET /api/company/resolve?q=&limit=`을 쓰며 **LLM을 호출하지 않는다** — SEC `company_tickers.json`, DART 상장 종목, 수동 사전을 같은 기준으로 채점하는 규칙 기반이다.
+- status는 `confident | ambiguous | unknown` 셋이다. **모르면 모른다고 답한다.** 예전 `infer_requested_company()`는 아무것도 못 찾으면 입력 문자열을 그대로 티커로 돌려줘, "하우멧"이나 오타를 넣어도 분석이 진행되어 빈 보고서가 나왔다.
+- **DART 캐시는 상장 종목만 쓴다.** 전체 118,664건에는 비상장 법인이 대부분이라, 부분일치가 먼저 걸려 "마이크론"이 LG마이크론이 되고 "델타"가 신성델타테크가 됐다. `stock_code`가 있는 3,981건만 후보가 된다.
+- 질의 문자로 시장을 가른다. 라틴 문자면 미국장, 한글이면 한국장에 가산한다(`MICRONIX`도 "Micron"에 접두 일치하기 때문).
+- 질의 **전체**가 티커 모양일 때만 티커로 본다. 문자를 걷어낸 나머지를 쓰면 "없는회사이름123"이 "123"이 되어 한국 코드에 붙는다.
+- 정확한 티커 일치는 이름 접두 일치를 이긴다(`MU`가 MUELLER INDUSTRIES와 저울질되면 안 된다).
+- SEC는 클래스 구분에 하이픈을 쓴다. `BRK.B`는 `BRK-B`로 정규화한다.
+- SEC 파일에 한글 표기가 없으므로 한국 사용자가 실제로 치는 표기(마이크론·알파벳·존슨앤존슨 등)는 `company_lookup`의 수동 사전 별칭으로 보정한다(원칙 10의 "별칭·예외 보정" 용도).
+- 화면은 기업분석 입력칸에서 생성 전에 무엇으로 읽었는지 보여주고, 애매하면 후보 목록을, 모르면 경고를 낸다. 확정된 경우 `/api/analyze`에는 원문이 아니라 티커를 보낸다.
+
 ### Agent 대화 (Threads)
 
 - 로직은 `features/agent_mode/consultation_*.py`에 둔다(내부 식별자는 저장 데이터와의 계약이라 유지). `data/agent-threads/{id}.json` JSON-per-thread가 권위 저장소이며 research inbox/index 경로 밖이라 어떤 evidence loader·indexer도 읽지 않는다. 예전 `data/agent-consultations/`는 첫 사용 시 1회 이관한다(복사 후 삭제, 이름 충돌 시 양쪽 보존).

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCompanyResolution } from "./companyAnalysis/useCompanyResolution";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -219,6 +220,20 @@ export function CompanyAnalysisRoute() {
   const [selected, setSelected] = useState<AnalysisReport | null>(null);
   const [detailId, setDetailId] = useState(() => readAnalysisDetailId());
   const [query, setQuery] = useState("");
+  const { resolution, pending: resolvePending, picked, setPicked, effective } = useCompanyResolution(query);
+
+  const resolutionStatus = picked ? "picked" : resolvePending ? "pending" : resolution?.status || "idle";
+  const resolutionMessage = (() => {
+    if (!query.trim()) return "티커, 회사명, 한글 표기 중 무엇으로 적어도 됩니다.";
+    if (picked) return `${picked.name} (${picked.ticker})으로 분석합니다.`;
+    if (resolvePending) return "확인 중…";
+    if (!resolution) return "";
+    if (resolution.status === "confident" && resolution.match) {
+      return `${resolution.match.name} (${resolution.match.ticker})으로 분석합니다.`;
+    }
+    if (resolution.status === "ambiguous") return "여러 기업이 맞습니다. 아래에서 고르세요.";
+    return "아는 기업이 없습니다. 티커로 적어 보세요. 이대로 진행하면 자료가 거의 없는 보고서가 나옵니다.";
+  })();
   const [analysisStyle, setAnalysisStyle] = useState<AnalysisStyle>("beginner");
   const [reportQuery, setReportQuery] = useState("");
   const [reportView, setReportView] = useState<AnalysisViewMode>("recent");
@@ -311,7 +326,9 @@ export function CompanyAnalysisRoute() {
     setStatus("기업 자료를 읽고 분석 보고서를 생성하는 중입니다.");
     try {
       const params = new URLSearchParams({
-        q: trimmed,
+        // 해석이 끝났으면 원문이 아니라 확정된 티커를 보낸다. "마이크론"을 그대로
+        // 넘기면 서버가 다시 추측하고, 사용자가 화면에서 고른 것과 달라질 수 있다.
+        q: effective?.ticker || trimmed,
         analysisStyle,
       });
       const response = await getJson<AnalysisReport | AgentJob>(`/api/analyze?${params.toString()}`);
@@ -577,14 +594,37 @@ export function CompanyAnalysisRoute() {
           <span>미국 기업은 SEC 자료를 우선 사용하고, 한국 기업은 DART API Key를 설정하면 공시 확인 정확도가 높아집니다.</span>
         </div>
         <div className="react-analysis-query">
-          <label>
+          <label className="portfolio-ticker-field">
             <span>분석 대상</span>
             <input
               value={query}
               onChange={(event) => setQuery(event.currentTarget.value)}
               placeholder="예: NVDA, 삼성전자, SK하이닉스"
+              aria-describedby="analysis-resolution"
+              autoComplete="off"
             />
+            {resolution?.status === "ambiguous" && resolution.candidates.length > 0 && !picked && (
+              <div className="ticker-suggest" role="listbox" aria-label="후보 기업">
+                {resolution.candidates.map((candidate) => (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    key={`${candidate.market}:${candidate.ticker}`}
+                    onClick={() => setPicked(candidate)}
+                  >
+                    <strong>{candidate.ticker}</strong>
+                    <span>{candidate.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </label>
+          {/* 무엇으로 해석했는지 생성 전에 보여준다. 예전에는 입력 문자열이 그대로
+              티커가 되어 빈 보고서가 나올 때까지 알 수 없었다. */}
+          <p className="analysis-resolution" id="analysis-resolution" data-status={resolutionStatus}>
+            {resolutionMessage}
+          </p>
         </div>
         <fieldset className="react-analysis-style" aria-label="보고서 모드">
           <legend>보고서 모드</legend>

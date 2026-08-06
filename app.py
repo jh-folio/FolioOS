@@ -54,6 +54,7 @@ from features.automation.service import (
     schedule_automation_loop,
     save_settings as save_automation_settings,
 )
+from features.common.company_resolution import resolve_company_query
 from features.common.company_lookup import ensure_company_files
 from features.common.dataframe_ops import top_records
 from features.common.research_library.indexing.service import (
@@ -639,6 +640,18 @@ def api_briefing_personal_overlay(date: str, marketScope: str = "both", body: di
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Briefing not found")
+
+
+@fastapi_app.get("/api/company/resolve")
+def api_company_resolve(request: Request):
+    """입력이 어느 기업인지 판단한다. 규칙과 로컬 색인만 쓰며 LLM을 호출하지 않는다."""
+    qs = query_lists(request)
+    query = qs.get("q", qs.get("query", [""]))[0]
+    try:
+        limit = max(1, min(12, int(qs.get("limit", ["6"])[0])))
+    except ValueError:
+        limit = 6
+    return resolve_company_query(query, limit=limit)
 
 
 @fastapi_app.get("/api/analyze")
