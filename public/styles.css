@@ -15597,10 +15597,14 @@ select { min-height: 36px; padding: 0 12px; }
 .analysis-chart-axis { fill: var(--folio-ink-subtle); font-size: 11px; }
 
 /* 기간 전체가 hover 대상이다. 막대 폭을 조준할 필요가 없다. */
-.analysis-chart-band { fill: transparent; cursor: pointer; }
-.analysis-chart-band:hover,
+/* 강조 배경은 마크보다 먼저 그려 뒤에 깔린다. 입력을 받는 사각형이 칠하면
+   그 아래 막대와 선을 덮어 그래프가 사라진다. */
+.analysis-chart-band { fill: transparent; pointer-events: none; }
 .analysis-chart-band[data-active="true"] { fill: var(--surface-group); }
-.analysis-chart-band:focus-visible { outline: none; fill: var(--surface-control); }
+.analysis-chart-hit { fill: none; pointer-events: all; cursor: pointer; }
+/* 라인 차트에서 마우스를 따라 서는 선. 그 선에 걸리는 값을 아래 상자가 읽는다. */
+.analysis-chart-rule { stroke: var(--folio-ink-subtle); stroke-width: 1; stroke-dasharray: 3 3; }
+.analysis-chart-hit:focus-visible { outline: none; stroke: var(--folio-accent); stroke-width: 1.5; }
 
 .analysis-chart-readout {
   display: grid;

@@ -120,9 +120,8 @@ function yFor(value: number, min: number, max: number, top = 16, height = 150) {
   return top + (1 - (value - min) / (max - min)) * height;
 }
 
-/** 그림이 카드를 채우도록 넉넉히 잡는다. 예전 geometry는 플롯이 148px이라
- *  카드의 4분의 1만 쓰고 막대가 손톱만 했다. */
-const BARS = { width: 640, height: 300, top: 18, plot: 210, left: 58, right: 46 };
+/** 원래 비율로 돌아온다. 축 눈금과 오른쪽 비율 축이 들어갈 여백만 남긴다. */
+const BARS = { width: 520, height: 220, top: 16, plot: 148, left: 46, right: 40 };
 
 function niceTicks(min: number, max: number, count = 4): number[] {
   if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return [min, max];
@@ -155,6 +154,17 @@ function BarsChart({
 
   return (
     <svg className="analysis-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={chart.title || "기업 분석 차트"}>
+      {labels.map((label, index) => (
+        <rect
+          className="analysis-chart-band"
+          key={`band-${label}`}
+          data-active={index === activeIndex ? "true" : undefined}
+          x={left + index * groupWidth}
+          y={top - 4}
+          width={groupWidth}
+          height={plot + 8}
+        />
+      ))}
       {niceTicks(min, max).map((tick) => {
         const y = yFor(tick, min, max, top, plot);
         return (
@@ -215,25 +225,28 @@ function BarsChart({
         );
       })}
 
+      {/* 막대 하나가 아니라 그 기간 전체가 대상이다. 조준할 필요가 없다.
+          입력을 받는 사각형은 맨 위에 두되 칠하지 않는다 — 칠하면 그 아래 그래프를
+          덮는다. 강조 배경은 마크보다 먼저 그려 뒤에 깔린다. */}
       {labels.map((label, index) => (
-        <g key={`band-${label}`}>
-          {/* 막대 하나가 아니라 그 기간 전체가 대상이다. 조준할 필요가 없고,
-              한 번에 그 기간의 모든 지표를 볼 수 있다. */}
-          <rect
-            className="analysis-chart-band"
-            data-active={index === activeIndex ? "true" : undefined}
-            x={left + index * groupWidth}
-            y={top - 4}
-            width={groupWidth}
-            height={plot + 8}
-            tabIndex={0}
-            role="button"
-            aria-label={`${label} 수치 보기`}
-            onMouseEnter={() => onIndex(index)}
-            onFocus={() => onIndex(index)}
-          />
-          <text className="analysis-chart-axis" x={centre(index)} y={height - 14} textAnchor="middle">{label}</text>
-        </g>
+        <text className="analysis-chart-axis" key={`x-${label}`} x={centre(index)} y={height - 14} textAnchor="middle">
+          {label}
+        </text>
+      ))}
+      {labels.map((label, index) => (
+        <rect
+          className="analysis-chart-hit"
+          key={`hit-${label}`}
+          x={left + index * groupWidth}
+          y={top - 4}
+          width={groupWidth}
+          height={plot + 8}
+          tabIndex={0}
+          role="button"
+          aria-label={`${label} 수치 보기`}
+          onMouseEnter={() => onIndex(index)}
+          onFocus={() => onIndex(index)}
+        />
       ))}
     </svg>
   );
@@ -242,80 +255,93 @@ function BarsChart({
 function LineChart({
   chart,
   series,
-  onPoint,
-  onLeave,
+  activeIndex,
+  onIndex,
 }: {
   chart: AnalysisChart;
   series: Series[];
-  onPoint: (tooltip: NonNullable<ChartTooltip>) => void;
-  onLeave: () => void;
+  activeIndex: number;
+  onIndex: (index: number) => void;
 }) {
   const labels = Array.isArray(chart.years) ? chart.years : [];
-  const allValues = series.flatMap((item) => item.values);
-  const { min, max } = valueRange(allValues);
-  const width = 520;
-  const height = 220;
-  const top = 18;
-  const plotHeight = 148;
-  const left = 36;
-  const step = (width - left - 32) / Math.max(1, labels.length - 1);
+  const { min, max } = valueRange(series.flatMap((item) => item.values));
+  const { width, height, top, plot, left, right } = BARS;
+  const step = (width - left - right) / Math.max(1, labels.length - 1);
+  const at = (index: number) => left + index * step;
 
   return (
     <svg className="analysis-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={chart.title || "기업 분석 차트"}>
-      {[0, 0.5, 1].map((tick) => {
-        const y = top + tick * plotHeight;
-        return <line key={tick} x1={left} y1={y} x2={width - 12} y2={y} stroke="var(--folio-border)" strokeWidth="1" />;
+      {niceTicks(min, max).map((tick) => {
+        const y = yFor(tick, min, max, top, plot);
+        return (
+          <g key={`tick-${tick}`}>
+            <line x1={left} y1={y} x2={width - right} y2={y} stroke="var(--folio-border)" strokeWidth="0.5" />
+            <text className="analysis-chart-axis" x={left - 8} y={y + 4} textAnchor="end">
+              {formatValue(tick, series[0]?.kind || "percent", chart.currency)}
+            </text>
+          </g>
+        );
       })}
+
+      {/* 마우스를 따라 서는 세로 선. 그 선에 걸리는 값이 아래 상자에 함께 나온다. */}
+      {labels.length > 0 && (
+        <line
+          className="analysis-chart-rule"
+          x1={at(activeIndex)}
+          y1={top - 4}
+          x2={at(activeIndex)}
+          y2={top + plot + 4}
+        />
+      )}
+
       {series.map((item, seriesIndex) => {
-        const points = item.values.map((value, index) => (
-          value === null ? null : `${left + index * step},${yFor(value, min, max, top, plotHeight)}`
-        )).filter(Boolean).join(" ");
+        const points = item.values
+          .map((value, index) => (value === null ? null : `${at(index)},${yFor(value, min, max, top, plot)}`))
+          .filter(Boolean)
+          .join(" ");
+        const active = item.values[activeIndex];
         return (
           <g key={item.key}>
             <polyline
               points={points}
               fill="none"
               stroke={COLORS[seriesIndex % COLORS.length]}
-              strokeWidth="3"
+              strokeWidth="2"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
-            {item.values.map((value, index) => {
-              if (value === null) return null;
-              const x = left + index * step;
-              const y = yFor(value, min, max, top, plotHeight);
-              const label = labels[index] || `${index + 1}`;
-              const tooltip = {
-                label,
-                series: item.label,
-                value: formatValue(value, item.kind, chart.currency),
-                x,
-                y,
-              };
-              return (
-                <circle
-                  aria-label={`${label} ${item.label} ${tooltip.value}`}
-                  cx={x}
-                  cy={y}
-                  fill={COLORS[seriesIndex % COLORS.length]}
-                  key={`${item.key}-${label}`}
-                  onBlur={onLeave}
-                  onFocus={() => onPoint(tooltip)}
-                  onMouseEnter={() => onPoint(tooltip)}
-                  onMouseLeave={onLeave}
-                  r="5"
-                  tabIndex={0}
-                />
-              );
-            })}
+            {active !== null && active !== undefined && (
+              <circle
+                cx={at(activeIndex)}
+                cy={yFor(active, min, max, top, plot)}
+                r="4"
+                fill={COLORS[seriesIndex % COLORS.length]}
+              />
+            )}
           </g>
         );
       })}
+
       {labels.map((label, index) => (
-        <text key={label} x={left + index * step} y={height - 18} textAnchor="middle">{label}</text>
+        <text className="analysis-chart-axis" key={`x-${label}`} x={at(index)} y={height - 14} textAnchor="middle">
+          {label}
+        </text>
       ))}
-      <text x={left} y={14}>{formatValue(max, series[0]?.kind || "percent", chart.currency)}</text>
-      <text x={left} y={height - 40}>{formatValue(min, series[0]?.kind || "percent", chart.currency)}</text>
+      {labels.map((label, index) => (
+        <rect
+          className="analysis-chart-hit"
+          key={`hit-${label}`}
+          x={index === 0 ? left : at(index) - step / 2}
+          y={top - 4}
+          width={index === 0 || index === labels.length - 1 ? step / 2 : step}
+          height={plot + 8}
+          tabIndex={0}
+          role="button"
+          aria-label={`${label} 수치 보기`}
+          onMouseEnter={() => onIndex(index)}
+          onFocus={() => onIndex(index)}
+        />
+      ))}
     </svg>
   );
 }
@@ -363,15 +389,8 @@ function ScenarioChart({
   );
 }
 
-function ReturnChart({
-  chart,
-  onPoint,
-  onLeave,
-}: {
-  chart: AnalysisChart;
-  onPoint: (tooltip: NonNullable<ChartTooltip>) => void;
-  onLeave: () => void;
-}) {
+/** 수익률 비교 차트는 라벨과 계열이 다른 키에 담겨 온다. 라인 차트가 읽는 형태로 맞춘다. */
+function returnChartData(chart: AnalysisChart): { chart: AnalysisChart; series: Series[] } {
   const labels = Array.isArray(chart.labels) ? chart.labels : [];
   const series = Object.entries(chart.series || {}).map(([key, values]) => ({
     key,
@@ -379,20 +398,7 @@ function ReturnChart({
     values: Array.isArray(values) ? values.map((value) => (typeof value === "number" ? value / 100 : null)) : [],
     kind: "percent" as const,
   }));
-  return <LineChart chart={{ ...chart, years: labels }} series={series} onPoint={onPoint} onLeave={onLeave} />;
-}
-
-function legend(series: Series[]) {
-  return (
-    <div className="analysis-chart-legend">
-      {series.map((item, index) => (
-        <span key={item.key}>
-          <i style={{ background: COLORS[index % COLORS.length] }} />
-          {item.label}
-        </span>
-      ))}
-    </div>
-  );
+  return { chart: { ...chart, years: labels }, series };
 }
 
 /** 기간별 수치를 한 상자에 모아 보여준다.
@@ -453,12 +459,23 @@ function PeriodPanel({
 
 function ChartCard({ chart }: { chart: AnalysisChart }) {
   const [tooltip, setTooltip] = useState<ChartTooltip>(null);
-  const series = chartSeries(chart);
   const kind = String(chart.kind || chart.id || "");
-  const labels = Array.isArray(chart.years) ? chart.years : [];
-  // 마우스를 올리지 않아도 최신 기간 숫자가 보인다.
-  const [activeIndex, setActiveIndex] = useState(Math.max(0, labels.length - 1));
-  const banded = kind === "performance" || kind === "cashflow" || kind === "quarterly";
+  // 선으로 그리는 차트와 막대로 그리는 차트가 같은 기간 상자를 쓴다.
+  const line = kind === "margins"
+    ? { chart, series: chartSeries(chart) }
+    : kind === "price_return"
+      ? returnChartData(chart)
+      : null;
+  const bars = ["performance", "cashflow", "quarterly"].includes(kind)
+    ? { chart, series: chartSeries(chart) }
+    : null;
+  const banded = line ?? bars;
+  const series = banded?.series ?? [];
+  const labels = Array.isArray(banded?.chart.years) ? (banded?.chart.years as string[]) : [];
+  // 마우스를 올리지 않아도 최신 기간 숫자가 보인다. 짚기 전에는 마지막 기간이다.
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const last = Math.max(0, labels.length - 1);
+  const index = Math.min(activeIndex ?? last, last);
   const tooltipStyle = tooltip?.x !== undefined
     ? { left: `${Math.max(7, Math.min(93, (tooltip.x / 520) * 100))}%`, top: `${Math.max(10, tooltip.y || 10)}px` }
     : undefined;
@@ -470,21 +487,17 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
         {chart.subtitle && <p>{chart.subtitle}</p>}
       </div>
       <div className="analysis-chart-plot">
-        {kind === "margins" && series.length ? <LineChart chart={chart} series={series} onPoint={setTooltip} onLeave={() => setTooltip(null)} /> : null}
-        {banded && series.length ? (
-          <BarsChart
-            chart={chart}
-            series={series}
-            activeIndex={Math.min(activeIndex, Math.max(0, labels.length - 1))}
-            onIndex={setActiveIndex}
-          />
+        {line && line.series.length ? (
+          <LineChart chart={line.chart} series={line.series} activeIndex={index} onIndex={setActiveIndex} />
+        ) : null}
+        {bars && bars.series.length ? (
+          <BarsChart chart={bars.chart} series={bars.series} activeIndex={index} onIndex={setActiveIndex} />
         ) : null}
         {(kind === "dcf" || kind === "scenario_price") ? <ScenarioChart chart={chart} onPoint={setTooltip} onLeave={() => setTooltip(null)} /> : null}
-        {kind === "price_return" ? <ReturnChart chart={chart} onPoint={setTooltip} onLeave={() => setTooltip(null)} /> : null}
-        {!series.length && !["dcf", "scenario_price", "price_return"].includes(kind) && (
+        {!series.length && !["dcf", "scenario_price"].includes(kind) && (
           <p className="analysis-chart-warning">이 차트에 표시할 수치가 충분하지 않습니다.</p>
         )}
-        {tooltip && !banded && (
+        {tooltip && (
           <div className="analysis-chart-tooltip" style={tooltipStyle}>
             {tooltip.series && <span>{tooltip.series}</span>}
             <strong>{tooltip.value}</strong>
@@ -492,11 +505,7 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
           </div>
         )}
       </div>
-      {banded && series.length > 0 ? (
-        <PeriodPanel chart={chart} series={series} index={Math.min(activeIndex, Math.max(0, labels.length - 1))} />
-      ) : (
-        series.length > 0 && legend(series)
-      )}
+      {banded && series.length > 0 ? <PeriodPanel chart={banded.chart} series={series} index={index} /> : null}
     </article>
   );
 }
