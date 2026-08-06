@@ -14611,18 +14611,18 @@ main.page {
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
-.btn:hover { background: var(--surface-control-hover); transform: translateY(-1px); }
+.btn:hover:not(:disabled) { background: var(--surface-control-hover); transform: translateY(-1px); }
 .btn--primary { background: var(--folio-surface-dark); color: var(--folio-ink-inverse); }
-.btn--primary:hover { background: var(--folio-surface-dark-2); }
+.btn--primary:hover:not(:disabled) { background: var(--folio-surface-dark-2); }
 .btn--text { background: transparent; color: var(--folio-ink-muted); }
-.btn--text:hover { background: var(--folio-tint-weak); color: var(--folio-ink); }
+.btn--text:hover:not(:disabled) { background: var(--folio-tint-weak); color: var(--folio-ink); }
 .btn--sm { min-height: 32px; padding: 0 13px; font-size: var(--fs-meta); }
 .btn--icon { width: 32px; min-height: 32px; padding: 0; border-radius: var(--r-pill); }
 .btn:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
 /* 선택된 필터 버튼. 레거시 `.filter-btn.active`는 마크업에만 있고 규칙이 없어
    Work Log 필터가 무엇이 선택됐는지 보여주지 못했다. 상태는 aria가 소유한다. */
 .btn[aria-pressed="true"] { background: var(--folio-surface-dark); color: var(--folio-ink-inverse); }
-.btn[aria-pressed="true"]:hover { background: var(--folio-surface-dark-2); }
+.btn[aria-pressed="true"]:hover:not(:disabled) { background: var(--folio-surface-dark-2); }
 .btn:disabled { cursor: not-allowed; opacity: 0.6; transform: none; }
 
 /* --- .surface: 패널 > 그룹 > 인셋. 깊이가 내려갈수록 가벼워진다 --- */

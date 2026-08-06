@@ -8,7 +8,8 @@ import {
   type ChangedItem,
   type ChangeEvent,
 } from "../changeEvents";
-import { STORY_MARKETS, STORY_MARKET_LABELS, StoryShare, type StoryMarket } from "./StoryShare";
+import { MARKET_CODE_LABELS } from "../../api";
+import { STORY_MARKETS, StoryShare, type StoryMarket } from "./StoryShare";
 
 export const CHANGE_STATUS_LABELS: Record<string, string> = {
   major_change: "중대한 변화", developing_signal: "발전 중", conflicting_uncertain: "충돌·불확실",
@@ -161,10 +162,13 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
     <section className="cockpit-panel cockpit-change-feed" aria-labelledby="cockpit-change-title">
       <div className="cockpit-panel__head">
         <div><span>CHANGE INTELLIGENCE</span><h2 id="cockpit-change-title">무엇이 달라졌나</h2></div>
+        {/* 세그먼트 안 버튼에는 클래스를 붙이지 않는다. `.segment`가 트랙·알약·눌림
+            상태를 전부 소유한다. `sym-chip`을 섞었더니 선택 칩이 흰색이었다가
+            hover에서 네이비로 튀었다 — 두 규칙이 같은 요소를 서로 다르게 칠했다. */}
         <div className="segment story-share__toggle" role="group" aria-label="이야기 비중 시장">
           {STORY_MARKETS.map((option) => (
-            <button key={option} type="button" className={`sym-chip${storyMarket === option ? " sym-chip--active" : ""}`} aria-pressed={storyMarket === option} onClick={() => setStoryMarket(option)}>
-              {STORY_MARKET_LABELS[option]}
+            <button key={option} type="button" aria-pressed={storyMarket === option} onClick={() => setStoryMarket(option)}>
+              {MARKET_CODE_LABELS[option]}
             </button>
           ))}
         </div>
