@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { getJson } from "../../api";
+import { getJson, MARKET_KO_LABELS } from "../../api";
 
 export const STORY_MARKETS = ["us", "kr", "europe", "jp"] as const;
 export type StoryMarket = (typeof STORY_MARKETS)[number];
 export const STORY_MARKET_LABELS: Record<StoryMarket, string> = {
-  us: "미국", kr: "한국", europe: "유럽", jp: "일본",
+  us: MARKET_KO_LABELS.us, kr: MARKET_KO_LABELS.kr,
+  europe: MARKET_KO_LABELS.europe, jp: MARKET_KO_LABELS.jp,
 };
 
 type StoryShareRow = {

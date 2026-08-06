@@ -278,14 +278,32 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	e.Fragment = i, e.jsx = c, e.jsxs = c;
 })), i = /* @__PURE__ */ e(((e, t) => {
 	t.exports = r();
-})), a = "rules_on_engine_failure", o = /* @__PURE__ */ "id.jobId.category.kind.taskType.labelCode.status.progress.messageCode.createdAt.startedAt.updatedAt.finishedAt.errorCode.generationMode.adapter.requestedMode.mode.attemptedEngine.finalEngine.fallbackReason.artifactTypes.artifactCount.proposalId.proposalStatus.resultStatus".split("."), s = [
+})), a = {
+	us: "US",
+	kr: "KR",
+	europe: "EU",
+	jp: "JP",
+	US: "US",
+	KR: "KR",
+	EUROPE: "EU",
+	JP: "JP"
+}, o = {
+	us: "미국",
+	kr: "한국",
+	europe: "유럽",
+	jp: "일본",
+	US: "미국",
+	KR: "한국",
+	EUROPE: "유럽",
+	JP: "일본"
+}, s = "rules_on_engine_failure", c = /* @__PURE__ */ "id.jobId.category.kind.taskType.labelCode.status.progress.messageCode.createdAt.startedAt.updatedAt.finishedAt.errorCode.generationMode.adapter.requestedMode.mode.attemptedEngine.finalEngine.fallbackReason.artifactTypes.artifactCount.proposalId.proposalStatus.resultStatus".split("."), l = [
 	"schemaVersion",
 	"storeRevision",
 	"jobsStoreRevision",
 	"retention",
 	"total",
 	"entries"
-], c = ["maxEntries", "maxDays"], l = /* @__PURE__ */ new Set(["companion", "task"]), u = /* @__PURE__ */ new Set([
+], u = ["maxEntries", "maxDays"], d = /* @__PURE__ */ new Set(["companion", "task"]), f = /* @__PURE__ */ new Set([
 	"index",
 	"rss",
 	"setup",
@@ -295,7 +313,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"company_analysis",
 	"topic_report",
 	"market_state_snapshot"
-]), d = /* @__PURE__ */ new Set([
+]), p = /* @__PURE__ */ new Set([
 	"index",
 	"rss",
 	"setup",
@@ -310,7 +328,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"market_memory_update",
 	"quality_repair",
 	"investment_review"
-]), f = /* @__PURE__ */ new Set([
+]), m = /* @__PURE__ */ new Set([
 	"index_rebuild",
 	"rss_import",
 	"setup",
@@ -321,7 +339,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"company_analysis",
 	"topic_report",
 	"market_state"
-]), p = /* @__PURE__ */ new Set([
+]), h = /* @__PURE__ */ new Set([
 	"queued",
 	"running",
 	"cancel_requested",
@@ -333,12 +351,12 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"failed_commit",
 	"failed_restart",
 	"failed_commit_recovery"
-]), m = /* @__PURE__ */ new Set([
+]), g = /* @__PURE__ */ new Set([
 	"llm_api",
 	"llm_cli",
 	"rules",
 	"none"
-]), h = /* @__PURE__ */ new Set([
+]), _ = /* @__PURE__ */ new Set([
 	"auto",
 	"codex",
 	"claude",
@@ -348,7 +366,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"claude_api",
 	"rules",
 	"none"
-]), g = /* @__PURE__ */ new Set(["direct", "cli"]), _ = /* @__PURE__ */ new Set([
+]), v = /* @__PURE__ */ new Set(["direct", "cli"]), y = /* @__PURE__ */ new Set([
 	"collect",
 	"index",
 	"install",
@@ -356,16 +374,16 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"generate",
 	"revise",
 	"fallback"
-]), v = /* @__PURE__ */ new Set([
+]), b = /* @__PURE__ */ new Set([
 	"api",
 	"cli",
 	"rules",
 	"none"
-]), y = /* @__PURE__ */ new Set([
+]), x = /* @__PURE__ */ new Set([
 	"engine_unavailable",
 	"engine_failed",
 	"confirmed_zero_evidence"
-]), b = /* @__PURE__ */ new Set([
+]), S = /* @__PURE__ */ new Set([
 	"adapter_unavailable",
 	"adapter_failed",
 	"validation_failed",
@@ -376,7 +394,7 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"private_cleanup_failed",
 	"store_unavailable",
 	"internal_error"
-]), x = /* @__PURE__ */ new Set([
+]), C = /* @__PURE__ */ new Set([
 	"pending",
 	"applying",
 	"applied",
@@ -385,26 +403,26 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	"conflict",
 	"failed_apply",
 	"unavailable"
-]), S = /* @__PURE__ */ new Set([
+]), w = /* @__PURE__ */ new Set([
 	"done",
 	"cancelled",
 	"failed"
-]), C = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
-function w(e, t) {
-	if (!k(e)) return !1;
+]), T = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
+function E(e, t) {
+	if (!j(e)) return !1;
 	let n = Object.keys(e).sort(), r = [...t].sort();
 	return n.length === r.length && n.every((e, t) => e === r[t]);
 }
-function T(e) {
-	if (!w(e, o)) return !1;
-	let t = (e, t) => e === null || t.has(e), n = (e) => e === null || typeof e == "string" && C.test(e);
-	return typeof e.id == "string" && /^wl_[0-9a-f]{24}$/.test(e.id) && typeof e.jobId == "string" && l.has(e.category) && u.has(e.kind) && d.has(e.taskType) && f.has(e.labelCode) && p.has(e.status) && Number.isInteger(e.progress) && e.progress >= 0 && e.progress <= 100 && p.has(e.messageCode) && typeof e.createdAt == "string" && C.test(e.createdAt) && typeof e.updatedAt == "string" && C.test(e.updatedAt) && n(e.startedAt) && n(e.finishedAt) && t(e.errorCode, b) && m.has(e.generationMode) && h.has(e.adapter) && t(e.requestedMode, g) && _.has(e.mode) && t(e.attemptedEngine, v) && t(e.finalEngine, v) && t(e.fallbackReason, y) && Array.isArray(e.artifactTypes) && e.artifactTypes.every((e) => typeof e == "string") && Number.isInteger(e.artifactCount) && e.artifactCount >= 0 && (e.proposalId === null || typeof e.proposalId == "string") && t(e.proposalStatus, x) && t(e.resultStatus, S);
+function D(e) {
+	if (!E(e, c)) return !1;
+	let t = (e, t) => e === null || t.has(e), n = (e) => e === null || typeof e == "string" && T.test(e);
+	return typeof e.id == "string" && /^wl_[0-9a-f]{24}$/.test(e.id) && typeof e.jobId == "string" && d.has(e.category) && f.has(e.kind) && p.has(e.taskType) && m.has(e.labelCode) && h.has(e.status) && Number.isInteger(e.progress) && e.progress >= 0 && e.progress <= 100 && h.has(e.messageCode) && typeof e.createdAt == "string" && T.test(e.createdAt) && typeof e.updatedAt == "string" && T.test(e.updatedAt) && n(e.startedAt) && n(e.finishedAt) && t(e.errorCode, S) && g.has(e.generationMode) && _.has(e.adapter) && t(e.requestedMode, v) && y.has(e.mode) && t(e.attemptedEngine, b) && t(e.finalEngine, b) && t(e.fallbackReason, x) && Array.isArray(e.artifactTypes) && e.artifactTypes.every((e) => typeof e == "string") && Number.isInteger(e.artifactCount) && e.artifactCount >= 0 && (e.proposalId === null || typeof e.proposalId == "string") && t(e.proposalStatus, C) && t(e.resultStatus, w);
 }
-function E(e) {
-	if (!w(e, s) || e.schemaVersion !== 1 || !Number.isInteger(e.storeRevision) || !Number.isInteger(e.jobsStoreRevision) || !Number.isInteger(e.total) || !Array.isArray(e.entries) || !e.entries.every(T) || !w(e.retention, c) || e.retention.maxEntries !== 200 || e.retention.maxDays !== 30) throw Error("work_log_contract_invalid");
+function O(e) {
+	if (!E(e, l) || e.schemaVersion !== 1 || !Number.isInteger(e.storeRevision) || !Number.isInteger(e.jobsStoreRevision) || !Number.isInteger(e.total) || !Array.isArray(e.entries) || !e.entries.every(D) || !E(e.retention, u) || e.retention.maxEntries !== 200 || e.retention.maxDays !== 30) throw Error("work_log_contract_invalid");
 	return e;
 }
-var D = class extends Error {
+var k = class extends Error {
 	path;
 	status;
 	code;
@@ -414,61 +432,61 @@ var D = class extends Error {
 		super(`${e} failed: ${t}${n ? ` (${n})` : ""}`), this.path = e, this.status = t, this.code = n, this.payload = r;
 	}
 };
-function O(e) {
+function A(e) {
 	return e === "queued" || e === "running" || e === "cancel_requested" || e === "committing";
 }
-function k(e) {
+function j(e) {
 	return typeof e == "object" && !!e && !Array.isArray(e);
 }
-async function A(e) {
+async function M(e) {
 	try {
 		return await e.json();
 	} catch {
 		return null;
 	}
 }
-async function j(e, t) {
-	let n = await fetch(e, t), r = await A(n);
+async function N(e, t) {
+	let n = await fetch(e, t), r = await M(n);
 	if (!n.ok) {
-		let t = k(r) ? r : null, i = t?.error, a = typeof i == "string" ? i : "request_failed";
-		throw new D(e, n.status, a, t);
+		let t = j(r) ? r : null, i = t?.error, a = typeof i == "string" ? i : "request_failed";
+		throw new k(e, n.status, a, t);
 	}
 	if (r === null) throw Error(`${e} returned an empty response`);
 	return r;
 }
-async function M(e, t = {}) {
-	return j(e, {
+async function P(e, t = {}) {
+	return N(e, {
 		headers: { "Content-Type": "application/json" },
 		signal: t.signal
 	});
 }
-async function N(e, t, n = {}) {
-	return j(e, {
+async function F(e, t, n = {}) {
+	return N(e, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(t),
 		signal: n.signal
 	});
 }
-async function P(e, t = {}) {
-	return M(`/api/investment-notes/${encodeURIComponent(e)}/intelligence`, t);
-}
-async function F(e, t, n = {}) {
-	return N(`/api/theses/${encodeURIComponent(e)}/review/checkpoints`, t, n);
-}
 async function I(e, t = {}) {
-	return N(`/api/theses/${encodeURIComponent(e)}/delta`, { period: "90d" }, t);
+	return P(`/api/investment-notes/${encodeURIComponent(e)}/intelligence`, t);
 }
 async function L(e, t, n = {}) {
-	return j(e, {
+	return F(`/api/theses/${encodeURIComponent(e)}/review/checkpoints`, t, n);
+}
+async function R(e, t = {}) {
+	return F(`/api/theses/${encodeURIComponent(e)}/delta`, { period: "90d" }, t);
+}
+async function z(e, t, n = {}) {
+	return N(e, {
 		method: "PUT",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(t),
 		signal: n.signal
 	});
 }
-async function R(e, t, n = {}) {
-	return j(e, {
+async function B(e, t, n = {}) {
+	return N(e, {
 		method: "DELETE",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(t),
@@ -477,29 +495,29 @@ async function R(e, t, n = {}) {
 }
 //#endregion
 //#region src/app/themePreference.ts
-var z = n();
-function B(e) {
+var V = n();
+function H(e) {
 	return e === "light" || e === "dark" || e === "system";
 }
-function V(e) {
+function U(e) {
 	return e === "light" || e === "dark";
 }
-function H() {
+function W() {
 	return {
-		preference: B(window.FolioTheme?.preference) ? window.FolioTheme.preference : "system",
-		resolved: V(window.FolioTheme?.resolved) ? window.FolioTheme.resolved : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+		preference: H(window.FolioTheme?.preference) ? window.FolioTheme.preference : "system",
+		resolved: U(window.FolioTheme?.resolved) ? window.FolioTheme.resolved : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
 	};
 }
-function U() {
-	let [e, t] = (0, z.useState)(H);
-	return (0, z.useEffect)(() => {
+function G() {
+	let [e, t] = (0, V.useState)(W);
+	return (0, V.useEffect)(() => {
 		let e = (e) => {
 			let n = e?.detail;
-			if (n && B(n.preference) && V(n.resolved)) {
+			if (n && H(n.preference) && U(n.resolved)) {
 				t(n);
 				return;
 			}
-			t(H());
+			t(W());
 		};
 		return window.addEventListener("folio:theme-changed", e), e(), () => window.removeEventListener("folio:theme-changed", e);
 	}, []), {
@@ -508,10 +526,10 @@ function U() {
 			let n = window.FolioTheme?.setPreference(e);
 			t(n || {
 				preference: e,
-				resolved: e === "system" ? H().resolved : e
+				resolved: e === "system" ? W().resolved : e
 			});
 		}
 	};
 }
 //#endregion
-export { P as a, E as c, I as d, F as f, e as h, R as i, N as l, n as m, D as n, M as o, i as p, a as r, O as s, U as t, L as u };
+export { e as _, o as a, P as c, F as d, z as f, n as g, i as h, a as i, A as l, L as m, k as n, B as o, R as p, s as r, I as s, G as t, O as u };

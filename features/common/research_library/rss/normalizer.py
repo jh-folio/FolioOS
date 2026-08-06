@@ -5,7 +5,13 @@ import datetime as dt
 import hashlib
 
 from features.common.market_calendar import infer_doc_markets
+from features.common.markets import PRODUCT_MARKETS
 from features.common.research_library.rss.policy import normalize_url
+
+
+# feed가 선언한 기본 시장. 시장 계약에서 파생한다 — {US, KR, GLOBAL}로 적어두면
+# 유럽·일본 피드가 본문 신호를 못 찾았을 때 UNKNOWN으로 남는다.
+EXPLICIT_FEED_MARKETS = frozenset({market.value for market in PRODUCT_MARKETS} | {"GLOBAL"})
 
 
 def stable_evidence_id(*parts: str) -> str:
@@ -49,7 +55,7 @@ def rss_item_to_evidence(
     # 실제 신호가 있는 경우 feed 힌트가 절대 이기지 못하는 구조로 지킨다.
     if markets == ["UNKNOWN"]:
         default_market = str((feed or {}).get("default_market") or "").strip().upper()
-        if default_market in {"US", "KR", "GLOBAL"}:
+        if default_market in EXPLICIT_FEED_MARKETS:
             markets = [default_market]
     # 보도자료 와이어는 기업 자료이지 편집된 뉴스가 아니다. source_type으로 갈라 두면
     # 브리핑 입력에서만 제외하고 워치리스트·기업분석에서는 그대로 쓸 수 있다.

@@ -1,23 +1,23 @@
-import { l as e, m as t, o as n, p as r, t as i } from "./themePreference-B61FlBvT.js";
+import { c as e, d as t, g as n, h as r, t as i } from "./themePreference-yEs7yaHz.js";
 //#region src/app/dashboard/LegacyMarketWidgetBoard.tsx
-var a = t(), o = r();
+var a = n(), o = r();
 function s() {
-	let { resolved: t } = i(), r = (0, a.useRef)(null), [s, c] = (0, a.useState)(null), [l, u] = (0, a.useState)(""), [d, f] = (0, a.useState)(""), [p, m] = (0, a.useState)(null), h = (0, a.useCallback)(async () => {
+	let { resolved: n } = i(), r = (0, a.useRef)(null), [s, c] = (0, a.useState)(null), [l, u] = (0, a.useState)(""), [d, f] = (0, a.useState)(""), [p, m] = (0, a.useState)(null), h = (0, a.useCallback)(async () => {
 		try {
-			let e = await n("/api/market-widgets/settings");
-			c(e), u("");
+			let t = await e("/api/market-widgets/settings");
+			c(t), u("");
 		} catch (e) {
 			u(e instanceof Error ? e.message : "시장 위젯 설정을 불러오지 못했습니다.");
 		}
 	}, []);
 	(0, a.useEffect)(() => {
-		let e = !0;
-		return n("/api/market-widgets/settings").then((t) => {
-			e && (c(t), u(""));
-		}).catch((t) => {
-			e && u(t instanceof Error ? t.message : "시장 위젯 설정을 불러오지 못했습니다.");
+		let t = !0;
+		return e("/api/market-widgets/settings").then((e) => {
+			t && (c(e), u(""));
+		}).catch((e) => {
+			t && u(e instanceof Error ? e.message : "시장 위젯 설정을 불러오지 못했습니다.");
 		}), () => {
-			e = !1;
+			t = !1;
 		};
 	}, []), (0, a.useEffect)(() => {
 		let e = (e) => {
@@ -36,9 +36,9 @@ function s() {
 				window.FolioTradingViewWidgets?.cleanup?.(e);
 			};
 		}
-	}, [t, s]);
-	async function g(t) {
-		let n = await e("/api/market-widgets/settings", t);
+	}, [n, s]);
+	async function g(e) {
+		let n = await t("/api/market-widgets/settings", e);
 		return c(n), document.dispatchEvent(new CustomEvent("folio:market-widgets-updated", { detail: n })), n;
 	}
 	function _() {

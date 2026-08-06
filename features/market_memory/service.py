@@ -17,6 +17,7 @@ from features.daily_briefing.service import (
 )
 from features.common.research_library.search.service import group_docs
 from features.market_memory.memory import (
+    REGION_CHOICES,
     list_memory,
     list_states,
     list_story_links,
@@ -269,7 +270,10 @@ def normalize_llm_memory_entry(entry, date, used_docs):
     if not selected_sources:
         selected_sources = source_refs(used_docs, limit=5)
     allowed_category = {"stock_bond", "geopolitics", "emerging"}
-    allowed_region = {"US", "KR", "GLOBAL"}
+    # 시장 계약에서 파생한다. 하드코딩된 {US, KR, GLOBAL}이 남아 있어서 LLM이
+    # `EUROPE`/`JP`로 분류한 내러티브가 저장 직전에 전부 GLOBAL로 강등됐다 —
+    # 4시장으로 넓힌 뒤에도 유럽·일본 내러티브가 하나도 등록되지 않은 원인이다.
+    allowed_region = REGION_CHOICES
     allowed_importance = {"high", "medium", "low"}
     allowed_event = {"earnings", "policy", "geopolitics", "industry_trend", "market_move", "brief"}
     allowed_bias = {"bullish", "bearish", "neutral", "mixed"}

@@ -164,6 +164,16 @@ export type SavedMarketScope = (typeof SAVED_MARKET_SCOPES)[number];
 export const MARKET_STATE_SCOPES = ["AUTO", "GLOBAL", "US", "KR", "EUROPE", "JP"] as const;
 export type MarketStateScope = (typeof MARKET_STATE_SCOPES)[number];
 
+/** 시장 이름은 두 가지로 쓴다. 좁은 선택 컨트롤에서는 코드, 읽는 문장에서는 한글. */
+export const MARKET_CODE_LABELS: Record<string, string> = {
+  us: "US", kr: "KR", europe: "EU", jp: "JP",
+  US: "US", KR: "KR", EUROPE: "EU", JP: "JP",
+};
+export const MARKET_KO_LABELS: Record<string, string> = {
+  us: "미국", kr: "한국", europe: "유럽", jp: "일본",
+  US: "미국", KR: "한국", EUROPE: "유럽", JP: "일본",
+};
+
 export const EXECUTION_MODES = ["direct", "cli"] as const;
 export type ExecutionMode = (typeof EXECUTION_MODES)[number];
 

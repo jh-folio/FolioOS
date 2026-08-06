@@ -5,6 +5,7 @@ import re
 import time
 from functools import lru_cache
 from features.common.config_bootstrap import resolve_config
+from features.common.markets import PRODUCT_MARKETS
 from features.common.exchange_holidays import MARKET_EXCHANGES, market_exchange_status
 from features.common.markets import MarketCode, normalize_market_code
 from features.common.utils import normalize
@@ -720,7 +721,7 @@ def _company_market_matchers():
     matchers = []
     for company in data.get("companies", []) or []:
         market = str(company.get("market") or "").strip().upper()
-        if market not in {"US", "KR"}:
+        if market not in _PRODUCT_MARKET_VALUES:
             continue
         names = [company.get("name", ""), company.get("ticker", "")] + list(company.get("aliases", []) or [])
         for name in names:
@@ -751,6 +752,8 @@ def _text_has_token(text, token):
 
 
 _EXPLICIT_MARKETS = {"US", "KR", "EUROPE", "JP", "GLOBAL", "EU"}
+# 회사 마스터 matcher가 다루는 시장. 시장 계약에서 파생한다.
+_PRODUCT_MARKET_VALUES = frozenset(market.value for market in PRODUCT_MARKETS)
 
 
 def _canonical_market(token: str) -> str:

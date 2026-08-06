@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
+import { getJson, isActiveJobStatus, postJson, MARKET_CODE_LABELS, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
 import { legacyBridge } from "./legacyBridge";
@@ -17,8 +17,11 @@ type MarketScope = "us" | "kr" | "europe" | "jp" | "all" | "both" | "multi";
 type ArchiveMarketFilter = "all" | "aggregate" | MarketScope;
 const SINGLE_MARKETS = ["us", "kr", "europe", "jp"] as const;
 type SingleMarket = (typeof SINGLE_MARKETS)[number];
+// 좁은 다중 선택 트랙이라 코드로 쓴다. 한글 라벨 4개는 한 줄에 들어가지 않아
+// 알약 트랙이 두 줄로 접혔다. 읽는 문장에는 계속 한글(MARKET_KO_LABELS)을 쓴다.
 const MARKET_CHOICE_LABELS: Record<SingleMarket, string> = {
-  us: "미국장", kr: "한국장", europe: "유럽장", jp: "일본장",
+  us: MARKET_CODE_LABELS.us, kr: MARKET_CODE_LABELS.kr,
+  europe: MARKET_CODE_LABELS.europe, jp: MARKET_CODE_LABELS.jp,
 };
 
 // 조합에 이름이 없을 수 있다. `all`/`both`는 늘 뜻하던 집합에만 쓰고,

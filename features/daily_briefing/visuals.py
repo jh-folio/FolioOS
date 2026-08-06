@@ -16,6 +16,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from features.common.market_calendar import is_market_open, latest_trading_day_on_or_before, previous_trading_day
+from features.common.markets import PRODUCT_MARKETS
 from features.common.config_bootstrap import resolve_config
 from features.common.market_data.market_universe import (
     build_europe_heatmap_snapshot,
@@ -58,6 +59,11 @@ MARKET_META = {
     for market in PRODUCT_MARKETS
 }
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+# 단일 시장 스냅샷 필터. 시장 계약에서 파생한다 — {US, KR}로 적어두면 유럽·일본
+# 보고서가 필터를 통과하지 못해 전 시장 차트가 섞여 보인다.
+VISUAL_SINGLE_MARKETS = frozenset(market.value for market in PRODUCT_MARKETS)
 
 
 def _safe_float(value):
@@ -993,7 +999,7 @@ def load_current_visuals(
     saved_details = sidecar.get("snapshots") or {}
     target_market = str(market or "").strip().upper()
     selected_snapshots = deepcopy(report.get("visualSnapshots") or [])
-    if target_market in {"US", "KR"}:
+    if target_market in VISUAL_SINGLE_MARKETS:
         selected_snapshots = [
             row for row in selected_snapshots
             if str(row.get("market") or "").upper() == target_market

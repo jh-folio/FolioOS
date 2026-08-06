@@ -1033,11 +1033,11 @@ body:has(#folioReactRoot .react-shell) main.page {
   min-width: 58px;
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid var(--folio-border, #dde2e9);
-  border-radius: var(--radius-pill, 999px);
-  background: var(--folio-surface-clean, #ffffff);
-  color: var(--folio-ink, #07111f);
-  font-weight: var(--fw-bold);
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--surface-panel);
+  color: var(--folio-ink);
+  font-weight: var(--fw-medium);
   box-shadow: var(--elev-1, 0 4px 12px rgba(7, 17, 31, 0.045));
 }
 
@@ -8201,13 +8201,14 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
 .brief-market-segment {
   position: relative;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   width: fit-content;
   max-width: 100%;
   min-height: 36px;
   padding: 3px;
+  overflow-x: auto;
   border: none;
   border-radius: var(--r-pill);
   background: var(--surface-control);
@@ -8242,13 +8243,13 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-width: 62px;
+  min-width: 44px;
   min-height: 28px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-radius: var(--r-pill);
   color: var(--folio-ink-muted);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
   white-space: nowrap;
   transition: background 180ms var(--ease, ease), color 180ms var(--ease, ease);
 }
@@ -14740,9 +14741,17 @@ main.page {
 }
 .agent-action:hover { background: var(--surface-control-hover); color: var(--folio-ink); }
 
-/* 인터랙티브 필터 알약(cal-filter/sym-chip): 무테 fill로. 활성 어두운 fill은 기존 규칙 유지 */
+/* 인터랙티브 필터 알약(cal-filter/sym-chip): 무테 fill.
+   활성 상태를 여기서 다시 세운다 — `.sym-chip--active`(0,1,0)는 이 블록과 특이성이
+   같은데 앞에 있어서 졌고, Dark에서 --surface-control이 패널 배경과 같은 색이라
+   선택된 종목이 선택되지 않은 것과 구분되지 않았다. */
 .cal-filter, .sym-chip { border: none; background: var(--surface-control); }
 .cal-filter:hover, .sym-chip:hover { background: var(--surface-control-hover); }
+.sym-chip--active, .sym-chip[aria-pressed="true"] {
+  background: var(--folio-surface-dark);
+  color: var(--folio-ink-inverse);
+}
+.sym-chip--active:hover, .sym-chip[aria-pressed="true"]:hover { background: var(--folio-surface-dark-2); }
 
 /* --- 칩 계보 → .chip 기하(3px 9px / 11px / 600). 의미색 규칙은 그대로 둔다 --- */
 .status-chip, .cockpit-summary__chip, .change-verdict-chip, .briefing-archive-chip,

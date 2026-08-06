@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../../api";
+import { getJson, postJson, MARKET_KO_LABELS } from "../../api";
 
 type Event = {
   id: string; kind: string; title: string; startsAt: string; status: string;
@@ -20,7 +20,7 @@ const KIND_FILTERS: Array<{ value: string; label: string }> = [
   { value: "central_bank", label: "중앙은행" }, { value: "holiday", label: "휴장" },
   { value: "filing", label: "공시" }, { value: "dividend", label: "배당" },
 ];
-export const MARKET_KO: Record<string, string> = { US: "미국", KR: "한국", EUROPE: "유럽", JP: "일본" };
+export const MARKET_KO: Record<string, string> = MARKET_KO_LABELS;
 const MARKET_FILTERS = ["all", "US", "KR", "EUROPE", "JP"];
 // 유럽은 거래소마다 휴장일이 달라 시장 하나로 묶이지 않는다. 칩에서도 어느 거래소가
 // 쉬는지 보여야 "유럽 휴장"으로 잘못 읽히지 않는다.
