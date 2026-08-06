@@ -14326,16 +14326,28 @@ main.page {
 .chart-symbols__label { min-width: 30px; color: var(--folio-ink-subtle); font-size: 11px; font-weight: var(--fw-bold); letter-spacing: 0.06em; }
 .sym-chip { border: 1px solid var(--folio-border); background: var(--folio-surface-clean); color: var(--folio-ink-muted); border-radius: var(--r-pill); padding: 4px 12px; font-size: 12.5px; font-weight: var(--fw-medium); font-family: inherit; cursor: pointer; }
 .sym-chip--active { background: var(--folio-surface-dark); border-color: var(--folio-surface-dark); color: var(--folio-ink-inverse); }
-.chart-quote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin: 0 0 10px; color: var(--folio-ink); }
-.chart-quote b { font-size: 20px; font-variant-numeric: tabular-nums; }
-.chart-quote .up { color: var(--folio-green); font-weight: var(--fw-bold); }
-.chart-quote .down { color: var(--folio-burgundy); font-weight: var(--fw-bold); }
+/* 이 패널에서 가장 강조되어야 할 값은 종목명·가격·등락률이다. 예전에는 한 줄에
+   같은 크기로 놓여 위계가 없었다. 이름은 위 작은 글씨, 값은 크게. */
+.chart-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.chart-quote { display: grid; gap: 2px; margin: 0; color: var(--folio-ink); }
+.chart-quote__name { color: var(--folio-ink-soft); font-size: var(--fs-body-sm); font-weight: var(--fw-medium); }
+.chart-quote__value { display: flex; align-items: baseline; gap: 10px; }
+.chart-quote b { font-size: 30px; font-weight: var(--fw-bold); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.chart-quote .up { color: var(--folio-green); font-size: var(--fs-body); font-weight: var(--fw-bold); }
+.chart-quote .down { color: var(--folio-burgundy); font-size: var(--fs-body); font-weight: var(--fw-bold); }
 .chart-quote .flat { color: var(--folio-ink-muted); font-weight: var(--fw-bold); }
 .chart-quote small { color: var(--folio-ink-subtle); font-size: 12px; font-variant-numeric: tabular-nums; }
 .chart-next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 0; color: var(--folio-ink-soft); font-size: 13px; }
 .chart-next b { color: var(--folio-ink); }
 .chart-next small { color: var(--folio-ink-subtle); }
-.cockpit-chart-stage { position: relative; height: 360px; min-height: 360px; max-height: 360px; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); overflow: hidden; background: var(--folio-surface-clean); }
+.cockpit-chart-stage { position: relative; height: 376px; min-height: 376px; max-height: 376px; padding-bottom: 8px; border: none; border-radius: var(--r-group); overflow: hidden; background: var(--surface-group); }
 /* 브리핑 본문 차트의 크로스헤어 툴팁과 같은 형식(색은 토큰). */
 .market-chart-tooltip {
   position: absolute;
@@ -14368,8 +14380,14 @@ main.page {
 .cal-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 14px; }
 .cal-filter { border: 1px solid var(--folio-border); background: var(--folio-surface-clean); color: var(--folio-ink-muted); border-radius: var(--r-pill); padding: 4px 12px; font-size: 12px; font-weight: var(--fw-medium); cursor: pointer; }
 .cal-filter[aria-pressed="true"] { color: var(--folio-ink-inverse); background: var(--folio-surface-dark); border-color: var(--folio-surface-dark); }
+.cal-filter-label {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  margin-right: var(--sp-1);
+}
 .cal-filter-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--folio-border); }
-.cal-watch-toggle { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--folio-ink-muted); font-size: 12.5px; }
+.cal-watch-toggle { margin-left: auto; }
 .cal-week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 0 0 14px; }
 .cal-day { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); background: var(--folio-surface-clean); text-align: left; cursor: pointer; font: inherit; color: inherit; }
 .cal-day span { color: var(--folio-ink-subtle); font-size: 11px; }
@@ -15311,3 +15329,45 @@ select { min-height: 36px; padding: 0 12px; }
   .find-bar__search { flex: 1 1 100%; }
   .find-bar__reset { margin-left: 0; }
 }
+
+/* --- 차트 종목 선택기(제목 줄 우측 접이식) --- */
+.chart-pickers { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.chart-picker { position: relative; }
+.chart-picker > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  list-style: none;
+}
+.chart-picker > summary::-webkit-details-marker { display: none; }
+.chart-picker > summary::after { content: "▾"; color: var(--folio-ink-subtle); }
+.chart-picker > summary:hover { background: var(--surface-control-hover); }
+.chart-picker[open] > summary { background: var(--surface-control-hover); color: var(--folio-ink); }
+.chart-picker__list {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: max-content;
+  max-width: min(320px, 90vw);
+  margin-top: 6px;
+  padding: var(--sp-3);
+  border-radius: var(--r-group);
+  background: var(--surface-panel);
+  box-shadow: var(--elev-2, var(--elev-1));
+}
+.chart-picker__row { display: inline-flex; align-items: center; gap: 2px; }
+.chart-picker__remove { width: 24px; min-height: 24px; font-size: var(--fs-meta); }
+.chart-picker__add { display: flex; gap: 6px; width: 100%; margin-top: 2px; }
+.chart-picker__add input { min-width: 0; }
+.chart-picker__error { width: 100%; margin: 0; color: var(--folio-burgundy); font-size: var(--fs-meta); }

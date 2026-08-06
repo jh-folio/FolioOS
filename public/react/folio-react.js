@@ -11546,10 +11546,6 @@ var Ca = {
 	actual: "발표됨"
 }, Ta = [
 	{
-		value: "all",
-		label: "전체"
-	},
-	{
 		value: "earnings",
 		label: "실적"
 	},
@@ -11574,7 +11570,6 @@ var Ca = {
 		label: "배당"
 	}
 ], Ea = t, Da = [
-	"all",
 	"US",
 	"KR",
 	"EUROPE",
@@ -11645,66 +11640,66 @@ function Fa(e) {
 	return e.title.slice(0, 22);
 }
 function Ia({ focusSymbols: e }) {
-	let [t, i] = (0, S.useState)([]), [a, o] = (0, S.useState)("week"), [s, c] = (0, S.useState)("all"), [l, u] = (0, S.useState)("all"), [d, f] = (0, S.useState)(!1), [p, m] = (0, S.useState)(() => /* @__PURE__ */ new Date()), [h, g] = (0, S.useState)(() => ja(/* @__PURE__ */ new Date())), [_, v] = (0, S.useState)(!1), [y, b] = (0, S.useState)(""), [x, w] = (0, S.useState)(""), T = (0, S.useCallback)(async () => {
-		let e = /* @__PURE__ */ new Date(p.getTime() - 40 * Aa), t = new Date(p.getTime() + 70 * Aa);
+	let [t, i] = (0, S.useState)([]), [a, o] = (0, S.useState)("week"), [c, l] = (0, S.useState)([]), [u, d] = (0, S.useState)([]), [f, p] = (0, S.useState)(!1), [m, h] = (0, S.useState)(() => /* @__PURE__ */ new Date()), [g, _] = (0, S.useState)(() => ja(/* @__PURE__ */ new Date())), [v, y] = (0, S.useState)(!1), [b, x] = (0, S.useState)(""), [w, T] = (0, S.useState)(""), E = (0, S.useCallback)(async () => {
+		let e = /* @__PURE__ */ new Date(m.getTime() - 40 * Aa), t = new Date(m.getTime() + 70 * Aa);
 		try {
 			let r = await n(`/api/market-calendar?start=${encodeURIComponent(e.toISOString())}&end=${encodeURIComponent(t.toISOString())}&limit=500`);
-			i(r.events || []), w("");
+			i(r.events || []), T("");
 		} catch (e) {
-			w(e instanceof Error ? e.message : "일정을 불러오지 못했습니다.");
+			T(e instanceof Error ? e.message : "일정을 불러오지 못했습니다.");
 		}
-	}, [p]);
+	}, [m]);
 	(0, S.useEffect)(() => {
-		T();
-	}, [T]), (0, S.useEffect)(() => {
+		E();
+	}, [E]), (0, S.useEffect)(() => {
 		n("/api/dashboard/settings").then((e) => {
-			(e.calendarView === "week" || e.calendarView === "month") && o(e.calendarView), e.calendarKind && c(e.calendarKind), e.calendarMarket && u(e.calendarMarket), f(!!e.calendarWatchlistOnly);
+			(e.calendarView === "week" || e.calendarView === "month") && o(e.calendarView), l(e.calendarKinds || (e.calendarKind && e.calendarKind !== "all" ? [e.calendarKind] : [])), d(e.calendarMarkets || (e.calendarMarket && e.calendarMarket !== "all" ? [e.calendarMarket] : [])), p(!!e.calendarWatchlistOnly);
 		}).catch(() => void 0);
 	}, []);
-	function E(e) {
+	function D(e) {
 		r("/api/dashboard/settings", e).catch(() => void 0);
 	}
-	let D = (0, S.useMemo)(() => new Set(e.filter((e) => e.source !== "fallback").map((e) => e.symbol.toUpperCase())), [e]), O = (0, S.useMemo)(() => t.filter((e) => !(s !== "all" && e.kind !== s || l !== "all" && (e.market || "").toUpperCase() !== l || d && !(e.tickers || []).some((e) => D.has(e.toUpperCase())))), [
+	let O = (0, S.useMemo)(() => new Set(e.filter((e) => e.source !== "fallback").map((e) => e.symbol.toUpperCase())), [e]), k = (0, S.useMemo)(() => t.filter((e) => !(c.length && !c.includes(e.kind) || u.length && !u.includes((e.market || "").toUpperCase()) || f && !(e.tickers || []).some((e) => O.has(e.toUpperCase())))), [
 		t,
-		s,
-		l,
-		d,
-		D
-	]), k = (0, S.useMemo)(() => {
+		c,
+		u,
+		f,
+		O
+	]), A = (0, S.useMemo)(() => {
 		let e = /* @__PURE__ */ new Map();
-		for (let t of O) {
+		for (let t of k) {
 			let n = Ma(t);
 			e.set(n, [...e.get(n) || [], t]);
 		}
 		for (let t of e.values()) t.sort((e, t) => (t.importance || 0) - (e.importance || 0) || e.startsAt.localeCompare(t.startsAt));
 		return e;
-	}, [O]), A = Pa(p), j = Array.from({ length: 7 }, (e, t) => new Date(A.getTime() + t * Aa)), M = new Date(p.getFullYear(), p.getMonth(), 1), N = (0, S.useMemo)(() => {
-		let e = Pa(M), t = [];
+	}, [k]), j = Pa(m), M = Array.from({ length: 7 }, (e, t) => new Date(j.getTime() + t * Aa)), N = new Date(m.getFullYear(), m.getMonth(), 1), P = (0, S.useMemo)(() => {
+		let e = Pa(N), t = [];
 		for (let n = 0; n < 42; n += 1) t.push(new Date(e.getTime() + n * Aa));
-		for (; t.length > 7 && t[t.length - 7].getMonth() !== p.getMonth();) t.splice(-7, 7);
+		for (; t.length > 7 && t[t.length - 7].getMonth() !== m.getMonth();) t.splice(-7, 7);
 		return t;
-	}, [p, M]), P = ja(/* @__PURE__ */ new Date()), F = k.get(h) || [], I = (/* @__PURE__ */ new Date(`${h}T00:00:00`)).toLocaleDateString("ko-KR", {
+	}, [m, N]), F = ja(/* @__PURE__ */ new Date()), I = A.get(g) || [], L = (/* @__PURE__ */ new Date(`${g}T00:00:00`)).toLocaleDateString("ko-KR", {
 		month: "long",
 		day: "numeric",
 		weekday: "long"
-	}), L = (0, S.useMemo)(() => {
+	}), R = (0, S.useMemo)(() => {
 		let e = /* @__PURE__ */ new Map();
-		for (let t of F) e.set(t.kind, (e.get(t.kind) || 0) + 1);
+		for (let t of I) e.set(t.kind, (e.get(t.kind) || 0) + 1);
 		return [...e.entries()].map(([e, t]) => `${Ca[e] || e} ${t}`).join(" · ");
-	}, [F]);
-	function R(e) {
+	}, [I]);
+	function z(e) {
 		let t = a === "week" ? 7 * Aa : 0;
-		m(a === "week" ? (n) => new Date(n.getTime() + e * t) : (t) => new Date(t.getFullYear(), t.getMonth() + e, 1));
+		h(a === "week" ? (n) => new Date(n.getTime() + e * t) : (t) => new Date(t.getFullYear(), t.getMonth() + e, 1));
 	}
-	async function z() {
-		v(!0), b(""), w("");
+	async function B() {
+		y(!0), x(""), T("");
 		try {
 			let e = await r("/api/market-calendar/refresh", {}), t = e.providers?.fred_macro;
-			b(`일정 ${e.stored ?? 0}건 수집${t === "fred_key_required" ? " · 미국 지표 일정은 설정에서 FRED API Key를 등록하면 함께 수집됩니다" : ""}`), await T();
+			x(`일정 ${e.stored ?? 0}건 수집${t === "fred_key_required" ? " · 미국 지표 일정은 설정에서 FRED API Key를 등록하면 함께 수집됩니다" : ""}`), await E();
 		} catch (e) {
-			w(e instanceof Error ? e.message : "일정 수집에 실패했습니다.");
+			T(e instanceof Error ? e.message : "일정 수집에 실패했습니다.");
 		} finally {
-			v(!1);
+			y(!1);
 		}
 	}
 	return /* @__PURE__ */ (0, C.jsxs)("section", {
@@ -11729,14 +11724,14 @@ function Ia({ focusSymbols: e }) {
 									type: "button",
 									"aria-pressed": a === "week",
 									onClick: () => {
-										o("week"), E({ calendarView: "week" });
+										o("week"), D({ calendarView: "week" });
 									},
 									children: "주간"
 								}), /* @__PURE__ */ (0, C.jsx)("button", {
 									type: "button",
 									"aria-pressed": a === "month",
 									onClick: () => {
-										o("month"), E({ calendarView: "month" });
+										o("month"), D({ calendarView: "month" });
 									},
 									children: "월간"
 								})]
@@ -11746,7 +11741,7 @@ function Ia({ focusSymbols: e }) {
 							className: "btn",
 							type: "button",
 							"aria-label": a === "week" ? "이전 주" : "이전 달",
-							onClick: () => R(-1),
+							onClick: () => z(-1),
 							children: "◀"
 						}),
 						/* @__PURE__ */ (0, C.jsx)("button", {
@@ -11754,7 +11749,7 @@ function Ia({ focusSymbols: e }) {
 							type: "button",
 							onClick: () => {
 								let e = /* @__PURE__ */ new Date();
-								m(e), g(ja(e));
+								h(e), _(ja(e));
 							},
 							children: "오늘"
 						}),
@@ -11762,15 +11757,15 @@ function Ia({ focusSymbols: e }) {
 							className: "btn",
 							type: "button",
 							"aria-label": a === "week" ? "다음 주" : "다음 달",
-							onClick: () => R(1),
+							onClick: () => z(1),
 							children: "▶"
 						}),
 						/* @__PURE__ */ (0, C.jsx)("button", {
 							className: "btn btn--primary",
 							type: "button",
-							onClick: z,
-							disabled: _,
-							children: _ ? "수집 중" : "일정 수집"
+							onClick: B,
+							disabled: v,
+							children: v ? "수집 중" : "일정 수집"
 						})
 					]
 				})]
@@ -11778,65 +11773,75 @@ function Ia({ focusSymbols: e }) {
 			/* @__PURE__ */ (0, C.jsxs)("div", {
 				className: "cal-filter-row",
 				role: "group",
-				"aria-label": "일정 필터",
+				"aria-label": "일정 유형 필터",
+				children: [/* @__PURE__ */ (0, C.jsx)("span", {
+					className: "cal-filter-label",
+					children: "유형"
+				}), Ta.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
+					type: "button",
+					className: "cal-filter",
+					"aria-pressed": c.includes(e.value),
+					onClick: () => {
+						let t = c.includes(e.value) ? c.filter((t) => t !== e.value) : [...c, e.value];
+						l(t), D({ calendarKinds: t });
+					},
+					children: e.label
+				}, e.value))]
+			}),
+			/* @__PURE__ */ (0, C.jsxs)("div", {
+				className: "cal-filter-row",
+				role: "group",
+				"aria-label": "일정 시장 필터",
 				children: [
-					Ta.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
-						type: "button",
-						className: "cal-filter",
-						"aria-pressed": s === e.value,
-						onClick: () => {
-							c(e.value), E({ calendarKind: e.value });
-						},
-						children: e.label
-					}, e.value)),
 					/* @__PURE__ */ (0, C.jsx)("span", {
-						className: "cal-filter-sep",
-						"aria-hidden": "true"
+						className: "cal-filter-label",
+						children: "시장"
 					}),
 					Da.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
 						type: "button",
 						className: "cal-filter",
-						"aria-pressed": l === e,
+						"aria-pressed": u.includes(e),
 						onClick: () => {
-							u(e), E({ calendarMarket: e });
+							let t = u.includes(e) ? u.filter((t) => t !== e) : [...u, e];
+							d(t), D({ calendarMarkets: t });
 						},
-						children: e === "all" ? "전체 시장" : Ea[e] || e
+						children: s[e] || e
 					}, e)),
-					/* @__PURE__ */ (0, C.jsxs)("label", {
-						className: "cal-watch-toggle",
-						children: [/* @__PURE__ */ (0, C.jsx)("input", {
-							type: "checkbox",
-							checked: d,
-							onChange: (e) => {
-								f(e.currentTarget.checked), E({ calendarWatchlistOnly: e.currentTarget.checked });
-							}
-						}), " 보유·관심만"]
+					/* @__PURE__ */ (0, C.jsx)("button", {
+						type: "button",
+						className: "cal-filter cal-watch-toggle",
+						"aria-pressed": f,
+						onClick: () => {
+							let e = !f;
+							p(e), D({ calendarWatchlistOnly: e });
+						},
+						children: "보유·관심만"
 					})
 				]
 			}),
-			y && /* @__PURE__ */ (0, C.jsx)("p", {
+			b && /* @__PURE__ */ (0, C.jsx)("p", {
 				className: "react-reader-status",
-				children: y
+				children: b
 			}),
-			x && /* @__PURE__ */ (0, C.jsx)("p", {
+			w && /* @__PURE__ */ (0, C.jsx)("p", {
 				className: "react-dashboard-error",
 				role: "alert",
-				children: x
+				children: w
 			}),
 			a === "week" ? /* @__PURE__ */ (0, C.jsx)("div", {
 				className: "cal-week-strip",
 				role: "tablist",
 				"aria-label": "이번 주",
-				children: j.map((e, t) => {
-					let n = ja(e), r = k.get(n) || [], i = [...new Set(r.map((e) => e.kind))].slice(0, 3);
+				children: M.map((e, t) => {
+					let n = ja(e), r = A.get(n) || [], i = [...new Set(r.map((e) => e.kind))].slice(0, 3);
 					return /* @__PURE__ */ (0, C.jsxs)("button", {
 						type: "button",
 						role: "tab",
-						"aria-selected": n === h,
-						className: `cal-day${n === h ? " cal-day--active" : ""}${t >= 5 ? " cal-day--dim" : ""}${n === P ? " cal-day--today" : ""}`,
-						onClick: () => g(n),
+						"aria-selected": n === g,
+						className: `cal-day${n === g ? " cal-day--active" : ""}${t >= 5 ? " cal-day--dim" : ""}${n === F ? " cal-day--today" : ""}`,
+						onClick: () => _(n),
 						children: [
-							/* @__PURE__ */ (0, C.jsxs)("span", { children: [ka[t], n === P ? " · 오늘" : ""] }),
+							/* @__PURE__ */ (0, C.jsxs)("span", { children: [ka[t], n === F ? " · 오늘" : ""] }),
 							/* @__PURE__ */ (0, C.jsxs)("b", { children: [
 								e.getMonth() + 1,
 								".",
@@ -11849,21 +11854,21 @@ function Ia({ focusSymbols: e }) {
 				})
 			}) : /* @__PURE__ */ (0, C.jsxs)("div", {
 				className: "cal-month-grid",
-				"aria-label": `${p.getFullYear()}년 ${p.getMonth() + 1}월`,
+				"aria-label": `${m.getFullYear()}년 ${m.getMonth() + 1}월`,
 				children: [ka.map((e, t) => /* @__PURE__ */ (0, C.jsx)("span", {
 					className: `cal-dow${t >= 5 ? " cal-dow--dim" : ""}`,
 					children: e
-				}, e)), N.map((e) => {
-					let t = ja(e), n = k.get(t) || [], r = e.getMonth() !== p.getMonth();
+				}, e)), P.map((e) => {
+					let t = ja(e), n = A.get(t) || [], r = e.getMonth() !== m.getMonth();
 					return /* @__PURE__ */ (0, C.jsxs)("button", {
 						type: "button",
-						className: `cal-cell${t === P ? " cal-cell--today" : ""}${r ? " cal-cell--dim" : ""}${t === h ? " cal-cell--active" : ""}`,
-						onClick: () => g(t),
+						className: `cal-cell${t === F ? " cal-cell--today" : ""}${r ? " cal-cell--dim" : ""}${t === g ? " cal-cell--active" : ""}`,
+						onClick: () => _(t),
 						children: [
 							/* @__PURE__ */ (0, C.jsxs)("header", { children: [
 								e.getDate(),
 								n.length ? /* @__PURE__ */ (0, C.jsxs)("b", { children: [n.length, "건"] }) : null,
-								t === P ? /* @__PURE__ */ (0, C.jsx)("i", { children: "오늘" }) : null
+								t === F ? /* @__PURE__ */ (0, C.jsx)("i", { children: "오늘" }) : null
 							] }),
 							n.slice(0, 3).map((e) => /* @__PURE__ */ (0, C.jsx)("span", {
 								className: "ev",
@@ -11881,14 +11886,14 @@ function Ia({ focusSymbols: e }) {
 			}),
 			/* @__PURE__ */ (0, C.jsxs)("p", {
 				className: "cal-day-head",
-				children: [/* @__PURE__ */ (0, C.jsx)("b", { children: I }), F.length ? /* @__PURE__ */ (0, C.jsxs)(C.Fragment, { children: [
+				children: [/* @__PURE__ */ (0, C.jsx)("b", { children: L }), I.length ? /* @__PURE__ */ (0, C.jsxs)(C.Fragment, { children: [
 					" · ",
-					F.length,
+					I.length,
 					"건 — ",
-					L
+					R
 				] }) : null]
 			}),
-			F.length ? /* @__PURE__ */ (0, C.jsx)("div", {
+			I.length ? /* @__PURE__ */ (0, C.jsx)("div", {
 				className: "table-scroll",
 				children: /* @__PURE__ */ (0, C.jsxs)("table", {
 					className: "cal-table",
@@ -11913,7 +11918,7 @@ function Ia({ focusSymbols: e }) {
 							scope: "col",
 							children: "확정도"
 						})
-					] }) }), /* @__PURE__ */ (0, C.jsx)("tbody", { children: F.map((e) => /* @__PURE__ */ (0, C.jsxs)("tr", { children: [
+					] }) }), /* @__PURE__ */ (0, C.jsx)("tbody", { children: I.map((e) => /* @__PURE__ */ (0, C.jsxs)("tr", { children: [
 						/* @__PURE__ */ (0, C.jsx)("td", { children: Na(e) }),
 						/* @__PURE__ */ (0, C.jsx)("td", { children: /* @__PURE__ */ (0, C.jsx)("span", {
 							className: "chip mkt-chip",
@@ -12002,60 +12007,95 @@ function Va(e) {
 	return `${n} ${r} 예정${i && i !== "종일" ? ` · ${i}` : ""}`;
 }
 function Ha({ symbols: e }) {
-	let t = e.filter((e) => e.source !== "fallback" && !za.some((t) => t.symbol === e.symbol)), [i, a] = (0, S.useState)(za[0].symbol), [o, s] = (0, S.useState)("3m"), [c, l] = (0, S.useState)("line"), [u, d] = (0, S.useState)(null), [f, p] = (0, S.useState)(null), [m, h] = (0, S.useState)(""), g = (0, S.useRef)(null), _ = (0, S.useRef)(!1);
+	let t = e.filter((e) => e.source !== "fallback" && !za.some((t) => t.symbol === e.symbol)), [i, a] = (0, S.useState)(""), [o, s] = (0, S.useState)(""), [c, l] = (0, S.useState)(za[0].symbol), [u, d] = (0, S.useState)("3m"), [f, p] = (0, S.useState)("line"), [m, h] = (0, S.useState)(null), [g, _] = (0, S.useState)(null), [v, y] = (0, S.useState)(""), b = (0, S.useRef)(null), x = (0, S.useRef)(!1);
+	async function w(e) {
+		await r("/api/watchlist", { items: e }), document.dispatchEvent(new CustomEvent("folio:generation-complete"));
+	}
+	async function T() {
+		let e = i.trim().toUpperCase();
+		if (e) {
+			s("");
+			try {
+				let t = await n("/api/watchlist");
+				if (t.some((t) => t.toUpperCase() === e)) {
+					s("이미 관심 종목에 있습니다.");
+					return;
+				}
+				await w([...t, e]), a("");
+			} catch (e) {
+				s(e instanceof Error ? e.message : "추가하지 못했습니다.");
+			}
+		}
+	}
+	async function E(t) {
+		s("");
+		try {
+			let r = await n("/api/watchlist"), i = (e.find((e) => e.symbol === t)?.label || "").toLowerCase(), a = r.filter((e) => {
+				let n = e.trim().toLowerCase();
+				return n !== t.toLowerCase() && (!i || n !== i);
+			});
+			if (a.length === r.length) {
+				s("워치리스트에서 해당 항목을 찾지 못했습니다.");
+				return;
+			}
+			await w(a);
+		} catch (e) {
+			s(e instanceof Error ? e.message : "제거하지 못했습니다.");
+		}
+	}
 	(0, S.useEffect)(() => {
-		_.current || (_.current = !0, n("/api/dashboard/settings").then((e) => {
-			e.chartRange && Ra.includes(e.chartRange) && s(e.chartRange), e.chartSymbol && a(e.chartSymbol), (e.chartStyle === "line" || e.chartStyle === "candle") && l(e.chartStyle);
+		x.current || (x.current = !0, n("/api/dashboard/settings").then((e) => {
+			e.chartRange && Ra.includes(e.chartRange) && d(e.chartRange), e.chartSymbol && l(e.chartSymbol), (e.chartStyle === "line" || e.chartStyle === "candle") && p(e.chartStyle);
 		}).catch(() => void 0));
 	}, []), (0, S.useEffect)(() => {
-		za.some((e) => e.symbol === i) || t.some((e) => e.symbol === i) || a(za[0].symbol);
-	}, [t, i]);
-	function v(e) {
-		a(e), r("/api/dashboard/settings", { chartSymbol: e }).catch(() => void 0);
+		za.some((e) => e.symbol === c) || t.some((e) => e.symbol === c) || l(za[0].symbol);
+	}, [t, c]);
+	function D(e) {
+		l(e), r("/api/dashboard/settings", { chartSymbol: e }).catch(() => void 0);
 	}
-	function y(e) {
-		s(e), r("/api/dashboard/settings", { chartRange: e }).catch(() => void 0);
+	function O(e) {
+		d(e), r("/api/dashboard/settings", { chartRange: e }).catch(() => void 0);
 	}
-	function b(e) {
-		l(e), r("/api/dashboard/settings", { chartStyle: e }).catch(() => void 0);
+	function k(e) {
+		p(e), r("/api/dashboard/settings", { chartStyle: e }).catch(() => void 0);
 	}
 	(0, S.useEffect)(() => {
 		let e = !0;
-		return h(""), n(`/api/market/chart?symbol=${encodeURIComponent(i)}&range=${o}&interval=1d`).then((t) => {
-			e && d(t);
+		return y(""), n(`/api/market/chart?symbol=${encodeURIComponent(c)}&range=${u}&interval=1d`).then((t) => {
+			e && h(t);
 		}).catch((t) => {
-			e && h(t instanceof Error ? t.message : "차트를 불러오지 못했습니다.");
+			e && y(t instanceof Error ? t.message : "차트를 불러오지 못했습니다.");
 		}), () => {
 			e = !1;
 		};
-	}, [i, o]), (0, S.useEffect)(() => {
+	}, [c, u]), (0, S.useEffect)(() => {
 		let e = !0;
-		if (p(null), !i || Ba(i)) return;
+		if (_(null), !c || Ba(c)) return;
 		let t = /* @__PURE__ */ new Date(), r = new Date(t.getTime() + 7776e6);
-		return n(`/api/market-calendar?start=${encodeURIComponent(t.toISOString())}&end=${encodeURIComponent(r.toISOString())}&ticker=${encodeURIComponent(i)}&limit=20`).then((t) => {
+		return n(`/api/market-calendar?start=${encodeURIComponent(t.toISOString())}&end=${encodeURIComponent(r.toISOString())}&ticker=${encodeURIComponent(c)}&limit=20`).then((t) => {
 			if (!e) return;
 			let n = (t.events || []).filter((e) => [
 				"earnings",
 				"dividend",
 				"filing"
 			].includes(e.kind)).sort((e, t) => e.startsAt.localeCompare(t.startsAt));
-			p(n[0] || null);
+			_(n[0] || null);
 		}).catch(() => void 0), () => {
 			e = !1;
 		};
-	}, [i]);
-	let [x, w] = (0, S.useState)(0);
+	}, [c]);
+	let [A, j] = (0, S.useState)(0);
 	(0, S.useEffect)(() => {
-		let e = new MutationObserver(() => w((e) => e + 1));
+		let e = new MutationObserver(() => j((e) => e + 1));
 		return e.observe(document.documentElement, {
 			attributes: !0,
 			attributeFilter: ["data-theme"]
 		}), () => e.disconnect();
 	}, []), (0, S.useEffect)(() => {
-		let e = g.current, t = window.LightweightCharts;
-		if (!e || !t || !u?.series?.length) return;
+		let e = b.current, t = window.LightweightCharts;
+		if (!e || !t || !m?.series?.length) return;
 		e.innerHTML = "";
-		let n = getComputedStyle(document.documentElement), r = (e, t) => n.getPropertyValue(e).trim() || t, i = r("--folio-green", "#3b6d11"), a = r("--folio-burgundy", "#8a1024"), o = u.series, s = !(o.length > 1) || o[o.length - 1].close >= o[0].close ? i : a, l = t.createChart(e, {
+		let n = getComputedStyle(document.documentElement), r = (e, t) => n.getPropertyValue(e).trim() || t, i = r("--folio-green", "#3b6d11"), a = r("--folio-burgundy", "#8a1024"), o = m.series, s = !(o.length > 1) || o[o.length - 1].close >= o[0].close ? i : a, c = t.createChart(e, {
 			autoSize: !0,
 			height: 360,
 			width: e.clientWidth || 0,
@@ -12105,13 +12145,13 @@ function Ha({ symbols: e }) {
 				mouseWheel: !1,
 				pinch: !0
 			}
-		}), d = o.filter((e) => e.open != null && e.high != null && e.low != null), f = c === "candle" && d.length > 0, p = f ? l.addSeries(t.CandlestickSeries, {
+		}), l = o.filter((e) => e.open != null && e.high != null && e.low != null), u = f === "candle" && l.length > 0, d = u ? c.addSeries(t.CandlestickSeries, {
 			upColor: i,
 			downColor: a,
 			wickUpColor: i,
 			wickDownColor: a,
 			borderVisible: !1
-		}) : l.addSeries(t.AreaSeries, {
+		}) : c.addSeries(t.AreaSeries, {
 			lineColor: s,
 			topColor: `${s}38`,
 			bottomColor: `${s}05`,
@@ -12119,7 +12159,7 @@ function Ha({ symbols: e }) {
 			priceLineVisible: !1,
 			lastValueVisible: !0
 		});
-		p.setData(f ? d.map((e) => ({
+		d.setData(u ? l.map((e) => ({
 			time: e.time,
 			open: e.open,
 			high: e.high,
@@ -12129,33 +12169,33 @@ function Ha({ symbols: e }) {
 			time: e.time,
 			value: e.close
 		})));
-		let m = new Map(o.map((e, t) => [String(e.time), {
+		let p = new Map(o.map((e, t) => [String(e.time), {
 			close: e.close,
 			previous: t > 0 ? o[t - 1].close : null
 		}])), h = document.createElement("div");
-		return h.className = "market-chart-tooltip", h.hidden = !0, e.appendChild(h), l.subscribeCrosshairMove((t) => {
-			let n = t?.point, r = t?.seriesData?.get(p), i = e.getBoundingClientRect();
+		return h.className = "market-chart-tooltip", h.hidden = !0, e.appendChild(h), c.subscribeCrosshairMove((t) => {
+			let n = t?.point, r = t?.seriesData?.get(d), i = e.getBoundingClientRect();
 			if (!n || !r || n.x < 0 || n.y < 0 || n.x > i.width || n.y > i.height) {
 				h.hidden = !0;
 				return;
 			}
-			let a = String(r.time), o = m.get(a), s = o?.close ?? r.close ?? r.value ?? null, c = o?.previous ?? null, l = s != null && c != null ? s - c : null, u = l != null && c ? l / c * 100 : null, d = l == null || l >= 0 ? "up" : "down", f = s == null ? "가격 없음" : s.toLocaleString(void 0, { maximumFractionDigits: 2 }), g = l == null || u == null ? "전일 대비 없음" : `${l >= 0 ? "+" : ""}${l.toLocaleString(void 0, { maximumFractionDigits: 2 })} (${u >= 0 ? "+" : ""}${u.toFixed(2)}%)`;
+			let a = String(r.time), o = p.get(a), s = o?.close ?? r.close ?? r.value ?? null, c = o?.previous ?? null, l = s != null && c != null ? s - c : null, u = l != null && c ? l / c * 100 : null, f = l == null || l >= 0 ? "up" : "down", m = s == null ? "가격 없음" : s.toLocaleString(void 0, { maximumFractionDigits: 2 }), g = l == null || u == null ? "전일 대비 없음" : `${l >= 0 ? "+" : ""}${l.toLocaleString(void 0, { maximumFractionDigits: 2 })} (${u >= 0 ? "+" : ""}${u.toFixed(2)}%)`;
 			h.innerHTML = "";
 			let _ = document.createElement("div");
 			_.className = "market-chart-tooltip__date", _.textContent = a;
 			let v = document.createElement("div");
-			v.className = "market-chart-tooltip__price", v.textContent = f;
+			v.className = "market-chart-tooltip__price", v.textContent = m;
 			let y = document.createElement("div");
-			y.className = "market-chart-tooltip__change", y.dataset.direction = d, y.textContent = g, h.append(_, v, y);
+			y.className = "market-chart-tooltip__change", y.dataset.direction = f, y.textContent = g, h.append(_, v, y);
 			let b = h.offsetWidth || 150, x = h.offsetHeight || 76, S = Math.min(Math.max(8, n.x + 14), Math.max(8, i.width - b - 8)), C = Math.min(Math.max(8, n.y - x - 12), Math.max(8, i.height - x - 8));
 			h.style.transform = `translate(${S}px, ${C}px)`, h.hidden = !1;
-		}), l.timeScale().fitContent(), () => l.remove();
+		}), c.timeScale().fitContent(), () => c.remove();
 	}, [
-		u,
-		x,
-		c
+		m,
+		A,
+		f
 	]);
-	let T = u?.series || [], E = T.length ? T[T.length - 1].close : null, D = T.length > 1 ? T[T.length - 2].close : null, O = E != null && D ? (E - D) / D * 100 : null, k = La[u?.freshness || ""] || (u ? u.freshness : "불러오는 중");
+	let M = m?.series || [], N = M.length ? M[M.length - 1].close : null, P = M.length > 1 ? M[M.length - 2].close : null, F = N != null && P ? (N - P) / P * 100 : null, I = La[m?.freshness || ""] || (m ? m.freshness : "불러오는 중");
 	return /* @__PURE__ */ (0, C.jsxs)("section", {
 		className: "cockpit-panel cockpit-chart",
 		"aria-labelledby": "native-chart-title",
@@ -12166,6 +12206,92 @@ function Ha({ symbols: e }) {
 					id: "native-chart-title",
 					children: "시장 차트"
 				})] }), /* @__PURE__ */ (0, C.jsxs)("div", {
+					className: "chart-pickers",
+					children: [/* @__PURE__ */ (0, C.jsxs)("details", {
+						className: "chart-picker",
+						children: [/* @__PURE__ */ (0, C.jsx)("summary", { children: "지수" }), /* @__PURE__ */ (0, C.jsx)("div", {
+							className: "chart-picker__list",
+							children: za.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
+								type: "button",
+								className: `sym-chip${e.symbol === c ? " sym-chip--active" : ""}`,
+								"aria-pressed": e.symbol === c,
+								onClick: () => D(e.symbol),
+								children: e.label
+							}, e.symbol))
+						})]
+					}), /* @__PURE__ */ (0, C.jsxs)("details", {
+						className: "chart-picker",
+						children: [/* @__PURE__ */ (0, C.jsxs)("summary", { children: ["관심 종목", t.length ? ` ${t.length}` : ""] }), /* @__PURE__ */ (0, C.jsxs)("div", {
+							className: "chart-picker__list",
+							children: [
+								t.map((e) => /* @__PURE__ */ (0, C.jsxs)("span", {
+									className: "chart-picker__row",
+									children: [/* @__PURE__ */ (0, C.jsx)("button", {
+										type: "button",
+										title: e.label || e.symbol,
+										className: `sym-chip${e.symbol === c ? " sym-chip--active" : ""}`,
+										"aria-pressed": e.symbol === c,
+										onClick: () => D(e.symbol),
+										children: e.symbol
+									}), /* @__PURE__ */ (0, C.jsx)("button", {
+										type: "button",
+										className: "btn btn--icon chart-picker__remove",
+										"aria-label": `${e.label || e.symbol} 관심 종목에서 제거`,
+										onClick: () => void E(e.symbol),
+										children: "×"
+									})]
+								}, e.symbol)),
+								/* @__PURE__ */ (0, C.jsxs)("form", {
+									className: "chart-picker__add",
+									onSubmit: (e) => {
+										e.preventDefault(), T();
+									},
+									children: [/* @__PURE__ */ (0, C.jsx)("input", {
+										value: i,
+										onChange: (e) => a(e.currentTarget.value),
+										placeholder: "티커 추가",
+										"aria-label": "관심 종목 추가"
+									}), /* @__PURE__ */ (0, C.jsx)("button", {
+										className: "btn btn--sm",
+										type: "submit",
+										disabled: !i.trim(),
+										children: "추가"
+									})]
+								}),
+								o && /* @__PURE__ */ (0, C.jsx)("p", {
+									className: "chart-picker__error",
+									children: o
+								})
+							]
+						})]
+					})]
+				})]
+			}),
+			/* @__PURE__ */ (0, C.jsxs)("div", {
+				className: "chart-headline",
+				children: [/* @__PURE__ */ (0, C.jsxs)("div", {
+					className: "chart-quote",
+					children: [
+						/* @__PURE__ */ (0, C.jsx)("span", {
+							className: "chart-quote__name",
+							children: za.find((e) => e.symbol === c)?.label || c
+						}),
+						/* @__PURE__ */ (0, C.jsxs)("div", {
+							className: "chart-quote__value",
+							children: [N == null ? null : /* @__PURE__ */ (0, C.jsx)("b", { children: N.toLocaleString(void 0, { maximumFractionDigits: 2 }) }), F == null ? null : /* @__PURE__ */ (0, C.jsxs)("span", {
+								className: F > 0 ? "up" : F < 0 ? "down" : "flat",
+								children: [
+									F > 0 ? "▲" : F < 0 ? "▼" : "—",
+									" ",
+									F > 0 ? "+" : "",
+									F.toFixed(1),
+									"%"
+								]
+							})]
+						}),
+						/* @__PURE__ */ (0, C.jsxs)("small", { children: [I, m?.asOf ? ` · ${m.asOf} 기준` : ""] })
+					]
+				}), /* @__PURE__ */ (0, C.jsxs)("div", {
 					className: "cockpit-chart-controls",
 					children: [/* @__PURE__ */ (0, C.jsxs)("div", {
 						className: "segment",
@@ -12173,13 +12299,13 @@ function Ha({ symbols: e }) {
 						"aria-label": "차트 유형",
 						children: [/* @__PURE__ */ (0, C.jsx)("button", {
 							type: "button",
-							"aria-pressed": c === "line",
-							onClick: () => b("line"),
+							"aria-pressed": f === "line",
+							onClick: () => k("line"),
 							children: "라인"
 						}), /* @__PURE__ */ (0, C.jsx)("button", {
 							type: "button",
-							"aria-pressed": c === "candle",
-							onClick: () => b("candle"),
+							"aria-pressed": f === "candle",
+							onClick: () => k("candle"),
 							children: "캔들"
 						})]
 					}), /* @__PURE__ */ (0, C.jsx)("div", {
@@ -12188,88 +12314,39 @@ function Ha({ symbols: e }) {
 						"aria-label": "차트 기간",
 						children: Ra.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
 							type: "button",
-							"aria-pressed": o === e,
-							onClick: () => y(e),
+							"aria-pressed": u === e,
+							onClick: () => O(e),
 							children: e
 						}, e))
 					})]
 				})]
 			}),
-			/* @__PURE__ */ (0, C.jsxs)("div", {
-				className: "chart-symbols",
-				role: "group",
-				"aria-label": "지수 차트",
-				children: [/* @__PURE__ */ (0, C.jsx)("span", {
-					className: "chart-symbols__label",
-					children: "지수"
-				}), za.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
-					type: "button",
-					className: `sym-chip${e.symbol === i ? " sym-chip--active" : ""}`,
-					"aria-pressed": e.symbol === i,
-					onClick: () => v(e.symbol),
-					children: e.label
-				}, e.symbol))]
-			}),
-			t.length > 0 && /* @__PURE__ */ (0, C.jsxs)("div", {
-				className: "chart-symbols",
-				role: "group",
-				"aria-label": "관심 종목 차트",
-				children: [/* @__PURE__ */ (0, C.jsx)("span", {
-					className: "chart-symbols__label",
-					children: "관심"
-				}), t.map((e) => /* @__PURE__ */ (0, C.jsx)("button", {
-					type: "button",
-					title: e.label || e.symbol,
-					className: `sym-chip${e.symbol === i ? " sym-chip--active" : ""}`,
-					"aria-pressed": e.symbol === i,
-					onClick: () => v(e.symbol),
-					children: e.symbol
-				}, e.symbol))]
-			}),
-			/* @__PURE__ */ (0, C.jsxs)("p", {
-				className: "chart-quote",
-				children: [
-					/* @__PURE__ */ (0, C.jsx)("strong", { children: za.find((e) => e.symbol === i)?.label || i }),
-					E == null ? null : /* @__PURE__ */ (0, C.jsx)("b", { children: E.toLocaleString(void 0, { maximumFractionDigits: 2 }) }),
-					O == null ? null : /* @__PURE__ */ (0, C.jsxs)("span", {
-						className: O > 0 ? "up" : O < 0 ? "down" : "flat",
-						children: [
-							O > 0 ? "▲" : O < 0 ? "▼" : "—",
-							" ",
-							O > 0 ? "+" : "",
-							O.toFixed(1),
-							"%"
-						]
-					}),
-					/* @__PURE__ */ (0, C.jsxs)("small", { children: [k, u?.asOf ? ` · ${u.asOf} 기준` : ""] })
-				]
-			}),
-			m && /* @__PURE__ */ (0, C.jsx)("p", {
+			v && /* @__PURE__ */ (0, C.jsx)("p", {
 				className: "react-dashboard-error",
-				children: m
+				children: v
 			}),
 			/* @__PURE__ */ (0, C.jsx)("div", {
 				className: "cockpit-chart-stage",
-				ref: g,
+				ref: b,
 				children: !window.LightweightCharts && /* @__PURE__ */ (0, C.jsx)("p", { children: "차트 라이브러리를 사용할 수 없습니다. 아래 표를 이용하세요." })
 			}),
-			f && /* @__PURE__ */ (0, C.jsxs)("p", {
+			g && /* @__PURE__ */ (0, C.jsxs)("p", {
 				className: "chart-next",
 				children: [
 					/* @__PURE__ */ (0, C.jsx)("span", {
-						className: `chip certainty-badge--${f.status}`,
-						children: wa[f.status] || f.status
+						className: `chip certainty-badge--${g.status}`,
+						children: wa[g.status] || g.status
 					}),
 					"다음 일정 — ",
-					/* @__PURE__ */ (0, C.jsx)("b", { children: Va(f) }),
+					/* @__PURE__ */ (0, C.jsx)("b", { children: Va(g) }),
 					/* @__PURE__ */ (0, C.jsx)("small", { children: "시장 캘린더 연동" })
 				]
 			}),
-			u?.notice ? /* @__PURE__ */ (0, C.jsx)("div", {
+			m?.notice ? /* @__PURE__ */ (0, C.jsx)("div", {
 				className: "cockpit-chart-foot",
-				children: /* @__PURE__ */ (0, C.jsx)("small", { children: u.notice })
+				children: /* @__PURE__ */ (0, C.jsx)("small", { children: m.notice })
 			}) : null,
-			u?.series?.length ? /* @__PURE__ */ (0, C.jsxs)("details", { children: [/* @__PURE__ */ (0, C.jsx)("summary", { children: "표로 보기" }), /* @__PURE__ */ (0, C.jsxs)("table", { children: [/* @__PURE__ */ (0, C.jsx)("thead", { children: /* @__PURE__ */ (0, C.jsxs)("tr", { children: [/* @__PURE__ */ (0, C.jsx)("th", { children: "일자" }), /* @__PURE__ */ (0, C.jsx)("th", { children: "종가" })] }) }), /* @__PURE__ */ (0, C.jsx)("tbody", { children: u.series.slice(-20).reverse().map((e) => /* @__PURE__ */ (0, C.jsxs)("tr", { children: [/* @__PURE__ */ (0, C.jsx)("td", { children: e.time }), /* @__PURE__ */ (0, C.jsx)("td", { children: e.close.toLocaleString() })] }, e.time)) })] })] }) : null
+			m?.series?.length ? /* @__PURE__ */ (0, C.jsxs)("details", { children: [/* @__PURE__ */ (0, C.jsx)("summary", { children: "표로 보기" }), /* @__PURE__ */ (0, C.jsxs)("table", { children: [/* @__PURE__ */ (0, C.jsx)("thead", { children: /* @__PURE__ */ (0, C.jsxs)("tr", { children: [/* @__PURE__ */ (0, C.jsx)("th", { children: "일자" }), /* @__PURE__ */ (0, C.jsx)("th", { children: "종가" })] }) }), /* @__PURE__ */ (0, C.jsx)("tbody", { children: m.series.slice(-20).reverse().map((e) => /* @__PURE__ */ (0, C.jsxs)("tr", { children: [/* @__PURE__ */ (0, C.jsx)("td", { children: e.time }), /* @__PURE__ */ (0, C.jsx)("td", { children: e.close.toLocaleString() })] }, e.time)) })] })] }) : null
 		]
 	});
 }

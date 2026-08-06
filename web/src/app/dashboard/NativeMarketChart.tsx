@@ -54,6 +54,8 @@ function nextEventLabel(event: CalendarEvent): string {
 
 export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string; label?: string; source?: string }> }) {
   const watchSymbols = symbols.filter((row) => row.source !== "fallback" && !INDEX_SYMBOLS.some((index) => index.symbol === row.symbol));
+  const [draftSymbol, setDraftSymbol] = useState("");
+  const [watchError, setWatchError] = useState("");
   const [symbol, setSymbol] = useState(INDEX_SYMBOLS[0].symbol);
   const [range, setRange] = useState("3m");
   const [style, setStyle] = useState<"candle" | "line">("line");
@@ -62,6 +64,50 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
   const [error, setError] = useState("");
   const targetRef = useRef<HTMLDivElement | null>(null);
   const settingsRef = useRef(false);
+
+  // 관심 종목 목록의 주인은 워치리스트다. 차트에서 편집해도 저장소는 한 곳이라
+  // 같은 목록을 두 곳에서 따로 관리하는 일이 생기지 않는다.
+  async function saveWatchlist(next: string[]) {
+    await postJson("/api/watchlist", { items: next });
+    document.dispatchEvent(new CustomEvent("folio:generation-complete"));
+  }
+
+  async function addWatchSymbol() {
+    const value = draftSymbol.trim().toUpperCase();
+    if (!value) return;
+    setWatchError("");
+    try {
+      const current = await getJson<string[]>("/api/watchlist");
+      if (current.some((item) => item.toUpperCase() === value)) {
+        setWatchError("이미 관심 종목에 있습니다.");
+        return;
+      }
+      await saveWatchlist([...current, value]);
+      setDraftSymbol("");
+    } catch (reason) {
+      setWatchError(reason instanceof Error ? reason.message : "추가하지 못했습니다.");
+    }
+  }
+
+  async function removeWatchSymbol(target: string) {
+    setWatchError("");
+    try {
+      const current = await getJson<string[]>("/api/watchlist");
+      const row = symbols.find((item) => item.symbol === target);
+      const label = (row?.label || "").toLowerCase();
+      const next = current.filter((item) => {
+        const token = item.trim().toLowerCase();
+        return token !== target.toLowerCase() && (!label || token !== label);
+      });
+      if (next.length === current.length) {
+        setWatchError("워치리스트에서 해당 항목을 찾지 못했습니다.");
+        return;
+      }
+      await saveWatchlist(next);
+    } catch (reason) {
+      setWatchError(reason instanceof Error ? reason.message : "제거하지 못했습니다.");
+    }
+  }
 
   useEffect(() => {
     if (settingsRef.current) return;
@@ -220,6 +266,59 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
     <section className="cockpit-panel cockpit-chart" aria-labelledby="native-chart-title">
       <div className="cockpit-panel__head">
         <div><span>MARKET CHART</span><h2 id="native-chart-title">시장 차트</h2></div>
+        {/* 종목 선택은 제목 줄 우측. 지수 6개 + 관심 종목을 칩으로 늘어놓으면 제목
+            줄이 넘치므로 접이식 둘로 묶는다. */}
+        <div className="chart-pickers">
+          <details className="chart-picker">
+            <summary>지수</summary>
+            <div className="chart-picker__list">
+              {INDEX_SYMBOLS.map((row) => (
+                <button type="button" key={row.symbol}
+                  className={`sym-chip${row.symbol === symbol ? " sym-chip--active" : ""}`}
+                  aria-pressed={row.symbol === symbol} onClick={() => pickSymbol(row.symbol)}>{row.label}</button>
+              ))}
+            </div>
+          </details>
+          <details className="chart-picker">
+            <summary>관심 종목{watchSymbols.length ? ` ${watchSymbols.length}` : ""}</summary>
+            <div className="chart-picker__list">
+              {watchSymbols.map((row) => (
+                <span className="chart-picker__row" key={row.symbol}>
+                  <button type="button" title={row.label || row.symbol}
+                    className={`sym-chip${row.symbol === symbol ? " sym-chip--active" : ""}`}
+                    aria-pressed={row.symbol === symbol} onClick={() => pickSymbol(row.symbol)}>{row.symbol}</button>
+                  <button type="button" className="btn btn--icon chart-picker__remove"
+                    aria-label={`${row.label || row.symbol} 관심 종목에서 제거`}
+                    onClick={() => void removeWatchSymbol(row.symbol)}>×</button>
+                </span>
+              ))}
+              {/* 워치리스트가 관리 주체다. 여기서 더하면 워치리스트에 반영돼
+                  같은 목록을 두 곳에서 따로 관리하는 일이 생기지 않는다. */}
+              <form className="chart-picker__add" onSubmit={(event) => { event.preventDefault(); void addWatchSymbol(); }}>
+                <input value={draftSymbol} onChange={(event) => setDraftSymbol(event.currentTarget.value)}
+                  placeholder="티커 추가" aria-label="관심 종목 추가" />
+                <button className="btn btn--sm" type="submit" disabled={!draftSymbol.trim()}>추가</button>
+              </form>
+              {watchError && <p className="chart-picker__error">{watchError}</p>}
+            </div>
+          </details>
+        </div>
+      </div>
+      {/* 종목명·가격·등락률이 이 패널에서 가장 강조되어야 할 값이다. 예전에는
+          한 줄에 같은 크기로 놓여 위계가 없었다. 차트 컨트롤은 그 오른쪽으로. */}
+      <div className="chart-headline">
+        <div className="chart-quote">
+          <span className="chart-quote__name">{INDEX_SYMBOLS.find((row) => row.symbol === symbol)?.label || symbol}</span>
+          <div className="chart-quote__value">
+            {lastClose != null ? <b>{lastClose.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b> : null}
+            {changePct != null ? (
+              <span className={changePct > 0 ? "up" : changePct < 0 ? "down" : "flat"}>
+                {changePct > 0 ? "▲" : changePct < 0 ? "▼" : "—"} {changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%
+              </span>
+            ) : null}
+          </div>
+          <small>{freshnessLabel}{payload?.asOf ? ` · ${payload.asOf} 기준` : ""}</small>
+        </div>
         <div className="cockpit-chart-controls">
           <div className="segment" role="group" aria-label="차트 유형">
             <button type="button" aria-pressed={style === "line"} onClick={() => pickStyle("line")}>라인</button>
@@ -228,34 +327,6 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
           <div className="segment" role="group" aria-label="차트 기간">{RANGES.map((value) => <button type="button" aria-pressed={range === value} onClick={() => pickRange(value)} key={value}>{value}</button>)}</div>
         </div>
       </div>
-      <div className="chart-symbols" role="group" aria-label="지수 차트">
-        <span className="chart-symbols__label">지수</span>
-        {INDEX_SYMBOLS.map((row) => (
-          <button type="button" key={row.symbol}
-            className={`sym-chip${row.symbol === symbol ? " sym-chip--active" : ""}`}
-            aria-pressed={row.symbol === symbol} onClick={() => pickSymbol(row.symbol)}>{row.label}</button>
-        ))}
-      </div>
-      {watchSymbols.length > 0 && (
-        <div className="chart-symbols" role="group" aria-label="관심 종목 차트">
-          <span className="chart-symbols__label">관심</span>
-          {watchSymbols.map((row) => (
-            <button type="button" key={row.symbol} title={row.label || row.symbol}
-              className={`sym-chip${row.symbol === symbol ? " sym-chip--active" : ""}`}
-              aria-pressed={row.symbol === symbol} onClick={() => pickSymbol(row.symbol)}>{row.symbol}</button>
-          ))}
-        </div>
-      )}
-      <p className="chart-quote">
-        <strong>{INDEX_SYMBOLS.find((row) => row.symbol === symbol)?.label || symbol}</strong>
-        {lastClose != null ? <b>{lastClose.toLocaleString(undefined, { maximumFractionDigits: 2 })}</b> : null}
-        {changePct != null ? (
-          <span className={changePct > 0 ? "up" : changePct < 0 ? "down" : "flat"}>
-            {changePct > 0 ? "▲" : changePct < 0 ? "▼" : "—"} {changePct > 0 ? "+" : ""}{changePct.toFixed(1)}%
-          </span>
-        ) : null}
-        <small>{freshnessLabel}{payload?.asOf ? ` · ${payload.asOf} 기준` : ""}</small>
-      </p>
       {error && <p className="react-dashboard-error">{error}</p>}
       <div className="cockpit-chart-stage" ref={targetRef}>{!window.LightweightCharts && <p>차트 라이브러리를 사용할 수 없습니다. 아래 표를 이용하세요.</p>}</div>
       {nextEvent && (

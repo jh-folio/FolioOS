@@ -15,6 +15,7 @@ from features.market_calendar.adapters.bok import fetch_bok_macro_events
 from features.market_calendar.adapters.fred import fetch_fred_macro_events
 from features.market_calendar.adapters.yf_economic import fetch_yf_economic_events
 from features.market_calendar.schema import normalize_event
+from features.common.market_data.major_companies import major_company_symbols
 from features.portfolio.service import get_portfolio
 
 
@@ -153,9 +154,15 @@ def list_events(db_path: Path, *, start: str = "", end: str = "", market: str = 
 
 
 def _calendar_target_tickers(data_dir: Path) -> list[str]:
-    """Portfolio positions plus resolved watchlist symbols, deduplicated."""
+    """Largest companies per market, plus the user's own positions and watchlist.
+
+    "주요 실적"은 관심 등록 여부와 무관해야 한다. 워치리스트에 넣지 않았다는 이유로
+    NVDA 실적을 놓치면 캘린더가 제 역할을 못한다. 시총 상위는 시장별로 뽑으므로
+    (US 20 / KR·EU·JP 각 10) 홈 마켓이 비지 않는다.
+    """
+    tickers = set(major_company_symbols())
     portfolio = get_portfolio(data_dir)
-    tickers = {str(row.get("symbol") or row.get("ticker") or "").upper() for row in portfolio.get("positions") or [] if row.get("symbol") or row.get("ticker")}
+    tickers.update(str(row.get("symbol") or row.get("ticker") or "").upper() for row in portfolio.get("positions") or [] if row.get("symbol") or row.get("ticker"))
     try:
         from features.dashboard.schema import native_symbol
         from features.watchlist_notes.service import get_watchlist, sec_ticker_for_name, tradingview_symbol_for_query

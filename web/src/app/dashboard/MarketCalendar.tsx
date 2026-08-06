@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson, MARKET_KO_LABELS } from "../../api";
+import { getJson, postJson, MARKET_CODE_LABELS, MARKET_KO_LABELS } from "../../api";
 
 type Event = {
   id: string; kind: string; title: string; startsAt: string; status: string;
@@ -16,12 +16,12 @@ export const STATUS_KO: Record<string, string> = {
   confirmed: "확정", estimated: "추정", tentative: "미정", actual: "발표됨",
 };
 const KIND_FILTERS: Array<{ value: string; label: string }> = [
-  { value: "all", label: "전체" }, { value: "earnings", label: "실적" }, { value: "macro", label: "지표" },
+  { value: "earnings", label: "실적" }, { value: "macro", label: "지표" },
   { value: "central_bank", label: "중앙은행" }, { value: "holiday", label: "휴장" },
   { value: "filing", label: "공시" }, { value: "dividend", label: "배당" },
 ];
 export const MARKET_KO: Record<string, string> = MARKET_KO_LABELS;
-const MARKET_FILTERS = ["all", "US", "KR", "EUROPE", "JP"];
+const MARKET_FILTERS = ["US", "KR", "EUROPE", "JP"];
 // 유럽은 거래소마다 휴장일이 달라 시장 하나로 묶이지 않는다. 칩에서도 어느 거래소가
 // 쉬는지 보여야 "유럽 휴장"으로 잘못 읽히지 않는다.
 const VENUE_KO: Record<string, string> = {
@@ -73,8 +73,9 @@ function shortChip(event: Event): string {
 export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }) {
   const [events, setEvents] = useState<Event[]>([]);
   const [view, setView] = useState<CalendarView>("week");
-  const [kind, setKind] = useState("all");
-  const [market, setMarket] = useState("all");
+  // 빈 집합 = 전체. 브리핑 시장 선택과 같은 규칙이라 조작을 새로 배우지 않는다.
+  const [kinds, setKinds] = useState<string[]>([]);
+  const [markets, setMarkets] = useState<string[]>([]);
   const [watchOnly, setWatchOnly] = useState(false);
   const [anchor, setAnchor] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(() => dateKey(new Date()));
@@ -98,11 +99,12 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    getJson<{ calendarView?: CalendarView; calendarKind?: string; calendarMarket?: string; calendarWatchlistOnly?: boolean }>("/api/dashboard/settings")
+    getJson<{ calendarView?: CalendarView; calendarKinds?: string[]; calendarMarkets?: string[]; calendarKind?: string; calendarMarket?: string; calendarWatchlistOnly?: boolean }>("/api/dashboard/settings")
       .then((row) => {
         if (row.calendarView === "week" || row.calendarView === "month") setView(row.calendarView);
-        if (row.calendarKind) setKind(row.calendarKind);
-        if (row.calendarMarket) setMarket(row.calendarMarket);
+        // 예전 단일 선택 설정은 한 개짜리 배열로 읽어 기존 사용자의 선택을 잃지 않는다.
+        setKinds(row.calendarKinds || (row.calendarKind && row.calendarKind !== "all" ? [row.calendarKind] : []));
+        setMarkets(row.calendarMarkets || (row.calendarMarket && row.calendarMarket !== "all" ? [row.calendarMarket] : []));
         setWatchOnly(Boolean(row.calendarWatchlistOnly));
       })
       .catch(() => undefined);
@@ -118,11 +120,11 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   );
 
   const filtered = useMemo(() => events.filter((event) => {
-    if (kind !== "all" && event.kind !== kind) return false;
-    if (market !== "all" && (event.market || "").toUpperCase() !== market) return false;
+    if (kinds.length && !kinds.includes(event.kind)) return false;
+    if (markets.length && !markets.includes((event.market || "").toUpperCase())) return false;
     if (watchOnly && !(event.tickers || []).some((t) => watchSymbols.has(t.toUpperCase()))) return false;
     return true;
-  }), [events, kind, market, watchOnly, watchSymbols]);
+  }), [events, kinds, markets, watchOnly, watchSymbols]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, Event[]>();
@@ -186,18 +188,32 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
           <button className="btn btn--primary" type="button" onClick={refresh} disabled={busy}>{busy ? "수집 중" : "일정 수집"}</button>
         </div>
       </div>
-      <div className="cal-filter-row" role="group" aria-label="일정 필터">
+      {/* 유형과 시장을 각각 한 줄로 나눈다. 열 개를 한 줄에 늘어놓으면 다중 선택에서
+          무엇이 켜졌는지 읽히지 않는다. 아무것도 고르지 않은 상태가 "전체"다. */}
+      <div className="cal-filter-row" role="group" aria-label="일정 유형 필터">
+        <span className="cal-filter-label">유형</span>
         {KIND_FILTERS.map((row) => (
-          <button key={row.value} type="button" className="cal-filter" aria-pressed={kind === row.value}
-            onClick={() => { setKind(row.value); persist({ calendarKind: row.value }); }}>{row.label}</button>
+          <button key={row.value} type="button" className="cal-filter" aria-pressed={kinds.includes(row.value)}
+            onClick={() => {
+              const next = kinds.includes(row.value) ? kinds.filter((v) => v !== row.value) : [...kinds, row.value];
+              setKinds(next); persist({ calendarKinds: next });
+            }}>{row.label}</button>
         ))}
-        <span className="cal-filter-sep" aria-hidden="true" />
+      </div>
+      <div className="cal-filter-row" role="group" aria-label="일정 시장 필터">
+        <span className="cal-filter-label">시장</span>
         {MARKET_FILTERS.map((value) => (
-          <button key={value} type="button" className="cal-filter" aria-pressed={market === value}
-            onClick={() => { setMarket(value); persist({ calendarMarket: value }); }}>{value === "all" ? "전체 시장" : MARKET_KO[value] || value}</button>
+          <button key={value} type="button" className="cal-filter" aria-pressed={markets.includes(value)}
+            onClick={() => {
+              const next = markets.includes(value) ? markets.filter((v) => v !== value) : [...markets, value];
+              setMarkets(next); persist({ calendarMarkets: next });
+            }}>{MARKET_CODE_LABELS[value] || value}</button>
         ))}
-        <label className="cal-watch-toggle"><input type="checkbox" checked={watchOnly}
-          onChange={(event) => { setWatchOnly(event.currentTarget.checked); persist({ calendarWatchlistOnly: event.currentTarget.checked }); }} /> 보유·관심만</label>
+        {/* 옆 칩들과 같은 토글이다. 혼자 체크박스라 크기·정렬이 어긋나 있었다. */}
+        <button type="button" className="cal-filter cal-watch-toggle" aria-pressed={watchOnly}
+          onClick={() => { const next = !watchOnly; setWatchOnly(next); persist({ calendarWatchlistOnly: next }); }}>
+          보유·관심만
+        </button>
       </div>
       {notice && <p className="react-reader-status">{notice}</p>}
       {error && <p className="react-dashboard-error" role="alert">{error}</p>}

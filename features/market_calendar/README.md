@@ -20,3 +20,21 @@
 API: `GET /api/market-calendar`, `POST /api/market-calendar/refresh`.
 
 브리핑의 거래 세션 기준일 판정은 저장된 이벤트 목록과 별도로 `features/common/market_calendar.py`가 담당합니다. 연결된 Toss Open API 거래소 캘린더 응답을 정적 NYSE/KRX 휴장일 표보다 우선하며, API를 사용할 수 없거나 응답 날짜·형식 검증에 실패하면 정적 표로 fallback합니다.
+
+## 주요 실적 대상 (0.5)
+
+실적 일정 조회 대상은 **시장별 시총 상위 + 사용자 보유·워치리스트**다. 상위 목록은
+`features/common/market_data/major_companies.py`가 히트맵용 구성종목 파일에서 뽑는다.
+
+| 시장 | 개수 | 구성종목 파일 |
+|---|---:|---|
+| US | 20 | `sp500_constituents.json` |
+| KR | 10 | `kospi200_constituents.json` |
+| EUROPE | 10 | `europe_core_constituents.json` |
+| JP | 10 | `nikkei225_constituents.json` |
+
+- 관심 등록 여부와 무관하게 보여야 한다. 워치리스트에 넣지 않았다는 이유로 NVDA 실적을 놓치면 캘린더가 제 역할을 못한다.
+- **순위는 시장 안에서** 매긴다. 시장을 가로질러 한 줄로 세우면 결과가 거의 전부 미국 종목이 되고, 한국 투자자 화면의 `주요 실적`에 한국 기업이 하나도 없게 된다. 시장별 순위라 환율 환산도 필요 없다.
+- 시총이 없는 행은 순위를 매길 수 없으므로 제외한다. 결측은 크기 0이 아니라 미상이다.
+- 한국은 6자리 코드로 저장돼 있어 `.KS`를 붙여야 provider가 조회한다.
+- 화면 필터(유형·시장)는 다중 선택이며 **빈 집합이 전체**를 뜻한다. 설정은 `calendarKinds`/`calendarMarkets` 배열이고, 예전 단일 설정(`calendarKind`/`calendarMarket`)은 한 개짜리 배열로 승격해 기존 선택을 잃지 않는다.
