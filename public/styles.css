@@ -171,7 +171,8 @@
   --folio-bg: #f5f6f8;
   --folio-bg-soft: #f9fafb;
   --folio-surface: #f6f8fb;
-  --folio-surface-2: #eef1f5;
+  /* Stage D2: 컨트롤 fill과 사실상 같은 회색이라 하나로 모은다(참조 26곳 유지). */
+  --folio-surface-2: var(--surface-control);
   --folio-surface-clean: #ffffff;
   --folio-surface-muted: #eef1f5;
   --folio-surface-dark: #101829;
@@ -388,7 +389,7 @@
   --folio-bg: #0d0f12;
   --folio-bg-soft: #101318;
   --folio-surface: #14171f;
-  --folio-surface-2: #1c202b;
+  --folio-surface-2: var(--surface-control);
   --folio-surface-clean: #13151b;
   --folio-surface-muted: #1c202b;
   --folio-surface-dark: #0b0c0f;
@@ -492,11 +493,18 @@ button { cursor: pointer; }
 
 input, textarea, select {
   width: 100%;
-  border: 1px solid var(--border);
-  background: var(--folio-surface-clean);
+  border: none;
+  background: var(--surface-control);
   color: var(--ink);
   border-radius: var(--r-control);
-  padding: 11px 12px;
+  padding: 0 12px;
+  min-height: 36px;
+}
+
+textarea {
+  padding: 10px 12px;
+  min-height: 72px;
+  line-height: 1.5;
 }
 
 input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
@@ -2890,13 +2898,6 @@ body:has(#folioReactRoot .react-shell) main.page {
   padding: 20px 20px 14px;
 }
 
-.react-briefing-generation .brief-gen-panel {
-  background: var(--folio-surface-veil);
-}
-
-.react-briefing-generation .brief-gen-panel-head {
-  background: var(--folio-surface-clean, #ffffff);
-}
 
 .react-briefing-generation .brief-gen-actionbar .icon-btn {
   width: 36px;
@@ -7555,17 +7556,19 @@ button:disabled {
   gap: 8px;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--folio-border);
-  border-radius: var(--folio-radius);
-  background: var(--folio-surface-2);
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
   color: var(--folio-ink);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body-sm);
   font-weight: var(--fw-medium);
   letter-spacing: 0;
   text-transform: none;
   cursor: pointer;
 }
-.gen-option:hover { border-color: var(--folio-border-strong); }
+.gen-option:hover { background: var(--surface-control-hover); }
+/* 래퍼가 이미 면을 갖고 있으므로 안쪽 select는 면을 또 그리지 않는다. */
+.gen-option select { min-height: 0; padding: 0; background: transparent; }
 .gen-option > span { white-space: nowrap; }
 .gen-option input[type="checkbox"] {
   width: auto;
@@ -8159,21 +8162,22 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
 }
 
 /* 생성 박스: 설정과 실행 액션을 분리해 첫 화면에서 바로 스캔되게 한다. */
+/* 패널 안의 묶음 면(.surface--group 규격). 바깥 .input-panel이 이미 r18+그림자라
+   같은 무게를 한 번 더 주면 액자가 이중으로 보인다. */
 .brief-gen-panel {
-  position: relative;
-  border: 1px solid var(--folio-border);
+  border: none;
   border-radius: var(--r-group);
-  padding: 26px 20px 18px;
-  background: var(--folio-surface-veil);
+  padding: var(--sp-4);
+  background: var(--surface-group);
+  box-shadow: none;
 }
-.brief-gen-panel-head { position: absolute;
-  top: -10px;
-  left: 18px;
+/* 제목은 흐름 안의 라벨이다. 예전에는 fieldset처럼 테두리 위에 떠 있고 배경으로
+   테두리를 뚫었는데, 테두리를 없앤 뒤로는 그 배경만 흰 사각형으로 남아 있었다. */
+.brief-gen-panel-head {
   display: flex;
   align-items: center;
   min-height: 20px;
-  padding: 0 8px;
-  background: var(--folio-surface);
+  margin-bottom: var(--sp-3);
 }
 .brief-gen-panel-head h3 {
   margin: 0;
@@ -8269,9 +8273,7 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--folio-border);
+  margin-top: var(--sp-4);
 }
 .brief-gen-actionbar #reindexBtn {
   flex: 0 0 auto;
@@ -14803,11 +14805,6 @@ main.page {
   background: var(--surface-panel);
   box-shadow: var(--elev-1);
 }
-.brief-gen-panel {
-  border: none;
-  border-radius: var(--r-panel);
-  box-shadow: var(--elev-1);
-}
 
 /* 터치 타깃: 별칭 계열도 모바일에서 실제 박스 44px (0.5_PLAN §3.13) */
 @media (pointer: coarse), (max-width: 768px) {
@@ -15187,4 +15184,58 @@ main.page {
   .react-rss-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .react-rss-searchbar { flex-wrap: wrap; }
   .react-rss-searchbar input { flex: 1 1 100%; }
+}
+
+/* ============================================================
+   0.5 Stage D2 — 폼 컨트롤 프리미티브 되받기
+   D1은 버튼·칩·세그먼트·패널만 다루고 input/select/textarea를 남겨뒀다. 그래서
+   같은 줄에 "무테 회색 버튼"과 "테두리 흰 입력칸"이 나란히 놓이고, 높이도
+   버튼 32~36px vs 컨트롤 47~57px로 어긋나 설정·검색·필터 박스가 투박해 보였다.
+   화면별 규칙 30개가 (0,2,0) 이상으로 기본값을 이기므로 여기서 한 번에 정리한다.
+   ============================================================ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  border: none;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  color: var(--folio-ink);
+  box-shadow: none;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):hover,
+select:hover,
+textarea:hover { background: var(--surface-control-hover); }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--folio-focus);
+  outline-offset: 2px;
+  background: var(--surface-control);
+}
+/* 컨트롤 높이는 버튼과 같은 리듬을 쓴다. textarea만 여러 줄이라 예외다. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select { min-height: 36px; padding: 0 12px; }
+@media (pointer: coarse), (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select { min-height: var(--touch-min); }
+}
+
+/* (0,2,0)으로 위 규칙을 이기는 나머지 세 곳. 같은 특이성으로 되받는다. */
+.report-feed-view-pill select,
+.input-panel .report-feed-view-pill select,
+.react-agent-form textarea,
+.react-agent-tools select {
+  border: none;
+  background: var(--surface-control);
+}
+.report-feed-view-pill select:hover,
+.react-agent-tools select:hover { background: var(--surface-control-hover); }
+/* (0,2,0) 이상으로 이기는 나머지 화면 규칙들. */
+.react-rss-filter-grid input,
+.react-rss-filter-grid select,
+.react-rss-searchbar input,
+.topicrpt-context-field textarea,
+.field topicrpt-context-field textarea {
+  border: none;
+  background: var(--surface-control);
 }
