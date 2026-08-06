@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
 
 from features.agent_mode import consultation_store as store
+from features.agent_mode.consultation_store import append_user_message, create_session
 from features.agent_mode.consultation_context import assemble_consultation_context
 from features.agent_mode.consultation_prompt import build_consultation_prompt
 from features.agent_mode.job_runtime import run_consultation_job
@@ -159,3 +161,28 @@ def test_delete_requires_json_true_not_truthy_string(tmp_path, monkeypatch):
             boundary.delete_consultation(created["id"], {"confirm": value})
         assert error.value.status_code == 400
     assert boundary.delete_consultation(created["id"], {"confirm": True})["deleted"] is True
+
+
+def test_submit_consultation_job_runs_for_real_not_only_as_a_stub(tmp_path, monkeypatch):
+    """도크가 실제로 부르는 경로. HTTP 테스트가 이 함수를 통째로 대체해 왔기 때문에
+    본문이 깨져도(예: import 누락) 초록으로 남았다. 잡 실행만 가로채고 본문은 돌린다."""
+    from features.common import jobs
+    from features.agent_mode import job_runtime
+
+    captured = {}
+
+    def fake_submit(kind, label, fn, *args, **kwargs):
+        captured["kind"] = kind
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return {"id": "job-real", "status": "queued"}
+
+    monkeypatch.setattr(jobs, "submit_job", fake_submit)
+    session = create_session(tmp_path, {"title": "실경로", "scope": {"kind": "general"}})
+    appended = append_user_message(tmp_path, session["id"], "무엇이 바뀌었나?", operation_id="op-real")
+
+    job = job_runtime.submit_consultation_job(tmp_path, session["id"], appended["message"]["id"])
+
+    assert job["generationMode"] == "llm_cli"
+    assert captured["args"][0] == Path(tmp_path)
+    assert captured["args"][1] == session["id"]

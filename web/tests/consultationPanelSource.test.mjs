@@ -25,3 +25,11 @@ test("a conversation is created before the turn is sent", async () => {
   assert.match(source, /threads\.threadId \|\| \(await threads\.createThread/);
   assert.match(source, /operationId: messageId\(\)/);
 });
+
+test("migration keeps the browser copy until the server confirms the count", async () => {
+  const source = await readFile(new URL("../src/app/agentWorkspace/useDockThreads.ts", import.meta.url), "utf8");
+  // 2xx만 믿으면 importMessages를 모르는 서버에 붙었을 때 빈 대화를 만들고 원본을 지운다.
+  assert.match(source, /created\.messageCount \|\| 0\) < local\.length/);
+  const guard = source.indexOf("< local.length");
+  assert.ok(guard < source.indexOf("resetAgentThreadMessages()"), "확인이 원본 삭제보다 앞서야 한다");
+});

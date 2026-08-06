@@ -16050,7 +16050,7 @@ function Os(e) {
 			return;
 		}
 		try {
-			await G("/api/agent/threads", {
+			let t = await G("/api/agent/threads", {
 				title: "이전 대화",
 				scope: { kind: "general" },
 				importMessages: e.map((e) => ({
@@ -16058,7 +16058,12 @@ function Os(e) {
 					content: e.text,
 					createdAt: e.createdAt
 				}))
-			}), window.localStorage.setItem(Es, (/* @__PURE__ */ new Date()).toISOString()), St(), window.localStorage.removeItem(ft), c();
+			});
+			if ((t.messageCount || 0) < e.length) {
+				await se(`/api/agent/threads/${encodeURIComponent(t.id)}`, { confirm: !0 }).catch(() => {}), s.current = !1;
+				return;
+			}
+			window.localStorage.setItem(Es, (/* @__PURE__ */ new Date()).toISOString()), St(), window.localStorage.removeItem(ft), c();
 		} catch {
 			s.current = !1;
 		}

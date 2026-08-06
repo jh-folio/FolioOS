@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getJson, postJson } from "../../api";
+import { deleteJson, getJson, postJson } from "../../api";
 import {
   AGENT_HOME_THREAD_STORAGE_KEY,
   getAgentThreadMessages,
@@ -63,11 +63,18 @@ export function useDockThreads(welcome: AgentMessage) {
     }
     try {
       // 기록만 옮긴다. 메시지 API로 재생하면 옛 질문이 전부 Agent 잡으로 다시 실행된다.
-      await postJson<ConsultationSession>("/api/agent/threads", {
+      const created = await postJson<ConsultationSession>("/api/agent/threads", {
         title: "이전 대화",
         scope: { kind: "general" },
         importMessages: local.map((row) => ({ role: row.role, content: row.text, createdAt: row.createdAt })),
       });
+      // 저장된 건수를 확인하고 나서야 원본을 지운다. 2xx만 믿으면 옛 서버처럼
+      // importMessages를 모르는 쪽에 붙었을 때 빈 대화를 만들고 원본을 지운다.
+      if ((created.messageCount || 0) < local.length) {
+        await deleteJson(`/api/agent/threads/${encodeURIComponent(created.id)}`, { confirm: true }).catch(() => {});
+        migratedRef.current = false;
+        return;
+      }
       window.localStorage.setItem(MIGRATED_KEY, new Date().toISOString());
       resetAgentThreadMessages();
       window.localStorage.removeItem(AGENT_HOME_THREAD_STORAGE_KEY);
