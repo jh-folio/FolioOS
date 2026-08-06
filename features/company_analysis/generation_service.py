@@ -7,6 +7,7 @@ from features.common.quality_generation.preflight import preflight_from_context
 from features.common.research_library.indexing.service import load_index
 from features.common.research_library.search.service import search_documents
 from features.common.utils import now_iso
+from features.company_analysis.company_search import search_company_documents
 from features.company_analysis.data_gap_resolver import resolve_company_analysis_gaps
 from features.company_analysis.report_rules import build_rule_report
 from features.company_analysis.service import (
@@ -35,8 +36,10 @@ def analyze_company(query, web_search_override=None, llm_override=None, analysis
     llm_config_fn = runtime.get("selected_llm_config", selected_llm_config)
     analysis_style = normalize_analysis_style(analysis_style)
     index = load_index_fn()
-    docs = search_documents_fn(index, query=query, company=query, limit=30)
-    company = infer_company_fn(query, docs)
+    # 회사를 먼저 해석하고 그 회사의 표기들로 찾는다. 원문 문자열 하나로 찾으면
+    # 티커만 아는 회사의 한글·영문 기사가 전부 빠진다.
+    company = infer_company_fn(query, search_documents_fn(index, query=query, company=query, limit=8))
+    docs = search_company_documents(index, search_documents_fn, company, query, limit=30)
     materials = materials_fn(query, docs, company)
     selected = materials.get("selectedDocs", [])
     tags = [tag for doc in selected for tag in doc.get("impactTags", [])]

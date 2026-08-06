@@ -199,11 +199,14 @@
   --folio-purple-soft: #e9e6f6;
   --folio-teal: #266c5b;
   --folio-teal-soft: #e4f2ec;
-  --folio-chart-1: #185fa5;
-  --folio-chart-2: #8a1024;
-  --folio-chart-3: #3b6d11;
-  --folio-chart-4: #b7791f;
-  --folio-chart-5: #7c5a8a;
+  /* 채도만 낮추고 명도는 눌러 둔 계열 색. 채도를 낮추면서 밝기까지 올리면
+     파스텔이 되어 가벼워진다. 명도 30% 안팎을 지켜 무게를 남기고, 흰 배경 대비는
+     6.6:1 이상이라 비텍스트 요소 기준(WCAG 1.4.11)을 넉넉히 넘는다. */
+  --folio-chart-1: #33506b;
+  --folio-chart-2: #71383f;
+  --folio-chart-3: #3f5c39;
+  --folio-chart-4: #6f5a2c;
+  --folio-chart-5: #514961;
   --folio-border: #dde2e9;
   --folio-border-strong: #c4ccd6;
   --folio-shadow: 0 6px 14px rgba(7, 17, 31, 0.045), 0 0 10px rgba(7, 17, 31, 0.025);
@@ -413,11 +416,12 @@
   --folio-purple-soft: #343147;
   --folio-teal: #8ac2b4;
   --folio-teal-soft: #1b3732;
-  --folio-chart-1: #7ab6ea;
-  --folio-chart-2: #ea91a1;
-  --folio-chart-3: #9ec37c;
-  --folio-chart-4: #d6b168;
-  --folio-chart-5: #c5add3;
+  /* 다크에서는 밝기를 올려야 보이지만 채도는 같은 수준으로 눌러 둔다. */
+  --folio-chart-1: #7f9cbb;
+  --folio-chart-2: #bd868d;
+  --folio-chart-3: #89a681;
+  --folio-chart-4: #ab9358;
+  --folio-chart-5: #948aa3;
   --folio-border: #2e374c;
   --folio-border-strong: #4a5673;
   --folio-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
