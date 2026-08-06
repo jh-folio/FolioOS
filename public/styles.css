@@ -15427,15 +15427,20 @@ select { min-height: 36px; padding: 0 12px; }
 /* 래퍼가 36px 라벨이고 안쪽 select만 28px이면 측정값과 실제 조작 영역이 어긋난다. */
 .gen-option select { height: 100%; }
 
-/* 보이는 크기는 그대로, 눌리는 영역만 44px로 넓힌다. */
+/* 보이는 크기는 그대로, 눌리는 영역만 44px로 넓힌다.
+
+   ::before를 쓴다. 툴팁이 ::after를 쓰기 때문이다 — 여기서 ::after를 쓰면
+   같은 요소를 두 규칙이 다투고, 나중에 오는 쪽이 content와 width를 덮어써서
+   툴팁 글자가 44px 상자에 갇힌다. 실제로 "삭제"가 "삭"/"제" 두 줄로 쪼개져
+   상자가 아래로 늘어났다. */
 .report-feed-card-delete,
 .briefing-archive-card-delete,
 .agent-home-icon-btn,
 .agent-home-send { position: relative; }
-.report-feed-card-delete::after,
-.briefing-archive-card-delete::after,
-.agent-home-icon-btn::after,
-.agent-home-send::after {
+.report-feed-card-delete::before,
+.briefing-archive-card-delete::before,
+.agent-home-icon-btn::before,
+.agent-home-send::before {
   content: "";
   position: absolute;
   left: 50%;
