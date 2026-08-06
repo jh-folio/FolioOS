@@ -26,7 +26,11 @@ from features.company_analysis.report_rules import (
     fetch_market_valuation_data,
 )
 from features.company_analysis.sec_companyfacts import build_companyfacts_summary
-from features.company_analysis.sec_filings import ranked_10k_paragraphs, ranked_paragraphs_to_markdown
+from features.company_analysis.sec_filings import (
+    ranked_10k_paragraphs,
+    ranked_paragraphs_to_markdown,
+    ranked_quarterly_report_paragraphs,
+)
 from features.llm_settings.client import (
     request_claude,
     request_gemini,
@@ -547,6 +551,13 @@ def build_company_analysis_materials(query, docs, company=None):
     dart_facts = build_dart_summary(company, DART_CACHE_DIR) if is_kr_company else {}
     sec_facts = dart_facts if is_kr_company else build_companyfacts_summary(company, SEC_CACHE_DIR)
     ranked_filing = {"ok": False, "reason": "dart_company", "metadata": {}, "paragraphs": []} if is_kr_company else ranked_10k_paragraphs(company, SEC_CACHE_DIR, max_paragraphs=14)
+    # 연차보고서만 읽으면 8월에 만든 보고서가 1월에 끝난 회계연도 서술로 회사를
+    # 설명한다. 그 사이 분기의 MD&A를 함께 읽는다. 연차를 대체하지 않고 덧붙인다.
+    quarterly_filing = (
+        {"ok": False, "reason": "dart_company", "metadata": {}, "paragraphs": []}
+        if is_kr_company
+        else ranked_quarterly_report_paragraphs(company, SEC_CACHE_DIR, max_paragraphs=8)
+    )
     sic_description = (ranked_filing.get("metadata", {}) or {}).get("sicDescription", "")
     if sic_description and (not company.get("sector") or company.get("sector") == "Unclassified"):
         company = {**company, "sector": sic_description}
@@ -618,6 +629,13 @@ def build_company_analysis_materials(query, docs, company=None):
         "## 공식 숫자 데이터",
         sec_facts.get("markdown", "Official financial data unavailable."),
         "",
+        "## 최근 분기 공시 서술 (10-Q MD&A)",
+        (
+            ranked_paragraphs_to_markdown(quarterly_filing)
+            if quarterly_filing.get("ok")
+            else "최근 분기보고서 서술을 확보하지 못했습니다. 연차보고서 기준 서술만 사용하세요."
+        ),
+        "",
         "## 공식 공시 상위 문단 또는 Item 발췌",
         filing_context or ("DART 공시 본문 문단 추출은 아직 연결되지 않았습니다. 로컬 filings의 사업보고서/분기보고서 원문 또는 웹 검색 공식 공시로 보완하세요." if is_kr_company else "선별 가능한 SEC 연차보고서 HTML 문단/Item 발췌가 없습니다. 로컬 filings 원문 또는 웹 검색 공식 공시로 보완하세요."),
         "",
@@ -649,6 +667,7 @@ def build_company_analysis_materials(query, docs, company=None):
         ],
         "secFacts": sec_facts,
         "rankedFiling": ranked_filing,
+        "rankedQuarterlyFiling": quarterly_filing,
         "dartFacts": dart_facts,
         "computedFinancialTable": computed_financial_table,
         "computedFinancialQuality": computed_financial_quality,

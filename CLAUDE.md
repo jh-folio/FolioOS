@@ -128,7 +128,7 @@ Python 패키지명에는 하이픈을 쓸 수 없으므로 런타임 코드는 
 4. WSJ, FT 등 유료 매체의 유료 본문 우회 수집을 구현하지 않는다. 공개 RSS, 공개 링크, 사용자가 직접 저장한 자료만 쓴다.
 5. 브리핑은 `filings`와 `reports`를 직접 근거로 쓰지 않는다.
 6. 기업 분석의 숫자는 SEC companyfacts를 최우선으로 한다.
-7. 기업 분석의 공시 서술은 SEC 10-K HTML 문단 점수화 결과를 우선 사용하고, 실패 시 로컬 공식자료(10-K/10-Q/S-1/20-F/8-K/prospectus/proxy 등) 발췌를 보조 공식자료로 사용한다.
+7. 기업 분석의 공시 서술은 SEC 연차보고서(10-K/20-F) HTML 문단 점수화 결과를 우선 사용하고, **최근 10-Q의 MD&A 문단을 함께 읽는다**(연차를 대체하지 않고 덧붙인다 — 연차만 읽으면 8월 보고서가 1월에 끝난 회계연도 서술로 회사를 설명한다). 실패 시 로컬 공식자료(10-K/10-Q/S-1/20-F/8-K/prospectus/proxy 등) 발췌를 보조 공식자료로 사용한다.
 8. 보조 자료는 관련성 점수화 결과를 사용한다. 단순 검색 결과 앞부분을 LLM이나 규칙 엔진에 그대로 넣지 않는다.
 9. 웹 검색은 로컬 자료를 대체하지 않는다. 부족한 지수/가격 반응/공식 자료를 보완하는 용도다.
 10. 미국 상장사 식별은 SEC `company_tickers.json` 기반 CIK 조회를 우선하고, 수동 사전은 한국 종목/별칭/예외 보정에만 쓴다.
@@ -378,6 +378,9 @@ features/company_analysis/financial_quality_prompt.md
 - 제공 자료가 부족하면 먼저 `features/company_analysis/data_gap_resolver.py`로 확인 경로와 미해결 항목을 구조화하고, 보고서 JSON에는 `dataGaps`와 `resolutionAttempts`를 보존한다.
 - 보고서는 생성 시 `data/company-analysis/`에 **자동 저장**된다(`api_analyze`가 `save_analysis_report` 호출). 보고서 id는 `ticker:날짜` 기준이라 같은 기업을 같은 날 재분석하면 최신본으로 덮어쓴다(파일 무한 누적 방지). 덮어쓸 때 기존 `personalOverlay`는 보존한다.
 - 영어 10-K 원문은 규칙 기반 보고서에서 그대로 나올 수 있다. 번역은 브라우저 번역이나 LLM 버전에 맡긴다.
+
+- **분기 자료**: companyfacts 분기 행은 이미 컨텍스트 표(`Recent Quarter`)에 들어간다. 차트는 연간만 읽고 있어서 `분기 흐름` 차트를 따로 만든다(최근 8개 기간, **전년 동기 대비** — 분기는 계절성이 있어 직전 분기와 비교하면 오해한다). 10-Q 서술은 `rankedQuarterlyFiling`으로 붙는다. 10-Q는 Item 번호 체계가 10-K와 달라(`Item 2` = MD&A) `_ITEM_PATTERNS`·`_ITEM_EQUIVALENTS`에 따로 등재돼 있다.
+- **차트 계약**: 값이 하나도 없는 계열은 그리지도 **부제에서 약속하지도** 않는다(`_present_subtitle`). 마진처럼 단위가 다른 계열은 오른쪽 축으로 분리한다 — 금액 축에 얹으면 0에 붙어 사라진다. 기간 구간이 hover 대상이고 그 기간의 모든 계열과 증감을 그림 밖 고정 상자에 보여준다.
 
 ### 테마분석 (Topic Report v2)
 

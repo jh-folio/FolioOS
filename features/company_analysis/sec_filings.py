@@ -191,19 +191,25 @@ def paragraphs_with_items(markup: str, form: str = "10-K"):
 # form을 모르고 읽으면 사업 개요 자리에서 위험 요소를 읽게 된다.
 #   10-K: 1 사업 · 1A 위험 · 7 MD&A · 7A 시장위험 · 8 재무제표
 #   20-F: 3.D 위험 · 4 회사 정보 · 5 경영진 논의 · 11 시장위험 · 18/19 재무제표
+#   10-Q: Part I 1 재무제표 · 2 MD&A · 3 시장위험 / Part II 1A 위험
 _ITEM_PATTERNS = {
     "10-K": r"\bITEM\s+(1A|1B|1|7A|7|8|9A|9B|9)\b",
     "20-F": r"\bITEM\s+(3\.?D|3|4A|4|5|11|18|19)\b",
+    "10-Q": r"\bITEM\s+(1A|1|2|3|4)\b",
 }
 FINANCIAL_DISCUSSION_ITEMS = {
     "10-K": {"7", "7A", "8"},
     "20-F": {"5", "11", "18"},
+    # 분기보고서에서 서술의 무게는 MD&A(2)와 시장위험(3)에 있다.
+    "10-Q": {"2", "3", "1"},
 }
 # 섹터 프로필의 `items`는 10-K 번호로 쓰여 있다. 20-F에 그대로 대면 사업 개요
 # 자리(10-K의 1)가 20-F의 Item 1(제출사 신원)에 가산되고, 정작 MD&A인 Item 5는
 # 아무 가산도 못 받는다. 같은 뜻의 구획끼리 옮긴다.
 _ITEM_EQUIVALENTS = {
     "20-F": {"1": "4", "1A": "3D", "7": "5", "7A": "11", "8": "18"},
+    # 10-Q에는 사업 개요(10-K의 1)에 해당하는 구획이 없다. MD&A로 옮긴다.
+    "10-Q": {"1": "2", "7": "2", "7A": "3", "8": "1"},
 }
 
 
@@ -270,15 +276,29 @@ def ranked_annual_report_paragraphs(company: dict, cache_dir: Path, max_paragrap
     티커로 CIK를 스스로 찾기 때문에, **숫자는 오는데 공시 서술만 빠지는** 보고서가
     나왔다. 두 경로가 같은 해결기를 쓰면 그 비대칭이 생기지 않는다.
     """
+    return _ranked_filing_paragraphs(company, cache_dir, ANNUAL_REPORT_FORMS, "no_annual_report", max_paragraphs)
+
+
+def ranked_quarterly_report_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 8) -> dict:
+    """가장 최근 10-Q의 서술 문단.
+
+    연차보고서만 읽으면 8월에 만든 보고서가 1월에 끝난 회계연도의 서술로 회사를
+    설명한다. 그 사이 두 분기에 무슨 일이 있었는지는 MD&A(Item 2)에 있다.
+    연차보고서를 대체하지 않고 최근 분기를 덧붙이는 용도다.
+    """
+    return _ranked_filing_paragraphs(company, cache_dir, ("10-Q",), "no_quarterly_report", max_paragraphs)
+
+
+def _ranked_filing_paragraphs(company: dict, cache_dir: Path, forms, missing_reason: str, max_paragraphs: int) -> dict:
     from features.company_analysis.sec_companyfacts import resolve_cik
 
     cik = resolve_cik(company, cache_dir)
     if not cik:
         return {"ok": False, "reason": "no_cik", "paragraphs": [], "metadata": {}}
-    metadata = latest_annual_report_metadata(cik, cache_dir)
+    metadata = latest_annual_report_metadata(cik, cache_dir, forms=forms)
     if not metadata.get("ok"):
-        return {"ok": False, "reason": "no_annual_report", "paragraphs": [], "metadata": metadata}
-    form = str(metadata.get("form") or "10-K").upper()
+        return {"ok": False, "reason": missing_reason, "paragraphs": [], "metadata": metadata}
+    form = str(metadata.get("form") or forms[0]).upper()
     # 캐시 키에 form을 넣는다. 같은 회사가 form을 바꾸면 예전 문서를 계속 읽는다.
     cache_name = f"{cik}_{form.replace('/', '-')}_{metadata['accession']}.json"
     html_text, error = fetch_text(metadata["url"], cache_dir / "html_10k" / cache_name, ttl_hours=24 * 30)

@@ -22,7 +22,7 @@ def test_both_sec_paths_resolve_a_cik_from_a_ticker_only_company(monkeypatch, tm
 
     seen: dict[str, str] = {}
 
-    def capture(cik, _cache_dir):
+    def capture(cik, _cache_dir, forms=None):
         seen["cik"] = cik
         return {"ok": False}  # 네트워크로 나가지 않는다. CIK 해결까지만 본다.
 
