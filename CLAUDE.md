@@ -188,7 +188,7 @@ data/company-analysis/         # 저장된 기업분석 보고서
 data/topic-reports/            # 저장된 테마분석 보고서
 data/obsidian-settings.json    # Obsidian Vault 경로
 data/dashboard-settings.json   # Research Cockpit 대시보드 설정
-data/agent-consultations/      # Watchlist/Portfolio 상담 세션 (hypothesis, evidence 아님)
+data/agent-threads/            # Agent 대화 스레드 (hypothesis, evidence 아님)
 ```
 
 현재 active prompt 위치:
@@ -228,7 +228,7 @@ features/company_analysis/financial_quality_prompt.md
 | Thesis Tracking | `thesis_tracking` | 기업 thesis의 강화/유지/약화/이탈 추적 | Personal Overlay |
 | Research Quality | `common/research_quality` | 산출물 공통 품질 평가: sourceGrounding·risk·coverage | source-grounded |
 | Quality Generation | `common/quality_generation` | 생성 품질 목표·자료 루트·preflight·evidence coverage·생성 후 평가·약한 섹션 LLM 개선·telemetry | source-grounded |
-| AI Agent Mode | `agent_mode` | Codex/Claude/Antigravity CLI용 context pack·Direct Bridge·기존 저장소 writeback + 도크 Agent 채팅(`/api/agent/chat`)·수정 제안 diff 승인 writeback(`/api/agent/proposals/{id}`)·Watchlist/Portfolio 상담 세션(`/api/agent/consultations`) | source-grounded + Personal Overlay |
+| AI Agent Mode | `agent_mode` | Codex/Claude/Antigravity CLI용 context pack·Direct Bridge·기존 저장소 writeback + 도크 Agent 대화 스레드(`/api/agent/threads`)·수정 제안 diff 승인 writeback(`/api/agent/proposals/{id}`) | source-grounded + Personal Overlay |
 | 투자 리뷰 | `investment_review` | regime/thesis/portfolio/checkpoints/obsidian을 묶은 투자 리뷰 홈 | Personal Overlay |
 | 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그. 0.5에서 Legacy 모드를 삭제해 화면에서는 쓰지 않으며, 설정 파일은 집중 종목 fallback으로만 read-only로 읽는다 | — |
 | Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장·공식자료 semantic cache/fetch runtime | source-grounded |
@@ -242,8 +242,8 @@ features/company_analysis/financial_quality_prompt.md
 0.4 기본 사용자 화면에서의 노출 상태:
 
 - **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
-- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio 상담과 `노트로 정리`, Portfolio 스크린샷 가져오기.
-- **Agent 실행 경계**: freshness/health/context 배지와 `changeSummary`는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 상담 답변은 사용자의 명시적 action에서만 Agent를 실행한다.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio `짚어보기` 대화와 `노트로 정리`, Portfolio 스크린샷 가져오기.
+- **Agent 실행 경계**: freshness/health/context 배지와 `changeSummary`는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 대화 답변은 사용자의 명시적 action에서만 Agent를 실행한다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
 - **숨김/축소 유지**: Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 보이는 리서치 화면의 제한된 projection으로만 노출한다. Portfolio 독립 화면은 0.4에서 공개로 복귀했다.
 - **문서 원칙**: 사용자용 README는 현재 릴리즈에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
@@ -488,7 +488,7 @@ features/company_analysis/financial_quality_prompt.md
 - retention 기본값: 일반 lead 3일, Watchlist/Portfolio 관련 14일, corroborated 30일.
 - polling provider는 automation의 `signals` kind로 실행한다. 승인된 provider가 모두 polling RSS라 상시 WebSocket 연결은 두지 않는다(`start_signal_runtime`은 lifespan 호환용 no-op).
 - run log에는 provider/count/status/error code만 남기고 headline/raw payload를 남기지 않는다.
-- **0.4.8부터 lead를 보여주는 화면이 없다.** 워치리스트 상세의 `빠른 시장 신호` 레일은 승인 provider가 하나만 남아 교차 확인이 불가능해졌고 lead 티커가 워치리스트 종목과 맞는 경우가 없어 제거했다. 승격·retention 런타임은 그대로 남아 상담 context(`sourceContext.fastSignals`)가 계속 읽는다.
+- **0.4.8부터 lead를 보여주는 화면이 없다.** 워치리스트 상세의 `빠른 시장 신호` 레일은 승인 provider가 하나만 남아 교차 확인이 불가능해졌고 lead 티커가 워치리스트 종목과 맞는 경우가 없어 제거했다. 승격·retention 런타임은 그대로 남아 대화 context(`sourceContext.fastSignals`)가 계속 읽는다.
 
 ### Change Intelligence
 
@@ -517,16 +517,20 @@ features/company_analysis/financial_quality_prompt.md
 - `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
 - 기존 `/api/dashboard` 응답은 기존 consumer 호환을 위해 유지한다.
 
-### Agent 상담 (Consultation)
+### Agent 대화 (Threads)
 
-- 로직은 `features/agent_mode/consultation_*.py`에 둔다. `data/agent-consultations/{sessionId}.json` JSON-per-session이 권위 저장소이며 research inbox/index 경로 밖이라 어떤 evidence loader·indexer도 읽지 않는다.
-- 세션·메시지·노트 snapshot은 `layer=hypothesis`, `sourceLayer=user_consultation`, `reuseAsEvidence=false`를 코드 상수로 강제한다.
-- 모델 입력은 전체 transcript가 아니라 rolling summary + 최근 8개 메시지 + 서버가 재조회한 최신 리서치 context로 구성한 32,000자 이하 pack이다.
+- 로직은 `features/agent_mode/consultation_*.py`에 둔다(내부 식별자는 저장 데이터와의 계약이라 유지). `data/agent-threads/{id}.json` JSON-per-thread가 권위 저장소이며 research inbox/index 경로 밖이라 어떤 evidence loader·indexer도 읽지 않는다. 예전 `data/agent-consultations/`는 첫 사용 시 1회 이관한다(복사 후 삭제, 이름 충돌 시 양쪽 보존).
+- **도크가 대화의 집이다.** 주제가 붙은 대화(워치리스트·포트폴리오·보고서)는 도크 아래 한 종류이며 별도 상담 패널을 만들지 않는다. 화면 용어는 전부 `대화`이고 주제는 칩으로 보여준다. `상담`은 전문가 조언을 뜻해 §5 원칙 3(사용자 생각을 옹호하지 말고 검증한다)과 충돌하므로 화면에서 쓰지 않는다.
+- 세션·메시지·노트 snapshot은 `layer=hypothesis`, `sourceLayer=user_consultation`, `reuseAsEvidence=false`를 코드 상수로 강제하고 화면에도 그 경계를 표시한다.
+- scope를 주지 않으면 `general`이다. 알 수 없는 kind를 `portfolio`로 떨어뜨리지 않는다(주제 없는 대화에 포트폴리오 맥락이 딸려 들어간다).
+- **생성 경로는 하나다.** 스레드 러너(`job_runtime.run_consultation_job`)는 맥락 조립과 저장만 하고 생성은 도크와 같은 `chat.run_agent_chat`에 위임한다. 제안 생성·거절 같은 사건도 같은 transcript에 남겨 다음 세션의 Agent가 같은 제안을 반복하지 않게 한다.
+- 모델 입력은 전체 transcript가 아니라 rolling summary + 최근 8개 메시지 + 서버가 **매번 다시 조회한** 최신 리서치 context로 구성한 32,000자 이하 pack이다. 저장된 옛 시세/브리핑을 재생하지 않는다.
+- **답변 본문은 잡 결과가 아니라 스레드에서 읽는다.** 잡 결과는 `data/jobs.json`과 Work Log에 남으므로 transcript를 담지 않는다.
+- user turn을 먼저 저장한 뒤 Agent job을 실행하므로 재시작 후에도 질문이 남고 retry할 수 있다. `operationId`로 중복 응답을 막는다. 저장 성공 후 폴링이 실패해도 작성칸을 되돌리지 않는다(재전송이 새 `operationId`로 같은 질문을 두 번 저장한다).
+- 대화 관리(목록·전환·제목·보관·삭제)는 도크가 소유한다. 삭제는 확인을 받고 저장소도 `confirmed` 없이는 지우지 않는다.
 - memory 갱신은 규칙 기반 rolling summary다. 계획의 구조화 memoryPatch 계약은 미도입 상태이며 상세는 `.planning/folio-os-0.4-x-research-intelligence/task_plan.md`의 구현 편차 기록을 본다.
-- user turn을 먼저 저장한 뒤 Agent job을 실행하므로 재시작 후에도 질문이 남고 retry할 수 있다. `operationId`로 중복 응답을 막는다.
 - `노트로 정리` 명시적 action만 Native Investment Note snapshot을 만들며 노트에도 `consultationRef`와 hypothesis 경계가 유지된다.
 - Work Log/API/exception/telemetry에 transcript·session memory·Portfolio 민감 context를 남기지 않는다.
-
 ---
 
 ## 11. 실행에 필요한 것
