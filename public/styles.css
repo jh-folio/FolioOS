@@ -528,7 +528,7 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
   font-weight: var(--fw-bold);
 }
 
-.settings-theme-options button.active {
+.settings-theme-options button[aria-pressed="true"] {
   border-color: var(--folio-blue);
   background: var(--folio-blue-soft);
   color: var(--folio-ink);
@@ -2617,7 +2617,7 @@ body:has(#folioReactRoot .react-shell) main.page {
   justify-content: center;
 }
 
-.react-rss-pagination button.active {
+.react-rss-pagination button[aria-current="page"] {
   background: var(--folio-accent);
   border-color: var(--folio-accent);
   color: var(--folio-on-accent);
@@ -9451,13 +9451,13 @@ body.report-reader-open { overflow: hidden; }
   cursor: pointer;
 }
 
-.sub-tabs button.active {
+.sub-tabs button[aria-current="page"] {
   background: var(--folio-surface-dark);
   border-color: var(--folio-surface-dark);
   color: var(--folio-ink-inverse);
 }
 
-.sub-tabs button:hover:not(.active) {
+.sub-tabs button:hover:not([aria-current="page"]) {
   border-color: var(--folio-ink-muted);
 }
 
@@ -12584,7 +12584,7 @@ main.page {
   font-weight: var(--fw-bold);
 }
 
-.settings-segmented button.active {
+.settings-segmented button[aria-pressed="true"] {
   color: var(--folio-segment-active-ink);
 }
 

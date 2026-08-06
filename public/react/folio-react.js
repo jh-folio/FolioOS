@@ -11368,7 +11368,6 @@ function ma() {
 							"data-style": c,
 							children: Wi.map((e) => /* @__PURE__ */ (0, f.jsx)("button", {
 								type: "button",
-								className: c === e.value ? "active" : "",
 								"aria-pressed": c === e.value,
 								onClick: () => l(e.value),
 								"data-tooltip": e.description,
@@ -17129,7 +17128,7 @@ function hc() {
 					}), L > 2 && /* @__PURE__ */ (0, f.jsx)("span", { children: "..." })] }),
 					Array.from({ length: ee - L + 1 }, (e, t) => L + t).map((e) => /* @__PURE__ */ (0, f.jsx)("button", {
 						type: "button",
-						className: e === I ? "active" : "",
+						"aria-current": e === I ? "page" : void 0,
 						disabled: m,
 						onClick: () => A(e, o),
 						children: e
@@ -17762,12 +17761,12 @@ function Gc() {
 				className: "sub-tabs",
 				"aria-label": "설정 하위 탭",
 				children: [/* @__PURE__ */ (0, f.jsx)("button", {
-					className: n === "integrations" ? "active" : "",
+					"aria-current": n === "integrations" ? "page" : void 0,
 					type: "button",
 					onClick: () => r("integrations"),
 					children: "연동"
 				}), /* @__PURE__ */ (0, f.jsx)("button", {
-					className: n === "admin" ? "active" : "",
+					"aria-current": n === "admin" ? "page" : void 0,
 					type: "button",
 					onClick: () => r("admin"),
 					children: "관리"
@@ -17812,7 +17811,6 @@ function Gc() {
 										["system", "시스템"]
 									].map(([t, n]) => /* @__PURE__ */ (0, f.jsx)("button", {
 										type: "button",
-										className: e.preference === t ? "active" : "",
 										"aria-pressed": e.preference === t,
 										onClick: () => e.setPreference(t),
 										children: n
@@ -17861,12 +17859,12 @@ function Gc() {
 											"aria-label": "AI Agent 실행 방식",
 											"data-mode": w,
 											children: [/* @__PURE__ */ (0, f.jsx)("button", {
-												className: w === "cli" ? "active" : "",
+												"aria-pressed": w === "cli",
 												type: "button",
 												onClick: () => T("cli"),
 												children: "LLM CLI"
 											}), /* @__PURE__ */ (0, f.jsx)("button", {
-												className: w === "api" ? "active" : "",
+												"aria-pressed": w === "api",
 												type: "button",
 												onClick: () => T("api"),
 												children: "LLM API"

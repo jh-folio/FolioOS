@@ -593,7 +593,6 @@ export function CompanyAnalysisRoute() {
               <button
                 type="button"
                 key={style.value}
-                className={analysisStyle === style.value ? "active" : ""}
                 aria-pressed={analysisStyle === style.value}
                 onClick={() => setAnalysisStyle(style.value)}
                 data-tooltip={style.description}

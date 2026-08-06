@@ -448,7 +448,7 @@ export function RssRoute() {
             <button
               type="button"
               key={pageNumber}
-              className={pageNumber === currentPage ? "active" : ""}
+              aria-current={pageNumber === currentPage ? "page" : undefined}
               disabled={loading}
               onClick={() => loadItems(pageNumber, filters)}
             >

@@ -461,8 +461,8 @@ export function SettingsRoute() {
       />
 
       <nav className="sub-tabs" aria-label="설정 하위 탭">
-        <button className={tab === "integrations" ? "active" : ""} type="button" onClick={() => setTab("integrations")}>연동</button>
-        <button className={tab === "admin" ? "active" : ""} type="button" onClick={() => setTab("admin")}>관리</button>
+        <button aria-current={tab === "integrations" ? "page" : undefined} type="button" onClick={() => setTab("integrations")}>연동</button>
+        <button aria-current={tab === "admin" ? "page" : undefined} type="button" onClick={() => setTab("admin")}>관리</button>
       </nav>
 
       {error && <p className="react-dashboard-error">{error}</p>}
@@ -490,7 +490,6 @@ export function SettingsRoute() {
                 ] as Array<[ThemePreference, string]>).map(([value, label]) => (
                   <button
                     type="button"
-                    className={theme.preference === value ? "active" : ""}
                     aria-pressed={theme.preference === value}
                     onClick={() => theme.setPreference(value)}
                     key={value}
@@ -527,8 +526,8 @@ export function SettingsRoute() {
                 <div className="settings-agent-mode-row">
                   <ToggleSwitch ariaLabel="AI Agent 사용" checked={agentEnabled} onChange={setAgentEnabled} compact />
                   <div className="settings-segmented" aria-label="AI Agent 실행 방식" data-mode={agentMode}>
-                    <button className={agentMode === "cli" ? "active" : ""} type="button" onClick={() => setAgentMode("cli")}>LLM CLI</button>
-                    <button className={agentMode === "api" ? "active" : ""} type="button" onClick={() => setAgentMode("api")}>LLM API</button>
+                    <button aria-pressed={agentMode === "cli"} type="button" onClick={() => setAgentMode("cli")}>LLM CLI</button>
+                    <button aria-pressed={agentMode === "api"} type="button" onClick={() => setAgentMode("api")}>LLM API</button>
                   </div>
                 </div>
               </div>
