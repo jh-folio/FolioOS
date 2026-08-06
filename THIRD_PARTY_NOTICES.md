@@ -36,6 +36,24 @@ apply.
 Leads enter Folio OS as metadata-only and unconfirmed. They do not count as
 report evidence until corroborated through an eligible evidence path.
 
+## Market index names and constituent lists
+
+Folio OS ships reference lists of the companies in several market indices so
+that charts, heat maps, and company lookup work offline. The index names —
+including S&P 500, KOSPI 200, Nikkei 225, FTSE 100, DAX, CAC 40, and AEX — are
+trademarks of their respective owners. They are used here to identify which
+market a list of companies refers to. Folio OS is not affiliated with, endorsed
+by, or licensed by any index provider, and the lists are reference data for
+local research rather than a redistribution of an index product.
+
+## SEC and DART official data
+
+Company identification and official filing text come from public filing
+systems: the U.S. Securities and Exchange Commission (EDGAR, company tickers,
+companyfacts) and, for Korean companies, DART. Requests identify Folio OS
+through `SEC_USER_AGENT`. Folio OS reads what these systems publish openly and
+does not bypass access controls.
+
 ## Optional OpenAI Vision import
 
 When the user explicitly selects external Vision and consents for that request,
