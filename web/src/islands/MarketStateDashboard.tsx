@@ -71,8 +71,12 @@ export interface DashboardPayload {
 }
 
 const CONFIDENCE_LABELS: Record<string, string> = { high: "높음", medium: "보통", low: "낮음" };
-type MarketScope = "overall" | "us" | "kr";
-const MARKET_SCOPE_LABELS: Record<MarketScope, string> = { overall: "종합", us: "미국장", kr: "한국장" };
+type MarketScope = "overall" | "us" | "kr" | "europe" | "jp";
+/* 백엔드는 us/kr/europe/jp 네 시장의 view를 만들어 저장하는데 화면이 us/kr만
+   알고 있어서, 유럽·일본 내러티브는 생성되어도 열 방법이 없었다.
+   라벨은 브리핑 시장 선택과 같은 US/KR/EU/JP를 쓴다. */
+const MARKET_SCOPE_ORDER: MarketScope[] = ["overall", "us", "kr", "europe", "jp"];
+const MARKET_SCOPE_LABELS: Record<MarketScope, string> = { overall: "종합", us: "US", kr: "KR", europe: "EU", jp: "JP" };
 type CheckItem = string | { title?: string; summary?: string; sourceRefs?: string[] };
 
 /** 문장 단위로 가른다. 소수점은 문장 끝이 아니다.
@@ -348,7 +352,7 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
   const ref = readMarketStateRef(payload);
   const state: MarketStateStatus = ref?.status || "empty";
   const marketViews = payload?.marketViews || {};
-  const availableMarkets = (["overall", "us", "kr"] as MarketScope[]).filter((scope) => scope === "overall" || Boolean(marketViews[scope]));
+  const availableMarkets = MARKET_SCOPE_ORDER.filter((scope) => scope === "overall" || Boolean(marketViews[scope]));
   const activeMarket = availableMarkets.includes(selectedMarket) ? selectedMarket : "overall";
   const activePayload = activeMarket === "overall" ? (marketViews.overall || payload) : (marketViews[activeMarket] || payload);
   const drivers = activePayload?.drivers ?? [];
@@ -388,7 +392,6 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
               type="button"
               role="tab"
               aria-selected={activeMarket === key}
-              className={activeMarket === key ? "active" : ""}
               onClick={() => onSelectMarket?.(key)}
             >
               {MARKET_SCOPE_LABELS[key]}

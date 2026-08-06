@@ -314,3 +314,15 @@ def test_stale_recovery_now_fails_closed(tmp_path: Path) -> None:
         recover_manual_attempts(store, (), NOW - timedelta(seconds=1))
 
     assert store.path.read_bytes() == before
+
+
+def test_snapshot_prompt_asks_for_every_product_market():
+    """프롬프트가 세 시장만 요구하면 Agent 경로는 유럽·일본 view를 아예 쓰지 않는다.
+
+    2026-08-06 저장본이 그랬다: 백엔드 scope는 네 시장인데 프롬프트가 overall/us/kr만
+    요구해서 agent_authored 스냅샷에 europe/jp가 없었다.
+    """
+    from features.market_memory.snapshot import MARKET_VIEW_KEYS, MARKET_STATE_SNAPSHOT_PROMPT
+
+    for key in MARKET_VIEW_KEYS:
+        assert f"marketViews.{key}" in MARKET_STATE_SNAPSHOT_PROMPT, key

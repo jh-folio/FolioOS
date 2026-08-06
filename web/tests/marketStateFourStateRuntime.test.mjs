@@ -121,12 +121,16 @@ test("scope tabs render only backed distinct market views", async (t) => {
   t.after(() => vite.close());
   const { MarketStateDashboardView } = await vite.ssrLoadModule("/src/islands/MarketStateDashboard.tsx");
   const overallOnly = renderToStaticMarkup(React.createElement(MarketStateDashboardView, { payload: marketStateFixtures.current }));
-  assert.doesNotMatch(overallOnly, /미국장|한국장/);
+  assert.doesNotMatch(overallOnly, /market-scope-tabs/);
   const withUs = { ...marketStateFixtures.current, marketViews: { us: { ...marketStateFixtures.current, title: "미국 시장" } } };
   const withUsHtml = renderToStaticMarkup(React.createElement(MarketStateDashboardView, { payload: withUs }));
-  assert.match(withUsHtml, /종합/);
-  assert.match(withUsHtml, /미국장/);
-  assert.doesNotMatch(withUsHtml, /한국장/);
+  assert.match(withUsHtml, /aria-selected="true">종합</);
+  assert.match(withUsHtml, />US</);
+  assert.doesNotMatch(withUsHtml, />KR</);
+  // 백엔드가 authoring하는 네 시장이 모두 열려야 한다. europe/jp는 화면에서 빠져 있었다.
+  const withAll = { ...marketStateFixtures.current, marketViews: Object.fromEntries(["us", "kr", "europe", "jp"].map((k) => [k, { ...marketStateFixtures.current }])) };
+  const allHtml = renderToStaticMarkup(React.createElement(MarketStateDashboardView, { payload: withAll }));
+  for (const label of ["종합", "US", "KR", "EU", "JP"]) assert.match(allHtml, new RegExp(`>${label}<`), label);
 });
 
 test("Deep Research renders freshness as separate context without canary promotion", async (t) => {

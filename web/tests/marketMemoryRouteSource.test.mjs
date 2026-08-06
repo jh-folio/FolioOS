@@ -39,10 +39,11 @@ test("Market State dashboard island keeps the state-dashboard API contract", asy
   assert.match(source, /selectedMarket/);
   assert.match(source, /marketViews/);
   assert.match(source, /market-scope-tabs/);
-  assert.match(source, /\["overall", "us", "kr"\]/);
+  assert.match(source, /MARKET_SCOPE_ORDER/);
   assert.match(source, /종합/);
-  assert.match(source, /미국장/);
-  assert.match(source, /한국장/);
+  // 라벨은 브리핑 시장 선택과 같은 말을 쓴다(US/KR/EU/JP).
+  assert.match(source, /us: "US"/);
+  assert.match(source, /kr: "KR"/);
   assert.match(source, /watchItems/);
   assert.match(source, /stance/);
   assert.match(source, /posture/);
@@ -107,4 +108,17 @@ test("market-memory route no longer falls back to the legacy memory view", async
   const source = await readFile(new URL("../src/app/routes.ts", import.meta.url), "utf8");
 
   assert.doesNotMatch(source, /id: "market-memory", label: "시장 내러티브", group: "research", legacyViewId: "memory"/);
+});
+
+test("the narrative view offers every market the backend can author", async () => {
+  const source = await readFile(new URL("../src/islands/MarketStateDashboard.tsx", import.meta.url), "utf8");
+  // 백엔드는 us/kr/europe/jp의 view를 만들어 저장하는데 화면이 us/kr만 알고 있어서
+  // 유럽·일본 내러티브는 생성되어도 열 방법이 없었다.
+  for (const scope of ["overall", "us", "kr", "europe", "jp"]) {
+    assert.match(source, new RegExp(`"${scope}"`), `${scope} 범위가 화면에 없다`);
+  }
+  // 라벨은 브리핑 시장 선택과 같은 말을 쓴다.
+  assert.match(source, /europe: "EU"/);
+  assert.match(source, /jp: "JP"/);
+  assert.doesNotMatch(source, /\["overall", "us", "kr"\]/, "시장 목록을 다시 하드코딩하지 않는다");
 });

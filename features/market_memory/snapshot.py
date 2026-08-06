@@ -40,7 +40,7 @@ Required JSON fields:
 - uncertainties: optional but recommended
 - sourceRefs: source references used, preserving ids from context when possible
 - confidence: 0.0 to 1.0
-- marketViews: optional object with overall, us, kr. Each view may include headline, marketInterpretation, actionSummary, actionGuide, keyDrivers, watchItems, counterEvidence, uncertainties.
+- marketViews: optional object with overall, us, kr, europe, jp. Each view may include headline, marketInterpretation, actionSummary, actionGuide, keyDrivers, watchItems, counterEvidence, uncertainties.
 
 Rules:
 - Use judgment, but keep it source-grounded.
@@ -48,8 +48,8 @@ Rules:
 - beginnerSummary and actionGuide are additive display guidance. They must not replace oneLineSummary, driver summaries, whyItMatters, or evidenceSummary.
 - Do not repeat a list of factors in beginnerSummary; factors are shown in keyDrivers.
 - Every keyDriver must preserve both judgment and reason: summary states the driver's current judgment, whyItMatters explains why it matters, evidenceSummary explains what evidence supports it, and marketImpact explains the effect on investors/markets.
-- Write marketViews.overall, marketViews.us, and marketViews.kr when the evidence supports market-specific views. Keep the same reasoning structure in each view; do not produce disconnected formats.
-- marketViews.overall/us/kr keyDrivers are not labels. Each market view driver must include the same rich fields as top-level keyDrivers: title, summary, directionLabel, marketImpact, nextMemoryCheck, evidenceSummary, whyItMatters, sourceRefs.
+- Write marketViews.overall, marketViews.us, marketViews.kr, marketViews.europe, and marketViews.jp when the evidence supports market-specific views. Keep the same reasoning structure in each view; do not produce disconnected formats.
+- marketViews.overall/us/kr/europe/jp keyDrivers are not labels. Each market view driver must include the same rich fields as top-level keyDrivers: title, summary, directionLabel, marketImpact, nextMemoryCheck, evidenceSummary, whyItMatters, sourceRefs.
 - If a market-specific view has weak evidence, say that in marketInterpretation/counterEvidence instead of filling it with short factor names.
 - Use marketTape and macroSnapshot as structured evidence. They are not conclusions. They help decide whether news flows are confirmed or contradicted by prices and macro data.
 - marketTape and macroSnapshot are supporting evidence only. If they are unavailable, stale, weak, or hard to match, do not list that as user-facing uncertainties; keep those limitations as internal data diagnostics.
@@ -699,7 +699,7 @@ def build_market_state_context(
             "marketTape and macroSnapshot provide structured price, index, FX, rates, and macro context from yfinance/FRED/BOK when available; use them to confirm, weaken, or qualify news-driven narratives, not as prewritten conclusions. "
             "Financial market data is supporting evidence only; if marketTape or macroSnapshot is missing, stale, sparse, or hard to match, do not turn that into user-facing uncertainties. "
             "Each rssCandidate has markets tags (US/KR/GLOBAL/UNKNOWN). The list is already filtered for this marketScope, except overall keeps the broad pool. "
-            "LLM should choose the important drivers from rssCandidates, marketTape, macroSnapshot, and existingStates, invalidate existingStates when new evidence contradicts them, then return judgment with evidence, counter-evidence, uncertainty, watch items, and marketViews for overall/us/kr when supported."
+            "LLM should choose the important drivers from rssCandidates, marketTape, macroSnapshot, and existingStates, invalidate existingStates when new evidence contradicts them, then return judgment with evidence, counter-evidence, uncertainty, watch items, and marketViews for overall/us/kr/europe/jp when supported."
         ),
         "marketScope": market_scope,
         "marketDataPolicy": {

@@ -365,7 +365,8 @@ export function AppShell() {
                         type="button"
                         data-tooltip={route.label}
                         data-qa={route.id === "deep-research" ? "nav-deep-research" : undefined}
-                        className={`react-left-nav-item${route.id === active.id ? " active" : ""}`}
+                        className="react-left-nav-item"
+                        aria-current={route.id === active.id ? "page" : undefined}
                         onClick={() => {
                           navigateToRoute(route.id);
                         }}
