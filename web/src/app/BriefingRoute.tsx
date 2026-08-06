@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { engineTooltip, groupMeta, listDate } from "./savedListFormat";
 import { getJson, isActiveJobStatus, postJson, MARKET_CODE_LABELS, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -46,6 +47,8 @@ type BriefingArchiveItem = {
   sessionDate?: string;
   briefingType?: string;
   tags?: string[];
+  engine?: string;
+  engineDetail?: string;
 };
 
 type BriefingArchivePayload = {
@@ -146,9 +149,10 @@ function archiveCardView(item: BriefingArchiveItem) {
   const formatted = formatArchiveDate(date);
   const title = item.title || (formatted ? `${displayTitle} — ${formatted}` : displayTitle);
   const chips = (item.tags || []).filter((tag) => !BRIEFING_MARKET_TAGS.has(String(tag || "").trim()));
-  const publication = formatted ? `${formatted} KST 발행` : "발행일 미상";
-  const generated = item.generatedAt ? new Date(item.generatedAt).toLocaleString("ko-KR") : "생성 시각 미상";
-  return { date, scope, title, chips, foot: `${publication} · ${generated}` };
+  // 브리핑은 발행일과 세션일이 다르고 그 구분이 이 화면의 핵심이라 `KST 발행`을 남긴다.
+  // 초 단위 생성 시각은 목록에서 쓸 일이 없어 뺀다 — 이 카드만 유독 길어지는 원인이었다.
+  const publication = formatted ? `${listDate(item.reportDate || item.date)} KST 발행` : "발행일 미상";
+  return { date, scope, title, chips, engine: item.engine || "", engineDetail: item.engineDetail || "", foot: publication };
 }
 
 function sleep(ms: number) {
@@ -469,7 +473,8 @@ export function BriefingRoute() {
     const sorted = [...filteredItems].sort((a, b) => String(displayDate(b) || b.generatedAt || "").localeCompare(String(displayDate(a) || a.generatedAt || "")));
     if (archiveView === "recent") {
       if (!sorted.length) return [];
-      return [{ label: `최근 브리핑 ${Math.min(sorted.length, RECENT_BRIEFING_LIMIT)}건`, rows: sorted.slice(0, RECENT_BRIEFING_LIMIT) }];
+      // 건수는 그룹 머리 오른쪽이 맡는다. 이름에 또 넣으면 같은 줄에 두 번 적힌다.
+      return [{ label: "최근 브리핑", rows: sorted.slice(0, RECENT_BRIEFING_LIMIT) }];
     }
     if (archiveView === "month") {
       const byMonth = new Map<string, BriefingArchiveItem[]>();
@@ -480,7 +485,8 @@ export function BriefingRoute() {
       }
       return Array.from(byMonth.entries()).map(([label, rows]) => ({ label, rows }));
     }
-    const order: MarketScope[] = ["us", "kr", "both"];
+    // 0.5는 네 시장이다. us/kr만 두면 유럽·일본 브리핑이 시장별 보기에서 사라진다.
+    const order: MarketScope[] = ["us", "kr", "europe", "jp", "both"];
     return order
       .map((scope) => ({
         label: `${SCOPE_LABELS[scope]} 시장`,
@@ -710,12 +716,21 @@ export function BriefingRoute() {
 
       {/* 레거시 briefing-archive-card 클래스를 그대로 재사용해 디자인 언어를 통일한다. */}
       <section className="briefing-archive-feed" aria-label="저장 브리핑">
-        <p className="feed-count" aria-live="polite">
-          {loading ? "불러오는 중..." : `${filteredItems.length}건${archiveQuery ? " · 검색 결과" : ""}`}
-        </p>
+        <div className="react-section-heading">
+          <div>
+            <p className="section-kicker">Saved Briefings</p>
+            <h2>저장된 브리핑</h2>
+          </div>
+          <span aria-live="polite">
+            {loading ? "불러오는 중..." : `${filteredItems.length}건${archiveQuery ? " · 검색 결과" : ""}`}
+          </span>
+        </div>
         {visibleGroups.length ? visibleGroups.map((group) => (
           <div className="briefing-archive-date-group" key={group.label}>
-            <h3>{group.label}</h3>
+            <div className="report-feed-group-head">
+              <span className="report-feed-group-name">{group.label}</span>
+              <span className="report-feed-group-meta">{groupMeta(group.rows.length, group.rows[0]?.generatedAt)}</span>
+            </div>
             {group.rows.map((item) => {
               const view = archiveCardView(item);
               const deleting = actionBusy === `delete-${view.date}-${view.scope}`;
@@ -731,6 +746,11 @@ export function BriefingRoute() {
                       {view.chips.map((chip) => (
                         <span className="chip briefing-archive-chip" key={chip}>{chip}</span>
                       ))}
+                      {view.engine && (
+                        <span className="chip briefing-archive-chip" data-tooltip={engineTooltip(view.engine, view.engineDetail)}>
+                          {view.engine}
+                        </span>
+                      )}
                     </span>
                     <strong>{view.title}</strong>
                     <span className="briefing-archive-card-foot">{view.foot}</span>

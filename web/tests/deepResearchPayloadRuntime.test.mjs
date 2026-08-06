@@ -127,6 +127,7 @@ test("malformed rows are discarded without throwing", async () => {
   assert.ok(report.contractWarnings.length >= 3);
   assert.deepEqual(parseTopicReportSummaries([null, 1, { id: "summary-1", topicLabel: "valid" }, { id: "", topicLabel: "invalid" }]), [{
     id: "summary-1", topicKey: "", topicLabel: "valid", date: "", generatedAt: "", mode: "", saved: false,
+    engine: "", engineDetail: "",
   }]);
   assert.deepEqual(parseTopicReportSummaries({}), []);
 });

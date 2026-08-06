@@ -41,6 +41,7 @@ from features.common.quality_generation.preflight_enrichment import build_prefli
 from features.common.quality_generation.quality_targets import render_quality_target_context
 from features.common.quality_generation.telemetry import normalize_token_usage
 from features.market_memory.snapshot import render_market_memory_context
+from features.common.generation_engine import engine_detail, engine_label
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data"
@@ -860,6 +861,9 @@ def list_analysis_reports():
                 "company": company,
                 "mode": (report.get("generation") or {}).get("mode", ""),
                 "provider": (report.get("generation") or {}).get("provider", ""),
+                # 목록 카드가 "LLM"이라고만 적으면 어느 모델이 썼는지 알 수 없다.
+                "engine": engine_label(report.get("generation")),
+                "engineDetail": engine_detail(report.get("generation")),
                 "analysisStyle": report.get("analysisStyle", ""),
                 "dataGapSummary": data_gap_summary,
             }

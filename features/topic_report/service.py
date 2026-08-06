@@ -45,6 +45,7 @@ from features.topic_report.source_ledger import build_source_ledger
 from features.topic_report.templates import compose_prompt
 from features.topic_report.topic_config import PRESET_TOPICS, get_topic_config
 from features.topic_report.report_rules import build_rule_report
+from features.common.generation_engine import engine_detail, engine_label
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data"
@@ -673,6 +674,8 @@ def list_topic_reports() -> list:
                     "title": data.get("title", ""),
                     "generatedAt": data.get("generatedAt", ""),
                     "mode": data.get("generation", {}).get("mode", ""),
+                    "engine": engine_label(data.get("generation")),
+                    "engineDetail": engine_detail(data.get("generation")),
                 })
             except Exception:
                 continue

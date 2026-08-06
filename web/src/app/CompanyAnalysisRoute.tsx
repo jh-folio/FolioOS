@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { engineTooltip, groupMeta, listDate } from "./savedListFormat";
 import { useCompanyResolution } from "./companyAnalysis/useCompanyResolution";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
@@ -24,6 +25,8 @@ type AnalysisReport = {
   company?: Company;
   generatedAt?: string;
   mode?: string;
+  engine?: string;
+  engineDetail?: string;
   headline?: string;
   markdown?: string;
   analysisStyle?: AnalysisStyle | string;
@@ -127,9 +130,7 @@ function analysisFeedTitle(report: AnalysisReport) {
 }
 
 function displayDate(value?: string) {
-  if (!value) return "미상";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString("ko-KR");
+  return listDate(value) || "미상";
 }
 
 function analysisStyleLabel(value?: string) {
@@ -703,7 +704,7 @@ export function CompanyAnalysisRoute() {
           <section className="report-feed-group" key={group.key}>
             <div className="report-feed-group-head">
               <span className="report-feed-group-name">{group.label}</span>
-              <span className="report-feed-group-meta">{group.rows.length}건 · 최근 {displayDate(group.rows[0]?.generatedAt)}</span>
+              <span className="report-feed-group-meta">{groupMeta(group.rows.length, group.rows[0]?.generatedAt)}</span>
             </div>
             <div className="report-feed-group-cards">
               {group.rows.map((report) => {
@@ -712,7 +713,12 @@ export function CompanyAnalysisRoute() {
                   <div className="report-feed-card-wrap" key={report.id || `${analysisFeedTitle(report)}-${report.generatedAt}`}>
                     <button className="report-feed-card is-analysis" type="button" onClick={() => openReport(report.id)}>
                       <span className="report-feed-card-meta">
-                        {report.mode && <span className="report-feed-badge">{String(report.mode).toUpperCase()}</span>}
+                        {/* "LLM"만으로는 세 보고서가 다른 모델로 쓰였어도 구분되지 않는다. */}
+                        {(report.engine || report.mode) && (
+                          <span className="report-feed-badge" data-tooltip={engineTooltip(report.engine, report.engineDetail)}>
+                            {report.engine || String(report.mode).toUpperCase()}
+                          </span>
+                        )}
                         {report.analysisStyle && <span className="report-feed-badge">{analysisStyleLabel(report.analysisStyle) || String(report.analysisStyle).toUpperCase()}</span>}
                       </span>
                       <strong>{analysisFeedTitle(report)}</strong>

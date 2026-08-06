@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { engineTooltip, groupMeta, listDate } from "./savedListFormat";
 import {
   ApiRequestError,
   FALLBACK_POLICY,
@@ -239,7 +240,8 @@ export function MarketStateReportContext({ resolution }: { resolution?: MarketSt
 // 저장 보고서 호환용 topicKey. 0.5 기준 딥 리서치는 질문 중심 하나뿐이라
 // 사용자가 고를 프리셋이 없다(선택지 하나짜리 컨트롤은 두지 않는다).
 const DEFAULT_TOPIC_KEY = "custom";
-const PRESET_LABELS: Record<string, string> = { custom: "질문 중심" };
+// 사용자가 직접 던진 질문 묶음. 프리셋 주제와 구분해 부른다.
+const PRESET_LABELS: Record<string, string> = { custom: "직접 질문" };
 const JOB_STATUS_VALUES = [
   "queued",
   "running",
@@ -324,14 +326,18 @@ function reportLabel(report: TopicReport | TopicReportSummary) {
   return report.topicLabel || report.topicKey || "딥 리서치";
 }
 
+/** 목록 그룹의 이름. 내부 키(`custom`, `exchange_rate`)를 그대로 보여주지 않는다. */
 function presetLabel(report: TopicReport | TopicReportSummary) {
   const key = String(report.topicKey || "").trim();
-  return PRESET_LABELS[key] || key || "기타";
+  if (PRESET_LABELS[key]) return PRESET_LABELS[key];
+  // custom이 아닌 프리셋은 저장된 주제 이름이 사람이 읽는 유일한 단서다.
+  const label = String((report as TopicReportSummary).topicLabel || "").trim();
+  if (label) return label;
+  return key ? key.replace(/_/g, " ") : "기타";
 }
 
 function displayDate(value?: string) {
-  if (!value) return "날짜 미상";
-  return value.slice(0, 10) || value;
+  return listDate(value) || "날짜 미상";
 }
 
 function setTopicHash(reportId?: string) {
@@ -1078,13 +1084,13 @@ export function DeepResearchRoute() {
       <div className="report-feed">
         {groupedReports.length ? groupedReports.map((group) => (
           <section className="report-feed-group" key={group.key}>
-            <div className="report-feed-group-head"><span className="report-feed-group-name">{group.key}</span><span className="report-feed-group-meta">{group.rows.length}건 · 최근 {displayDate(group.rows[0]?.generatedAt || group.rows[0]?.date)}</span></div>
+            <div className="report-feed-group-head"><span className="report-feed-group-name">{group.key}</span><span className="report-feed-group-meta">{groupMeta(group.rows.length, group.rows[0]?.generatedAt || group.rows[0]?.date)}</span></div>
             <div className="report-feed-group-cards">
               {group.rows.map((report) => {
                 const deleting = actionBusy === `delete-${report.id}`;
                 return (
                   <div className="report-feed-card-wrap" key={report.id || `${reportLabel(report)}-${report.date}`}>
-                    <button className="report-feed-card is-topic" type="button" data-report-id={report.id} onClick={() => { if (report.id) { openingReportId.current = report.id; setTopicHash(report.id); } }}><span className="report-feed-card-meta">{report.mode && <span className="report-feed-badge">{String(report.mode).toUpperCase()}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">{displayDate(report.date || report.generatedAt)}</span></button>
+                    <button className="report-feed-card is-topic" type="button" data-report-id={report.id} onClick={() => { if (report.id) { openingReportId.current = report.id; setTopicHash(report.id); } }}><span className="report-feed-card-meta">{(report.engine || report.mode) && <span className="report-feed-badge" data-tooltip={engineTooltip(report.engine, report.engineDetail)}>{report.engine || String(report.mode).toUpperCase()}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">생성일 {displayDate(report.date || report.generatedAt)}</span></button>
                     <button type="button" className="report-feed-card-delete" disabled={deleting} onClick={() => void deleteReport(report)} aria-label={`${reportLabel(report)} 삭제`} data-tooltip="삭제" data-tooltip-pos="bottom"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" /></svg></button>
                   </div>
                 );

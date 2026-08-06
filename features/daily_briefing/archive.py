@@ -9,6 +9,7 @@ import threading
 import time
 from pathlib import Path
 
+from features.common.generation_engine import engine_detail, engine_label
 from features.daily_briefing.schema import (
     AGGREGATE_SCOPES,
     BRIEFING_TYPES,
@@ -90,6 +91,10 @@ class BriefingArchiveIndex:
                 for item in briefing_archive_items(report):
                     scope = item["marketScope"]
                     section = sections.get(scope) if isinstance(sections.get(scope), dict) else report
+                    # 어느 모델이 썼는지. schema는 의존성 없는 계약 모듈이라 여기서 붙인다.
+                    generation = section.get("generation") or report.get("generation")
+                    item["engine"] = engine_label(generation)
+                    item["engineDetail"] = engine_detail(generation)
                     search_text = " ".join((
                         item.get("title", ""),
                         item.get("summary", ""),

@@ -190,7 +190,10 @@ export type TopicReport = {
   readonly contractWarnings: readonly string[];
 };
 
-export type TopicReportSummary = Pick<TopicReport, "id" | "topicKey" | "topicLabel" | "date" | "generatedAt" | "mode" | "saved">;
+export type TopicReportSummary =
+  Pick<TopicReport, "id" | "topicKey" | "topicLabel" | "date" | "generatedAt" | "mode" | "saved">
+  // 어느 모델이 썼는지. 목록 배지가 "LLM"만 적으면 보고서를 구분할 수 없다.
+  & { engine?: string; engineDetail?: string };
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -447,5 +450,6 @@ export function parseTopicReportSummaries(value: unknown): TopicReportSummary[] 
   return value.filter(isRecord).map((row) => ({
     id: stringValue(row.id), topicKey: stringValue(row.topicKey), topicLabel: stringValue(row.topicLabel),
     date: stringValue(row.date), generatedAt: stringValue(row.generatedAt), mode: stringValue(row.mode), saved: row.saved === true,
+    engine: stringValue(row.engine), engineDetail: stringValue(row.engineDetail),
   })).filter((row) => Boolean(row.id));
 }
