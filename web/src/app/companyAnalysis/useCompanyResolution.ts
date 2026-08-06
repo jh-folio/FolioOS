@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { getJson } from "../../api";
 
 export type CompanyCandidate = {
+  /** 이름 일부만 겹친 약한 후보가 아니라는 뜻. 주제어에 후보 목록을 띄우지 않는 데 쓴다. */
+  strong?: boolean;
   ticker: string;
   name: string;
   market: string;

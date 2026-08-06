@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCompanyResolution } from "./companyAnalysis/useCompanyResolution";
 import { getJson, postJson } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
@@ -220,6 +221,19 @@ export function WatchlistRoute() {
     }
   }
 
+  const { resolution, pending: resolvePending, picked, setPicked } = useCompanyResolution(keyword);
+  const watchlistResolutionMessage = (() => {
+    const text = keyword.trim();
+    if (!text) return "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
+    if (picked) return `${picked.name}로 추가합니다.`;
+    if (resolvePending) return "확인 중…";
+    if (resolution?.status === "confident" && resolution.match) return `${resolution.match.name}로 추가합니다.`;
+    if (resolution?.status === "ambiguous" && resolution.candidates.some((row) => row.strong)) {
+      return "여러 기업이 맞습니다. 고르거나, 이대로 주제 키워드로 추가합니다.";
+    }
+    return "주제 키워드로 추가합니다.";
+  })();
+
   async function resolveKeyword(raw: string) {
     try {
       const result = await getJson<{ keyword?: string }>(`/api/watchlist/resolve?keyword=${encodeURIComponent(raw)}`);
@@ -327,19 +341,45 @@ export function WatchlistRoute() {
           <h3>키워드 추가</h3>
           <p>관심 기업, 섹터, 테마를 하나씩 추가해 뉴스와 브리핑 추적 범위를 관리합니다.</p>
         </div>
-        <input
-          value={keyword}
-          onChange={(event) => setKeyword(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              addKeyword();
-            }
-          }}
-          placeholder="예: NVDA, 삼성전자, AI"
-        />
+        <label className="portfolio-ticker-field watchlist-add-field">
+          <span className="sr-only">추가할 종목 또는 키워드</span>
+          <input
+            value={keyword}
+            onChange={(event) => setKeyword(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addKeyword();
+              }
+            }}
+            placeholder="예: NVDA, 삼성전자, AI"
+            aria-describedby="watchlist-resolution"
+            autoComplete="off"
+          />
+          {/* 주제어에는 이름 일부만 겹친 약한 후보가 걸린다. 그 경우 목록을 띄우지 않는다. */}
+          {resolution?.status === "ambiguous" && resolution.candidates.some((row) => row.strong) && !picked && (
+            <div className="ticker-suggest" role="listbox" aria-label="후보 기업">
+              {resolution.candidates.map((candidate) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  key={`${candidate.market}:${candidate.ticker}`}
+                  onClick={() => { setPicked(candidate); setKeyword(candidate.name); }}
+                >
+                  <strong>{candidate.ticker}</strong>
+                  <span>{candidate.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </label>
         <button className="btn" type="button" onClick={addKeyword} disabled={saving}>추가</button>
       </div>
+      {/* 워치리스트는 테마 키워드도 받는다. 못 알아본 입력은 오류가 아니라 키워드다. */}
+      <p className="analysis-resolution" id="watchlist-resolution" data-status={keyword.trim() ? (picked ? "picked" : resolution?.status || "idle") : "idle"}>
+        {watchlistResolutionMessage}
+      </p>
       {error && <p className="react-dashboard-error">{error}</p>}
       {status && <p className="react-dashboard-warning">{status}</p>}
       <div className="watchlist-grid">

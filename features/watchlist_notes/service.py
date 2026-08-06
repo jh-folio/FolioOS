@@ -7,6 +7,7 @@ from pathlib import Path
 from features.common.config_bootstrap import resolve_config
 from features.common.utils import normalize, read_json, write_json, now_iso
 from features.common.taxonomy import normalize_tag
+from features.common.company_resolution import resolve_company_query
 from features.common.company_lookup import (
     company_public,
     company_matches_query,
@@ -285,6 +286,14 @@ def normalize_watchlist_keyword(value: str):
         )
         if company and company.get("name"):
             return company.get("name")
+        return raw
+    # 티커가 아니어도 회사 이름이면 정식 이름으로 통일한다. 예전에는 이름으로 치면
+    # 그대로 저장되어, "하우멧"과 "Howmet Aerospace"가 서로 다른 항목이 됐다.
+    # 짧은 낱말은 건드리지 않는다 — 두 글자짜리는 테마일 때가 많고 티커와도 겹친다.
+    if len(token) >= 3:
+        resolved = resolve_company_query(token, limit=1)
+        if resolved.get("status") == "confident" and (resolved.get("match") or {}).get("name"):
+            return resolved["match"]["name"]
     return raw
 
 

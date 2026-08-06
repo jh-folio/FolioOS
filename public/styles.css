@@ -15470,3 +15470,14 @@ select { min-height: 36px; padding: 0 12px; }
   min-height: 0;
 }
 .react-agent-dock-chrome:empty { display: none; }
+
+/* 보유 표에서 티커가 무엇으로 읽혔는지. 이름으로 적어도 되게 하면서 확인은 남긴다. */
+.holdings-resolved {
+  display: block;
+  margin-top: 2px;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-label);
+}
+
+/* 워치리스트 추가 입력. 자동완성이 라벨 안에서 뜬다. */
+.watchlist-add-field { position: relative; flex: 1 1 220px; min-width: 0; }

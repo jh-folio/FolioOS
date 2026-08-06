@@ -213,6 +213,9 @@ def _score(entry: dict, query_key: str, query_ticker: str, script: str) -> int:
 
 def _public(entry: dict, score: int) -> dict:
     return {
+        # 이름 일부만 겹친 약한 후보인지 알려준다. "반도체"에는 한미반도체 같은
+        # 회사가 걸리지만 그건 대개 주제어이며, 화면이 후보 목록을 띄울 자리는 아니다.
+        "strong": score >= PREFIX_NAME,
         "ticker": entry.get("ticker", ""),
         "name": entry.get("name", ""),
         "market": entry.get("market", ""),

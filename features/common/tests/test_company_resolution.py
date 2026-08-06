@@ -95,3 +95,13 @@ def test_unlisted_korean_corporations_never_become_candidates():
     finally:
         module.read_json = original
     assert [row["ticker"] for row in listed] == ["005930"]
+
+
+def test_weak_contains_matches_are_marked_so_screens_can_ignore_them(monkeypatch):
+    """워치리스트는 주제어도 받는다. "반도체"에 한미반도체가 걸린다고 후보를 띄우면 안 된다."""
+    result = _resolve(monkeypatch, "Johnson")
+    strong = [row for row in result["candidates"] if row["strong"]]
+    assert strong, "이름 접두 일치는 강한 후보다"
+
+    weak = _resolve(monkeypatch, "on")
+    assert all(not row["strong"] for row in weak["candidates"]), weak["candidates"]

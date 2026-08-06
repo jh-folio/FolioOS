@@ -15377,11 +15377,57 @@ function hs() {
 //#endregion
 //#region src/app/portfolio/HoldingsTable.tsx
 function gs({ positions: e, onChange: t }) {
-	function n(n, r, i) {
+	let [n, r] = (0, d.useState)({});
+	function i(n, r, i) {
 		t(e.map((e, t) => t === n ? {
 			...e,
 			[r]: i
 		} : e));
+	}
+	function a(n) {
+		t(e.filter((e, t) => t !== n)), r((e) => {
+			let t = {};
+			for (let [r, i] of Object.entries(e)) {
+				let e = Number(r);
+				e < n ? t[e] = i : e > n && (t[e - 1] = i);
+			}
+			return t;
+		});
+	}
+	async function o(n, i) {
+		let a = i.trim();
+		if (!a) {
+			r((e) => ({
+				...e,
+				[n]: ""
+			}));
+			return;
+		}
+		try {
+			let i = await W(`/api/company/resolve?q=${encodeURIComponent(a)}&limit=1`);
+			if (i.status !== "confident" || !i.match) {
+				r((e) => ({
+					...e,
+					[n]: ""
+				}));
+				return;
+			}
+			let o = i.match;
+			r((e) => ({
+				...e,
+				[n]: o.name
+			}));
+			let s = {};
+			o.ticker && o.ticker !== a && (s.ticker = o.ticker), o.market && !e[n]?.market && (s.market = o.market), Object.keys(s).length && t(e.map((e, t) => t === n ? {
+				...e,
+				...s
+			} : e));
+		} catch {
+			r((e) => ({
+				...e,
+				[n]: ""
+			}));
+		}
 	}
 	return /* @__PURE__ */ (0, f.jsxs)("div", {
 		className: "portfolio-holdings-table-wrap",
@@ -15396,38 +15442,42 @@ function gs({ positions: e, onChange: t }) {
 					className: "sr-only",
 					children: "삭제"
 				}) })
-			] }) }), /* @__PURE__ */ (0, f.jsx)("tbody", { children: e.map((r, i) => /* @__PURE__ */ (0, f.jsxs)("tr", { children: [
+			] }) }), /* @__PURE__ */ (0, f.jsx)("tbody", { children: e.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("tr", { children: [
+				/* @__PURE__ */ (0, f.jsxs)("td", { children: [/* @__PURE__ */ (0, f.jsx)("input", {
+					"aria-label": `${t + 1}번 종목`,
+					value: e.ticker,
+					onChange: (e) => i(t, "ticker", e.currentTarget.value.toUpperCase()),
+					onBlur: (e) => void o(t, e.currentTarget.value),
+					placeholder: "NVDA / 삼성전자"
+				}), n[t] && /* @__PURE__ */ (0, f.jsx)("small", {
+					className: "holdings-resolved",
+					children: n[t]
+				})] }),
 				/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
-					"aria-label": `${i + 1}번 종목`,
-					value: r.ticker,
-					onChange: (e) => n(i, "ticker", e.currentTarget.value.toUpperCase()),
-					placeholder: "NVDA / 005930"
-				}) }),
-				/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
-					"aria-label": `${r.ticker || i + 1} 수량`,
-					value: r.quantity,
-					onChange: (e) => n(i, "quantity", e.currentTarget.value),
+					"aria-label": `${e.ticker || t + 1} 수량`,
+					value: e.quantity,
+					onChange: (e) => i(t, "quantity", e.currentTarget.value),
 					inputMode: "decimal"
 				}) }),
 				/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
-					"aria-label": `${r.ticker || i + 1} 평균단가`,
-					value: r.averagePrice ?? "",
-					onChange: (e) => n(i, "averagePrice", e.currentTarget.value),
+					"aria-label": `${e.ticker || t + 1} 평균단가`,
+					value: e.averagePrice ?? "",
+					onChange: (e) => i(t, "averagePrice", e.currentTarget.value),
 					inputMode: "decimal"
 				}) }),
 				/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
-					"aria-label": `${r.ticker || i + 1} 시장`,
-					value: r.market || "",
-					onChange: (e) => n(i, "market", e.currentTarget.value.toUpperCase()),
+					"aria-label": `${e.ticker || t + 1} 시장`,
+					value: e.market || "",
+					onChange: (e) => i(t, "market", e.currentTarget.value.toUpperCase()),
 					placeholder: "US / KR / EUROPE / JP"
 				}) }),
 				/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("button", {
 					type: "button",
 					className: "btn",
-					onClick: () => t(e.filter((e, t) => t !== i)),
+					onClick: () => a(t),
 					children: "삭제"
 				}) })
-			] }, i)) })]
+			] }, t)) })]
 		}), !e.length && /* @__PURE__ */ (0, f.jsx)("p", {
 			className: "cockpit-empty",
 			children: "등록된 보유 종목이 없습니다. 직접 추가하거나 증권사 화면에서 가져오세요."
@@ -18842,27 +18892,28 @@ function sl() {
 			v(!1);
 		}
 	}
-	async function D(e) {
+	let { resolution: D, pending: O, picked: k, setPicked: A } = wi(a), j = a.trim() ? k ? `${k.name}로 추가합니다.` : O ? "확인 중…" : D?.status === "confident" && D.match ? `${D.match.name}로 추가합니다.` : D?.status === "ambiguous" && D.candidates.some((e) => e.strong) ? "여러 기업이 맞습니다. 고르거나, 이대로 주제 키워드로 추가합니다." : "주제 키워드로 추가합니다." : "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
+	async function M(e) {
 		try {
 			return (await W(`/api/watchlist/resolve?keyword=${encodeURIComponent(e)}`)).keyword || e;
 		} catch {
 			return e;
 		}
 	}
-	async function O() {
+	async function N() {
 		let e = a.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean);
 		if (!e.length) return;
 		let n = [...t];
 		for (let t of e) {
-			let e = await D(t);
+			let e = await M(t);
 			e && !n.some((t) => t.toLowerCase() === e.toLowerCase()) && n.push(e);
 		}
 		o(""), n.length !== t.length && await E(n, "워치리스트에 추가했습니다.");
 	}
-	async function k(e) {
+	async function P(e) {
 		await E(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), s === e && il();
 	}
-	let A = (0, d.useMemo)(() => tl(l?.news || []), [l]), j = $c(l, s);
+	let F = (0, d.useMemo)(() => tl(l?.news || []), [l]), I = $c(l, s);
 	return s ? /* @__PURE__ */ (0, f.jsx)("div", {
 		className: "react-watchlist-route",
 		"data-watchlist-route": !0,
@@ -18885,7 +18936,7 @@ function sl() {
 					}),
 					/* @__PURE__ */ (0, f.jsx)("span", {
 						className: "reader-breadcrumb-leaf",
-						children: j
+						children: I
 					})
 				]
 			}), /* @__PURE__ */ (0, f.jsxs)("section", {
@@ -18902,7 +18953,7 @@ function sl() {
 							}),
 							/* @__PURE__ */ (0, f.jsx)("h2", {
 								id: "watchlistDetailTitle",
-								children: j
+								children: I
 							}),
 							/* @__PURE__ */ (0, f.jsx)("p", {
 								className: "section-subtitle",
@@ -18938,9 +18989,9 @@ function sl() {
 						children: [/* @__PURE__ */ (0, f.jsx)("h3", { children: "수집한 뉴스" }), h ? /* @__PURE__ */ (0, f.jsx)("p", {
 							className: "section-subtitle",
 							children: "관련 뉴스를 불러오는 중입니다."
-						}) : A.length ? /* @__PURE__ */ (0, f.jsx)("div", {
+						}) : F.length ? /* @__PURE__ */ (0, f.jsx)("div", {
 							className: "watchlist-detail-news-list",
-							children: A.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("article", {
+							children: F.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("article", {
 								className: "compact-item",
 								children: [
 									/* @__PURE__ */ (0, f.jsx)("div", {
@@ -18996,22 +19047,53 @@ function sl() {
 						className: "input-panel-header",
 						children: [/* @__PURE__ */ (0, f.jsx)("h3", { children: "키워드 추가" }), /* @__PURE__ */ (0, f.jsx)("p", { children: "관심 기업, 섹터, 테마를 하나씩 추가해 뉴스와 브리핑 추적 범위를 관리합니다." })]
 					}),
-					/* @__PURE__ */ (0, f.jsx)("input", {
-						value: a,
-						onChange: (e) => o(e.currentTarget.value),
-						onKeyDown: (e) => {
-							e.key === "Enter" && (e.preventDefault(), O());
-						},
-						placeholder: "예: NVDA, 삼성전자, AI"
+					/* @__PURE__ */ (0, f.jsxs)("label", {
+						className: "portfolio-ticker-field watchlist-add-field",
+						children: [
+							/* @__PURE__ */ (0, f.jsx)("span", {
+								className: "sr-only",
+								children: "추가할 종목 또는 키워드"
+							}),
+							/* @__PURE__ */ (0, f.jsx)("input", {
+								value: a,
+								onChange: (e) => o(e.currentTarget.value),
+								onKeyDown: (e) => {
+									e.key === "Enter" && (e.preventDefault(), N());
+								},
+								placeholder: "예: NVDA, 삼성전자, AI",
+								"aria-describedby": "watchlist-resolution",
+								autoComplete: "off"
+							}),
+							D?.status === "ambiguous" && D.candidates.some((e) => e.strong) && !k && /* @__PURE__ */ (0, f.jsx)("div", {
+								className: "ticker-suggest",
+								role: "listbox",
+								"aria-label": "후보 기업",
+								children: D.candidates.map((e) => /* @__PURE__ */ (0, f.jsxs)("button", {
+									type: "button",
+									role: "option",
+									"aria-selected": !1,
+									onClick: () => {
+										A(e), o(e.name);
+									},
+									children: [/* @__PURE__ */ (0, f.jsx)("strong", { children: e.ticker }), /* @__PURE__ */ (0, f.jsx)("span", { children: e.name })]
+								}, `${e.market}:${e.ticker}`))
+							})
+						]
 					}),
 					/* @__PURE__ */ (0, f.jsx)("button", {
 						className: "btn",
 						type: "button",
-						onClick: O,
+						onClick: N,
 						disabled: _,
 						children: "추가"
 					})
 				]
+			}),
+			/* @__PURE__ */ (0, f.jsx)("p", {
+				className: "analysis-resolution",
+				id: "watchlist-resolution",
+				"data-status": a.trim() ? k ? "picked" : D?.status || "idle" : "idle",
+				children: j
 			}),
 			y && /* @__PURE__ */ (0, f.jsx)("p", {
 				className: "react-dashboard-error",
@@ -19047,7 +19129,7 @@ function sl() {
 								"data-tooltip": "삭제",
 								"data-tooltip-pos": "bottom",
 								onClick: (e) => {
-									e.stopPropagation(), k(t);
+									e.stopPropagation(), P(t);
 								},
 								children: /* @__PURE__ */ (0, f.jsx)("svg", {
 									width: "13",
