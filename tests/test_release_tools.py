@@ -219,6 +219,7 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
         "nikkei225_constituents.json",
         "rss_feeds.yaml",
         "sp500_constituents.json",
+        "web_search_sources.yaml",
     } == {path.name for path in (package_dir / "defaults" / "config").iterdir()}
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
     assert build["version"] == "0.5.0"

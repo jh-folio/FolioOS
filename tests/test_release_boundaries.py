@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # 예전에는 config/의 blob과 비교했는데 config/는 .gitignore 대상이라 새 파일이
 # 추적되지 않는다. 그래서 유럽/일본 구성종목 파일은 목록에도 못 들어가고 검사도
 # 받지 못했다. 이제 defaults/ 자신의 검토 시점 blob과 비교한다.
-BASE_COMMIT = "463abbcd42811a91da6b7bda5940a2d5bba158f5"
+BASE_COMMIT = "75d6b838a33097f03b7742e68f0584a2f23241e0"
 sys.path.insert(0, str(ROOT))
 from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 
