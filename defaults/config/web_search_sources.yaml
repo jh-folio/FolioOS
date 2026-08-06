@@ -1,0 +1,227 @@
+# 웹 검색으로 가져올 수 있는 출처.
+#
+# 웹 검색은 로컬 자료를 대체하지 않고 부족한 자리만 채운다(원칙 9). 그런데 로컬
+# 자료에는 출처 우선순위를 엄격히 매기면서 웹에는 아무 계층도 두지 않으면, 가장
+# 약한 자료가 가장 느슨하게 들어온다. 이 파일이 그 계층이다.
+#
+# 등급은 둘이다.
+#   official  공시·통계·중앙은행처럼 1차 자료. 회사 공식 도메인도 여기에 들어간다.
+#   media     신뢰 가능한 금융 매체. 유료 매체도 포함하되 유료 본문은 가져오지 않는다.
+#             검색 결과의 제목·요약과 공개 페이지까지만 쓴다(원칙 4).
+#
+# 목록에 없는 도메인은 근거로 쓰지 않는다. 코드를 고치지 않고 여기서 넣고 뺀다.
+
+official:
+  # 미국
+  - domain: sec.gov
+    label: SEC EDGAR
+    market: US
+  - domain: federalreserve.gov
+    label: 연준
+    market: US
+  - domain: bls.gov
+    label: 미국 노동통계국
+    market: US
+  - domain: bea.gov
+    label: 미국 경제분석국
+    market: US
+  - domain: treasury.gov
+    label: 미국 재무부
+    market: US
+
+  # 한국
+  - domain: dart.fss.or.kr
+    label: DART
+    market: KR
+  - domain: kind.krx.co.kr
+    label: KIND 상장공시
+    market: KR
+  - domain: krx.co.kr
+    label: 한국거래소
+    market: KR
+  - domain: bok.or.kr
+    label: 한국은행
+    market: KR
+  - domain: kostat.go.kr
+    label: 통계청
+    market: KR
+  - domain: fss.or.kr
+    label: 금융감독원
+    market: KR
+
+  # 유럽
+  - domain: ec.europa.eu
+    label: 유럽위원회
+    market: EUROPE
+  - domain: esma.europa.eu
+    label: ESMA
+    market: EUROPE
+  - domain: ecb.europa.eu
+    label: 유럽중앙은행
+    market: EUROPE
+  - domain: data.fca.org.uk
+    label: 영국 FCA 공시
+    market: EUROPE
+  - domain: unternehmensregister.de
+    label: 독일 기업등기
+    market: EUROPE
+  - domain: amf-france.org
+    label: 프랑스 AMF
+    market: EUROPE
+  - domain: consob.it
+    label: 이탈리아 CONSOB
+    market: EUROPE
+  - domain: cnmv.es
+    label: 스페인 CNMV
+    market: EUROPE
+  - domain: afm.nl
+    label: 네덜란드 AFM
+    market: EUROPE
+
+  # 일본
+  - domain: disclosure.edinet-fsa.go.jp
+    label: EDINET
+    market: JP
+  - domain: jpx.co.jp
+    label: 일본거래소 TDnet
+    market: JP
+  - domain: boj.or.jp
+    label: 일본은행
+    market: JP
+  - domain: stat.go.jp
+    label: 일본 통계국
+    market: JP
+  - domain: mof.go.jp
+    label: 일본 재무성
+    market: JP
+
+media:
+  # 글로벌 통신·금융
+  - domain: reuters.com
+    label: Reuters
+    market: GLOBAL
+  - domain: apnews.com
+    label: AP
+    market: GLOBAL
+  - domain: bloomberg.com
+    label: Bloomberg
+    market: GLOBAL
+    paywalled: true
+  - domain: ft.com
+    label: Financial Times
+    market: GLOBAL
+    paywalled: true
+
+  # 미국
+  - domain: wsj.com
+    label: WSJ
+    market: US
+    paywalled: true
+  - domain: cnbc.com
+    label: CNBC
+    market: US
+  - domain: marketwatch.com
+    label: MarketWatch
+    market: US
+  - domain: barrons.com
+    label: Barron's
+    market: US
+    paywalled: true
+  - domain: finance.yahoo.com
+    label: Yahoo Finance
+    market: US
+
+  # 한국
+  - domain: yna.co.kr
+    label: 연합뉴스
+    market: KR
+  - domain: einfomax.co.kr
+    label: 연합인포맥스
+    market: KR
+  - domain: hankyung.com
+    label: 한국경제
+    market: KR
+  - domain: mk.co.kr
+    label: 매일경제
+    market: KR
+  - domain: biz.chosun.com
+    label: 조선비즈
+    market: KR
+  - domain: sedaily.com
+    label: 서울경제
+    market: KR
+  - domain: edaily.co.kr
+    label: 이데일리
+    market: KR
+  - domain: mt.co.kr
+    label: 머니투데이
+    market: KR
+
+  # 유럽
+  - domain: handelsblatt.com
+    label: Handelsblatt
+    market: EUROPE
+    paywalled: true
+  - domain: boersen-zeitung.de
+    label: Börsen-Zeitung
+    market: EUROPE
+    paywalled: true
+  - domain: lesechos.fr
+    label: Les Echos
+    market: EUROPE
+    paywalled: true
+  - domain: latribune.fr
+    label: La Tribune
+    market: EUROPE
+  - domain: ilsole24ore.com
+    label: Il Sole 24 Ore
+    market: EUROPE
+    paywalled: true
+  - domain: repubblica.it
+    label: la Repubblica
+    market: EUROPE
+  - domain: expansion.com
+    label: Expansión
+    market: EUROPE
+    paywalled: true
+  - domain: cincodias.elpais.com
+    label: Cinco Días
+    market: EUROPE
+  - domain: fd.nl
+    label: Het Financieele Dagblad
+    market: EUROPE
+    paywalled: true
+  - domain: theguardian.com
+    label: The Guardian
+    market: EUROPE
+  - domain: bbc.com
+    label: BBC
+    market: EUROPE
+
+  # 일본
+  - domain: nikkei.com
+    label: 日本経済新聞
+    market: JP
+    paywalled: true
+  - domain: asia.nikkei.com
+    label: Nikkei Asia
+    market: JP
+    paywalled: true
+  - domain: toyokeizai.net
+    label: 東洋経済
+    market: JP
+  - domain: nhk.or.jp
+    label: NHK
+    market: JP
+  - domain: kyodonews.net
+    label: 共同通信
+    market: JP
+  - domain: jiji.com
+    label: 時事통신
+    market: JP
+
+# 회사 공식 도메인은 목록에 두지 않는다. 1만 종목의 IR 주소를 손으로 관리할 수 없고,
+# yfinance가 회사 웹사이트를 준다(NVDA→nvidia.com, 삼성전자→samsung.com). 해석된
+# 회사의 도메인만 그 회사 분석에서 official 등급으로 허용한다.
+# 도출이 틀리는 예외만 여기에 적는다.
+company_domain_overrides: {}

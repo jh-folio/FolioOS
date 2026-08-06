@@ -18,6 +18,7 @@ EXPECTED_NAMES = frozenset(
         "nikkei225_constituents.json",
         "rss_feeds.yaml",
         "sp500_constituents.json",
+        "web_search_sources.yaml",
     }
 )
 

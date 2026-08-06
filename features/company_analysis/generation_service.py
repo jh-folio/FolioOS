@@ -4,6 +4,7 @@ from __future__ import annotations
 from features.common.change_intelligence.service import decorate_candidate
 from features.common.company_lookup import infer_requested_company
 from features.common.quality_generation.preflight import preflight_from_context
+from features.common.web_search_scope import audit_urls, load_source_scope
 from features.common.research_library.indexing.service import load_index
 from features.common.research_library.search.service import search_documents
 from features.common.utils import now_iso
@@ -83,6 +84,9 @@ def analyze_company(query, web_search_override=None, llm_override=None, analysis
             "promptPath": llm_result.get("promptPath") or str(analysis_prompt_path(analysis_style)),
             "generation": generation,
             "sources": sources_fn(materials, llm_result.get("usedDocs", [])[:14]),
+            # 프롬프트로 부탁한 것과 실제로 지킨 것은 다르다. 무엇이 목록 밖이었는지
+            # 남겨야 다음에 목록을 고칠 수 있다.
+            "webSearchAudit": audit_urls(llm_result.get("markdown", ""), load_source_scope(company)),
         }
     else:
         generation = {"mode": "rules", "status": llm_status, "provider": llm_config_fn().get("provider", ""), "model": "", "sourceCount": 0}

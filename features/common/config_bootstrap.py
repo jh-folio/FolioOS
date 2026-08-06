@@ -16,6 +16,7 @@ DEFAULT_CONFIG_NAMES: Final = frozenset(
         "nikkei225_constituents.json",
         "rss_feeds.yaml",
         "sp500_constituents.json",
+        "web_search_sources.yaml",
     }
 )
 _ROOT: Final = Path(__file__).resolve().parents[2]

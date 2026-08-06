@@ -17,15 +17,25 @@ def test_every_kind_is_reported_even_when_the_store_is_missing(tmp_path: Path):
     assert all(value == 0 for value in revisions.values())
 
 
-def test_adding_a_report_moves_the_signal(tmp_path: Path):
+def test_a_newer_file_moves_the_signal(tmp_path: Path):
+    """시계 해상도에 기대지 않는다. 파일 시각을 직접 세워 판정만 확인한다."""
     reports = tmp_path / "topic-reports"
     reports.mkdir()
-    (reports / "a.json").write_text("{}", encoding="utf-8")
+    first = reports / "a.json"
+    first.write_text("{}", encoding="utf-8")
+    os.utime(first, (1_000_000, 1_000_000))
+    os.utime(reports, (1_000_000, 1_000_000))
     before = content_revisions(tmp_path)["topicReport"]
 
-    (reports / "b.json").write_text("{}", encoding="utf-8")
+    later = reports / "b.json"
+    later.write_text("{}", encoding="utf-8")
+    os.utime(later, (3_000_000, 3_000_000))
 
-    assert content_revisions(tmp_path)["topicReport"] != before
+    # 파일 추가는 디렉터리 mtime도 올리므로 값은 둘 중 큰 쪽이다. 정확한 값이 아니라
+    # "달라졌고 뒤로 가지 않았다"가 계약이다.
+    after = content_revisions(tmp_path)["topicReport"]
+    assert after > before
+    assert after >= 3_000_000 * 10**9
 
 
 def test_the_directory_itself_counts_so_deletions_are_visible(tmp_path: Path):

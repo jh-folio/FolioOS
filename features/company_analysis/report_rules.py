@@ -229,6 +229,10 @@ def _market_cache_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "data" / "company-analysis" / "market-cache"
 
 
+# 캐시에 담는 항목이 늘면 올린다. 옛 파일은 신선해도 다시 받는다.
+MARKET_CACHE_SHAPE = 2
+
+
 def fetch_market_valuation_data(company: dict, ttl_hours: int = 6) -> dict:
     ticker = str(company.get("ticker") or "").strip().upper()
     if not ticker:
@@ -241,9 +245,11 @@ def fetch_market_valuation_data(company: dict, ttl_hours: int = 6) -> dict:
             fetched = dt.datetime.fromisoformat(cached["fetchedAt"])
             cached_data = cached.get("data", cached)
             cache_is_fresh = dt.datetime.now(dt.timezone.utc) - fetched < dt.timedelta(hours=ttl_hours)
-            # Older cache files did not include yfinance cashflow rows. Refetch those once so
-            # FCF, CapEx, and CFO fallback data can populate financial summary and DCF sections.
-            if cache_is_fresh and (cached_data.get("cashflowRows") or not cached_data.get("ok")):
+            # 캐시에 담기는 항목이 늘면 옛 파일은 그 항목 없이 신선한 상태로 남는다.
+            # cashflowRows 때 한 번 겪었고 website·업종을 더하며 또 겪었다. 형태에
+            # 번호를 붙여 두면 항목이 늘 때마다 특별 취급을 새로 쓰지 않아도 된다.
+            same_shape = int(cached_data.get("shape") or 0) >= MARKET_CACHE_SHAPE
+            if cache_is_fresh and same_shape and (cached_data.get("cashflowRows") or not cached_data.get("ok")):
                 return cached_data
         except Exception:
             pass
@@ -338,7 +344,12 @@ def fetch_market_valuation_data(company: dict, ttl_hours: int = 6) -> dict:
             "sharesOutstanding": pick("shares", "sharesOutstanding", "impliedSharesOutstanding"),
             "ebitda": pick("ebitda", "trailingEbitda"),
             "currency": info.get("currency") or "USD",
+            # 회사 공식 도메인. 웹 검색 허용 목록이 이 회사 사이트만 열어 두는 데 쓴다.
+            "website": info.get("website") or "",
+            "sector": info.get("sector") or "",
+            "industry": info.get("industry") or "",
             "source": "yfinance",
+            "shape": MARKET_CACHE_SHAPE,
             "cashflowRows": cashflow_rows(),
         }
         _write_json(cache_path, {"fetchedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "data": data})

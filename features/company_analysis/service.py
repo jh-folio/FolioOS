@@ -40,6 +40,7 @@ from features.common.quality_generation.prompt_hints import render_prompt_hints
 from features.common.quality_generation.preflight_enrichment import build_preflight_evidence_context
 from features.common.quality_generation.quality_targets import render_quality_target_context
 from features.common.quality_generation.telemetry import normalize_token_usage
+from features.common.web_search_scope import load_source_scope, render_scope_instruction
 from features.market_memory.snapshot import render_market_memory_context
 from features.common.generation_engine import engine_detail, engine_label
 
@@ -622,6 +623,14 @@ def build_company_analysis_materials(query, docs, company=None):
         "",
         support_context or "보조 리포트/기사 자료가 없습니다.",
     ]
+    # 웹 검색 허용 목록과 산업 맥락 질의가 회사 도메인·업종을 필요로 한다.
+    market_meta = market_financial_data if isinstance(market_financial_data, dict) else {}
+    company = {
+        **company,
+        "website": company.get("website") or market_meta.get("website") or "",
+        "sector": company.get("sector") or market_meta.get("sector") or "",
+        "industry": company.get("industry") or market_meta.get("industry") or "",
+    }
     return {
         "company": company,
         "docs": docs,
@@ -679,7 +688,43 @@ def company_external_search_context(materials):
         f"- {name} {ticker} latest earnings release guidance",
         f"- {name} {ticker} conference call transcript",
         f"- {name} {ticker} analyst report Reuters Bloomberg WSJ FT",
+        "",
+        render_scope_instruction(load_source_scope(company), company),
+        "",
+        _context_search_instruction(company),
     ])
+
+
+def _context_search_instruction(company: dict) -> str:
+    """산업·정책 맥락 질의와 그 결과를 다루는 규칙.
+
+    회사 공시만으로는 경쟁우위·리스크·성장 전망이 반쪽이다. 그렇다고 산업 기사를
+    회사 근거와 섞으면 안 된다 — 실제로 NVDA 보고서에 LATAM 항공 실적이 근거로
+    올라온 적이 있다. Market Memory와 같은 경계를 쓴다: 배경으로만 쓰고 회사 고유
+    사실의 근거로는 쓰지 않는다.
+    """
+    industry = str(company.get("industry") or "").strip()
+    sector = str(company.get("sector") or "").strip()
+    subject = industry or sector
+    lines = [
+        "## 산업·정책 맥락 검색",
+        "회사 자료만으로는 경쟁우위·리스크·성장 전망을 판단하기 어렵습니다. 아래 두 갈래를 함께 찾으세요.",
+    ]
+    if subject:
+        lines += [
+            f"- 산업: {subject} 수요 전망, 공급 구조, 가격, 주요 경쟁사 동향",
+            f"- 정책·거시: {subject} 관련 규제, 관세, 수출 통제, 보조금, 금리·환율 영향",
+        ]
+    else:
+        lines.append("- 업종을 확인하지 못했습니다. 회사 공시에서 사업 영역을 먼저 읽고 그 영역으로 검색하세요.")
+    lines += [
+        "",
+        "**이 결과는 배경입니다.**",
+        "- 회사의 매출·이익·가이던스·제품 같은 고유 사실의 근거로 인용하지 마세요. 그 숫자는 회사 자료에서만 옵니다.",
+        "- 4번(경쟁우위), 5번(리스크), 6번(성장 전망)의 판단 배경으로 쓰고, 회사에 어떻게 연결되는지 직접 밝히세요.",
+        "- `Sources Used`에 `회사 / 산업 / 정책`을 구분해 남기세요. 산업 기사 수가 많다고 회사 근거가 충분한 것은 아닙니다.",
+    ]
+    return "\n".join(lines)
 
 
 def generate_llm_company_analysis(query, docs, web_search_override=None, llm_override=None, materials=None, quality_preflight=None, analysis_style="beginner"):

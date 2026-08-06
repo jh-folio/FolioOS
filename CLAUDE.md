@@ -277,6 +277,21 @@ features/company_analysis/financial_quality_prompt.md
 - `write_bytes_atomic()`은 임시 파일에 쓰고 제자리로 옮기며, 실패 시 임시 파일을 남기지 않는다.
 - 전체 테스트를 반복 실행해 잡은 실제 오류가 근거다. 파일을 쓰는 테스트라면 어느 것이든 드물게 걸렸고 단독 실행 시에는 통과해, 오래 `간헐적 실패`로만 남아 있었다.
 
+### 웹 검색 출처 범위 (Web Search Scope)
+
+- 허용 목록은 `config/web_search_sources.yaml`이고 로직은 `features/common/web_search_scope.py`다. 등급은 **둘**이다 — `official`(공시·통계·중앙은행)과 `media`(신뢰 금융 매체).
+- **목록에 없는 도메인은 근거로 쓰지 않는다.** 로컬 자료에는 출처 우선순위를 엄격히 매기면서 웹에는 계층을 두지 않으면 가장 약한 자료가 가장 느슨하게 들어온다.
+- 두 겹으로 막는다. 프롬프트에 허용 목록을 명시하고(요청 단계), 생성된 본문의 URL을 목록과 대조해 `webSearchAudit`에 남긴다(응답 단계). **프롬프트는 부탁이지 제한이 아니다.**
+- 유료 매체(WSJ·FT·日経 등)도 목록에 넣되 `paywalled: true`로 표시한다. 검색 결과의 제목·요약과 공개 페이지까지만 쓰고 유료 본문은 우회하지 않는다(원칙 4).
+- **회사 공식 도메인은 목록에 두지 않는다.** 1만 종목의 IR 주소를 손으로 관리할 수 없어 yfinance `website`에서 도출하고 그 회사 분석에서만 허용한다. 도출이 틀리는 예외만 `company_domain_overrides`에 적는다. 서브도메인은 같은 출처로 본다(`investor.nvidia.com` ⊂ `nvidia.com`).
+- 설정을 못 읽으면 **아무 도메인도 허용하지 않는다.** 목록 없이 웹 검색을 여는 것보다 쓰지 않는 편이 낫다.
+
+### 산업·정책 맥락 검색
+
+- 회사 질의와 별개로 업종(`yfinance industry`) 기반 산업 질의와 정책·거시 질의를 함께 던진다. 회사 공시만으로는 경쟁우위·리스크·성장 전망이 반쪽이다.
+- **이 결과는 배경이다.** Market Memory와 같은 경계를 쓴다 — 회사의 매출·이익·가이던스·제품 같은 고유 사실의 근거로 인용하지 않는다. 실제로 산업 검색 없이도 무관한 기사가 회사 근거로 올라온 적이 있어(NVDA 보고서의 LATAM 항공 실적) 경계를 명시한다.
+- `Sources Used`에 `회사 / 산업 / 정책`을 구분해 남긴다. 산업 기사 수가 많다고 회사 근거가 충분한 것은 아니다.
+
 ### 자동 새로고침 (Content Revisions)
 
 - `GET /api/content-revisions`는 저장소별 마지막 변경 시각(`briefing`/`companyAnalysis`/`topicReport`/`marketMemory`/`rss`/`note`/`portfolio`/`watchlist`)만 돌려준다. 로직은 `features/common/content_revision.py`이며 **파일 mtime만 읽고 내용을 열지 않는다** — 몇 초 간격 폴링을 견뎌야 하기 때문이다.
