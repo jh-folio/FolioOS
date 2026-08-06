@@ -28,8 +28,52 @@ def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
+THREADS_DIRNAME = "agent-threads"
+LEGACY_DIRNAME = "agent-consultations"
+
+
+def migrate_legacy_sessions(data_dir: Path) -> dict:
+    """Move saved sessions to the thread directory, keeping the originals until copied.
+
+    이관 중 실패해도 원본을 잃지 않아야 한다. 복사가 끝난 파일만 지우고, 이미 같은
+    이름이 새 경로에 있으면 건드리지 않는다(재실행해도 덮어쓰지 않는다).
+    """
+    legacy = Path(data_dir) / LEGACY_DIRNAME
+    if not legacy.is_dir():
+        return {"moved": 0, "skipped": 0, "failed": 0}
+    target = Path(data_dir) / THREADS_DIRNAME
+    target.mkdir(parents=True, exist_ok=True)
+    moved = skipped = failed = 0
+    for path in sorted(legacy.glob("*.json")):
+        destination = target / path.name
+        if destination.exists():
+            skipped += 1
+            continue
+        try:
+            destination.write_bytes(path.read_bytes())
+        except OSError:
+            failed += 1
+            continue
+        # 원본은 새 파일이 자리를 잡은 뒤에만 지운다.
+        try:
+            path.unlink()
+        except OSError:
+            failed += 1
+        else:
+            moved += 1
+    if moved and not failed and not any(legacy.iterdir()):
+        try:
+            legacy.rmdir()
+        except OSError:
+            pass
+    return {"moved": moved, "skipped": skipped, "failed": failed}
+
+
 def sessions_dir(data_dir: Path) -> Path:
-    return Path(data_dir) / "agent-consultations"
+    root = Path(data_dir)
+    if (root / LEGACY_DIRNAME).is_dir():
+        migrate_legacy_sessions(root)
+    return root / THREADS_DIRNAME
 
 
 def _path(data_dir: Path, session_id: str) -> Path:

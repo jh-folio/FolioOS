@@ -26,7 +26,7 @@ def test_atomic_session_idempotency_and_hypothesis_boundary(tmp_path):
     assert loaded["layer"] == "hypothesis"
     assert loaded["sourceLayer"] == "user_consultation"
     assert loaded["reuseAsEvidence"] is False
-    assert not list((tmp_path / "agent-consultations").glob("*.tmp"))
+    assert not list(store.sessions_dir(tmp_path).glob("*.tmp"))
 
 
 def test_100_turn_context_is_bounded_and_valid_json(tmp_path):
@@ -67,7 +67,7 @@ def test_report_scope_cannot_escape_report_directory(tmp_path):
 
 def test_message_limit_creates_linked_continuation(tmp_path):
     session = store.create_session(tmp_path, {"title": "Long session"})
-    path = tmp_path / "agent-consultations" / f"{session['id']}.json"
+    path = store.sessions_dir(tmp_path) / f"{session['id']}.json"
     private = json.loads(path.read_text(encoding="utf-8"))
     private["messages"] = [{"id": f"msg-{index}", "role": "user", "content": "x", "createdAt": "2026-08-01T00:00:00Z", "status": "answered"} for index in range(500)]
     private["messageCount"] = 500
@@ -79,7 +79,7 @@ def test_message_limit_creates_linked_continuation(tmp_path):
 
 def test_message_limit_reserves_room_for_paired_assistant_reply(tmp_path):
     session = store.create_session(tmp_path, {"title": "Almost full"})
-    path = tmp_path / "agent-consultations" / f"{session['id']}.json"
+    path = store.sessions_dir(tmp_path) / f"{session['id']}.json"
     private = json.loads(path.read_text(encoding="utf-8"))
     private["messages"] = [{"id": f"msg-{index}", "role": "user", "content": "x", "createdAt": "2026-08-01T00:00:00Z", "status": "answered"} for index in range(499)]
     private["messageCount"] = 499

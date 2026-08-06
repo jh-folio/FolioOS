@@ -178,10 +178,22 @@
     return minutes ? shiftedIsoTime(rawTime, minutes) : String(rawTime || "");
   }
 
+  // 5분봉 시각은 거래소 현지 시각(`2026-06-19T15:55:00-04:00`)으로 들어온다.
+  // Lightweight Charts는 축과 crosshair 라벨을 항상 UTC로 그리므로 epoch를 그대로 넘기면
+  // 미국장 09:35~16:00이 13:35~20:00으로 보인다. 벽시계 값을 UTC인 척 넘겨 현지 시각을 표시한다.
   function intradayChartTime(rawTime, interval) {
-    const minutes = intervalMinutes(interval);
-    const parsed = Date.parse(rawTime);
-    return Number.isFinite(parsed) ? Math.floor((parsed + minutes * 60 * 1000) / 1000) : NaN;
+    const match = String(rawTime || "").match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!match) return NaN;
+    const wallClock = Date.UTC(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      Number(match[4]),
+      Number(match[5]),
+      Number(match[6] || 0),
+    );
+    if (!Number.isFinite(wallClock)) return NaN;
+    return Math.floor((wallClock + intervalMinutes(interval) * 60 * 1000) / 1000);
   }
 
   function initialPriceState(snapshot) {

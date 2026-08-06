@@ -191,12 +191,14 @@ class AgentCompanionBoundary:
             self.explain_investment_context,
             methods=["POST"],
         )
-        router.add_api_route("/api/agent/consultations", self.create_consultation, methods=["POST"])
-        router.add_api_route("/api/agent/consultations", self.list_consultations, methods=["GET"])
-        router.add_api_route("/api/agent/consultations/{consultation_id}", self.get_consultation, methods=["GET"])
-        router.add_api_route("/api/agent/consultations/{consultation_id}", self.update_consultation, methods=["POST"])
-        router.add_api_route("/api/agent/consultations/{consultation_id}", self.delete_consultation, methods=["DELETE"])
-        router.add_api_route("/api/agent/consultations/{consultation_id}/messages", self.add_consultation_message, methods=["POST"])
-        router.add_api_route("/api/agent/consultations/{consultation_id}/archive", self.archive_consultation, methods=["POST"])
-        router.add_api_route("/api/agent/consultations/{consultation_id}/note", self.consultation_note, methods=["POST"])
+        # 도크가 대화의 집이다. 주제가 붙은 대화도 같은 스레드라 경로가 하나다.
+        # 호환 alias를 두지 않는다(2026-08-06 사용자 결정) — 로컬 앱이라 구 클라이언트가 없다.
+        router.add_api_route("/api/agent/threads", self.create_consultation, methods=["POST"])
+        router.add_api_route("/api/agent/threads", self.list_consultations, methods=["GET"])
+        router.add_api_route("/api/agent/threads/{consultation_id}", self.get_consultation, methods=["GET"])
+        router.add_api_route("/api/agent/threads/{consultation_id}", self.update_consultation, methods=["POST"])
+        router.add_api_route("/api/agent/threads/{consultation_id}", self.delete_consultation, methods=["DELETE"])
+        router.add_api_route("/api/agent/threads/{consultation_id}/messages", self.add_consultation_message, methods=["POST"])
+        router.add_api_route("/api/agent/threads/{consultation_id}/archive", self.archive_consultation, methods=["POST"])
+        router.add_api_route("/api/agent/threads/{consultation_id}/note", self.consultation_note, methods=["POST"])
         return router

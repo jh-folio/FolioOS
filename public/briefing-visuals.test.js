@@ -122,12 +122,14 @@ test("lightweightRows preserves OHLC for candles and converts intraday time", ()
   const point = { time: "2026-06-19T15:55:00-04:00", open: 100, high: 102, low: 99, close: 101 };
   const candle = lightweightRows([point], "candle", "5m")[0];
   const line = lightweightRows([point], "line", "5m")[0];
-  const expectedCloseTime = Math.floor(Date.parse("2026-06-19T16:00:00-04:00") / 1000);
+  // 축은 UTC로 그려지므로 거래소 현지 벽시계(16:00)를 그대로 UTC epoch로 넘긴다.
+  const expectedCloseTime = Math.floor(Date.parse("2026-06-19T16:00:00Z") / 1000);
   assert.equal(typeof candle.time, "number");
   assert.equal(candle.time, expectedCloseTime);
   assert.deepEqual({ open: candle.open, high: candle.high, low: candle.low, close: candle.close }, { open: 100, high: 102, low: 99, close: 101 });
   assert.equal(line.value, 101);
   assert.equal(line.time, candle.time);
+  assert.equal(lightweightTimeLabel(candle.time), "2026-06-19 16:00");
 });
 
 test("section helpers recognize market flow and numbered leading-company headings", () => {
