@@ -15282,7 +15282,11 @@ select { min-height: 36px; padding: 0 12px; }
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  flex: 0 0 auto;
+  /* 줄어들 수 있어야 한다. 기간 필드는 datetime 입력 두 개(각 204px)를 담아
+     좁은 화면에서 혼자 화면을 넘긴다. 안에서도 줄바꿈시킨다. */
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  max-width: 100%;
   color: var(--folio-ink-muted);
   font-size: var(--fs-meta);
   font-weight: var(--fw-medium);
@@ -15291,7 +15295,7 @@ select { min-height: 36px; padding: 0 12px; }
 /* 라벨은 인라인 하나로 통일한다. 위 라벨/인라인 혼용이 화면마다 달랐다. */
 .find-bar__field select,
 .find-bar__field input { width: auto; min-width: 0; color: var(--folio-ink); }
-.find-bar__field input[type="date"] { flex: 0 0 auto; }
+.find-bar__field input[type="date"], .find-bar__field input[type="datetime-local"] { flex: 0 1 auto; }
 .find-bar__reset { margin-left: auto; flex: 0 0 auto; }
 
 /* 결과 건수는 목록 헤더에 둔다(검색 패널 안에 두면 목록과 떨어져 읽힌다). */
@@ -15304,8 +15308,15 @@ select { min-height: 36px; padding: 0 12px; }
 
 /* 검색과 필터가 각각 한 줄인 형태(RSS). 전문 검색은 목록 필터가 아니라 다른 결과
    집합을 만드는 별개 동작이라 버튼을 유지하고, 선택 필터는 즉시 적용한다. */
-.find-bar--stacked { flex-direction: column; align-items: stretch; }
-.find-bar__row { display: flex; align-items: center; gap: var(--sp-2); }
+/* nowrap이 필수다. base의 flex-wrap: wrap을 물려받은 채 column이 되면 줄의
+   교차축 크기가 내용 폭으로 정해져 stretch가 컨테이너 폭을 씌우지 못한다 —
+   행이 화면보다 넓어져도 아무도 막지 않는다. */
+.find-bar--stacked { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+/* 행도 줄바꿈한다. 좁은 화면에서 검색칸과 버튼이 한 줄을 고집하면 화면을 넘긴다. */
+.find-bar__row { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; min-width: 0; }
+/* 폼 컨트롤의 기본 내재 폭(size 속성)이 줄어들지 않는 원인이라 전부 풀어준다. */
+.find-bar input, .find-bar select { max-width: 100%; }
+.find-bar__row > *, .find-bar__more > * { min-width: 0; }
 .find-bar__more { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
 .find-bar__detail { flex: 0 0 auto; }
 .find-bar__detail > summary {
@@ -15326,7 +15337,9 @@ select { min-height: 36px; padding: 0 12px; }
 .find-bar__detail[open] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
 
 @media (max-width: 760px) {
-  .find-bar__search { flex: 1 1 100%; }
+  /* basis를 100%로 두면 폭이 미정인 행 안에서 순환이 되어 내용 폭으로 풀린다.
+     길이로 주면 좁은 화면에서 실제로 줄어들고, 모자라면 버튼이 다음 줄로 내려간다. */
+  .find-bar__search { flex: 1 1 12rem; }
   .find-bar__reset { margin-left: 0; }
 }
 
