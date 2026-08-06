@@ -8196,6 +8196,9 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   align-items: center;
   min-width: 0;
 }
+/* 시장 트랙은 알약 4개가 항상 보여야 한다. 수축을 허용하면 옆 컨트롤에 밀려
+   잘리고, 잘린 자리에 가로 스크롤바가 생긴다. 자리가 없으면 행이 줄바꿈한다. */
+.brief-gen-market-field { flex: 0 0 auto; }
 /* 선택 표시는 슬라이딩 thumb이 아니라 선택된 항목 자체에 칠한다. 예전 thumb은
    위치·너비가 "옵션 3개"에 박혀 있어 시장이 넷으로 늘면 엉뚱한 칸을 가리켰다. */
 .brief-market-segment {
@@ -8205,10 +8208,8 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   align-items: center;
   gap: 2px;
   width: fit-content;
-  max-width: 100%;
   min-height: 36px;
   padding: 3px;
-  overflow-x: auto;
   border: none;
   border-radius: var(--r-pill);
   background: var(--surface-control);
@@ -8236,7 +8237,7 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   opacity: 0;
   pointer-events: none;
 }
-.brief-market-segment span {
+.brief-market-segment label span {
   position: relative;
   z-index: 1;
   display: inline-flex;
@@ -8302,7 +8303,7 @@ details[open] > .brief-disclosure::after { transform: rotate(180deg); }
   .brief-market-segment { width: 100%; max-width: none; justify-content: flex-start; }
   /* 시장 다섯 칸은 좁은 화면에서 줄바꿈한다. 한 줄에 밀어넣으면 글자가 잘린다. */
   .brief-market-segment label { flex: 1 1 auto; }
-  .brief-market-segment span { min-width: 0; }
+  .brief-market-segment label span { min-width: 0; }
   .brief-gen-actionbar-divider { display: none; }
   .brief-gen-primary { flex: 1 1 auto; }
 }
