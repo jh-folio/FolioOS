@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { engineTooltip, groupMeta, listDate } from "./savedListFormat";
+import { useContentRevision } from "./useContentRevision";
+import { groupMeta, listDate } from "./savedListFormat";
 import { getJson, isActiveJobStatus, postJson, MARKET_CODE_LABELS, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -240,6 +241,7 @@ async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
 }
 
 export function BriefingRoute() {
+  const contentRevision = useContentRevision("briefing");
   const [archive, setArchive] = useState<BriefingArchivePayload | null>(null);
   const [detailRoute, setDetailRoute] = useState<BriefingDetailRoute | null>(() => readBriefingDetailRoute());
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -298,7 +300,8 @@ export function BriefingRoute() {
 
   useEffect(() => {
     loadArchive();
-  }, [loadArchive]);
+  // 생성·수집이 어디서 일어나든 목록이 따라온다(자동화, 다른 탭, Agent 도크 포함).
+  }, [loadArchive, contentRevision]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -747,9 +750,7 @@ export function BriefingRoute() {
                         <span className="chip briefing-archive-chip" key={chip}>{chip}</span>
                       ))}
                       {view.engine && (
-                        <span className="chip briefing-archive-chip" data-tooltip={engineTooltip(view.engine, view.engineDetail)}>
-                          {view.engine}
-                        </span>
+                        <span className="chip briefing-archive-chip">{view.engine}</span>
                       )}
                     </span>
                     <strong>{view.title}</strong>

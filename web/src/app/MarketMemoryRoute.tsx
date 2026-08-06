@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useContentRevision } from "./useContentRevision";
 import { getJson, postJson, type JobStatus } from "../api";
 import { MarketStateDashboard } from "../islands/MarketStateDashboard";
 import { RouteHero } from "./RouteHero";
@@ -61,6 +62,8 @@ async function submitMemoryUpdate(): Promise<MemoryResult | AgentJob> {
 
 export function MarketMemoryRoute() {
   const [refreshKey, setRefreshKey] = useState(0);
+  // 시장 메모리 업데이트가 어디서 돌든 화면이 따라온다.
+  const contentRevision = useContentRevision("marketMemory");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -214,7 +217,7 @@ export function MarketMemoryRoute() {
       <InvestmentContextCard mode="market-memory" />
 
       <section className="market-state-dashboard react-market-memory-dashboard" aria-label="현재 중기 시장 상황">
-        <MarketStateDashboard key={refreshKey} onUpdate={runMarketMemoryUpdate} updating={busy} updateDisabled={Boolean(resumableJob)} onContext={handleMarketStateContext} />
+        <MarketStateDashboard key={`${refreshKey}:${contentRevision}`} onUpdate={runMarketMemoryUpdate} updating={busy} updateDisabled={Boolean(resumableJob)} onContext={handleMarketStateContext} />
       </section>
     </div>
   );

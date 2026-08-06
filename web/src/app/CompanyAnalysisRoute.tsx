@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { engineTooltip, groupMeta, listDate } from "./savedListFormat";
+import { useContentRevision } from "./useContentRevision";
+import { engineNote, groupMeta, listDate } from "./savedListFormat";
 import { useCompanyResolution } from "./companyAnalysis/useCompanyResolution";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
@@ -217,6 +218,7 @@ function isAnalysisHash() {
 }
 
 export function CompanyAnalysisRoute() {
+  const contentRevision = useContentRevision("companyAnalysis");
   const [reports, setReports] = useState<AnalysisReport[]>([]);
   const [selected, setSelected] = useState<AnalysisReport | null>(null);
   const [detailId, setDetailId] = useState(() => readAnalysisDetailId());
@@ -271,7 +273,8 @@ export function CompanyAnalysisRoute() {
 
   useEffect(() => {
     loadReports();
-  }, [loadReports]);
+  // 생성·수집이 어디서 일어나든 목록이 따라온다(자동화, 다른 탭, Agent 도크 포함).
+  }, [loadReports, contentRevision]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -715,8 +718,11 @@ export function CompanyAnalysisRoute() {
                       <span className="report-feed-card-meta">
                         {/* "LLM"만으로는 세 보고서가 다른 모델로 쓰였어도 구분되지 않는다. */}
                         {(report.engine || report.mode) && (
-                          <span className="report-feed-badge" data-tooltip={engineTooltip(report.engine, report.engineDetail)}>
+                          <span className="report-feed-badge">
                             {report.engine || String(report.mode).toUpperCase()}
+                            {engineNote(report.engine, report.engineDetail) && (
+                              <em>{engineNote(report.engine, report.engineDetail)}</em>
+                            )}
                           </span>
                         )}
                         {report.analysisStyle && <span className="report-feed-badge">{analysisStyleLabel(report.analysisStyle) || String(report.analysisStyle).toUpperCase()}</span>}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { engineTooltip, groupMeta, listDate } from "./savedListFormat";
+import { useContentRevision } from "./useContentRevision";
+import { engineNote, groupMeta, listDate } from "./savedListFormat";
 import {
   ApiRequestError,
   FALLBACK_POLICY,
@@ -491,6 +492,7 @@ function PlanReview({
 }
 
 export function DeepResearchRoute() {
+  const contentRevision = useContentRevision("topicReport");
   const [workLogRefreshKey, setWorkLogRefreshKey] = useState(0);
   const [reports, setReports] = useState<TopicReportSummary[]>([]);
   const [selected, setSelected] = useState<TopicReport | null>(null);
@@ -562,7 +564,8 @@ export function DeepResearchRoute() {
     const controller = new AbortController();
     void loadReports(controller.signal);
     return () => controller.abort();
-  }, [loadReports]);
+  // 생성·수집이 어디서 일어나든 목록이 따라온다(자동화, 다른 탭, Agent 도크 포함).
+  }, [loadReports, contentRevision]);
 
   useEffect(() => {
     const ownedCollectionIdentity = {
@@ -1090,7 +1093,7 @@ export function DeepResearchRoute() {
                 const deleting = actionBusy === `delete-${report.id}`;
                 return (
                   <div className="report-feed-card-wrap" key={report.id || `${reportLabel(report)}-${report.date}`}>
-                    <button className="report-feed-card is-topic" type="button" data-report-id={report.id} onClick={() => { if (report.id) { openingReportId.current = report.id; setTopicHash(report.id); } }}><span className="report-feed-card-meta">{(report.engine || report.mode) && <span className="report-feed-badge" data-tooltip={engineTooltip(report.engine, report.engineDetail)}>{report.engine || String(report.mode).toUpperCase()}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">생성일 {displayDate(report.date || report.generatedAt)}</span></button>
+                    <button className="report-feed-card is-topic" type="button" data-report-id={report.id} onClick={() => { if (report.id) { openingReportId.current = report.id; setTopicHash(report.id); } }}><span className="report-feed-card-meta">{(report.engine || report.mode) && <span className="report-feed-badge">{report.engine || String(report.mode).toUpperCase()}{engineNote(report.engine, report.engineDetail) && <em>{engineNote(report.engine, report.engineDetail)}</em>}</span>}</span><strong>{reportLabel(report)}</strong><span className="report-feed-card-foot">생성일 {displayDate(report.date || report.generatedAt)}</span></button>
                     <button type="button" className="report-feed-card-delete" disabled={deleting} onClick={() => void deleteReport(report)} aria-label={`${reportLabel(report)} 삭제`} data-tooltip="삭제" data-tooltip-pos="bottom"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M5 4l.5 9h5L11 4" /></svg></button>
                   </div>
                 );

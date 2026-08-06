@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useContentRevision } from "./useContentRevision";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
@@ -172,6 +173,7 @@ function mapSearchDocument(doc: SearchDocument): RssItem {
 }
 
 export function RssRoute() {
+  const contentRevision = useContentRevision("rss");
   const [indexedCount, setIndexedCount] = useState<number | null>(null);
   const [payload, setPayload] = useState<RssPayload | null>(null);
   const [page, setPage] = useState(1);
@@ -225,6 +227,20 @@ export function RssRoute() {
     // 첫 진입 시 한 번만 현재 필터를 로드한다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 수집이 끝나면 목록이 따라온다. 자동화가 돌렸든 다른 탭에서 돌렸든 같다.
+  // 첫 렌더의 기준점 잡기는 훅이 하므로 여기서 다시 읽지 않는다.
+  const firstRevision = useRef(true);
+  useEffect(() => {
+    if (firstRevision.current) {
+      firstRevision.current = false;
+      return;
+    }
+    void loadItems(1, filters);
+    void refreshIndexedCount();
+    // 신호에만 반응한다. 필터 변경은 각자의 핸들러가 이미 다시 읽는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contentRevision]);
 
   async function updateFilter(patch: Partial<RssFilters>) {
     const next = { ...draftFilters, ...patch };

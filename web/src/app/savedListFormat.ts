@@ -23,10 +23,14 @@ export function groupMeta(count: number, latest?: string): string {
   return date ? `${count}건 · 최근 ${date}` : `${count}건`;
 }
 
-/** 배지에 붙일 엔진 이름. 모델명이 있으면 tooltip으로 함께 보여준다. */
-export function engineTooltip(engine?: string, detail?: string): string | undefined {
+/** 배지 옆에 덧붙일 맥락(제공자·도구). 없으면 빈 문자열.
+ *
+ * tooltip으로 띄우지 않는다. 카드가 `overflow: hidden`이라 카드 밖으로 나가는
+ * 툴팁은 잘리고, 덧붙일 것이 없을 때는 배지 글자를 그대로 되풀이해 소음이 된다.
+ */
+export function engineNote(engine?: string, detail?: string): string {
   const name = String(engine || "").trim();
-  const model = String(detail || "").trim();
-  if (!name) return undefined;
-  return model ? `${name} · ${model}` : name;
+  const note = String(detail || "").trim();
+  if (!name || !note || note === name) return "";
+  return note;
 }

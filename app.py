@@ -55,6 +55,7 @@ from features.automation.service import (
     save_settings as save_automation_settings,
 )
 from features.common.company_resolution import resolve_company_query, schedule_sec_exchange_cache
+from features.common.content_revision import content_revisions
 from features.common.company_lookup import ensure_company_files
 from features.common.dataframe_ops import top_records
 from features.common.research_library.indexing.service import (
@@ -643,6 +644,15 @@ def api_briefing_personal_overlay(date: str, marketScope: str = "both", body: di
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Briefing not found")
+
+
+@fastapi_app.get("/api/content-revisions")
+def api_content_revisions():
+    """저장소별 마지막 변경 시각. 화면이 목록을 다시 읽을 시점을 판단한다.
+
+    파일 mtime만 읽으므로 몇 초 간격 폴링에도 부담이 없다.
+    """
+    return {"revisions": content_revisions(DATA_DIR)}
 
 
 @fastapi_app.get("/api/company/resolve")

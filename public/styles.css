@@ -15573,3 +15573,11 @@ select { min-height: 36px; padding: 0 12px; }
 @media (max-width: 760px) {
   .agent-threads { max-height: 50vh; }
 }
+
+/* 배지 안의 보조 맥락(제공자·도구). 카드가 overflow: hidden이라 툴팁은 잘린다. */
+.report-feed-badge > em {
+  margin-left: 5px;
+  color: var(--folio-ink-subtle);
+  font-style: normal;
+  font-weight: var(--fw-normal);
+}
