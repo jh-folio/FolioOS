@@ -11078,8 +11078,15 @@ function ga() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "analysis";
 }
 function _a() {
-	let [e, t] = (0, d.useState)([]), [n, r] = (0, d.useState)(null), [i, a] = (0, d.useState)(() => ha()), [o, s] = (0, d.useState)(""), { resolution: c, pending: l, picked: u, setPicked: p, effective: m } = wi(o), h = u ? "picked" : l ? "pending" : c?.status || "idle", g = o.trim() ? u ? `${u.name} (${u.ticker})으로 분석합니다.` : l ? "확인 중…" : c ? c.status === "confident" && c.match ? `${c.match.name} (${c.match.ticker})으로 분석합니다.` : c.status === "ambiguous" ? "여러 기업이 맞습니다. 아래에서 고르세요." : "아는 기업이 없습니다. 티커로 적어 보세요. 이대로 진행하면 자료가 거의 없는 보고서가 나옵니다." : "" : "티커, 회사명, 한글 표기 중 무엇으로 적어도 됩니다.", [_, v] = (0, d.useState)("beginner"), [y, b] = (0, d.useState)(""), [x, S] = (0, d.useState)("recent"), [C, w] = (0, d.useState)(!1), [T, E] = (0, d.useState)(!1), [D, O] = (0, d.useState)(""), [k, A] = (0, d.useState)(""), [j, M] = (0, d.useState)(""), [N, P] = (0, d.useState)(0), F = (0, d.useCallback)(async () => {
-		w(!0), A("");
+	let [e, t] = (0, d.useState)([]), [n, r] = (0, d.useState)(null), [i, a] = (0, d.useState)(() => ha()), [o, s] = (0, d.useState)(""), { resolution: c, pending: l, picked: u, setPicked: p, effective: m } = wi(o), h = u || (c?.status === "confident" ? c.match : null), g = !!(h && !h.cik && (h.market === "EUROPE" || h.market === "JP")), _ = g ? "out-of-scope" : u ? "picked" : l ? "pending" : c?.status || "idle", v = (() => {
+		if (!o.trim()) return "티커, 회사명, 한글 표기 중 무엇으로 적어도 됩니다.";
+		if (g && h) {
+			let e = h.market === "JP" ? "일본" : "유럽";
+			return `${h.name}는 ${e} 거래소에만 상장되어 있어 아직 분석할 수 없습니다. 미국에도 상장된 기업은 그 티커로 적어 보세요.`;
+		}
+		return u ? `${u.name} (${u.ticker})으로 분석합니다.` : l ? "확인 중…" : c ? c.status === "confident" && c.match ? `${c.match.name} (${c.match.ticker})으로 분석합니다.` : c.status === "ambiguous" ? "여러 기업이 맞습니다. 아래에서 고르세요." : "아는 기업이 없습니다. 티커로 적어 보세요. 이대로 진행하면 자료가 거의 없는 보고서가 나옵니다." : "";
+	})(), [y, b] = (0, d.useState)("beginner"), [x, S] = (0, d.useState)(""), [C, w] = (0, d.useState)("recent"), [T, E] = (0, d.useState)(!1), [D, O] = (0, d.useState)(!1), [k, A] = (0, d.useState)(""), [j, M] = (0, d.useState)(""), [N, P] = (0, d.useState)(""), [F, I] = (0, d.useState)(0), L = (0, d.useCallback)(async () => {
+		E(!0), M("");
 		try {
 			let e = await W("/api/analysis-reports");
 			t(Array.isArray(e) ? e : []), q("analysis", {
@@ -11089,14 +11096,14 @@ function _a() {
 				reportId: ""
 			});
 		} catch (e) {
-			A(e instanceof Error ? e.message : "기업 분석 목록을 불러오지 못했습니다.");
+			M(e instanceof Error ? e.message : "기업 분석 목록을 불러오지 못했습니다.");
 		} finally {
-			w(!1);
+			E(!1);
 		}
 	}, []);
 	(0, d.useEffect)(() => {
-		F();
-	}, [F]), (0, d.useEffect)(() => {
+		L();
+	}, [L]), (0, d.useEffect)(() => {
 		let e = () => {
 			ga() && a(ha());
 		};
@@ -11104,13 +11111,13 @@ function _a() {
 	}, []), (0, d.useEffect)(() => {
 		let e = (e) => {
 			let t = e.detail;
-			ze(t, window.FolioAgent?.currentContext) && P((e) => e + 1);
+			ze(t, window.FolioAgent?.currentContext) && I((e) => e + 1);
 		};
 		return window.addEventListener(ce, e), () => window.removeEventListener(ce, e);
 	}, []), (0, d.useEffect)(() => {
 		let e = !0;
 		async function t(t) {
-			w(!0), A("");
+			E(!0), M("");
 			try {
 				let n = await W(`/api/analysis-reports/${encodeURIComponent(t)}?includePersonal=true`);
 				if (!e) return;
@@ -11123,9 +11130,9 @@ function _a() {
 				});
 			} catch (t) {
 				if (!e) return;
-				r(null), A(t instanceof Error ? t.message : "저장된 기업 분석 보고서를 열지 못했습니다.");
+				r(null), M(t instanceof Error ? t.message : "저장된 기업 분석 보고서를 열지 못했습니다.");
 			} finally {
-				e && w(!1);
+				e && E(!1);
 			}
 		}
 		return i ? t(i) : (r(null), q("analysis", {
@@ -11136,77 +11143,77 @@ function _a() {
 		})), () => {
 			e = !1;
 		};
-	}, [i, N]);
-	async function I(e) {
+	}, [i, F]);
+	async function ee(e) {
 		e.preventDefault();
 		let t = o.trim();
 		if (t) {
-			E(!0), A(""), M("기업 자료를 읽고 분석 보고서를 생성하는 중입니다.");
+			O(!0), M(""), P("기업 자료를 읽고 분석 보고서를 생성하는 중입니다.");
 			try {
 				let e = await W(`/api/analyze?${new URLSearchParams({
 					q: m?.ticker || t,
-					analysisStyle: _
+					analysisStyle: y
 				}).toString()}`), n;
 				if (Xi(e)) {
 					let t = await Zi(e), r = t.result?.reportId || t.result?.artifactId || "";
 					if (!r) throw Error("생성된 보고서 ID를 확인하지 못했습니다.");
 					n = await W(`/api/analysis-reports/${encodeURIComponent(r)}?includePersonal=true`);
 				} else n = e;
-				await F(), M("기업 분석 보고서를 생성하고 자동 저장했습니다."), r(n), n.id && ma(n.id);
+				await L(), P("기업 분석 보고서를 생성하고 자동 저장했습니다."), r(n), n.id && ma(n.id);
 			} catch (e) {
-				A(e instanceof Error ? e.message : "기업 분석 생성에 실패했습니다."), M("");
+				M(e instanceof Error ? e.message : "기업 분석 생성에 실패했습니다."), P("");
 			} finally {
-				E(!1);
-			}
-		}
-	}
-	async function L(e) {
-		e && ma(e);
-	}
-	async function ee(e) {
-		if (e.id && window.confirm(`${ta(e)} 보고서를 삭제할까요?`)) {
-			O(`delete-${e.id}`), A("");
-			try {
-				let t = await fetch(`/api/analysis-reports/${encodeURIComponent(e.id)}`, { method: "DELETE" });
-				if (!t.ok) throw Error(`삭제 실패: ${t.status}`);
-				n?.id === e.id && ma(), await F(), M("저장된 기업 분석 보고서를 삭제했습니다.");
-			} catch (e) {
-				A(e instanceof Error ? e.message : "보고서 삭제에 실패했습니다.");
-			} finally {
-				O("");
+				O(!1);
 			}
 		}
 	}
 	async function R(e) {
-		if (n) {
-			O(e), M(e === "notion" ? "Notion으로 내보내는 중..." : "Obsidian으로 내보내는 중...");
+		e && ma(e);
+	}
+	async function z(e) {
+		if (e.id && window.confirm(`${ta(e)} 보고서를 삭제할까요?`)) {
+			A(`delete-${e.id}`), M("");
 			try {
-				let t = e === "notion" ? await G("/api/export-notion/analysis", n) : await G("/api/export-obsidian/analysis", n);
-				M(e === "notion" ? `Notion으로 내보냈습니다${t.title ? `: ${t.title}` : ""}` : `Obsidian으로 내보냈습니다${t.company || t.filename ? `: ${t.company || t.filename}` : ""}`);
+				let t = await fetch(`/api/analysis-reports/${encodeURIComponent(e.id)}`, { method: "DELETE" });
+				if (!t.ok) throw Error(`삭제 실패: ${t.status}`);
+				n?.id === e.id && ma(), await L(), P("저장된 기업 분석 보고서를 삭제했습니다.");
 			} catch (e) {
-				M(e instanceof Error ? e.message : "내보내기에 실패했습니다.");
+				M(e instanceof Error ? e.message : "보고서 삭제에 실패했습니다.");
 			} finally {
-				O("");
+				A("");
 			}
 		}
 	}
-	async function z() {
+	async function B(e) {
+		if (n) {
+			A(e), P(e === "notion" ? "Notion으로 내보내는 중..." : "Obsidian으로 내보내는 중...");
+			try {
+				let t = e === "notion" ? await G("/api/export-notion/analysis", n) : await G("/api/export-obsidian/analysis", n);
+				P(e === "notion" ? `Notion으로 내보냈습니다${t.title ? `: ${t.title}` : ""}` : `Obsidian으로 내보냈습니다${t.company || t.filename ? `: ${t.company || t.filename}` : ""}`);
+			} catch (e) {
+				P(e instanceof Error ? e.message : "내보내기에 실패했습니다.");
+			} finally {
+				A("");
+			}
+		}
+	}
+	async function te() {
 		if (n?.id) {
-			O("overlay"), M("내 노트와 연결하는 중...");
+			A("overlay"), P("내 노트와 연결하는 중...");
 			try {
 				let e = await G(`/api/analysis-reports/${encodeURIComponent(n.id)}/personal-overlay`, {});
 				Xi(e) && await Zi(e);
 				let t = await W(`/api/analysis-reports/${encodeURIComponent(n.id)}?includePersonal=true`);
-				r(t), M("내 노트와 연결했습니다.");
+				r(t), P("내 노트와 연결했습니다.");
 			} catch (e) {
-				M(e instanceof Error ? e.message : "내 노트 연결에 실패했습니다.");
+				P(e instanceof Error ? e.message : "내 노트 연결에 실패했습니다.");
 			} finally {
-				O("");
+				A("");
 			}
 		}
 	}
-	let B = (0, d.useMemo)(() => {
-		let t = ua(y);
+	let V = (0, d.useMemo)(() => {
+		let t = ua(x);
 		return t ? e.filter((e) => ua([
 			$i(e),
 			ea(e),
@@ -11216,14 +11223,14 @@ function _a() {
 			e.generatedAt,
 			ra(e.generatedAt)
 		].filter(Boolean).join(" ")).includes(t)) : e;
-	}, [y, e]), te = (0, d.useMemo)(() => {
-		let e = [...B].sort((e, t) => String(t.generatedAt || "").localeCompare(String(e.generatedAt || "")));
-		if (x === "recent") return e.length ? [{
+	}, [x, e]), H = (0, d.useMemo)(() => {
+		let e = [...V].sort((e, t) => String(t.generatedAt || "").localeCompare(String(e.generatedAt || "")));
+		if (C === "recent") return e.length ? [{
 			key: "recent",
 			label: `최근 보고서 ${Math.min(e.length, Ji)}건`,
 			rows: e.slice(0, Ji)
 		}] : [];
-		if (x === "month") {
+		if (C === "month") {
 			let t = /* @__PURE__ */ new Map();
 			for (let n of e) {
 				let e = la(n.generatedAt);
@@ -11245,16 +11252,16 @@ function _a() {
 			label: na(t[0] || {}),
 			rows: t.sort((e, t) => String(t.generatedAt || "").localeCompare(String(e.generatedAt || "")))
 		})).sort((e, t) => String(t.rows[0]?.generatedAt || "").localeCompare(String(e.rows[0]?.generatedAt || "")));
-	}, [B, x]), V = pa(n || {}), H = Qi(V, n?.headline || ta(n || {})), ne = n?.sources || [], U = ca(n);
+	}, [V, C]), ne = pa(n || {}), U = Qi(ne, n?.headline || ta(n || {})), re = n?.sources || [], ie = ca(n);
 	return n ? /* @__PURE__ */ (0, f.jsxs)("div", {
 		className: "react-company-analysis-route",
 		"data-company-analysis-route": !0,
-		children: [k && /* @__PURE__ */ (0, f.jsx)("p", {
+		children: [j && /* @__PURE__ */ (0, f.jsx)("p", {
 			className: "react-dashboard-error",
-			children: k
+			children: j
 		}), /* @__PURE__ */ (0, f.jsxs)(Rn, {
 			eyebrow: `COMPANY ANALYSIS${$i(n) ? ` · ${$i(n)}` : ""}`,
-			title: H.title,
+			title: U.title,
 			meta: [n.generatedAt ? `생성일 ${ra(n.generatedAt)}` : "", ia(n.analysisStyle)].filter(Boolean).join(" · "),
 			agentContext: {
 				surface: "analysis_reader",
@@ -11267,7 +11274,7 @@ function _a() {
 				type: "button",
 				onClick: () => ma(),
 				children: "기업 분석"
-			}), /* @__PURE__ */ (0, f.jsx)("span", { children: H.title })] }),
+			}), /* @__PURE__ */ (0, f.jsx)("span", { children: U.title })] }),
 			onClose: () => ma(),
 			actionSlot: /* @__PURE__ */ (0, f.jsxs)(f.Fragment, { children: [
 				/* @__PURE__ */ (0, f.jsx)(ln, {
@@ -11279,7 +11286,7 @@ function _a() {
 							reportKind: "company_analysis",
 							reportId: n.id || "",
 							ticker: $i(n),
-							message: `${H.title}에서 투자 판단에 중요한 핵심, 리스크, 추가 확인 질문을 정리해줘.`,
+							message: `${U.title}에서 투자 판단에 중요한 핵심, 리스크, 추가 확인 질문을 정리해줘.`,
 							autoSubmit: !0
 						}),
 						children: "Agent에게 묻기"
@@ -11289,30 +11296,30 @@ function _a() {
 					title: "노트",
 					children: /* @__PURE__ */ (0, f.jsx)(un, {
 						icon: "link",
-						disabled: D === "overlay" || !n.id,
-						onClick: z,
-						children: D === "overlay" ? "연결 중" : "내 노트와 연결"
+						disabled: k === "overlay" || !n.id,
+						onClick: te,
+						children: k === "overlay" ? "연결 중" : "내 노트와 연결"
 					})
 				}),
 				/* @__PURE__ */ (0, f.jsxs)(ln, {
 					title: "내보내기",
 					children: [/* @__PURE__ */ (0, f.jsx)(un, {
 						icon: "notion",
-						disabled: D === "notion",
-						onClick: () => R("notion"),
-						children: D === "notion" ? "내보내는 중" : "Notion으로 내보내기"
+						disabled: k === "notion",
+						onClick: () => B("notion"),
+						children: k === "notion" ? "내보내는 중" : "Notion으로 내보내기"
 					}), /* @__PURE__ */ (0, f.jsx)(un, {
 						icon: "obsidian",
-						disabled: D === "obsidian",
-						onClick: () => R("obsidian"),
-						children: D === "obsidian" ? "내보내는 중" : "Obsidian으로 내보내기"
+						disabled: k === "obsidian",
+						onClick: () => B("obsidian"),
+						children: k === "obsidian" ? "내보내는 중" : "Obsidian으로 내보내기"
 					})]
 				}),
-				U.length > 0 && /* @__PURE__ */ (0, f.jsx)(ln, {
+				ie.length > 0 && /* @__PURE__ */ (0, f.jsx)(ln, {
 					title: "자료 한계",
 					children: /* @__PURE__ */ (0, f.jsx)("div", {
 						className: "react-reader-gap-list",
-						children: U.slice(0, 3).map((e, t) => /* @__PURE__ */ (0, f.jsxs)("div", {
+						children: ie.slice(0, 3).map((e, t) => /* @__PURE__ */ (0, f.jsxs)("div", {
 							className: "react-reader-gap",
 							children: [
 								/* @__PURE__ */ (0, f.jsx)("span", { children: aa(e.severity) }),
@@ -11326,9 +11333,9 @@ function _a() {
 					className: "react-reader-status",
 					children: n.generation.message
 				}),
-				j && /* @__PURE__ */ (0, f.jsx)("p", {
+				N && /* @__PURE__ */ (0, f.jsx)("p", {
 					className: "react-reader-status",
-					children: j
+					children: N
 				})
 			] }),
 			noteIdentity: {
@@ -11340,18 +11347,18 @@ function _a() {
 				label: $i(n),
 				reportKind: "company_analysis",
 				reportId: $i(n),
-				linkedReports: [H.title].filter(Boolean)
+				linkedReports: [U.title].filter(Boolean)
 			},
-			noteLinkedTitle: H.title,
+			noteLinkedTitle: U.title,
 			noteOverlay: sr(n.personalOverlay, n.canonicalRevision),
 			children: [/* @__PURE__ */ (0, f.jsx)(Ki, {
-				markdown: H.body || V,
+				markdown: U.body || ne,
 				charts: n.analysisCharts
-			}), ne.length > 0 && /* @__PURE__ */ (0, f.jsxs)("section", {
+			}), re.length > 0 && /* @__PURE__ */ (0, f.jsxs)("section", {
 				className: "source-panel react-analysis-sources",
 				children: [/* @__PURE__ */ (0, f.jsx)("h4", { children: "참고자료" }), /* @__PURE__ */ (0, f.jsx)("div", {
 					className: "sources",
-					children: ne.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("div", {
+					children: re.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("div", {
 						className: "meta",
 						children: [/* @__PURE__ */ (0, f.jsx)("span", { children: da(e) }), e.url ? /* @__PURE__ */ (0, f.jsx)("a", {
 							href: e.url,
@@ -11374,14 +11381,14 @@ function _a() {
 				actions: /* @__PURE__ */ (0, f.jsx)("button", {
 					className: "btn",
 					type: "button",
-					onClick: F,
-					disabled: C,
-					children: C ? "불러오는 중" : "새로고침"
+					onClick: L,
+					disabled: T,
+					children: T ? "불러오는 중" : "새로고침"
 				})
 			}),
 			/* @__PURE__ */ (0, f.jsxs)("form", {
 				className: "react-analysis-form",
-				onSubmit: I,
+				onSubmit: ee,
 				children: [
 					/* @__PURE__ */ (0, f.jsxs)("div", {
 						className: "react-analysis-api-note",
@@ -11417,8 +11424,8 @@ function _a() {
 						}), /* @__PURE__ */ (0, f.jsx)("p", {
 							className: "analysis-resolution",
 							id: "analysis-resolution",
-							"data-status": h,
-							children: g
+							"data-status": _,
+							children: v
 						})]
 					}),
 					/* @__PURE__ */ (0, f.jsxs)("fieldset", {
@@ -11426,11 +11433,11 @@ function _a() {
 						"aria-label": "보고서 모드",
 						children: [/* @__PURE__ */ (0, f.jsx)("legend", { children: "보고서 모드" }), /* @__PURE__ */ (0, f.jsx)("div", {
 							className: "segment react-analysis-style-toggle",
-							"data-style": _,
+							"data-style": y,
 							children: qi.map((e) => /* @__PURE__ */ (0, f.jsx)("button", {
 								type: "button",
-								"aria-pressed": _ === e.value,
-								onClick: () => v(e.value),
+								"aria-pressed": y === e.value,
+								onClick: () => b(e.value),
 								"data-tooltip": e.description,
 								children: e.label
 							}, e.value))
@@ -11439,18 +11446,18 @@ function _a() {
 					/* @__PURE__ */ (0, f.jsx)("button", {
 						className: "btn btn--primary",
 						type: "submit",
-						disabled: T || !o.trim(),
-						children: T ? "분석 중" : "분석"
+						disabled: D || !o.trim(),
+						children: D ? "분석 중" : "분석"
 					})
 				]
 			}),
-			k && /* @__PURE__ */ (0, f.jsx)("p", {
-				className: "react-dashboard-error",
-				children: k
-			}),
 			j && /* @__PURE__ */ (0, f.jsx)("p", {
-				className: "react-dashboard-warning",
+				className: "react-dashboard-error",
 				children: j
+			}),
+			N && /* @__PURE__ */ (0, f.jsx)("p", {
+				className: "react-dashboard-warning",
+				children: N
 			}),
 			/* @__PURE__ */ (0, f.jsxs)("section", {
 				className: "find-bar",
@@ -11459,8 +11466,8 @@ function _a() {
 					/* @__PURE__ */ (0, f.jsx)("input", {
 						className: "find-bar__search",
 						type: "search",
-						value: y,
-						onChange: (e) => b(e.currentTarget.value),
+						value: x,
+						onChange: (e) => S(e.currentTarget.value),
 						placeholder: "티커·회사명·보고서 검색",
 						"aria-label": "저장 기업 분석 검색"
 					}),
@@ -11468,8 +11475,8 @@ function _a() {
 						className: "find-bar__field",
 						children: [/* @__PURE__ */ (0, f.jsx)("span", { children: "보기" }), /* @__PURE__ */ (0, f.jsxs)("select", {
 							"aria-label": "기업 분석 보기 방식",
-							value: x,
-							onChange: (e) => S(e.currentTarget.value),
+							value: C,
+							onChange: (e) => w(e.currentTarget.value),
 							children: [
 								/* @__PURE__ */ (0, f.jsx)("option", {
 									value: "recent",
@@ -11490,7 +11497,7 @@ function _a() {
 						className: "btn btn--text find-bar__reset",
 						type: "button",
 						onClick: () => {
-							b(""), S("recent");
+							S(""), w("recent");
 						},
 						children: "초기화"
 					})
@@ -11506,9 +11513,9 @@ function _a() {
 						children: "Saved Reports"
 					}), /* @__PURE__ */ (0, f.jsx)("h2", { children: "저장된 기업 분석" })] }), /* @__PURE__ */ (0, f.jsx)("span", {
 						"aria-live": "polite",
-						children: C ? "불러오는 중..." : `${B.length}건${y ? " · 검색 결과" : ""}`
+						children: T ? "불러오는 중..." : `${V.length}건${x ? " · 검색 결과" : ""}`
 					})]
-				}), te.length ? te.map((e) => /* @__PURE__ */ (0, f.jsxs)("section", {
+				}), H.length ? H.map((e) => /* @__PURE__ */ (0, f.jsxs)("section", {
 					className: "report-feed-group",
 					children: [/* @__PURE__ */ (0, f.jsxs)("div", {
 						className: "report-feed-group-head",
@@ -11526,13 +11533,13 @@ function _a() {
 					}), /* @__PURE__ */ (0, f.jsx)("div", {
 						className: "report-feed-group-cards",
 						children: e.rows.map((e) => {
-							let t = D === `delete-${e.id}`;
+							let t = k === `delete-${e.id}`;
 							return /* @__PURE__ */ (0, f.jsxs)("div", {
 								className: "report-feed-card-wrap",
 								children: [/* @__PURE__ */ (0, f.jsxs)("button", {
 									className: "report-feed-card is-analysis",
 									type: "button",
-									onClick: () => L(e.id),
+									onClick: () => R(e.id),
 									children: [
 										/* @__PURE__ */ (0, f.jsxs)("span", {
 											className: "report-feed-card-meta",
@@ -11554,7 +11561,7 @@ function _a() {
 									type: "button",
 									className: "report-feed-card-delete",
 									disabled: t,
-									onClick: () => ee(e),
+									onClick: () => z(e),
 									"aria-label": `${ta(e)} 삭제`,
 									"data-tooltip": "삭제",
 									"data-tooltip-pos": "bottom",

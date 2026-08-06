@@ -54,7 +54,7 @@ from features.automation.service import (
     schedule_automation_loop,
     save_settings as save_automation_settings,
 )
-from features.common.company_resolution import resolve_company_query
+from features.common.company_resolution import resolve_company_query, schedule_sec_exchange_cache
 from features.common.company_lookup import ensure_company_files
 from features.common.dataframe_ops import top_records
 from features.common.research_library.indexing.service import (
@@ -342,6 +342,9 @@ def analyze_company(q, web_search_override=None, llm_override=None, analysis_sty
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     ensure_dirs()
+    # 거래소가 붙은 SEC 목록을 한 번 받아 둔다. 없으면 dual-listed 유럽·일본 기업이
+    # 상장 라인과 원주 OTC 라인으로 갈려 전부 "애매"로 떨어진다.
+    schedule_sec_exchange_cache()
     schedule_startup_regime_refresh(MARKET_MEMORY_DB_PATH)
     schedule_automation_loop()
     start_signal_runtime(DATA_DIR, CONFIG_DIR / "evidence_sources.yaml")

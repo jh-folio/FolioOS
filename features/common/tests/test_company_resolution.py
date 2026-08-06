@@ -7,7 +7,14 @@ from __future__ import annotations
 import features.common.company_resolution as resolution
 
 
+EU_JP = [
+    {"ticker": "ASML.AS", "name": "ASML Holding", "englishName": "", "market": "EUROPE", "cik": "", "exchange": "EURONEXT_AMSTERDAM", "source": "constituents"},
+    {"ticker": "MC.PA", "name": "LVMH", "englishName": "", "market": "EUROPE", "cik": "", "exchange": "EURONEXT_PARIS", "source": "constituents"},
+    {"ticker": "7203", "name": "トヨタ自動車", "englishName": "", "market": "JP", "cik": "", "exchange": "JPX", "source": "constituents"},
+]
 SEC = [
+    {"ticker": "ASML", "name": "ASML HOLDING NV", "englishName": "ASML HOLDING NV", "market": "US", "cik": "0000937966", "exchange": "Nasdaq", "source": "sec"},
+    {"ticker": "ASMLF", "name": "ASML HOLDING NV", "englishName": "ASML HOLDING NV", "market": "US", "cik": "0000937966", "exchange": "OTC", "source": "sec"},
     {"ticker": "MU", "name": "MICRON TECHNOLOGY INC", "englishName": "MICRON TECHNOLOGY INC", "market": "US", "cik": "0000723125", "source": "sec"},
     {"ticker": "MLI", "name": "MUELLER INDUSTRIES INC", "englishName": "MUELLER INDUSTRIES INC", "market": "US", "cik": "0000089439", "source": "sec"},
     {"ticker": "HWM", "name": "Howmet Aerospace Inc.", "englishName": "Howmet Aerospace Inc.", "market": "US", "cik": "0000004281", "source": "sec"},
@@ -24,7 +31,7 @@ KR = [
 
 
 def _resolve(monkeypatch, query, **kwargs):
-    monkeypatch.setattr(resolution, "_index", lambda: {"entries": SEC + KR, "byTicker": {}})
+    monkeypatch.setattr(resolution, "_index", lambda: {"entries": SEC + KR + EU_JP, "byTicker": {}})
     return resolution.resolve_company_query(query, **kwargs)
 
 
@@ -105,3 +112,32 @@ def test_weak_contains_matches_are_marked_so_screens_can_ignore_them(monkeypatch
 
     weak = _resolve(monkeypatch, "on")
     assert all(not row["strong"] for row in weak["candidates"]), weak["candidates"]
+
+
+def test_the_otc_ordinary_line_never_outranks_the_listed_one(monkeypatch):
+    """유럽·일본 기업은 상장 라인과 원주 OTC 라인 두 줄로 SEC에 올라 있다.
+
+    동점이면 dual-listed 기업이 전부 "애매"로 떨어진다 — 0.5가 다루는 바로 그 집합이다.
+    """
+    result = _resolve(monkeypatch, "ASML Holding")
+    assert result["status"] == "confident"
+    assert result["match"]["ticker"] == "ASML"
+    assert result["match"]["exchange"] != "OTC"
+
+
+def test_one_company_on_two_exchanges_is_one_answer(monkeypatch):
+    """ASML은 SEC와 암스테르담 양쪽에 있다. 사용자에게는 고를 의미가 없는 갈림길이다."""
+    result = _resolve(monkeypatch, "ASML Holding")
+    assert [row["ticker"] for row in result["candidates"]] == ["ASML"]
+
+
+def test_a_local_only_listing_resolves_but_carries_no_sec_route(monkeypatch):
+    """자국에만 상장된 기업도 찾아는 준다 — 워치리스트·차트에는 쓸 수 있다.
+
+    CIK가 없다는 사실이 화면에 남아야 기업분석이 "왜 안 되는지" 말할 수 있다.
+    """
+    for query, ticker in (("LVMH", "MC.PA"), ("トヨタ自動車", "7203")):
+        result = _resolve(monkeypatch, query)
+        assert result["status"] == "confident", query
+        assert result["match"]["ticker"] == ticker
+        assert not result["match"]["cik"]

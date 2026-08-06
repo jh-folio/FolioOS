@@ -222,9 +222,19 @@ export function CompanyAnalysisRoute() {
   const [query, setQuery] = useState("");
   const { resolution, pending: resolvePending, picked, setPicked, effective } = useCompanyResolution(query);
 
-  const resolutionStatus = picked ? "picked" : resolvePending ? "pending" : resolution?.status || "idle";
+  // 0.5.0 기업분석은 SEC 제출사와 한국 종목만 다룬다. 자국에만 상장된 유럽·일본
+  // 기업은 공식 자료 경로가 아직 없다 — 조용히 빈 보고서를 내는 대신 이유를 말한다.
+  const target = picked || (resolution?.status === "confident" ? resolution.match : null);
+  const outOfScope = Boolean(target && !target.cik && (target.market === "EUROPE" || target.market === "JP"));
+  const resolutionStatus = outOfScope
+    ? "out-of-scope"
+    : picked ? "picked" : resolvePending ? "pending" : resolution?.status || "idle";
   const resolutionMessage = (() => {
     if (!query.trim()) return "티커, 회사명, 한글 표기 중 무엇으로 적어도 됩니다.";
+    if (outOfScope && target) {
+      const where = target.market === "JP" ? "일본" : "유럽";
+      return `${target.name}는 ${where} 거래소에만 상장되어 있어 아직 분석할 수 없습니다. 미국에도 상장된 기업은 그 티커로 적어 보세요.`;
+    }
     if (picked) return `${picked.name} (${picked.ticker})으로 분석합니다.`;
     if (resolvePending) return "확인 중…";
     if (!resolution) return "";

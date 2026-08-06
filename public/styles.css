@@ -15458,7 +15458,8 @@ select { min-height: 36px; padding: 0 12px; }
 }
 .analysis-resolution[data-status="confident"],
 .analysis-resolution[data-status="picked"] { color: var(--folio-ink); font-weight: var(--fw-medium); }
-.analysis-resolution[data-status="unknown"] { color: var(--folio-danger, var(--folio-ink)); }
+.analysis-resolution[data-status="unknown"],
+.analysis-resolution[data-status="out-of-scope"] { color: var(--folio-danger, var(--folio-ink)); }
 
 /* 자동완성은 라벨 안에서 뜬다. 라벨이 기준 상자를 갖는다. */
 .react-analysis-query .portfolio-ticker-field { position: relative; display: grid; gap: var(--sp-2); }
