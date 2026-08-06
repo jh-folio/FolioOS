@@ -9,6 +9,16 @@ KINDS = {"macro", "central_bank", "holiday", "earnings", "filing", "dividend"}
 STATUSES = {"confirmed", "estimated", "tentative", "actual"}
 
 
+def _number(value) -> str:
+    """Released figures stay as text: a missing reading is unknown, not zero."""
+    if value is None or value == "":
+        return ""
+    try:
+        return f"{float(value):g}"
+    except (TypeError, ValueError):
+        return _text(value, 24)
+
+
 def _text(value, limit=300):
     return re.sub(r"\s+", " ", str(value or "")).strip()[:limit]
 
@@ -66,4 +76,10 @@ def normalize_event(value: dict) -> dict:
         "fetchedAt": _text(row.get("fetchedAt") or row.get("fetched_at") or dt.datetime.now(dt.timezone.utc).isoformat(), 50),
         "updatedAt": _text(row.get("updatedAt") or row.get("updated_at") or row.get("fetchedAt") or row.get("fetched_at") or dt.datetime.now(dt.timezone.utc).isoformat(), 50),
         "provider": provider, "parserVersion": _text(row.get("parserVersion") or "0.4.0", 30),
+        # 발표된 지표의 실제 결과. 예정만 보여주면 캘린더를 다시 열 이유가 없다.
+        # 값이 없으면 빈 문자열이며, 없는 것을 0으로 바꾸지 않는다.
+        "actualValue": _number(row.get("actualValue")),
+        "previousValue": _number(row.get("previousValue")),
+        "unit": _text(row.get("unit"), 24),
+        "observedAt": _text(row.get("observedAt"), 30),
     }

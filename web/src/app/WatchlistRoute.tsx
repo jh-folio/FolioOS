@@ -99,6 +99,17 @@ function isWatchlistHash() {
   return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "watchlist";
 }
 
+// TradingView 위젯 bridge. 대시보드 Legacy 보드가 갖고 있던 선언인데, 그 화면을
+// 0.5에서 삭제하면서 위젯을 계속 쓰는 이쪽으로 옮겼다.
+declare global {
+  interface Window {
+    FolioTradingViewWidgets?: {
+      renderWatchlistDetail?: (target: HTMLElement, detail: unknown) => void;
+      cleanup?: (root?: ParentNode) => void;
+    };
+  }
+}
+
 export function WatchlistRoute() {
   const { resolved: resolvedTheme } = useThemePreference();
   const [items, setItems] = useState<string[]>([]);

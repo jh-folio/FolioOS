@@ -28,7 +28,9 @@ def ensure_calendar_table(connection: sqlite3.Connection) -> None:
             timezone TEXT NOT NULL, all_day INTEGER NOT NULL, status TEXT NOT NULL, importance INTEGER NOT NULL,
             source TEXT NOT NULL, source_url TEXT NOT NULL, as_of TEXT NOT NULL, fetched_at TEXT NOT NULL,
             provider TEXT NOT NULL, parser_version TEXT NOT NULL,
-            cancelled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT ''
+            cancelled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT '',
+            actual_value TEXT NOT NULL DEFAULT '', previous_value TEXT NOT NULL DEFAULT '',
+            unit TEXT NOT NULL DEFAULT '', observed_at TEXT NOT NULL DEFAULT ''
         )
         """
     )
@@ -37,6 +39,10 @@ def ensure_calendar_table(connection: sqlite3.Connection) -> None:
         connection.execute("ALTER TABLE market_calendar_events ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0")
     if "updated_at" not in columns:
         connection.execute("ALTER TABLE market_calendar_events ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''")
+    # 발표된 지표의 실제 결과. 예정만 남기면 발표 후 캘린더를 다시 열 이유가 없다.
+    for name in ("actual_value", "previous_value", "unit", "observed_at"):
+        if name not in columns:
+            connection.execute(f"ALTER TABLE market_calendar_events ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_market_calendar_time ON market_calendar_events(starts_at, kind)")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_market_calendar_market ON market_calendar_events(market, starts_at)")
 
@@ -53,15 +59,16 @@ def upsert_events(db_path: Path, events: list[dict]) -> int:
                 continue
             conn.execute(
                 """INSERT INTO market_calendar_events
-                   (id,kind,title,market,country,tickers_json,starts_at,ends_at,timezone,all_day,status,importance,source,source_url,as_of,fetched_at,provider,parser_version,cancelled,updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   (id,kind,title,market,country,tickers_json,starts_at,ends_at,timezone,all_day,status,importance,source,source_url,as_of,fetched_at,provider,parser_version,cancelled,updated_at,actual_value,previous_value,unit,observed_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(id) DO UPDATE SET title=excluded.title,market=excluded.market,country=excluded.country,
                    tickers_json=excluded.tickers_json,starts_at=excluded.starts_at,ends_at=excluded.ends_at,
                    timezone=excluded.timezone,all_day=excluded.all_day,status=excluded.status,importance=excluded.importance,
                    source=excluded.source,source_url=excluded.source_url,as_of=excluded.as_of,fetched_at=excluded.fetched_at,
                    provider=excluded.provider,parser_version=excluded.parser_version,cancelled=excluded.cancelled,
-                   updated_at=excluded.updated_at""",
-                (row["id"], row["kind"], row["title"], row["market"], row["country"], json.dumps(row["tickers"], ensure_ascii=False), row["startsAt"], row["endsAt"], row["timezone"], int(row["allDay"]), row["status"], row["importance"], row["source"], row["sourceUrl"], row["asOf"], row["fetchedAt"], row["provider"], row["parserVersion"], int(row["cancelled"]), row["updatedAt"]),
+                   updated_at=excluded.updated_at,actual_value=excluded.actual_value,
+                   previous_value=excluded.previous_value,unit=excluded.unit,observed_at=excluded.observed_at""",
+                (row["id"], row["kind"], row["title"], row["market"], row["country"], json.dumps(row["tickers"], ensure_ascii=False), row["startsAt"], row["endsAt"], row["timezone"], int(row["allDay"]), row["status"], row["importance"], row["source"], row["sourceUrl"], row["asOf"], row["fetchedAt"], row["provider"], row["parserVersion"], int(row["cancelled"]), row["updatedAt"], row["actualValue"], row["previousValue"], row["unit"], row["observedAt"]),
             )
             count += 1
         conn.commit()
@@ -149,6 +156,8 @@ def list_events(db_path: Path, *, start: str = "", end: str = "", market: str = 
             "status": row["status"], "importance": row["importance"], "source": row["source"], "sourceUrl": row["source_url"],
             "asOf": row["as_of"], "fetchedAt": row["fetched_at"], "provider": row["provider"], "parserVersion": row["parser_version"],
             "cancelled": bool(row["cancelled"]), "updatedAt": row["updated_at"],
+            "actualValue": row["actual_value"], "previousValue": row["previous_value"],
+            "unit": row["unit"], "observedAt": row["observed_at"],
         })
     return {"events": events, "count": len(events), "dataGaps": gaps}
 

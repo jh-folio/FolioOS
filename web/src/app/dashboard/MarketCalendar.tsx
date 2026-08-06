@@ -4,6 +4,7 @@ import { getJson, postJson, MARKET_CODE_LABELS, MARKET_KO_LABELS } from "../../a
 type Event = {
   id: string; kind: string; title: string; startsAt: string; status: string;
   market?: string; tickers?: string[]; source?: string; sourceUrl?: string;
+  actualValue?: string; previousValue?: string; unit?: string; observedAt?: string;
   allDay?: boolean; timezone?: string; importance?: number; provider?: string;
 };
 type FocusSymbol = { symbol: string; label?: string; source?: string };
@@ -259,7 +260,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
       <p className="cal-day-head"><b>{selectedLabel}</b>{dayEvents.length ? <> · {dayEvents.length}건 — {dayKindCounts}</> : null}</p>
       {dayEvents.length ? (
         <div className="table-scroll"><table className="cal-table">
-          <thead><tr><th scope="col">시간(KST)</th><th scope="col">시장</th><th scope="col">중요도</th><th scope="col">이벤트</th><th scope="col">확정도</th></tr></thead>
+          <thead><tr><th scope="col">시간(KST)</th><th scope="col">시장</th><th scope="col">중요도</th><th scope="col">이벤트</th><th scope="col">결과</th><th scope="col">확정도</th></tr></thead>
           <tbody>
             {dayEvents.map((event) => (
               <tr key={event.id}>
@@ -267,8 +268,22 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
                 <td><span className="chip mkt-chip">{MARKET_KO[event.market || ""] || event.market || "—"}</span></td>
                 <td><span className="imp" aria-label={`중요도 ${event.importance || 1}/3`}>{[1, 2, 3].map((level) => <u key={level} className={(event.importance || 1) >= level ? "on" : ""} />)}</span></td>
                 <td>
-                  {event.sourceUrl ? <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer"><strong>{event.title}</strong></a> : <strong>{event.title}</strong>}
-                  <small>{KIND_KO[event.kind] || event.kind}{event.source ? ` · ${event.source}` : ""}</small>
+                  <strong>{event.title}</strong>
+                  <small>
+                    {KIND_KO[event.kind] || event.kind}{event.source ? ` · ${event.source}` : ""}
+                    {/* 링크는 사용자가 읽을 원문이 있을 때만 단다. 수집 경로(yfinance
+                        캘린더 등)로 내보내면 우리 화면 밖 제3자 페이지로 나가버린다. */}
+                    {event.sourceUrl ? <> · <a href={event.sourceUrl} target="_blank" rel="noopener noreferrer">원문</a></> : null}
+                  </small>
+                </td>
+                <td className="cal-actual">
+                  {event.actualValue ? (
+                    <>
+                      <b>{event.actualValue}{event.unit ? ` ${event.unit}` : ""}</b>
+                      {event.previousValue ? <small>직전 {event.previousValue}</small> : null}
+                      {event.observedAt ? <small>{event.observedAt} 기준</small> : null}
+                    </>
+                  ) : <span className="cal-actual__pending">—</span>}
                 </td>
                 <td><span className={`chip certainty-badge--${event.status}`}>{STATUS_KO[event.status] || event.status}</span></td>
               </tr>

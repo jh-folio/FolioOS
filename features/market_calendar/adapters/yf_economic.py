@@ -42,7 +42,6 @@ IMPORTANT_EVENT_TERMS = (
     "industrial", "pmi", "ifo", "zew", "consumer confidence", "consumer sentiment",
     "machinery orders", "tankan", "export", "import", "wage", "earnings",
 )
-_SOURCE_URL = "https://finance.yahoo.com/calendar/economic"
 
 
 def normalize_yf_economic_events(rows: list[dict]) -> list[dict]:
@@ -137,6 +136,7 @@ def fetch_yf_economic_events(
                 "startsAt": stamp.isoformat(),
                 "timezone": "UTC",
                 "importance": 2,
-                "sourceUrl": _SOURCE_URL,
+                # 링크를 붙이지 않는다. yfinance는 수집 경로일 뿐 사용자가 읽을
+                # 원문이 아니라, 클릭하면 제3자 캘린더 페이지로 나가버린다.
             })
     return normalize_yf_economic_events(rows)

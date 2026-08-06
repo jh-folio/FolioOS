@@ -4,7 +4,7 @@ import re
 
 from features.common.markets import MarketCode, PRODUCT_MARKETS, normalize_market_code
 
-VALID_MODES = {"cockpit", "legacy"}
+VALID_MODES = {"cockpit"}
 VALID_CALENDAR_VIEWS = {"week", "month"}
 VALID_CALENDAR_KINDS = {"all", "earnings", "macro", "central_bank", "holiday", "filing", "dividend"}
 VALID_CALENDAR_MARKETS = {"all", *(market.value for market in PRODUCT_MARKETS)}

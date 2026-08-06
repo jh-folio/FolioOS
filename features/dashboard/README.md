@@ -1,8 +1,8 @@
 # Research Cockpit
 
-Dashboard의 기본 모드는 `cockpit`입니다. initial payload는 로컬 change projection, 시장 일정 ref, provider health, native symbol과 기존 로컬 투자 맥락만 집계하며 upstream network나 chart series를 포함하지 않습니다.
+Dashboard는 `cockpit` 하나입니다(0.5에서 Legacy 모드 삭제). initial payload는 로컬 change projection, 시장 일정 ref, provider health, native symbol과 기존 로컬 투자 맥락만 집계하며 upstream network나 chart series를 포함하지 않습니다.
 
-`legacy` 모드는 기존 TradingView widget board를 한 릴리즈 동안 보존하는 rollback 경로입니다. 기존 `data/market-widget-settings.json`은 삭제하지 않고 `features/market_widgets/service.py`를 통해서만 읽습니다. 설정/Watchlist가 없으면 미국 `SPY`, 한국 `^KS11`을 사용합니다.
+**Legacy 모드는 0.5에서 삭제했습니다.** 0.4에서 한 릴리즈 동안만 두기로 한 rollback 경로였고, Cockpit이 자리를 잡아 같은 화면을 두 벌 유지할 이유가 없습니다. 저장된 `dashboardMode: legacy`는 `cockpit`으로 승격됩니다. 사용자 설정 파일 `data/market-widget-settings.json`은 계약대로 **삭제하지 않고**, 집중 종목 fallback(`source: legacy_setting`)으로 계속 read-only로 읽습니다. 설정/Watchlist가 없으면 미국 `SPY`, 한국 `^KS11`을 사용합니다.
 
 cockpit payload의 변화 이벤트는 `major_change | developing_signal | conflicting_uncertain`만 `changes`로 노출하고, 나머지(기준선·근거부족·변화없음)는 `quietChanges`(최대 8건)와 `changeCounts.quiet`로 분리합니다. `changeCounts`는 요약 스트립용 상태별 카운트입니다. implications는 포트폴리오와 워치리스트 티커(`sec_ticker_for_name` 이름 해석 포함)를 모두 매칭하고 `source: portfolio|watchlist`를 표기합니다.
 

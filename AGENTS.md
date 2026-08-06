@@ -230,12 +230,12 @@ features/company_analysis/financial_quality_prompt.md
 | Quality Generation | `common/quality_generation` | 생성 품질 목표·자료 루트·preflight·evidence coverage·생성 후 평가·약한 섹션 LLM 개선·telemetry | source-grounded |
 | AI Agent Mode | `agent_mode` | Codex/Claude/Antigravity CLI용 context pack·Direct Bridge·기존 저장소 writeback + 도크 Agent 채팅(`/api/agent/chat`)·수정 제안 diff 승인 writeback(`/api/agent/proposals/{id}`)·Watchlist/Portfolio 상담 세션(`/api/agent/consultations`) | source-grounded + Personal Overlay |
 | 투자 리뷰 | `investment_review` | regime/thesis/portfolio/checkpoints/obsidian을 묶은 투자 리뷰 홈 | Personal Overlay |
-| 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그. 0.4부터 Dashboard Legacy 모드에서만 사용하며 설정 파일은 read-only로 유지 | — |
+| 현재 시장 위젯 | `market_widgets` | TradingView 기반 대시보드 Current Market 위젯 설정·허용 카탈로그. 0.5에서 Legacy 모드를 삭제해 화면에서는 쓰지 않으며, 설정 파일은 집중 종목 fallback으로만 read-only로 읽는다 | — |
 | Data Source Reliability | `common/data_reliability` | 공식자료 우선순위·provider status·한국 데이터 보강 경로·Thesis evidence 확장·공식자료 semantic cache/fetch runtime | source-grounded |
 | Fast-Origin Signals | `common/research_library/signals` | 기존 KR RSS(연합인포맥스·연합뉴스)의 빠른 게시 headline을 metadata-only lead로 수집·표시. 자격증명 없이 기본 동작하며 lead는 evidence count/source ledger 제외 | lead (evidence 이전 단계) |
 | Change Intelligence | `common/change_intelligence` | 보고서/스냅샷 커밋 시 artifact-native ChangeBasis 비교로 changeSummary 생성. 추가 LLM 호출 없음 | source-grounded 파생 metadata |
 | 시장 캘린더 | `market_calendar` | 경제지표·중앙은행·휴장일·실적·공시·배당 6종 일정 수집·정규화와 confirmed/estimated badge | — |
-| Research Cockpit 대시보드 | `dashboard` | 변화 피드·네이티브 차트·시장 캘린더·투자 맥락 집계, Cockpit/Legacy 모드 전환 | — |
+| Research Cockpit 대시보드 | `dashboard` | 변화 피드·시장 캘린더·네이티브 차트. 0.5에서 Legacy 모드 삭제 | — |
 | Pixel Office (보류) | `pixel_office` | 리서치 상태를 하나의 픽셀 오피스 장면으로 보여준다. 0.3.0에서는 배선을 전부 끊고 릴리즈 패키지에서도 제외한다. 소스(백엔드 service·PixiJS 씬·13개 오브젝트 레이어)는 재개용으로 저장소에만 남는다. | 보류 |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
@@ -511,7 +511,7 @@ features/company_analysis/financial_quality_prompt.md
 
 ### Research Cockpit 대시보드
 
-- 로직은 `features/dashboard/`에 둔다. 기본 `dashboardMode=cockpit`이며 Legacy 모드로 실제 전환할 수 있다.
+- 로직은 `features/dashboard/`에 둔다. 화면은 `cockpit` 하나이며 0.5에서 Legacy 모드를 삭제했다(저장된 `legacy` 설정은 `cockpit`으로 승격). 패널 순서는 변화 피드 → 시장 캘린더 → 네이티브 차트다.
 - 기존 `data/market-widget-settings.json`은 삭제·수정하지 않고 read-only fallback으로만 읽는다. 새 설정은 `data/dashboard-settings.json`에 저장한다.
 - 초기 cockpit payload에는 외부 network 호출·chart series·iframe이 없고 차트/일정 상세는 lazy fetch한다. 네이티브 차트는 `GET /api/market/chart`와 기존 Lightweight Charts 전역을 재사용한다.
 - `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.

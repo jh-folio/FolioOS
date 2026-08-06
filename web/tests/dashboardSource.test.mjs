@@ -2,35 +2,30 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-test("Dashboard route source owns monitoring APIs and market state component", async () => {
+test("Dashboard renders the cockpit only", async () => {
   const source = await readFile(new URL("../src/app/Dashboard.tsx", import.meta.url), "utf8");
-  const legacySource = await readFile(new URL("../src/app/dashboard/LegacyMarketWidgetBoard.tsx", import.meta.url), "utf8");
 
   assert.match(source, /data-react-dashboard/);
-  assert.match(source, /\/api\/dashboard/);
-  assert.match(source, /\/api\/investment-review/);
-  assert.match(source, /\/api\/investment-review\/generate/);
-  assert.match(source, /lazy\(\(\) => import\("\.\/dashboard\/LegacyMarketWidgetBoard"\)\)/);
-  assert.match(legacySource, /\/api\/market-widgets\/settings/);
-  assert.match(legacySource, /FolioTradingViewWidgets/);
-  assert.match(legacySource, /folio:market-widgets-updated/);
-  assert.match(legacySource, /id="editGlobalMarketsBtn"/);
-  assert.match(legacySource, /id="addMarketChartBtn"/);
-  assert.match(legacySource, /id="resetMarketWidgetsBtn"/);
-  assert.match(legacySource, /id="marketWidgetBoard"/);
-  assert.match(legacySource, /saveWidgetSettings/);
-  assert.match(legacySource, /editWidget/);
-  assert.match(legacySource, /deleteWidget/);
-  assert.match(legacySource, /market-widget-context-menu is-open/);
-  assert.match(legacySource, /data-market-widget-action="delete"/);
-  assert.match(legacySource, /addWidget/);
-  assert.match(legacySource, /resetWidgets/);
-  assert.match(source, /MarketStateDashboard/);
-  assert.match(source, /recentReports/);
-  assert.match(source, /keyCheckpoints/);
-  assert.match(legacySource, /data-current-market/);
+  assert.match(source, /<ResearchCockpit \/>/);
+  // Legacy(위젯 보드 + 투자 리뷰 요약)는 0.5에서 삭제했다. 한 릴리즈만 두기로 한
+  // rollback 경로였고, 같은 화면을 두 벌 유지할 이유가 없다.
+  assert.doesNotMatch(source, /LegacyMarketWidgetBoard/);
+  assert.doesNotMatch(source, /dashboardMode/);
+  assert.doesNotMatch(source, /\/api\/investment-review/);
   assert.doesNotMatch(source, /home-launcher/);
   assert.doesNotMatch(source, /오늘의 투자 리뷰/);
+});
+
+test("cockpit panel order puts today's schedule before price movement", async () => {
+  const source = await readFile(new URL("../src/app/dashboard/ResearchCockpit.tsx", import.meta.url), "utf8");
+
+  const feed = source.indexOf("<ChangeFeed");
+  const calendar = source.indexOf("<MarketCalendar");
+  const chart = source.indexOf("<NativeMarketChart");
+  assert.ok(feed >= 0 && calendar > feed, "변화 피드가 먼저다");
+  assert.ok(chart > calendar, "일정이 차트보다 위다 — 오늘 무엇을 지켜볼지가 가격 움직임보다 먼저 필요하다");
+  // 브리핑 lineage가 시장 단위라 개별 보유 티커와 걸리지 않아 늘 비어 있었다.
+  assert.doesNotMatch(source, /InvestmentImplications/);
 });
 
 test("AppShell renders Dashboard on the dashboard route", async () => {

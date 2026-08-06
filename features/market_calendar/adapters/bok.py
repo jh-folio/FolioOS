@@ -28,7 +28,8 @@ BOK_RELEASES: dict[str, tuple[str, str, str, int]] = {
     "901Y009": ("한국 소비자물가지수 (CPI)", "M", "0", 3),
     "901Y014": ("한국 생산자물가지수 (PPI)", "M", "*AA", 2),
 }
-_ECOS_DOC = "https://ecos.bok.or.kr/api/"
+# 사람이 읽는 통계 포털. 예전 값은 API 엔드포인트라 클릭하면 개발자 문서가 열렸다.
+_ECOS_DOC = "https://ecos.bok.or.kr/"
 
 
 def normalize_bok_events(rows: list[dict]) -> list[dict]:
@@ -90,9 +91,35 @@ def fetch_bok_macro_events(api_key: str, *, start: str, end: str, timeout: float
             continue
 
         observations = (payload.get("StatisticSearch") or {}).get("row") or []
-        months = sorted({m for m in (_parse_ecos_month(o.get("TIME")) for o in observations) if m})
+        by_month = {m: o for o, m in ((o, _parse_ecos_month(o.get("TIME"))) for o in observations) if m}
+        months = sorted(by_month)
         if not months:
             continue
+
+        # 이미 관측된 달은 발표가 끝난 것이다. ECOS가 값을 함께 주므로 예정이 아니라
+        # 결과로 싣는다 — 예정만 남기면 발표 뒤에 캘린더를 다시 열 이유가 없다.
+        for index, month in enumerate(months):
+            release = month.replace(day=15)
+            if not (start_date <= release <= end_date):
+                continue
+            observation = by_month[month]
+            previous = by_month.get(months[index - 1]) if index else None
+            rows.append({
+                "title": title,
+                "market": "KR",
+                "country": "KR",
+                "kind": "central_bank" if stat_code == "722Y001" else "macro",
+                "startsAt": f"{release.isoformat()}T08:00:00",
+                "timezone": "Asia/Seoul",
+                "importance": importance,
+                "status": "actual",
+                "source": "Bank of Korea ECOS",
+                "sourceUrl": _ECOS_DOC,
+                "actualValue": observation.get("DATA_VALUE"),
+                "previousValue": (previous or {}).get("DATA_VALUE"),
+                "unit": observation.get("UNIT_NAME"),
+                "observedAt": str(observation.get("TIME") or ""),
+            })
 
         # 마지막 관측월 다음 달부터 월 단위로 투영한다. ECOS가 공표 일정을 주지 않으므로
         # 일자는 해당 월 중순으로 두고 estimated로 표시한다.
