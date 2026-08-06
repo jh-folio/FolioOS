@@ -43,8 +43,6 @@ MARKET_CALENDAR_INTERVAL_MINUTES = 360
 def default_settings() -> dict:
     return {
         "rss": {"enabled": False, "intervalMinutes": 60, "saveFullText": True},
-        # 자격증명이 필요 없는 공개 피드만 돌므로 기본으로 켠다.
-        "signals": {"enabled": True, "intervalMinutes": 5},
         "marketMemory": {"enabled": False, "intervalMinutes": 1440, "runAfterRss": True},
         "briefing": {
             "enabled": False,
@@ -67,7 +65,6 @@ def normalize_settings(raw: dict | None) -> dict:
     raw = raw or {}
     defaults = default_settings()
     rss = raw.get("rss") or {}
-    signals = raw.get("signals") or {}
     memory = raw.get("marketMemory") or {}
     briefing = raw.get("briefing") or {}
     missed = raw.get("missedRuns") or {}
@@ -76,10 +73,6 @@ def normalize_settings(raw: dict | None) -> dict:
             "enabled": _bool(rss.get("enabled", defaults["rss"]["enabled"])),
             "intervalMinutes": _int(rss.get("intervalMinutes"), defaults["rss"]["intervalMinutes"], 15),
             "saveFullText": _bool(rss.get("saveFullText", defaults["rss"]["saveFullText"])),
-        },
-        "signals": {
-            "enabled": _bool(signals.get("enabled", defaults["signals"]["enabled"])),
-            "intervalMinutes": _int(signals.get("intervalMinutes"), defaults["signals"]["intervalMinutes"], 1),
         },
         "marketMemory": {
             "enabled": _bool(memory.get("enabled", defaults["marketMemory"]["enabled"])),

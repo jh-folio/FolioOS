@@ -28,20 +28,20 @@ def test_adding_a_report_moves_the_signal(tmp_path: Path):
     assert content_revisions(tmp_path)["topicReport"] != before
 
 
-def test_deleting_the_newest_report_also_moves_the_signal(tmp_path: Path):
-    """자식 파일만 보면 최신 파일이 사라질 때 값이 내려가 삭제가 신호로 전달되지 않는다."""
+def test_the_directory_itself_counts_so_deletions_are_visible(tmp_path: Path):
+    """자식 파일만 보면 최신 파일이 사라질 때 값이 내려가 삭제가 신호로 전달되지 않는다.
+
+    삭제는 디렉터리 mtime을 올린다. 시계 경쟁 없이 그 값이 반영되는지만 본다.
+    """
     reports = tmp_path / "briefings"
     reports.mkdir()
-    old = reports / "old.json"
-    old.write_text("{}", encoding="utf-8")
-    os.utime(old, (1_000_000, 1_000_000))
-    newest = reports / "new.json"
-    newest.write_text("{}", encoding="utf-8")
-    before = content_revisions(tmp_path)["briefing"]
+    stale = reports / "old.json"
+    stale.write_text("{}", encoding="utf-8")
+    os.utime(stale, (1_000_000, 1_000_000))
+    # 디렉터리를 자식보다 확실히 최신으로 둔다.
+    os.utime(reports, (2_000_000, 2_000_000))
 
-    newest.unlink()
-
-    assert content_revisions(tmp_path)["briefing"] != before
+    assert content_revisions(tmp_path)["briefing"] == 2_000_000 * 10**9
 
 
 def test_a_single_file_store_is_watched_too(tmp_path: Path):

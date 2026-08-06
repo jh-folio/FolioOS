@@ -29,7 +29,6 @@ import { ReportBody } from "./reportReader/ReportBody";
 import { ReportReaderShell } from "./reportReader/ReportReaderShell";
 import { PersonalOverlayView } from "./reportReader/PersonalOverlayView";
 import { RouteHero } from "./RouteHero";
-import { AgentWorkLog } from "./AgentWorkLog";
 import { marketStateContextProjection, readMarketStateRef } from "./marketStateContext";
 import {
   deepResearchCollectionHash,
@@ -493,7 +492,6 @@ function PlanReview({
 
 export function DeepResearchRoute() {
   const contentRevision = useContentRevision("topicReport");
-  const [workLogRefreshKey, setWorkLogRefreshKey] = useState(0);
   const [reports, setReports] = useState<TopicReportSummary[]>([]);
   const [selected, setSelected] = useState<TopicReport | null>(null);
   const initialLocation = useMemo(() => parseDeepResearchLocation(window.location.hash), []);
@@ -631,7 +629,6 @@ export function DeepResearchRoute() {
       const result = (event as CustomEvent<ProposalLifecycleResult>).detail;
       if (proposalTargetsContext(result, window.FolioAgent?.currentContext)) {
         setProposalReloadKey((value) => value + 1);
-        setWorkLogRefreshKey((value) => value + 1);
       }
     };
     window.addEventListener(PROPOSAL_LIFECYCLE_EVENT, handleProposalLifecycle);
@@ -745,7 +742,6 @@ export function DeepResearchRoute() {
       const job = isJobEnvelope(response) ? response.job : isAgentJob(response) ? response : null;
       if (!job) throw new Error("생성 작업 ID를 확인하지 못했습니다.");
       const done = await pollJob(job, request.signal);
-      setWorkLogRefreshKey((current) => current + 1);
       if (!isCurrentRequest(request.id)) return;
       const reportId = done.result?.reportId || done.result?.artifactId || "";
       if (!reportId) throw new Error("생성된 보고서 ID를 확인하지 못했습니다.");
@@ -758,7 +754,6 @@ export function DeepResearchRoute() {
       setTopicHash(report.id);
       setReactAgentContextScope("deep-research", { surface: "topic_report_reader", viewId: "topicrpt", reportKind: "topic_report", reportId: report.id || "", collectionId: selectedCollectionRef?.id || null, collectionRevision: selectedCollectionRef?.revision || null });
     } catch (err) {
-      setWorkLogRefreshKey((current) => current + 1);
       if (err instanceof DOMException && err.name === "AbortError") return;
       if (!isCurrentRequest(request.id)) return;
       setError(errorCopy("generation", err));
@@ -1102,7 +1097,6 @@ export function DeepResearchRoute() {
           </section>
         )) : <div className="report-feed-empty" data-qa="dr-report-list-empty">저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요.</div>}
       </div>
-      <AgentWorkLog surface="deep-research" pageSize={20} defaultFilter="task" refreshKey={workLogRefreshKey} />
     </div>
   );
 }

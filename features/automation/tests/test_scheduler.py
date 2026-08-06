@@ -74,15 +74,13 @@ def test_run_due_automations_chains_memory_after_rss(monkeypatch):
     assert [kind for kind in calls if kind != "marketCalendar"] == ["rss", "marketMemory"]
 
 
-def test_signals_collection_is_on_by_default_without_user_setup():
-    """공개 피드만 쓰므로 사용자가 설정하지 않아도 빠른 신호가 수집돼야 한다."""
-    defaults = service.normalize_settings({})
-    assert defaults["signals"]["enabled"] is True
-    assert defaults["signals"]["intervalMinutes"] == 5
+def test_the_signals_automation_is_gone():
+    """별도 자동화로 둘 이유가 없어졌다. 승격은 RSS 수집에 함께 실린다."""
+    assert "signals" not in service.normalize_settings({})
 
 
-def test_rss_run_also_promotes_kr_leads(monkeypatch):
-    """signals 자동화를 꺼도 RSS만 돌리면 한국 lead는 표시돼야 한다(네트워크 없음)."""
+def test_rss_run_still_promotes_kr_leads(monkeypatch):
+    """설정을 없앤 뒤에도 한국 lead 승격은 RSS 수집으로 계속된다(네트워크 없음)."""
     monkeypatch.setattr(service, "import_rssarchive", lambda **_kwargs: {"ok": True})
     monkeypatch.setattr(service, "promote_kr_rss_leads", lambda _data_dir: 7)
     monkeypatch.setattr(service, "_append_run", lambda *_args, **_kwargs: None)

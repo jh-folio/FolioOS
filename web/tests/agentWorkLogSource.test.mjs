@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 const appFile = (name) => new URL(`../src/app/${name}`, import.meta.url);
 
-test("Home and Deep Research reuse the metadata-only Work Log", async () => {
+test("the metadata-only Work Log lives on Home alone", async () => {
   const [home, deep, component] = await Promise.all([
     readFile(appFile("AgentHome.tsx"), "utf8"),
     readFile(appFile("DeepResearchRoute.tsx"), "utf8"),
@@ -12,7 +12,8 @@ test("Home and Deep Research reuse the metadata-only Work Log", async () => {
   ]);
 
   assert.match(home, /<AgentWorkLog surface="home"/);
-  assert.match(deep, /<AgentWorkLog surface="deep-research"/);
+  // 딥 리서치에만 따로 붙어 있어 화면마다 다른 것이 보였다. 기록은 Home 한 곳이다.
+  assert.doesNotMatch(deep, /<AgentWorkLog/);
   assert.doesNotMatch(home, /getJson<AgentJob\[]>\("\/api\/jobs"\)/);
   assert.match(component, /\/api\/agent\/work-log/);
   assert.match(component, /data-qa="work-log"/);

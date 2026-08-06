@@ -58,7 +58,6 @@ type AgentSettings = {
 
 type AutomationSettings = {
   rss?: { enabled?: boolean; intervalMinutes?: number | string; saveFullText?: boolean };
-  signals?: { enabled?: boolean; intervalMinutes?: number | string };
   marketMemory?: { enabled?: boolean; intervalMinutes?: number | string; runAfterRss?: boolean };
   briefing?: {
     enabled?: boolean;
@@ -158,10 +157,6 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
       enabled: Boolean(form.rss?.enabled),
       intervalMinutes: form.rss?.intervalMinutes || 60,
       saveFullText: form.rss?.saveFullText !== false,
-    },
-    signals: {
-      enabled: Boolean(form.signals?.enabled),
-      intervalMinutes: form.signals?.intervalMinutes || 1,
     },
     marketMemory: {
       enabled: Boolean(form.marketMemory?.enabled),
@@ -285,7 +280,10 @@ export function SettingsRoute() {
       const result = await postJson<CacheCleanup>("/api/cache/cleanup", {});
       const statsPayload = await getJson<CacheStats>("/api/cache/stats");
       setCacheStats(statsPayload);
-      setStatus(`캐시 정리 완료: ${result.deleted || 0}개 삭제, ${result.freed_mb || 0}MB 확보`);
+      // 0개 삭제만 적으면 고장인지 지울 게 없는 것인지 알 수 없다.
+      setStatus(result.deleted
+        ? `캐시 정리 완료: ${result.deleted}개 삭제, ${result.freed_mb || 0}MB 확보`
+        : "정리할 오래된 캐시가 없습니다. 보관 기간이 지난 파일만 지웁니다.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "캐시 정리에 실패했습니다.");
     } finally {
@@ -676,18 +674,6 @@ export function SettingsRoute() {
                 </div>
                 <label className="field"><span>수집 간격</span><select value={String(automation.rss?.intervalMinutes || 60)} onChange={(event) => setAutomation({ ...automation, rss: { ...automation.rss, intervalMinutes: event.currentTarget.value } })}><option value="15">15분마다</option><option value="30">30분마다</option><option value="60">1시간마다</option><option value="180">3시간마다</option></select></label>
                 <div className="automation-inline-switch"><span>기사 전문 저장 (무료 공개 본문만, 로컬 보관용)</span><ToggleSwitch ariaLabel="기사 전문 저장" checked={automation.rss?.saveFullText !== false} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, saveFullText: checked } })} compact /></div>
-              </section>
-
-              <section className="automation-card">
-                <div className="automation-card-head">
-                  <div>
-                    <span>Fast-origin signals</span>
-                    <strong>저지연 리드 수집</strong>
-                    <p>설정된 속보 RSS와 기존 한국 RSS lead를 규칙 기반으로 수집합니다. Agent는 호출하지 않습니다.</p>
-                  </div>
-                  <ToggleSwitch ariaLabel="저지연 리드 자동 수집" checked={Boolean(automation.signals?.enabled)} onChange={(checked) => setAutomation({ ...automation, signals: { ...automation.signals, enabled: checked } })} compact />
-                </div>
-                <label className="field"><span>확인 간격</span><select value={String(automation.signals?.intervalMinutes || 1)} onChange={(event) => setAutomation({ ...automation, signals: { ...automation.signals, intervalMinutes: event.currentTarget.value } })}><option value="1">1분마다</option><option value="2">2분마다</option><option value="5">5분마다</option><option value="10">10분마다</option></select></label>
               </section>
 
               <section className="automation-card">
