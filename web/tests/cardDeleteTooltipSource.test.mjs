@@ -28,7 +28,10 @@ test("change feed explains what changed and against which baseline", async () =>
   const source = await readFile(new URL("../src/app/dashboard/ChangeFeed.tsx", import.meta.url), "utf8");
   // 눌러서 이동하기 전에 왜 떴는지 알 수 있어야 한다.
   assert.match(source, /changeReasonText\(event\)/);
-  assert.match(source, /baselineText\(event\)/);
+  // 카드는 "무엇이 어떻게 달라졌다" 한 줄까지만 말한다. 기준선·항목 대조는
+  // 보고서에 있으므로 카드에서 뺐다.
+  assert.doesNotMatch(source, /aria-expanded=\{expanded\}/);
+  assert.doesNotMatch(source, /ChangeItemContrast/);
   const helpers = await readFile(new URL("../src/app/changeEvents.ts", import.meta.url), "utf8");
   assert.match(helpers, /export function changeReasonText/);
   assert.match(helpers, /export function baselineText/);

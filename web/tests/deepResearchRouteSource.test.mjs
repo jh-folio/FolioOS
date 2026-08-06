@@ -26,7 +26,8 @@ test("Deep Research route preserves legacy visual class contracts", async () => 
 
   assert.match(source, /RouteHero/);
   assert.match(source, /input-panel topicrpt-form/);
-  assert.match(source, /topicrpt-preset/);
+  // 선택지가 하나뿐인 프리셋 줄은 컨트롤이 아니라 라벨이라 제거했다.
+  assert.doesNotMatch(source, /topicrpt-preset/);
   assert.match(source, /topicrpt-action-row/);
   assert.match(source, /report-feed-card is-topic/);
   assert.doesNotMatch(source, />품질 모드</);

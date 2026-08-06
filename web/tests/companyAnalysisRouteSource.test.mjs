@@ -40,9 +40,10 @@ test("Company Analysis route owns feed, form, and reader APIs", async () => {
   assert.match(source, /visibleReportGroups/);
   assert.match(source, /RECENT_ANALYSIS_LIMIT/);
   assert.match(source, /displayMonth/);
-  assert.match(source, /report-feed-outside-controls/);
-  assert.match(source, /report-feed-view-row/);
-  assert.match(source, /report-feed-view-pill/);
+  // `보기`는 패널 밖에 떠 있었다. 검색과 함께 한 찾기 바로 모았다.
+  assert.match(source, /className="find-bar"/);
+  assert.doesNotMatch(source, /className="report-feed-outside-controls"/);
+  assert.match(source, /find-bar__field/);
   assert.match(source, /티커·회사명·보고서 검색/);
 });
 

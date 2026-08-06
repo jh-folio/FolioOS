@@ -2,32 +2,36 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-// 필터가 3개(기간·소스)에서 6개로 늘었다. 시장·국가·언어가 합쳐지면서
-// 목록 옆에서 즉시 적용되던 시장 드롭다운도 이 폼으로 들어왔다.
 const SELECT_FILTERS = ["start", "end", "source", "market", "country", "language"];
 
-test("RSS filter inputs read the event before the state updater runs", async () => {
+test("RSS filter handlers read the event value before any async work", async () => {
   const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");
-  // 상태 업데이터는 렌더 시점에 실행되고 그때 React는 currentTarget을 비운다.
-  // 업데이터 안에서 event를 읽으면 null.value로 터져 화면 전체가 언마운트된다.
+  // React는 렌더 시점에 currentTarget을 비운다. 상태 업데이터 안이나 await 뒤에서
+  // 읽으면 null.value로 터져 화면 전체가 언마운트된다. 인자를 만들 때 읽어야 한다.
   assert.doesNotMatch(source, /setDraftFilters\(\([^)]*\) => \([^)]*event\.currentTarget/);
+  assert.doesNotMatch(source, /await[\s\S]{0,120}?event\.currentTarget/);
 
-  const captured = source.match(/const value = event\.currentTarget\.value;/g) || [];
-  assert.equal(
-    captured.length,
-    SELECT_FILTERS.length,
-    `${SELECT_FILTERS.length}개 필터 모두 값을 먼저 읽어야 합니다`,
-  );
   for (const field of SELECT_FILTERS) {
-    assert.ok(source.includes(`${field}: value`), `${field} 필터가 캡처한 값을 써야 합니다`);
+    assert.ok(
+      source.includes(`${field}: event.currentTarget.value`) || source.includes(`${field}: value`),
+      `${field} 필터가 핸들러 안에서 값을 읽어야 합니다`,
+    );
   }
 });
 
-test("RSS filters live in one panel rather than three surfaces", async () => {
+test("RSS select filters apply on change without a submit button", async () => {
+  const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");
+  // 다른 탭은 전부 즉시 적용이다. 여기만 `필터 적용` 제출을 요구하면 같은 일에
+  // 다른 조작을 배우게 한다. 전문 검색은 별개 동작이라 버튼을 유지한다.
+  assert.ok(!source.includes("필터 적용"), "선택 필터는 즉시 적용되어야 합니다");
+  assert.ok(source.includes("본문 검색"), "전문 검색 버튼은 남아 있어야 합니다");
+});
+
+test("RSS filters and search live in one find bar", async () => {
   const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");
   // 기간·소스 폼, 별도 검색 폼, 목록 옆 즉시적용 시장 드롭다운으로 나뉘어 있었다.
-  const panels = source.match(/className="react-rss-control-panel/g) || [];
-  assert.equal(panels.length, 1, "필터·검색이 한 패널에 있어야 합니다");
+  const bars = source.match(/className="find-bar find-bar--stacked/g) || [];
+  assert.equal(bars.length, 1, "필터·검색이 한 찾기 바에 있어야 합니다");
   assert.ok(!source.includes("react-rss-market-controls"), "목록 옆 시장 드롭다운은 제거됐어야 합니다");
   assert.ok(!source.includes("react-rss-search-panel"), "별도 검색 패널은 제거됐어야 합니다");
 });

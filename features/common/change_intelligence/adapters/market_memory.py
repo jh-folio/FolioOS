@@ -18,7 +18,7 @@ def build_market_memory_basis(snapshot: dict) -> dict:
             })
     ref_ids = [row["id"] for row in refs]
     units = [{
-        "id": stable_id("regime", snapshot.get("horizon")), "kind": "market_regime", "subject": "marketRegime",
+        "id": stable_id("regime", snapshot.get("horizon")), "kind": "market_regime", "subject": "시장 국면",
         "currentValue": snapshot.get("marketRegime"), "direction": "state", "magnitude": float(snapshot.get("confidence") or 0.5),
         "horizon": snapshot.get("horizon") or "medium_term", "sourceRefIds": ref_ids[:12],
     }]

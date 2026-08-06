@@ -3,7 +3,6 @@ import { openReactAgentDock } from "../agentContext";
 import { legacyBridge } from "../legacyBridge";
 import {
   ARTIFACT_KIND_LABELS,
-  baselineText,
   changedValueText,
   changeReasonText,
   type ChangedItem,
@@ -112,47 +111,12 @@ export function isReadableItem(item: ChangedItem): boolean {
   return !/^[0-9a-f]{12,}$/i.test(String(item.subject || ""));
 }
 
-function ChangeItemContrast({ item }: { item: ChangedItem }) {
-  const before = changedValueText(item, item.previousValue);
-  const after = changedValueText(item, item.currentValue);
-  const beforeTitles = item.previousContextDocs || [];
-  const afterTitles = item.contextDocs || [];
-  const verdict = SEMANTIC_VERDICT_LABELS[String(item.semanticVerdict || "")];
-  return (
-    <li className="change-contrast">
-      <div className="change-contrast__subject">
-        <strong>{item.subject || "항목"}</strong>
-        {verdict ? <span className="chip change-verdict-chip" data-tone={verdict.tone}>{verdict.label}</span> : null}
-      </div>
-      {item.semanticNote ? <p className="change-contrast__note">{item.semanticNote}</p> : null}
-      <div className="change-contrast__cols">
-        <div>
-          <span className="change-contrast__col-label">직전</span>
-          {before ? <p>{before}</p> : <p className="change-contrast__empty">{item.change === "added" ? "없던 항목" : "값 없음"}</p>}
-          {beforeTitles.length ? <ul>{beforeTitles.map((title) => <li key={title}>{title}</li>)}</ul> : null}
-        </div>
-        <div>
-          <span className="change-contrast__col-label">현재</span>
-          {after ? <p>{after}</p> : <p className="change-contrast__empty">{item.change === "removed" ? "사라진 항목" : "값 없음"}</p>}
-          {afterTitles.length ? <ul>{afterTitles.map((title) => <li key={title}>{title}</li>)}</ul> : null}
-        </div>
-      </div>
-    </li>
-  );
-}
-
 function ChangeCard({ event }: { event: ChangeEvent }) {
-  const [expanded, setExpanded] = useState(false);
   // 동적으로 mount되는 로고 슬롯은 bridge를 다시 불러야 채워진다 (시장 내러티브와 같은 방식).
   useEffect(() => { legacyBridge().applyAgentBranding?.(); }, []);
   const item = primaryChangedItem(event);
   const verdict = SEMANTIC_VERDICT_LABELS[String(item?.semanticVerdict || "")];
-  const allItems = event.changedItems || [];
-  const items = allItems.filter(isReadableItem);
-  const hiddenCount = allItems.length - items.length;
   const reason = item?.semanticNote || changeReasonText(event);
-  const targetRoute = changeEventRoute(event);
-  const baseline = baselineRoute(event);
   return (
     <li data-status={event.status} data-tone={verdict?.tone || ""}>
       <div className="cockpit-change-card">
@@ -162,19 +126,12 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
           <time>{event.generatedAt ? new Date(event.generatedAt).toLocaleString("ko-KR") : ""}</time>
         </div>
         <strong>{item?.subject || artifactLabel(event)}</strong>
+        {/* 카드는 "무엇이 어떻게 달라졌다" 한 줄까지만 말한다. 순위·비중 대조는
+            보도량 변화지 내용 변화가 아니라서 위 안내와 어긋났고, 항목별 펼치기는
+            보고서에 이미 있는 내용을 카드에서 한 번 더 펼치는 것이었다. */}
         {reason ? <em className="cockpit-change-reason">{reason}</em> : null}
-        <small>{artifactLabel(event)}
-          {baselineText(event) ? <> · {baselineText(event)}</> : null}
-          {Number(event.materiality || 0) > 0 ? <> · 중요도 {Math.round(Number(event.materiality) * 100)}</> : null}
-          {Number(event.reliability || 0) > 0 ? <> · 신뢰도 {Math.round(Number(event.reliability) * 100)}</> : null}
-        </small>
         <div className="cockpit-change-card__actions">
-          <button type="button" className="btn btn--sm agent-action" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
-            {expanded ? "접기" : `펼치기${items.length > 1 ? ` (${items.length}건)` : ""}`}
-          </button>
-          <button type="button" className="btn btn--sm agent-action" onClick={() => { window.location.hash = targetRoute; }}>보고서 열기</button>
-          {baseline ? <button type="button" className="btn btn--sm agent-action" onClick={() => { window.location.hash = baseline; }}>기준 열기</button> : null}
-          {/* 시장 내러티브 카드와 같은 로고 아이콘 버튼. 슬롯은 applyAgentBranding bridge가 채운다. */}
+          <button type="button" className="btn btn--sm" onClick={() => { window.location.hash = changeEventRoute(event); }}>보고서 열기</button>
           <button
             type="button"
             className="btn btn--icon agent-action agent-ask-btn"
@@ -186,12 +143,6 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
             <span className="agent-logo-slot" aria-hidden="true" />
           </button>
         </div>
-        {expanded ? (
-          <ol className="change-contrast-list">
-            {items.map((row) => <ChangeItemContrast item={row} key={row.id || row.subject} />)}
-            {hiddenCount > 0 ? <li className="change-contrast-list__hidden">제목이 남지 않은 이전 형식 항목 {hiddenCount}건은 생략했습니다.</li> : null}
-          </ol>
-        ) : null}
       </div>
     </li>
   );
@@ -199,6 +150,13 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
 
 export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: ChangeEvent[] }) {
   const [storyMarket, setStoryMarket] = useState<StoryMarket>("us");
+  // 의미 판정이 끝난 변화만 본문에 둔다. `내용 미평가`(LLM 없이 생성)와 보도량
+  // 이동만 있는 건은 "무엇이 달라졌다"를 아직 말할 수 없으므로 접힌 목록으로.
+  const confirmed = events.filter((event) => {
+    const verdict = String(primaryChangedItem(event)?.semanticVerdict || "");
+    return verdict === "new_information" || verdict === "reversal" || verdict === "trend_development";
+  });
+  const pending = [...events.filter((event) => !confirmed.includes(event)), ...(quiet || [])];
   return (
     <section className="cockpit-panel cockpit-change-feed" aria-labelledby="cockpit-change-title">
       <div className="cockpit-panel__head">
@@ -214,21 +172,20 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
       <StoryShare market={storyMarket} />
       <div className="cockpit-change-feed__subhead">
         <span>내용의 변화</span>
-        <b>{events.length}건</b>
+        <b>{confirmed.length}건</b>
       </div>
-      {events.length ? <ol>
-        {events.map((event) => <ChangeCard event={event} key={eventKey(event)} />)}
+      {confirmed.length ? <ol>
+        {confirmed.map((event) => <ChangeCard event={event} key={eventKey(event)} />)}
       </ol> : (
-        <p className="cockpit-empty">
-          아직 확인된 중요한 변화가 없습니다. 새 브리핑·기업 분석·딥 리서치를 만들면 직전 보고서와 비교한 결과가 여기에 표시됩니다.
-        </p>
+        <p className="cockpit-empty">아직 확인된 내용 변화가 없습니다.</p>
       )}
-      {quiet?.length ? (
+      {pending.length ? (
         <details className="cockpit-quiet">
-          {/* 기준선 생성·근거 부족·변화 없음이 함께 들어가므로 "변화 없음"으로 뭉뚱그리지 않는다. */}
-          <summary>그 외 평가 {quiet.length}건 보기</summary>
+          {/* 기준선 생성·근거 부족·변화 없음·내용 미평가가 함께 들어가므로
+              "변화 없음"으로 뭉뚱그리지 않는다. */}
+          <summary>내용 미평가·보도량 이동 {pending.length}건 보기</summary>
           <ol>
-            {quiet.map((event) => (
+            {pending.map((event) => (
               <li key={eventKey(event)}>
                 <span>{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span>
                 <em>{artifactLabel(event)}{event.artifactId ? ` · ${String(event.artifactId).slice(0, 24)}` : ""}</em>

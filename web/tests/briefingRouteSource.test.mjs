@@ -26,7 +26,9 @@ test("Briefing route mirrors the legacy generation and archive controls", async 
   assert.match(source, /기준일`/);
   assert.doesNotMatch(source, />품질 모드</);
   assert.doesNotMatch(source, /setQualityMode/);
-  assert.match(source, /briefing-archive-filters/);
+  // 검색·시장·유형·기간·보기가 한 찾기 바에 모여야 한다(예전에는 패널 안팎으로 갈렸다).
+  assert.match(source, /className="find-bar"/);
+  assert.doesNotMatch(source, /className="report-feed-outside-controls"/);
   assert.match(source, /archiveQuery/);
   assert.match(source, /archiveMarket/);
   assert.match(source, /archiveType/);
@@ -36,9 +38,8 @@ test("Briefing route mirrors the legacy generation and archive controls", async 
   assert.match(source, /ArchiveViewMode = "recent" \| "month" \| "market"/);
   assert.match(source, /RECENT_BRIEFING_LIMIT/);
   assert.match(source, /formatArchiveMonth/);
-  assert.match(source, /report-feed-outside-controls/);
-  assert.match(source, /report-feed-view-row/);
-  assert.match(source, /report-feed-view-pill/);
+  // 시장·유형·보기는 패널 밖 별도 줄이 아니라 찾기 바 안의 필드다.
+  assert.match(source, /find-bar__field/);
   assert.match(source, /value="recent"/);
   assert.match(source, /value="month"/);
   assert.match(source, /URLSearchParams/);

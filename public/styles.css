@@ -4603,9 +4603,9 @@ h1 {
   border-color: var(--folio-surface-dark-2);
 }
 
-.filter-btn.clear:hover, .action-link:hover, .toggle:hover {
-  background: var(--folio-ink-soft);
-  color: var(--folio-ink-inverse);
+.action-link:hover, .toggle:hover {
+  background: var(--surface-control-hover);
+  color: var(--folio-ink);
 }
 
 .btn.download:hover {
@@ -4729,9 +4729,9 @@ button:disabled {
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: var(--folio-surface-dark);
-  border-color: var(--folio-surface-dark);
-  color: var(--folio-ink-inverse);
+  background: var(--surface-control-hover);
+  border-color: transparent;
+  color: var(--folio-ink);
 }
 
 .icon-btn svg { display: block; }
@@ -11619,8 +11619,8 @@ main.page {
 }
 
 .agent-action:hover {
-  background: var(--folio-surface-dark);
-  color: var(--folio-ink-inverse);
+  background: var(--surface-control-hover);
+  color: var(--folio-ink);
 }
 
 /* 로고만 보여주는 "Agent에게 묻기" 아이콘 버튼 */
