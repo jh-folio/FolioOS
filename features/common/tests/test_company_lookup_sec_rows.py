@@ -67,3 +67,16 @@ def test_sec_company_rows_unwraps_the_fetch_json_envelope():
 def test_sec_company_rows_still_reads_the_raw_sec_shape():
     raw = {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."}}
     assert [r["ticker"] for r in _sec_company_rows(raw)] == ["AAPL"]
+
+
+def test_a_partially_written_cache_is_refetched_not_trusted(monkeypatch):
+    """재조회 조건이 "행이 0개일 때"뿐이면 못 쓰는 캐시가 영구히 남는다.
+
+    실제로 봉투에 싸인 캐시가 행 1개로 읽히는 바람에, 10,412개 회사가 1개가 된
+    상태로 미국 기업 식별이 계속 수동 사전으로 떨어졌다.
+    """
+    from features.common import company_lookup
+
+    assert company_lookup._sec_cache_unusable([]) is True
+    assert company_lookup._sec_cache_unusable([{"ticker": "AAPL"}]) is True
+    assert company_lookup._sec_cache_unusable([{"ticker": "T"}] * company_lookup.MIN_USABLE_SEC_ROWS) is False

@@ -263,8 +263,16 @@ def score_paragraph(paragraph: str, *, sector: str, item: str, form: str = "10-K
 
 
 def ranked_annual_report_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 14) -> dict:
-    """Score the narrative sections of the newest 10-K or 20-F."""
-    cik = normalize_cik(company.get("cik", ""))
+    """Score the narrative sections of the newest 10-K or 20-F.
+
+    CIK는 직접 해결한다. 예전에는 `company["cik"]`만 읽어서, 그 값을 채워주지 못한
+    호출자에게는 조용히 빈 결과를 돌려줬다. 같은 company dict를 받는 companyfacts는
+    티커로 CIK를 스스로 찾기 때문에, **숫자는 오는데 공시 서술만 빠지는** 보고서가
+    나왔다. 두 경로가 같은 해결기를 쓰면 그 비대칭이 생기지 않는다.
+    """
+    from features.company_analysis.sec_companyfacts import resolve_cik
+
+    cik = resolve_cik(company, cache_dir)
     if not cik:
         return {"ok": False, "reason": "no_cik", "paragraphs": [], "metadata": {}}
     metadata = latest_annual_report_metadata(cik, cache_dir)

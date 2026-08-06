@@ -165,7 +165,7 @@ def _load_sec_indexes():
         return
     data = read_json(SEC_TICKER_CACHE_PATH, None)
     rows = list(_sec_company_rows(data))
-    if not rows:
+    if _sec_cache_unusable(rows):
         try:
             SEC_CACHE_DIR.mkdir(parents=True, exist_ok=True)
             req = urllib.request.Request(
@@ -228,6 +228,16 @@ def _sec_company_rows(data):
     for row in rows:
         if isinstance(row, dict):
             yield row
+
+
+# SEC가 배포하는 상장사 목록은 1만 건대다. 그보다 한참 적으면 형식이 어긋났거나
+# 잘린 캐시이며, 그대로 쓰면 미국 기업 식별이 조용히 수동 사전으로 떨어진다.
+# 재조회 조건이 "행이 0개일 때"뿐이라 못 쓰는 캐시가 영구히 남았던 적이 있다.
+MIN_USABLE_SEC_ROWS = 1000
+
+
+def _sec_cache_unusable(rows) -> bool:
+    return len(rows) < MIN_USABLE_SEC_ROWS
 
 
 def _sec_enrich(ticker_str):
@@ -413,7 +423,7 @@ def sec_company_lookup(query):
     SEC_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     data = read_json(SEC_TICKER_CACHE_PATH, None)
     rows = list(_sec_company_rows(data))
-    if not rows:
+    if _sec_cache_unusable(rows):
         try:
             req = urllib.request.Request(
                 "https://www.sec.gov/files/company_tickers.json",
