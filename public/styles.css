@@ -7723,7 +7723,9 @@ button:disabled {
 
 .analysis-chart-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* 폭이 있을 때만 2열이다. 보고서 리더가 552px이라 무조건 2열로 나누면
+     카드가 220px이 되고, 계열 넷짜리 차트가 그 폭에서는 읽히지 않는다. */
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 16px;
 }
 
@@ -7742,13 +7744,15 @@ button:disabled {
 .analysis-chart-plot {
   position: relative;
   width: 100%;
-  height: 360px;
+  /* 고정 높이를 두면 SVG가 폭에 맞춰 줄어든 만큼 아래가 빈다. 그림이 높이를 정한다. */
+  min-height: 0;
   min-width: 0;
 }
 
 .analysis-chart-svg {
   width: 100%;
-  height: 100%;
+  height: auto;
+  display: block;
   overflow: visible;
 }
 
@@ -7951,7 +7955,6 @@ button:disabled {
   .report-hero { padding: 20px 18px; }
   .report-hero h1 { font-size: var(--fs-lg); }
   .analysis-chart-card:last-child:nth-child(odd) { grid-column: auto; }
-  .analysis-chart-plot { height: 320px; }
   .settings-grid { grid-template-columns: 1fr; }
   .cli-provider-row { grid-template-columns: 1fr; }
   .cli-provider-actions { justify-content: flex-start; }
@@ -15585,3 +15588,59 @@ select { min-height: 36px; padding: 0 12px; }
   font-style: normal;
   font-weight: var(--fw-normal);
 }
+
+/* ============================================================
+   기업 분석 차트 — 그림이 카드를 채우고, 숫자는 그림 밖에서 비교한다
+   예전에는 제목·범례·여백이 카드의 4분의 3을 차지해 막대가 손톱만 했고,
+   툴팁이 막대마다 떠서 한 번에 한 계열만 보였다.
+   ============================================================ */
+.analysis-chart-axis { fill: var(--folio-ink-subtle); font-size: 11px; }
+
+/* 기간 전체가 hover 대상이다. 막대 폭을 조준할 필요가 없다. */
+.analysis-chart-band { fill: transparent; cursor: pointer; }
+.analysis-chart-band:hover,
+.analysis-chart-band[data-active="true"] { fill: var(--surface-group); }
+.analysis-chart-band:focus-visible { outline: none; fill: var(--surface-control); }
+
+.analysis-chart-readout {
+  display: grid;
+  gap: 1px;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--r-group);
+  background: var(--surface-group);
+}
+.analysis-chart-readout-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-meta);
+}
+.analysis-chart-readout-head strong { color: var(--folio-ink); font-weight: var(--fw-medium); }
+.analysis-chart-readout-head span { color: var(--folio-ink-subtle); }
+
+.analysis-chart-readout-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto 62px;
+  gap: var(--sp-2);
+  align-items: center;
+  margin: 0;
+  padding: 3px 0;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-body-sm, 13px);
+  white-space: nowrap;
+}
+/* 자릿수가 흔들리면 위아래 숫자를 눈으로 비교할 수 없다. */
+.analysis-chart-readout-row b,
+.analysis-chart-readout-row em {
+  font-variant-numeric: tabular-nums;
+  font-style: normal;
+}
+.analysis-chart-readout-row b { color: var(--folio-ink); font-weight: var(--fw-medium); }
+.analysis-chart-readout-row em { font-size: var(--fs-meta); text-align: right; }
+.analysis-chart-readout-row em[data-direction="up"] { color: var(--folio-chart-3); }
+.analysis-chart-readout-row em[data-direction="down"] { color: var(--folio-chart-2); }
+.analysis-chart-readout-row em[data-direction="flat"] { color: var(--folio-ink-subtle); }
+
+.analysis-chart-swatch { width: 9px; height: 9px; border-radius: 50%; }

@@ -974,6 +974,25 @@ def _finite_number(value):
     return number
 
 
+def _metric_quarterly_map(sec_summary, metric):
+    """분기 값을 기간 라벨로 모은다. `2026-03-31` → `2026 Q1`.
+
+    차트는 연간만 읽고 있었다. 8월에 만든 보고서가 1월 결산 회계연도만 그리면
+    그 사이 두 분기가 그림에서 사라진다.
+    """
+    out = {}
+    for row in sec_summary.get("rows", []) or []:
+        if row.get("metric") != metric:
+            continue
+        for item in row.get("quarterly", []) or []:
+            end = str(item.get("end", "") or "")
+            value = _finite_number(item.get("val"))
+            if len(end) >= 7 and value is not None:
+                year, month = end[:4], int(end[5:7])
+                out[f"{year} Q{(month - 1) // 3 + 1}"] = value
+    return out
+
+
 def _metric_annual_map(sec_summary, metric):
     out = {}
     for row in sec_summary.get("rows", []) or []:
@@ -1038,6 +1057,16 @@ def _compute_price_returns(ticker: str) -> dict | None:
         return None
 
 
+def _present_subtitle(base: str, named: list[tuple[str, list]]) -> str:
+    """실제로 값이 있는 계열만 부제에 적는다.
+
+    "Gross, operating, and net margin"이라 적어 놓고 총이익률을 못 그린 적이 있다.
+    공시에 없는 지표를 제목에서 약속하면 독자는 빠진 줄도 모른다.
+    """
+    present = [label for label, values in named if _has_any_number(values)]
+    return f"{base} · {' · '.join(present)}" if present else base
+
+
 def build_company_analysis_charts(materials):
     sec_summary = materials.get("secFacts", {}) or {}
     company = materials.get("company", {}) or {}
@@ -1083,8 +1112,8 @@ def build_company_analysis_charts(materials):
         if _has_any_number(revenue) or _has_any_number(net_income):
             charts.append({
                 "id": "performance",
-                "title": "Performance",
-                "subtitle": "Revenue, operating income, net income, and net margin from SEC companyfacts.",
+                "title": "실적 추이",
+                "subtitle": "SEC companyfacts 연간 보고 기준",
                 "kind": "performance",
                 "years": years,
                 "revenue": revenue,
@@ -1094,6 +1123,32 @@ def build_company_analysis_charts(materials):
                 "netMargin": net_margin,
                 "currency": reporting_currency,
             })
+
+        # 분기 흐름은 연간 추세와 다른 질문에 답한다. 둘 다 그린다.
+        quarter_maps = {
+            metric: _metric_quarterly_map(sec_summary, metric)
+            for metric in ("Revenue", "Operating Income", "Net Income")
+        }
+        quarters = sorted({q for values in quarter_maps.values() for q in values})[-8:]
+        if quarters:
+            q_revenue = [_finite_number(quarter_maps["Revenue"].get(q)) for q in quarters]
+            q_operating = [_finite_number(quarter_maps["Operating Income"].get(q)) for q in quarters]
+            q_net = [_finite_number(quarter_maps["Net Income"].get(q)) for q in quarters]
+            if _has_any_number(q_revenue) or _has_any_number(q_net):
+                charts.append({
+                    "id": "quarterly",
+                    "title": "분기 흐름",
+                    "subtitle": "SEC companyfacts 분기 보고 기준",
+                    "kind": "quarterly",
+                    "years": quarters,
+                    "revenue": q_revenue,
+                    "operatingIncome": q_operating,
+                    "netIncome": q_net,
+                    "netMargin": _ratio_series(q_net, q_revenue),
+                    "currency": reporting_currency,
+                    # 분기는 계절성이 있어 직전 분기가 아니라 전년 동기와 비교한다.
+                    "compareOffset": 4,
+                })
 
         cfo = _series_for_years(metric_maps["Operating Cash Flow"], years)
         capex_raw = _series_for_years(metric_maps["Capital Expenditure"], years)
@@ -1106,8 +1161,11 @@ def build_company_analysis_charts(materials):
         if _has_any_number(cfo) or _has_any_number(free_cash_flow):
             charts.append({
                 "id": "cashflow",
-                "title": "Cash Flow",
-                "subtitle": "Operating cash flow, capital expenditure, free cash flow, and FCF margin.",
+                "title": "현금흐름",
+                "subtitle": _present_subtitle(
+                    "SEC companyfacts 연간 보고 기준",
+                    [("영업활동", cfo), ("설비투자", capex), ("잉여현금흐름", free_cash_flow)],
+                ),
                 "kind": "cashflow",
                 "years": years,
                 "operatingCashFlow": cfo,
@@ -1122,8 +1180,11 @@ def build_company_analysis_charts(materials):
         if _has_any_number(gross_margin) or _has_any_number(operating_margin):
             charts.append({
                 "id": "margins",
-                "title": "Margin Trends",
-                "subtitle": "Gross, operating, and net margin %.",
+                "title": "마진 추이",
+                "subtitle": _present_subtitle(
+                    "매출 대비 비율",
+                    [("매출총이익률", gross_margin), ("영업이익률", operating_margin), ("순이익률", net_margin)],
+                ),
                 "kind": "margins",
                 "years": years,
                 "grossMargin": gross_margin,
@@ -1154,8 +1215,8 @@ def build_company_analysis_charts(materials):
     if scenario_rows:
         charts.append({
             "id": "dcf",
-            "title": "DCF Scenario",
-            "subtitle": "Conservative, base, and optimistic intrinsic value per share.",
+            "title": "DCF 시나리오",
+            "subtitle": "보수·기본·낙관 가정별 주당 내재가치",
             "kind": "dcf",
             "scenarios": scenario_rows,
             "currentPrice": _finite_number(price),
