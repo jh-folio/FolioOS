@@ -827,9 +827,9 @@
         hovertemplate: "%{customdata[0]}<br>등락 %{customdata[1]:+.2f}%<br>종가 %{customdata[2]:,.2f}<br>%{customdata[3]}<extra></extra>",
         tiling: { packing: "squarify", pad: 0 },
         pathbar: { visible: true, thickness: compact ? 18 : 12, textfont: { color: chartTheme().text, size: compact ? 11 : 8 } },
-        // 좁을 때는 섹터까지만. 253x620에서 재보면 깊이를 열수록 읽을 수 있는
+        // 좁을 때는 한 층씩 본다. 253x620에서 재보면 깊이를 열수록 읽을 수 있는
         // 타일이 줄어든다 — 전체 637개 중 ~50개, 산업까지 137개 중 24개,
-        // 섹터만 12개 중 12개. 종목은 섹터를 눌러 들어간다(pathbar로 되돌아온다).
+        // 섹터만 12개 중 12개. 들어가는 일은 아래 handler가 한다.
         maxdepth: compact ? 1 : -1,
         sort: true,
       }], {
@@ -838,8 +838,26 @@
         paper_bgcolor: "rgba(0,0,0,0)",
         font: { family: fontFamily, color: chartTheme().text, size: 14 },
         hoverlabel: { font: { family: fontFamily, size: 14 } },
-      }, { responsive: true, displayModeBar: false, scrollZoom: false }));
+      }, { responsive: true, displayModeBar: false, scrollZoom: false })).then((result) => {
+        if (compact) bindCompactDrill();
+        return result;
+      });
     };
+    // `maxdepth`를 걸면 하위가 렌더되지 않아 Plotly의 기본 드릴다운이 걸릴 대상을
+    // 못 찾는다(섹터를 눌러도 아무 일이 없었다). 우리가 직접 `level`을 옮긴다.
+    // 뿌리에서는 한 층(섹터)만, 들어간 뒤에는 그 노드와 자식 한 층을 그린다.
+    function bindCompactDrill() {
+      if (stage.dataset.drillBound === "true" || typeof stage.on !== "function") return;
+      stage.dataset.drillBound = "true";
+      stage.on("plotly_treemapclick", (event) => {
+        const id = String(event?.points?.[0]?.id || "");
+        // 종목이 마지막 층이다. 더 들어갈 곳이 없다.
+        if (id.startsWith("ticker:")) return false;
+        root.Plotly.restyle(stage, { level: [id], maxdepth: [id ? 2 : 1] });
+        return false;
+      });
+    }
+
     // 깊이는 폭이 정한다. 첫 렌더에서 한 번 정하고 끝내면 도크를 접거나 화면을
     // 돌려 폭이 두 배가 돼도 섹터 열한 개만 남는다.
     const syncDepth = () => {
@@ -848,6 +866,7 @@
       if (next === card.dataset.heatmapCompact) return;
       root.Plotly?.purge?.(stage);
       stage.dataset.rendered = "";
+      stage.dataset.drillBound = "";
       card.querySelector(".briefing-heatmap-hint")?.remove();
       plot();
     };
