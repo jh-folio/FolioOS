@@ -149,14 +149,14 @@ hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 �
 - 해석된 회사명은 화면 확인용이며 저장 payload에 넣지 않는다.
 - 행을 지우면 아래 행 번호가 당겨지므로 표시용 이름도 함께 옮긴다.
 
-## 사진 가져오기 — Agent CLI 경로 (0.5.0)
+## 사진 가져오기 — Agent CLI로 읽기 (0.5.0)
 
-기존 두 경로는 둘 다 사용자에게 무언가를 먼저 시킨다 — 로컬 OCR은 Tesseract(kor+eng) 설치, 외부 Vision은 OpenAI 키 저장과 매 요청 동의다. 이미 CLI 경로를 설정한 사용자에게 그 CLI는 아무것도 더 깔지 않고 이미지를 읽는다. 그래서 사진 스캔의 진입 장벽을 없애는 경로는 이쪽 하나뿐이다.
+기존 두 경로는 둘 다 사용자에게 무언가를 먼저 시킨다 — 로컬 OCR은 Tesseract(kor+eng) 설치, 외부 Vision은 OpenAI 키 저장과 매 요청 동의다. 이미 Agent CLI를 쓰고 있는 사용자에게 그 CLI는 아무것도 더 깔지 않고 이미지를 읽는다. 그래서 사진 스캔의 진입 장벽을 없애는 경로는 이쪽 하나뿐이다.
 
 런타임은 `agent_import.py`이고 `/api/portfolio/import-image/preview?mode=agent`로 부른다.
 
 - **바이트는 프롬프트에 넣지 않는다.** Agent 도크 첨부(`agent_mode/attachment_files.py`)와 같은 방식으로 파일 경로만 알려주고 CLI가 그 파일을 직접 연다. 임시 파일은 `preview_image`의 `TemporaryDirectory`가 성공·실패·취소 어느 쪽이든 지운다. `run_agent_prompt()`는 job을 만들지 않으므로 `data/jobs.json`과 Work Log에도 남지 않는다.
-- **동의 체크박스가 없다.** 설정에서 CLI 경로를 넣은 순간부터 그 프로젝트의 모든 동작에 Agent 사용을 허락한 것으로 본다(AGENTS.md §8 Agent 실행 경계). 여기서 동의를 또 받으면 설치 부담을 없앤 자리에 절차 부담을 넣는 셈이다. 다만 **사진이 그 CLI 제공자에게 전달된다는 사실은 화면이 먼저 말한다** — 허락과 고지는 다른 문제다. 다이얼로그 상단 표기가 `LOCAL-FIRST IMPORT`에서 `PREVIEW ONLY IMPORT`로 바뀐 것도 같은 이유다.
+- **동의 체크박스가 없다.** 설정에서 Agent를 연결한 순간부터 그 프로젝트의 모든 동작에 Agent 사용을 허락한 것으로 본다(AGENTS.md §8 Agent 실행 경계). 여기서 동의를 또 받으면 설치 부담을 없앤 자리에 절차 부담을 넣는 셈이다. 다만 **사진이 그 CLI 제공자에게 전달된다는 사실은 화면이 먼저 말한다** — 허락과 고지는 다른 문제다. 다이얼로그 상단 표기가 `LOCAL-FIRST IMPORT`에서 `PREVIEW ONLY IMPORT`로 바뀐 것도 같은 이유다.
 - **읽기 실패와 빈 결과를 섞지 않는다.** 파싱 실패(`agent_import_not_json`)와 이미지 열기 실패(`agent_import_image_unreadable`)는 오류로 올린다. 빈 목록은 "사진에 종목이 없다"는 뜻이고, 둘을 섞으면 사용자가 읽기 실패를 사진 탓으로 오해한다.
 - 프롬프트가 추정을 막는다. 안 보이는 값은 `null`이며 평가금액을 수량으로 나누는 역산을 금지한다. 합계·총자산·예수금 행은 종목이 아니므로 뺀다.
 - 한 번에 수십 초다(`PORTFOLIO_IMPORT_AGENT_TIMEOUT_SECONDS`, 기본 180초). 화면이 그 사실을 먼저 말한다. 실측(2026-08-07): 4종목 한국·미국 혼합 캡처를 11.9초에 4/4 정확히 읽었다.

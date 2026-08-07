@@ -1,15 +1,15 @@
 """Read a position screenshot with the Agent CLI already configured for the app.
 
 기존 두 경로는 둘 다 사용자에게 무언가를 더 시킨다 — 로컬 OCR은 Tesseract(kor+eng)
-설치, 외부 Vision은 OpenAI 키 저장과 매 요청 동의다. 사용자가 이미 CLI 경로를
-설정했다면 그 CLI는 아무것도 더 깔지 않고 이미지를 읽는다. 그래서 사진 스캔의
+설치, 외부 Vision은 OpenAI 키 저장과 매 요청 동의다. 사용자가 이미 Agent CLI를
+쓰고 있다면 그 CLI는 아무것도 더 깔지 않고 이미지를 읽는다. 그래서 사진 스캔의
 기본 진입 장벽을 없애는 경로는 이쪽이다.
 
 **바이트는 프롬프트에 넣지 않는다.** Agent 도크 첨부(`agent_mode/attachment_files.py`)와
 같은 방식으로 파일 경로만 알려주고 CLI가 그 파일을 직접 연다. 이미지는 호출자의
 임시 폴더에서 살고 블록이 끝나면 사라지며 `data/`에도 job 결과에도 남지 않는다.
 
-**동의 체크박스를 두지 않는다.** 설정에서 CLI 경로를 넣은 순간부터 그 프로젝트의
+**동의 체크박스를 두지 않는다.** 설정에서 Agent를 연결한 순간부터 그 프로젝트의
 모든 동작에 Agent 사용을 허락한 것으로 본다(AGENTS.md §8 Agent 실행 경계). 다만
 사진이 그 CLI 제공자에게 전달된다는 사실은 화면이 먼저 말한다 — 허락과 고지는
 다른 문제다.
@@ -76,14 +76,35 @@ def _positions_from_output(text: str) -> list[dict]:
     return [row for row in rows if isinstance(row, dict)]
 
 
-def cli_available() -> bool:
-    """실행 가능한 Agent CLI가 있는가. 없으면 화면이 이 방식을 못 고르게 한다."""
+def cli_status() -> dict:
+    """이 방식을 쓸 수 있는지와, 못 쓴다면 무엇을 하면 되는지.
+
+    두 가지를 함께 본다. 설정의 `AI Agent 사용` 토글이 꺼져 있으면 CLI가 깔려
+    있어도 쓰지 않는다 — 사용자가 명시적으로 끈 스위치다. 켜져 있으면 브리지가
+    실제로 실행 가능한 어댑터를 찾았는지 본다.
+
+    사유는 브리지가 쓰는 문장을 그대로 옮긴다. 설정 화면에 **CLI 경로를 넣는
+    칸은 없다** — 경로는 PATH에서 자동으로 찾고, `.env`의
+    `FOLIO_AGENT_<이름>_COMMAND`는 PATH 밖에 있을 때 쓰는 예외 통로다. 그러니
+    "설정에서 경로를 지정하라"고 안내하면 없는 칸을 찾게 만든다.
+    """
     try:
         from features.agent_mode import bridge
+        from features.llm_settings.client import ai_agent_enabled
 
-        return bool(bridge.bridge_status().get("available"))
+        if not ai_agent_enabled():
+            return {"available": False, "reason": "agent_disabled", "message": "설정에서 AI Agent가 꺼져 있습니다."}
+        status = bridge.bridge_status()
+        if status.get("available"):
+            return {"available": True, "reason": "", "message": str(status.get("message") or "")}
+        return {"available": False, "reason": "agent_cli_unavailable", "message": str(status.get("message") or "")}
     except Exception:
-        return False
+        # 상태 조회가 터져도 다이얼로그는 열려야 한다. 다른 두 경로가 남아 있다.
+        return {"available": False, "reason": "agent_status_unknown", "message": "Agent CLI 상태를 확인하지 못했습니다."}
+
+
+def cli_available() -> bool:
+    return bool(cli_status().get("available"))
 
 
 def extract_positions(image_path: Path, *, timeout: int = 0) -> list[dict]:

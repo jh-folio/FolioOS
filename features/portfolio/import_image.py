@@ -4,7 +4,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from features.portfolio.agent_import import cli_available, extract_positions as extract_agent
+from features.portfolio.agent_import import cli_status, extract_positions as extract_agent
 from features.portfolio.import_schema import import_preview
 from features.portfolio.local_ocr import extract_positions as extract_local, preprocess_image, tesseract_preflight, validate_image
 from features.portfolio.vision_import import extract_positions as extract_vision
@@ -51,11 +51,14 @@ def preflight_payload() -> dict:
     `ready`는 계속 로컬 OCR의 상태다(기존 호출자 계약). Agent CLI 여부는
     `agent.available`로 따로 싣는다 — 화면이 무엇을 고를 수 있는지 열기 전에
     알아야 방식을 골랐다가 막히는 일이 없다.
+
+    못 쓰는 이유는 `agent.message`에 브리지 문장 그대로 싣는다. `CLI를 찾을 수
+    없다`와 `로그인이 필요하다`는 사용자가 할 일이 다른데, 하나로 뭉뚱그리면
+    설치된 CLI 앞에서 설치 안내를 읽게 된다.
     """
-    agent_ok = cli_available()
     return {
         **tesseract_preflight(),
         "autoInstall": False,
         "languagesRequired": ["kor", "eng"],
-        "agent": {"available": agent_ok, "reason": "" if agent_ok else "agent_cli_unavailable"},
+        "agent": cli_status(),
     }

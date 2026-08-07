@@ -3,8 +3,24 @@ import type { PositionDraft } from "./HoldingsTable";
 
 type ImportDraft = { ticker: string; name?: string; quantity: number | null; averagePrice: number | null; status: "confirmed" | "needs_review" | "unresolved"; action: "skip" | "merge" | "replace"; issues?: string[] };
 type PreviewPayload = { engine?: string; drafts?: ImportDraft[]; notices?: string[]; persisted?: boolean };
-type Preflight = { available?: boolean; ready?: boolean; reason?: string; languages?: string[]; languagesRequired?: string[]; agent?: { available?: boolean; reason?: string } };
+type Preflight = { available?: boolean; ready?: boolean; reason?: string; languages?: string[]; languagesRequired?: string[]; agent?: { available?: boolean; reason?: string; message?: string } };
 type ImportMode = "agent" | "local" | "vision";
+
+// 설정 화면에는 **CLI 경로를 넣는 칸이 없다.** 경로는 PATH에서 자동으로 찾는다.
+// 그러니 "설정에서 경로를 지정하세요"라고 쓰면 없는 칸을 찾게 만든다. 사용자가
+// 실제로 할 수 있는 일만 적는다.
+const AGENT_REASONS: Record<string, string> = {
+  agent_disabled: "설정 › 연동에서 AI Agent 사용이 꺼져 있습니다. 켜면 이 방식을 쓸 수 있습니다.",
+  agent_cli_unavailable: "쓸 수 있는 Agent CLI가 없습니다. Codex 또는 Claude Code CLI를 설치하고 로그인하면 자동으로 잡힙니다. 설정 › 연동에 CLI별 상태가 보입니다.",
+  agent_status_unknown: "Agent CLI 상태를 확인하지 못했습니다.",
+};
+
+function agentReasonText(agent: Preflight["agent"]): string {
+  const base = AGENT_REASONS[String(agent?.reason || "")] || "Agent CLI를 쓸 수 없습니다.";
+  // 브리지가 더 구체적인 사유를 알면(로그인 필요 등) 그 문장을 함께 보여준다.
+  const detail = String(agent?.message || "").trim();
+  return detail && agent?.reason !== "agent_disabled" ? `${base} (${detail})` : base;
+}
 
 // 서버는 기계 코드를 던진다. 다이얼로그는 사람이 다음에 무엇을 할지 알 수 있는 말로 바꾼다.
 const IMPORT_ERRORS: Record<string, string> = {
@@ -93,10 +109,12 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
       .then((payload: Preflight) => {
         if (!alive) return;
         setPreflight(payload);
-        // 설정한 CLI가 있으면 그쪽이 기본이다. 아무것도 더 깔지 않고 읽는 유일한
-        // 경로라, 로컬 OCR을 기본으로 두면 Tesseract를 안 깐 사용자가 막힌
-        // 화면부터 만난다.
+        // 기본값은 쓸 수 있는 것 중 부담이 가장 적은 쪽이다. CLI는 아무것도 더
+        // 깔지 않고 읽으니 1순위, 그다음이 사진을 밖으로 안 내보내는 로컬 OCR,
+        // 마지막이 매번 동의가 필요한 외부 Vision이다. 셋 다 못 쓰는 상태에서
+        // 로컬을 기본으로 두면 비활성 라디오가 선택된 채 버튼도 눌리지 않는다.
         if (payload?.agent?.available) setMode("agent");
+        else if (payload?.ready === false) setMode("vision");
       })
       .catch(() => { if (alive) setPreflight({ ready: false, reason: "preflight_unavailable" }); });
     return () => { alive = false; };
@@ -215,7 +233,7 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
               {PREFLIGHT_REASONS[String(preflight?.reason || "")] || "로컬 OCR 준비 상태를 확인하지 못했습니다."}
               {" "}Tesseract(kor+eng)를 설치하면 사진이 이 컴퓨터 밖으로 나가지 않습니다.
               {agentReady
-                ? " 설치하지 않아도 됩니다 — 설정해 두신 Agent CLI가 사진을 읽습니다(아래 기본 선택)."
+                ? " 설치하지 않아도 됩니다 — 이미 쓰고 계신 Agent CLI가 사진을 읽습니다(아래 기본 선택)."
                 : " 설치 전에는 아래에서 외부 Vision을 선택하고 매번 동의해야 합니다."}
             </span>
           </div>
@@ -268,13 +286,14 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
           <canvas className="portfolio-crop-preview" ref={canvasRef} aria-label="전송될 이미지 미리보기" />
           <fieldset className="portfolio-import-mode">
             <legend>인식 방식</legend>
-            <label><input type="radio" name="portfolio-import-mode" checked={mode === "agent"} disabled={!agentReady} onChange={() => setMode("agent")} /> Agent CLI{agentReady ? " (설치 필요 없음)" : " — 설정에서 CLI 경로를 먼저 지정하세요"}</label>
+            <label><input type="radio" name="portfolio-import-mode" checked={mode === "agent"} disabled={!agentReady} onChange={() => setMode("agent")} /> Agent CLI{agentReady ? " (따로 설치할 것 없음)" : " — 사용 불가"}</label>
             <label><input type="radio" name="portfolio-import-mode" checked={mode === "local"} disabled={localBlocked} onChange={() => setMode("local")} /> 로컬 Tesseract{localBlocked ? " — 사용 불가" : ""}</label>
             <label><input type="radio" name="portfolio-import-mode" checked={mode === "vision"} onChange={() => setMode("vision")} /> 외부 Vision</label>
           </fieldset>
-          {/* CLI 경로를 설정한 순간부터 Agent 사용은 허락된 것으로 본다(동의 체크박스 없음).
+          {/* 설정에서 Agent를 연결한 순간부터 사용은 허락된 것으로 본다(동의 체크박스 없음).
               다만 사진이 그 제공자에게 전달된다는 사실은 먼저 말한다 — 허락과 고지는 다른 문제다. */}
           {mode === "agent" && <p className="settings-notice"><span>위 미리보기 crop을 설정한 Agent CLI가 직접 읽습니다. 사진은 그 CLI 제공자에게 전달되며 Folio OS에는 저장하지 않습니다. 한 장에 수십 초 걸립니다.</span></p>}
+          {!agentReady && preflight != null && <p className="section-subtitle">Agent CLI로 읽기 — {agentReasonText(preflight.agent)}</p>}
           {mode === "vision" && <label className="settings-notice warn"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} /> <span>위 미리보기 crop이 설정된 외부 AI 제공자에게 전송되며, Folio OS 요청은 저장 비활성화를 사용한다는 점을 확인했습니다.</span></label>}
           <button className="btn btn--primary" type="button" disabled={busy || (mode === "local" && localBlocked) || (mode === "agent" && !agentReady)} onClick={runPreview}>{busy ? (mode === "agent" ? `Agent CLI가 읽는 중 (수십 초)` : "인식 중") : `저장하지 않고 미리보기${files.length > 1 ? ` (${files.length}장)` : ""}`}</button>
         </>}

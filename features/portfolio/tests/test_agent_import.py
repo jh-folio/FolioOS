@@ -71,7 +71,7 @@ def test_agent_mode_cleans_the_temp_file_and_never_writes_portfolio(tmp_path, mo
 
 
 def test_agent_mode_asks_for_no_consent_flag(tmp_path, monkeypatch):
-    """CLI 경로를 설정한 것 자체가 허락이다(AGENTS.md §8 Agent 실행 경계).
+    """Agent를 연결해 둔 것 자체가 허락이다(AGENTS.md §8 Agent 실행 경계).
 
     외부 Vision과 달리 `consent=False`로도 진행해야 한다 — 여기서 동의를 또
     받으면 설치 부담을 없앤 자리에 절차 부담을 넣는 셈이다.
@@ -85,19 +85,38 @@ def test_agent_mode_asks_for_no_consent_flag(tmp_path, monkeypatch):
 def test_preflight_reports_cli_availability_separately_from_tesseract(monkeypatch):
     """화면이 열기 전에 무엇을 고를 수 있는지 알아야 고르고 나서 막히지 않는다."""
     monkeypatch.setattr(import_image, "tesseract_preflight", lambda: {"available": False, "ready": False, "reason": "tesseract_not_installed"})
-    monkeypatch.setattr(import_image, "cli_available", lambda: True)
+    monkeypatch.setattr(import_image, "cli_status", lambda: {"available": True, "reason": "", "message": "Claude Code CLI 사용 가능"})
     payload = import_image.preflight_payload()
     assert payload["ready"] is False
-    assert payload["agent"] == {"available": True, "reason": ""}
+    assert payload["agent"]["available"] is True
 
-    monkeypatch.setattr(import_image, "cli_available", lambda: False)
-    assert import_image.preflight_payload()["agent"]["reason"] == "agent_cli_unavailable"
+    monkeypatch.setattr(import_image, "cli_status", lambda: {"available": False, "reason": "agent_cli_unavailable", "message": "로그인이 필요합니다."})
+    agent = import_image.preflight_payload()["agent"]
+    assert agent["reason"] == "agent_cli_unavailable"
+    # 사유를 그대로 실어야 한다. `설치하라`와 `로그인하라`는 할 일이 다르다.
+    assert agent["message"] == "로그인이 필요합니다."
+
+
+def test_turning_the_agent_off_in_settings_disables_this_mode(monkeypatch):
+    """설정의 `AI Agent 사용`은 사용자가 명시적으로 끈 스위치다.
+
+    CLI가 깔려 있어도 꺼져 있으면 쓰지 않는다. 그리고 사유가 `CLI가 없다`가
+    아니라 `꺼져 있다`여야 한다 — 안 그러면 깔려 있는 CLI 앞에서 설치 안내를 읽는다.
+    """
+    monkeypatch.setattr("features.llm_settings.client.ai_agent_enabled", lambda: False)
+    monkeypatch.setattr("features.agent_mode.bridge.bridge_status", lambda **_kw: {"available": True, "message": "사용 가능"})
+    status = agent_import.cli_status()
+    assert status["available"] is False
+    assert status["reason"] == "agent_disabled"
 
 
 def test_a_broken_bridge_does_not_break_the_dialog(monkeypatch):
     """CLI 상태 조회가 터져도 다이얼로그는 열려야 한다 — 다른 두 경로가 남아 있다."""
-    def boom():
+    monkeypatch.setattr("features.llm_settings.client.ai_agent_enabled", lambda: True)
+
+    def boom(**_kwargs):
         raise OSError("no bridge")
 
     monkeypatch.setattr("features.agent_mode.bridge.bridge_status", boom)
     assert agent_import.cli_available() is False
+    assert agent_import.cli_status()["reason"] == "agent_status_unknown"
