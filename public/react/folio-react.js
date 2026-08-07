@@ -10685,12 +10685,12 @@ function Z(e, t, n, r = 16, i = 150) {
 	return r + (1 - (e - t) / (n - t)) * i;
 }
 var zi = {
-	height: 220,
-	top: 16,
-	plot: 148,
-	left: 46,
-	right: 40
-}, Bi = 720, Vi = 200;
+	height: 300,
+	top: 20,
+	plot: 212,
+	left: 58,
+	right: 50
+}, Bi = 980, Vi = 200;
 function Hi() {
 	let e = (0, d.useRef)(null), [t, n] = (0, d.useState)(520);
 	return (0, d.useLayoutEffect)(() => {
@@ -10699,9 +10699,13 @@ function Hi() {
 		let r = (e) => {
 			e > 0 && n(Math.max(Vi, Math.min(Bi, Math.round(e))));
 		};
-		if (r(t.getBoundingClientRect().width), typeof ResizeObserver > "u") return;
-		let i = new ResizeObserver((e) => r(e[0]?.contentRect.width ?? 0));
-		return i.observe(t), () => i.disconnect();
+		r(t.getBoundingClientRect().width);
+		let i = () => r(t.getBoundingClientRect().width);
+		window.addEventListener("resize", i);
+		let a = typeof ResizeObserver > "u" ? null : new ResizeObserver((e) => r(e[0]?.contentRect.width ?? 0));
+		return a?.observe(t), () => {
+			window.removeEventListener("resize", i), a?.disconnect();
+		};
 	}, []), {
 		ref: e,
 		width: t
@@ -10777,11 +10781,20 @@ function Wi({ chart: e, series: t, activeIndex: n, onIndex: r, width: i }) {
 			}),
 			a.map((e, t) => /* @__PURE__ */ (0, f.jsx)("text", {
 				className: "analysis-chart-axis",
+				"data-active": t === n ? "true" : void 0,
 				x: b(t),
-				y: d - 14,
+				y: d - 16,
 				textAnchor: "middle",
 				children: e
 			}, `x-${e}`)),
+			a.length > 0 && /* @__PURE__ */ (0, f.jsx)("rect", {
+				className: "analysis-chart-marker",
+				x: h + n * _ + _ * .2,
+				y: p + m + 6,
+				width: _ * .6,
+				height: 2,
+				rx: "1"
+			}),
 			a.map((e, t) => /* @__PURE__ */ (0, f.jsx)("rect", {
 				className: "analysis-chart-hit",
 				x: h + t * _,
@@ -10791,8 +10804,8 @@ function Wi({ chart: e, series: t, activeIndex: n, onIndex: r, width: i }) {
 				tabIndex: 0,
 				role: "button",
 				"aria-label": `${e} 수치 보기`,
-				onMouseEnter: () => r(t),
-				onFocus: () => r(t)
+				onMouseEnter: () => r(t, b(t)),
+				onFocus: () => r(t, b(t))
 			}, `hit-${e}`))
 		]
 	});
@@ -10849,11 +10862,20 @@ function Gi({ chart: e, series: t, activeIndex: n, onIndex: r, width: i }) {
 			}),
 			a.map((e, t) => /* @__PURE__ */ (0, f.jsx)("text", {
 				className: "analysis-chart-axis",
+				"data-active": t === n ? "true" : void 0,
 				x: h(t),
-				y: c - 14,
+				y: c - 16,
 				textAnchor: "middle",
 				children: e
 			}, `x-${e}`)),
+			a.length > 0 && /* @__PURE__ */ (0, f.jsx)("rect", {
+				className: "analysis-chart-marker",
+				x: h(n) - m * .3,
+				y: l + u + 6,
+				width: m * .6,
+				height: 2,
+				rx: "1"
+			}),
 			a.map((e, t) => /* @__PURE__ */ (0, f.jsx)("rect", {
 				className: "analysis-chart-hit",
 				x: t === 0 ? d : h(t) - m / 2,
@@ -10863,8 +10885,8 @@ function Gi({ chart: e, series: t, activeIndex: n, onIndex: r, width: i }) {
 				tabIndex: 0,
 				role: "button",
 				"aria-label": `${e} 수치 보기`,
-				onMouseEnter: () => r(t),
-				onFocus: () => r(t)
+				onMouseEnter: () => r(t, h(t)),
+				onFocus: () => r(t, h(t))
 			}, `hit-${e}`))
 		]
 	});
@@ -10964,8 +10986,10 @@ function Yi({ chart: e }) {
 	].includes(r) ? {
 		chart: e,
 		series: Ri(e)
-	} : null, o = i ?? a, s = o?.series ?? [], c = Array.isArray(o?.chart.years) ? o?.chart.years : [], [l, u] = (0, d.useState)(null), p = Hi(), m = Math.max(0, c.length - 1), h = Math.min(l ?? m, m), g = t?.x === void 0 ? void 0 : {
-		left: `${Math.max(7, Math.min(93, t.x / p.width * 100))}%`,
+	} : null, o = i ?? a, s = o?.series ?? [], c = Array.isArray(o?.chart.years) ? o?.chart.years : [], [l, u] = (0, d.useState)(null), [p, m] = (0, d.useState)(null), h = Hi(), g = (e, t) => {
+		u(e), m(t);
+	}, _ = Math.max(0, c.length - 1), v = Math.min(l ?? _, _), y = t?.x === void 0 ? void 0 : {
+		left: `${Math.max(7, Math.min(93, t.x / h.width * 100))}%`,
 		top: `${Math.max(10, t.y || 10)}px`
 	};
 	return /* @__PURE__ */ (0, f.jsxs)("article", {
@@ -10977,21 +11001,23 @@ function Yi({ chart: e }) {
 			}),
 			/* @__PURE__ */ (0, f.jsxs)("div", {
 				className: "analysis-chart-plot",
-				ref: p.ref,
+				onBlur: () => m(null),
+				onMouseLeave: () => m(null),
+				ref: h.ref,
 				children: [
 					i && i.series.length ? /* @__PURE__ */ (0, f.jsx)(Gi, {
 						chart: i.chart,
 						series: i.series,
-						activeIndex: h,
-						onIndex: u,
-						width: p.width
+						activeIndex: v,
+						onIndex: g,
+						width: h.width
 					}) : null,
 					a && a.series.length ? /* @__PURE__ */ (0, f.jsx)(Wi, {
 						chart: a.chart,
 						series: a.series,
-						activeIndex: h,
-						onIndex: u,
-						width: p.width
+						activeIndex: v,
+						onIndex: g,
+						width: h.width
 					}) : null,
 					r === "dcf" || r === "scenario_price" ? /* @__PURE__ */ (0, f.jsx)(Ki, {
 						chart: e,
@@ -11004,19 +11030,32 @@ function Yi({ chart: e }) {
 					}),
 					t && /* @__PURE__ */ (0, f.jsxs)("div", {
 						className: "analysis-chart-tooltip",
-						style: g,
+						style: y,
 						children: [
 							t.series && /* @__PURE__ */ (0, f.jsx)("span", { children: t.series }),
 							/* @__PURE__ */ (0, f.jsx)("strong", { children: t.value }),
 							/* @__PURE__ */ (0, f.jsx)("em", { children: t.label })
 						]
+					}),
+					p !== null && o && s.length > 0 && /* @__PURE__ */ (0, f.jsxs)("div", {
+						className: "analysis-chart-hover",
+						"data-side": p > h.width / 2 ? "left" : "right",
+						style: { left: `${p}px` },
+						children: [/* @__PURE__ */ (0, f.jsx)("b", { children: c[v] || "" }), s.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("p", { children: [
+							/* @__PURE__ */ (0, f.jsx)("span", {
+								className: "analysis-chart-swatch",
+								style: { background: Mi[t % Mi.length] }
+							}),
+							/* @__PURE__ */ (0, f.jsx)("span", { children: e.label }),
+							/* @__PURE__ */ (0, f.jsx)("em", { children: Li(e.values[v] ?? null, e.kind, o.chart.currency) })
+						] }, e.key))]
 					})
 				]
 			}),
 			o && s.length > 0 ? /* @__PURE__ */ (0, f.jsx)(Ji, {
 				chart: o.chart,
 				series: s,
-				index: h
+				index: v
 			}) : null
 		]
 	});

@@ -121,9 +121,9 @@ function yFor(value: number, min: number, max: number, top = 16, height = 150) {
 }
 
 /** 축 눈금과 오른쪽 비율 축이 들어갈 여백만 남긴다. 폭은 카드에서 재서 넣는다. */
-const BARS = { height: 220, top: 16, plot: 148, left: 46, right: 40 };
+const BARS = { height: 300, top: 20, plot: 212, left: 58, right: 50 };
 /** 넓은 화면에서도 이 폭을 넘지 않는다. 4년치 막대가 더 넓어져 봐야 여백만 는다. */
-const MAX_WIDTH = 720;
+const MAX_WIDTH = 980;
 const MIN_WIDTH = 200;
 
 /** 그릴 폭을 화면 픽셀로 잰다.
@@ -143,10 +143,18 @@ function useMeasuredWidth() {
       if (value > 0) setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(value))));
     };
     apply(node.getBoundingClientRect().width);
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver((entries) => apply(entries[0]?.contentRect.width ?? 0));
-    observer.observe(node);
-    return () => observer.disconnect();
+    // 창 크기는 따로 듣는다. ResizeObserver가 멈춘 환경에서도 최소한 이건 온다.
+    const onResize = () => apply(node.getBoundingClientRect().width);
+    window.addEventListener("resize", onResize);
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver((entries) => apply(entries[0]?.contentRect.width ?? 0));
+    observer?.observe(node);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      observer?.disconnect();
+    };
   }, []);
   return { ref, width };
 }
@@ -167,7 +175,7 @@ function BarsChart({
   chart: AnalysisChart;
   series: Series[];
   activeIndex: number;
-  onIndex: (index: number) => void;
+  onIndex: (index: number, x: number) => void;
   width: number;
 }) {
   const labels = Array.isArray(chart.years) ? chart.years : [];
@@ -266,10 +274,28 @@ function BarsChart({
           입력을 받는 사각형은 맨 위에 두되 칠하지 않는다 — 칠하면 그 아래 그래프를
           덮는다. 강조 배경은 마크보다 먼저 그려 뒤에 깔린다. */}
       {labels.map((label, index) => (
-        <text className="analysis-chart-axis" key={`x-${label}`} x={centre(index)} y={height - 14} textAnchor="middle">
+        <text
+          className="analysis-chart-axis"
+          data-active={index === activeIndex ? "true" : undefined}
+          key={`x-${label}`}
+          x={centre(index)}
+          y={height - 16}
+          textAnchor="middle"
+        >
           {label}
         </text>
       ))}
+      {/* 배경 음영만으로는 어느 기간을 짚었는지 잘 안 보인다. 축 위에 표시를 남긴다. */}
+      {labels.length > 0 && (
+        <rect
+          className="analysis-chart-marker"
+          x={left + activeIndex * groupWidth + groupWidth * 0.2}
+          y={top + plot + 6}
+          width={groupWidth * 0.6}
+          height={2}
+          rx="1"
+        />
+      )}
       {labels.map((label, index) => (
         <rect
           className="analysis-chart-hit"
@@ -281,8 +307,8 @@ function BarsChart({
           tabIndex={0}
           role="button"
           aria-label={`${label} 수치 보기`}
-          onMouseEnter={() => onIndex(index)}
-          onFocus={() => onIndex(index)}
+          onMouseEnter={() => onIndex(index, centre(index))}
+          onFocus={() => onIndex(index, centre(index))}
         />
       ))}
     </svg>
@@ -299,7 +325,7 @@ function LineChart({
   chart: AnalysisChart;
   series: Series[];
   activeIndex: number;
-  onIndex: (index: number) => void;
+  onIndex: (index: number, x: number) => void;
   width: number;
 }) {
   const labels = Array.isArray(chart.years) ? chart.years : [];
@@ -369,10 +395,27 @@ function LineChart({
       })}
 
       {labels.map((label, index) => (
-        <text className="analysis-chart-axis" key={`x-${label}`} x={at(index)} y={height - 14} textAnchor="middle">
+        <text
+          className="analysis-chart-axis"
+          data-active={index === activeIndex ? "true" : undefined}
+          key={`x-${label}`}
+          x={at(index)}
+          y={height - 16}
+          textAnchor="middle"
+        >
           {label}
         </text>
       ))}
+      {labels.length > 0 && (
+        <rect
+          className="analysis-chart-marker"
+          x={at(activeIndex) - step * 0.3}
+          y={top + plot + 6}
+          width={step * 0.6}
+          height={2}
+          rx="1"
+        />
+      )}
       {labels.map((label, index) => (
         <rect
           className="analysis-chart-hit"
@@ -384,8 +427,8 @@ function LineChart({
           tabIndex={0}
           role="button"
           aria-label={`${label} 수치 보기`}
-          onMouseEnter={() => onIndex(index)}
-          onFocus={() => onIndex(index)}
+          onMouseEnter={() => onIndex(index, at(index))}
+          onFocus={() => onIndex(index, at(index))}
         />
       ))}
     </svg>
@@ -520,7 +563,13 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
   const labels = Array.isArray(banded?.chart.years) ? (banded?.chart.years as string[]) : [];
   // 마우스를 올리지 않아도 최신 기간 숫자가 보인다. 짚기 전에는 마지막 기간이다.
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // 짚은 자리 옆에도 숫자를 띄운다. 아래 상자까지 눈을 내리지 않아도 되게.
+  const [anchor, setAnchor] = useState<number | null>(null);
   const plot = useMeasuredWidth();
+  const pick = (next: number, x: number) => {
+    setActiveIndex(next);
+    setAnchor(x);
+  };
   const last = Math.max(0, labels.length - 1);
   const index = Math.min(activeIndex ?? last, last);
   const tooltipStyle = tooltip?.x !== undefined
@@ -533,12 +582,12 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
         <h4>{chart.title || "기업 분석 차트"}</h4>
         {chart.subtitle && <p>{chart.subtitle}</p>}
       </div>
-      <div className="analysis-chart-plot" ref={plot.ref}>
+      <div className="analysis-chart-plot" onBlur={() => setAnchor(null)} onMouseLeave={() => setAnchor(null)} ref={plot.ref}>
         {line && line.series.length ? (
-          <LineChart chart={line.chart} series={line.series} activeIndex={index} onIndex={setActiveIndex} width={plot.width} />
+          <LineChart chart={line.chart} series={line.series} activeIndex={index} onIndex={pick} width={plot.width} />
         ) : null}
         {bars && bars.series.length ? (
-          <BarsChart chart={bars.chart} series={bars.series} activeIndex={index} onIndex={setActiveIndex} width={plot.width} />
+          <BarsChart chart={bars.chart} series={bars.series} activeIndex={index} onIndex={pick} width={plot.width} />
         ) : null}
         {(kind === "dcf" || kind === "scenario_price") ? <ScenarioChart chart={chart} onPoint={setTooltip} onLeave={() => setTooltip(null)} /> : null}
         {!series.length && !["dcf", "scenario_price"].includes(kind) && (
@@ -549,6 +598,22 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
             {tooltip.series && <span>{tooltip.series}</span>}
             <strong>{tooltip.value}</strong>
             <em>{tooltip.label}</em>
+          </div>
+        )}
+        {anchor !== null && banded && series.length > 0 && (
+          <div
+            className="analysis-chart-hover"
+            data-side={anchor > plot.width / 2 ? "left" : "right"}
+            style={{ left: `${anchor}px` }}
+          >
+            <b>{labels[index] || ""}</b>
+            {series.map((item, seriesIndex) => (
+              <p key={item.key}>
+                <span className="analysis-chart-swatch" style={{ background: COLORS[seriesIndex % COLORS.length] }} />
+                <span>{item.label}</span>
+                <em>{formatValue(item.values[index] ?? null, item.kind, banded.chart.currency)}</em>
+              </p>
+            ))}
           </div>
         )}
       </div>
