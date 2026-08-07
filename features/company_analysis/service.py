@@ -1088,6 +1088,17 @@ def _has_any_number(rows):
     return any(value is not None for value in rows)
 
 
+def _finite_series(node):
+    """차트 payload의 non-finite 숫자를 `None`으로 내린다(값 없음과 같은 자리)."""
+    if isinstance(node, dict):
+        return {key: _finite_series(value) for key, value in node.items()}
+    if isinstance(node, list):
+        return [_finite_series(item) for item in node]
+    if isinstance(node, float):
+        return _finite_number(node)
+    return node
+
+
 def _compute_price_returns(ticker: str) -> dict | None:
     """Return % vs SPY and QQQ over 1m/3m/6m/12m. Returns None on any failure."""
     if not ticker:
@@ -1104,9 +1115,16 @@ def _compute_price_returns(ticker: str) -> dict | None:
                 try:
                     hist = yf.Ticker(sym).history(period=period)
                     if hist is not None and not getattr(hist, "empty", True) and len(hist) >= 2:
-                        start_price = float(hist["Close"].iloc[0])
-                        end_price = float(hist["Close"].iloc[-1])
-                        r = round((end_price / start_price - 1) * 100, 2) if start_price else None
+                        # yfinance는 결측 행을 NaN으로 준다. `if start_price`는 0만 걸러내고
+                        # NaN은 참이라 그대로 통과해, NaN 수익률 하나가 보고서 저장 단계에서
+                        # canonical JSON에 걸려 100초짜리 CLI 결과를 통째로 버리게 했다.
+                        start_price = _finite_number(hist["Close"].iloc[0])
+                        end_price = _finite_number(hist["Close"].iloc[-1])
+                        r = (
+                            _finite_number(round((end_price / start_price - 1) * 100, 2))
+                            if start_price and end_price is not None
+                            else None
+                        )
                     else:
                         r = None
                 except Exception:
@@ -1337,5 +1355,8 @@ def build_company_analysis_charts(materials):
         "available": bool(charts),
         "company": {"name": company.get("name", ""), "ticker": company.get("ticker", "")},
         "source": "SEC companyfacts + yfinance market data",
-        "charts": charts,
+        # 차트 숫자는 전부 외부 provider에서 온다. 하나라도 NaN이면 보고서 저장이
+        # canonical JSON에서 막혀 CLI가 만든 결과를 통째로 잃는다. 값 없음은 이미
+        # None으로 표현하므로 여기서 같은 자리로 내린다.
+        "charts": _finite_series(charts),
     }
