@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Final
 
 
 ROOT: Final = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 FORBIDDEN_SUFFIXES: Final = frozenset({".sqlite", ".sqlite3", ".db", ".log", ".pem", ".key"})
 USER_ROOTS: Final = ("config/", "data/", "research-inbox/")
 
@@ -61,9 +64,18 @@ def audit_repository(root: Path = ROOT) -> list[str]:
         if normalized.startswith(("data/", "research-inbox/")) or normalized == ".env":
             issues.append(f"Private tracked input: {normalized}")
 
+    # 부트스트랩이 만든 로컬 config는 정상이다. defaults와 같은 이름의 ignored
+    # 파일까지 막으면, 새 기본 config가 생길 때마다 모든 개발 머신에서 감사가
+    # 깨진다(0.5의 유럽·닛케이 구성종목, 웹 검색 허용 목록이 실제로 걸렸다).
+    # 패키저의 _require_clean_release_inputs가 이미 같은 계약을 쓴다.
+    from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES
+
+    expected_local = {f"config/{name}" for name in DEFAULT_CONFIG_NAMES}
     for status, path in statuses:
         normalized = path.replace("\\", "/")
         if normalized == "config" or normalized.startswith("config/"):
+            if status == "!!" and normalized in expected_local:
+                continue
             issues.append(f"Local config status is release-forbidden: {normalized}")
         is_runtime = normalized in runtime_files or normalized.startswith(runtime_directories)
         if status == "??" and is_runtime and "canary" in Path(normalized).name.casefold():
