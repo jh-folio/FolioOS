@@ -31,6 +31,7 @@ from features.topic_report.approved_schema import (
     ConfirmDegradedRequest,
     GenerateApprovedRequest,
     PlanRequest,
+    ReplanRequest,
     RevisePlanRequest,
 )
 from features.topic_report.plan_edits import PlanEditError
@@ -130,6 +131,14 @@ class ApprovedRequestBoundary:
             return _failure_response(error)
         return _response(200, envelope.model_dump(mode="json"))
 
+    def replan(self, body: dict[str, JsonValue]) -> JSONResponse:
+        try:
+            request = ReplanRequest.model_validate(body)
+            envelope = self._service.replan(request)
+        except (ValidationError, ApprovalStoreError, ApprovedRequestError, CollectionServiceError) as error:
+            return _failure_response(error)
+        return _response(200, envelope.model_dump(mode="json"))
+
     def revise(self, body: dict[str, JsonValue]) -> JSONResponse:
         try:
             request = RevisePlanRequest.model_validate(body)
@@ -194,6 +203,7 @@ class ApprovedRequestBoundary:
         router = APIRouter(prefix="/api/topic-reports", tags=["topic-reports"])
         router.add_api_route("/plan", self.plan, methods=["POST"])
         router.add_api_route("/plan/revise", self.revise, methods=["POST"])
+        router.add_api_route("/plan/replan", self.replan, methods=["POST"])
         router.add_api_route("/confirm-degraded", self.confirm, methods=["POST"])
         if include_preflight:
             router.add_api_route("", self.preflight, methods=["POST"])

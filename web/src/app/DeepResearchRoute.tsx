@@ -21,6 +21,7 @@ import {
   type PlanPreviewEnvelope,
   type PlanEdits,
   type PlanRequest,
+  type ReplanRequest,
   type TopicPlan,
   type RevisePlanRequest,
 } from "../api";
@@ -577,6 +578,8 @@ function PlanReview({
   onCancelDegraded,
   editing,
   revising,
+  replanning,
+  onReplan,
   onEditPlan,
   onRevise,
   onCancelEdit,
@@ -593,6 +596,8 @@ function PlanReview({
   readonly onCancelDegraded: () => void;
   readonly editing: boolean;
   readonly revising: boolean;
+  readonly replanning: boolean;
+  readonly onReplan: () => void;
   readonly onEditPlan: () => void;
   readonly onRevise: (edits: PlanEdits) => void;
   readonly onCancelEdit: () => void;
@@ -610,7 +615,14 @@ function PlanReview({
         <p className="topicrpt-plan-origin">
           <span className="chip">{plannerModeLabel(plan.plannerMode)}</span>
           {!editing && (
-            <button className="btn btn--text" type="button" data-qa="dr-plan-edit" onClick={onEditPlan}>계획 수정</button>
+            <>
+              {/* Agent는 누를 때만 돈다. 미리보기가 자동으로 부르면 버튼 한 번에
+                  수십 초를 기다리게 된다(§8 Agent 실행 경계). */}
+              <button className="btn btn--text" type="button" data-qa="dr-plan-replan" onClick={onReplan} disabled={replanning}>
+                {replanning ? "AI가 계획을 쓰는 중" : "AI로 계획 다시 세우기"}
+              </button>
+              <button className="btn btn--text" type="button" data-qa="dr-plan-edit" onClick={onEditPlan} disabled={replanning}>계획 수정</button>
+            </>
           )}
         </p>
       </div>
@@ -722,6 +734,7 @@ export function DeepResearchRoute() {
   const [proposalReloadKey, setProposalReloadKey] = useState(0);
   const [planEditing, setPlanEditing] = useState(false);
   const [planRevising, setPlanRevising] = useState(false);
+  const [planReplanning, setPlanReplanning] = useState(false);
   const [reportQuery, setReportQuery] = useState("");
   const [reportView, setReportView] = useState<SavedViewMode>("recent");
   const requestId = useRef(0);
@@ -986,6 +999,39 @@ export function DeepResearchRoute() {
       return;
     }
     void executeEnvelope(planEnvelope);
+  };
+
+  const replanWithAgent = async () => {
+    if (!planEnvelope) return;
+    const request = beginRequest();
+    setPlanReplanning(true);
+    setError("");
+    setErrorKind(null);
+    setErrorReason("");
+    setStatus("AI가 리서치 계획을 다시 쓰는 중입니다. 30초 이상 걸릴 수 있습니다.");
+    const body: ReplanRequest = {
+      approvedRequest: planEnvelope.approvedRequest,
+      approval: approvalReference(planEnvelope),
+    };
+    try {
+      const replacement = await postJson<PlanPreviewEnvelope>("/api/topic-reports/plan/replan", body, { signal: request.signal });
+      if (!isCurrentRequest(request.id)) return;
+      setPlanEnvelope(replacement);
+      setDegradedConfirming(false);
+      // 엔진이 없거나 실패하면 규칙 계획이 그대로 온다. 그 사실을 숨기지 않는다.
+      setStatus(replacement.approvedRequest.topicPlan.plannerMode === "llm"
+        ? "AI가 계획을 다시 썼습니다."
+        : "AI 엔진을 쓸 수 없어 규칙 계획을 그대로 두었습니다.");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (!isCurrentRequest(request.id)) return;
+      setError(errorCopy("plan", err));
+      setErrorKind("plan");
+      setErrorReason(errorCode(err));
+      setStatus("");
+    } finally {
+      if (isCurrentRequest(request.id)) setPlanReplanning(false);
+    }
   };
 
   const revisePlan = async (edits: PlanEdits) => {
@@ -1327,6 +1373,8 @@ export function DeepResearchRoute() {
           onEdit={() => { setPhase("draft"); setPlanEditing(false); setStatus(""); }}
           editing={planEditing}
           revising={planRevising}
+          replanning={planReplanning}
+          onReplan={() => void replanWithAgent()}
           onEditPlan={() => setPlanEditing(true)}
           onRevise={(edits) => void revisePlan(edits)}
           onCancelEdit={() => setPlanEditing(false)}

@@ -390,7 +390,8 @@ features/company_analysis/financial_quality_prompt.md
 - custom 주제는 planner가 `searchQueries`/분석 축/후보 티커를 만든다. 기존 `label.split()` 검색은 폐기. 프리셋은 `plan_from_preset`으로 backward compatible.
 - **계획은 주제어 위에 세운다.** 사용자는 질문칸에 배경까지 한 문단으로 적는다. 그 240자를 주제 라벨로 쓰면 축 질문 다섯 개가 같은 문단이 되고 검색어에 질문 전문이 들어간다. `topic_subject()`가 첫 구획을 40자 이내로 끊고, 원문은 `topic`에 남는다.
 - **계획의 `searchQueries`는 그대로 근거 검색을 돌린다.** 한 단어 질의와 질문 전문 질의를 만들지 않는다(실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다 — FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남기며, 이 게이트는 LLM 계획에도 똑같이 적용한다.
-- 계획 미리보기는 LLM이 켜져 있으면 LLM 계획을 쓰고 실패하면 규칙 계획으로 떨어진다. `plannerMode`(`rules|llm|preset|edited`)를 계획에 남겨 화면이 표시한다.
+- **첫 미리보기는 규칙 계획이고, LLM 계획은 `AI로 계획 다시 세우기`(`POST /api/topic-reports/plan/replan`)로만 만든다.** Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계) — 미리보기에서 자동 실행하게 했더니 CLI 한 번에 48초가 걸렸다. `plannerMode`(`rules|llm|preset|edited`)를 계획에 남겨 화면이 표시한다.
+- 플래너는 API 키와 Agent CLI 둘 다 쓴다. `AI_AGENT_MODE=cli` 환경에서는 `apiKey`가 비어 있어 플래너만 엔진을 못 찾고 있었다. 키가 없으면 `run_agent_prompt()`로 같은 프롬프트를 보낸다(`TOPIC_PLANNER_TIMEOUT_SECONDS`, 기본 120초).
 - 승인 전 계획 수정은 `POST /api/topic-reports/plan/revise`다. `confirm-degraded`와 같은 모양으로 **서버가** payload를 고치고 planHash를 다시 계산해 기존 승인을 supersede한다. 클라이언트가 계획을 통째로 밀어넣는 통로는 없고, 축은 key로 찾을 뿐 새로 만들 수 없다.
 - `userContext`는 관심 방향이지 evidence가 아니다. 외부 자료와 충돌하면 충돌을 명시하고 반대 근거를 함께 제시한다.
 - Quality Gate(`evaluation.py`)는 규칙 기반이다. markdown 섹션 존재 + Evidence Pack 커버리지로 점수/등급/경고를 만든다. LLM 없이 동작한다.

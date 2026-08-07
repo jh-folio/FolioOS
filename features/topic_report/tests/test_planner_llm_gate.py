@@ -72,13 +72,65 @@ def test_a_broken_llm_reply_keeps_the_rule_plan(monkeypatch):
     assert plan is rule_plan
 
 
-def test_without_a_key_the_preview_still_gets_a_plan(monkeypatch):
+def test_without_a_key_the_planner_asks_the_agent_cli(monkeypatch):
+    """이 설치의 Agent는 API 키가 아니라 CLI로 돈다.
+
+    플래너만 직접 API 경로를 보고 있어서, 보고서를 쓰는 엔진이 멀쩡히 있는데도
+    계획은 늘 규칙으로 떨어졌다. 켤 설정이 없었던 게 아니라 플래너가 몰랐다.
+    """
     import features.llm_settings.client as client
+    from features.agent_mode import bridge
 
     monkeypatch.setattr(client, "use_llm_analysis", lambda: True)
     monkeypatch.setattr(client, "selected_llm_config", lambda: {"apiKey": ""})
+    monkeypatch.setattr(bridge, "bridge_status", lambda *a, **k: {"available": True})
+    asked = {}
+
+    def fake_prompt(prompt, **kwargs):
+        asked["prompt"] = prompt
+        return {"output": json.dumps({
+            "topic": LONG,
+            "reportType": "industry_theme",
+            "searchQueries": ["메모리 반도체 가격"],
+            "analysisAxes": [{"key": "demand", "label": "수요", "questions": ["수요는?"], "searchQueries": ["메모리 수요 전망"]}],
+        }, ensure_ascii=False)}
+
+    monkeypatch.setattr(bridge, "run_agent_prompt", fake_prompt)
+
+    plan, mode = planner.refine_plan_with_llm(planner.build_rule_plan(LONG), LONG)
+
+    assert mode == "llm"
+    assert "리서치 주제" in asked["prompt"]
+    assert plan["searchQueries"] == ["메모리 반도체 가격"]
+
+
+def test_with_no_key_and_no_cli_it_stays_on_rules(monkeypatch):
+    import features.llm_settings.client as client
+    from features.agent_mode import bridge
+
+    monkeypatch.setattr(client, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(client, "selected_llm_config", lambda: {"apiKey": ""})
+    monkeypatch.setattr(bridge, "bridge_status", lambda *a, **k: {"available": False})
 
     plan = planner.build_topic_plan("custom", custom_label=LONG)
 
     assert plan["plannerMode"] == "rules"
     assert plan["analysisAxes"]
+
+
+def test_the_preview_never_runs_the_agent_by_itself(monkeypatch):
+    """Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계).
+
+    미리보기가 CLI를 부르면 버튼 한 번에 수십 초를 기다린다. 실제로 이 경로를
+    열었을 때 테스트 스위트가 멈춰 섰다.
+    """
+    from features.agent_mode import bridge
+
+    def explode(*_args, **_kwargs):
+        raise AssertionError("미리보기가 Agent CLI를 호출했다")
+
+    monkeypatch.setattr(bridge, "run_agent_prompt", explode)
+
+    plan = planner.build_topic_plan("custom", custom_label=LONG, llm_override=False)
+
+    assert plan["plannerMode"] == "rules"

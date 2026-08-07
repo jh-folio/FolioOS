@@ -159,7 +159,9 @@ data/topic-reports/YYYY-MM-DD_<topic_key>_<id>.json
 - 계획은 **주제어(subject) 위에 세운다.** 사용자는 질문칸에 배경까지 한 문단으로 적는데, 그 240자를 주제 라벨로 쓰면 축 질문 다섯 개가 전부 같은 문단이 되고 검색어에 질문 전문이 들어간다. `topic_subject()`가 첫 구획(콜론·줄바꿈·` - `·문장 끝 앞)을 40자 이내로 끊어 쓴다. 원문 질문은 `topic`에 그대로 남는다.
 - **한 단어 질의와 질문 전문 질의는 만들지 않는다.** 계획의 `searchQueries`는 그대로 `search_keywords`가 되어 근거 검색을 돌린다. 실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다(FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남긴다.
 - 조사 제거 목록에 `의`가 빠져 있어 `반도체의`가 검색어로 살아남았다. `_PARTICLES`가 단일 출처다.
-- 계획 미리보기는 **LLM이 켜져 있으면 LLM 계획을 쓴다.** 규칙 계획은 실패했을 때의 바닥이지 화면에 보여줄 최선이 아니다. LLM 결과에도 같은 검색어 위생을 코드가 다시 적용한다(§5 원칙 4 — 프롬프트는 부탁이지 제한이 아니다).
+- **첫 미리보기는 규칙 계획이다.** Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계). LLM 계획은 `AI로 계획 다시 세우기`(`POST /api/topic-reports/plan/replan`)가 담당한다. 실제로 미리보기에서 자동 실행하게 했더니 CLI 한 번에 48초가 걸렸고 테스트 스위트가 멈춰 섰다.
+- 플래너는 **API 키와 Agent CLI 둘 다 쓴다.** 이 설치처럼 `AI_AGENT_MODE=cli`로 도는 환경에서는 `selected_llm_config()["apiKey"]`가 비어 있어, 보고서를 쓰는 엔진이 멀쩡히 있는데도 계획은 늘 규칙으로 떨어졌다. 키가 없으면 `run_agent_prompt()`로 같은 프롬프트를 보낸다. 타임아웃은 `TOPIC_PLANNER_TIMEOUT_SECONDS`(기본 120초).
+- LLM 결과에도 같은 검색어 위생을 코드가 다시 적용한다(§5 원칙 4 — 프롬프트는 부탁이지 제한이 아니다).
 - `plannerMode`(`rules|llm|preset|edited`)가 계획에 남고 화면이 그대로 표시한다. 무엇이 쓴 계획인지 모르면 얼마나 믿을지 정할 수 없다.
 
 ## 승인 전 계획 수정
@@ -177,6 +179,7 @@ GET    /api/topic-reports/presets
 GET    /api/topic-reports
 POST   /api/topic-reports/plan                       # 승인 가능한 TopicPlan + 자료 preview
 POST   /api/topic-reports/plan/revise                # 승인 전 계획 수정 (새 planHash로 승인 교체)
+POST   /api/topic-reports/plan/replan                # AI로 계획 다시 쓰기 (명시적 action)
 POST   /api/topic-reports/confirm-degraded           # zero-evidence 규칙 fallback 명시 확인
 POST   /api/topic-reports                             # 승인 envelope를 202 SharedJob으로 실행
 GET    /api/topic-reports/{report_id}?includePersonal # personalOverlay 포함 조회

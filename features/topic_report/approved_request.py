@@ -27,6 +27,7 @@ from features.topic_report.approved_schema import (
     GenerateApprovedRequest,
     PlanPreviewEnvelope,
     PlanRequest,
+    ReplanRequest,
     RevisePlanRequest,
 )
 from features.topic_report.plan_edits import PlanEditError, apply_plan_edits
@@ -114,13 +115,18 @@ class ApprovedRequestService:
         payload["degradedConfirmation"] = None
         return sha256_hex(payload)
 
-    def _topic_plan(self, request: PlanRequest) -> TopicPlanV1:
-        # LLM이 켜져 있으면 계획을 정제한다. 규칙 계획은 실패했을 때의 바닥이지
-        # 화면에 보여줄 최선이 아니다. 어느 쪽으로 만들었는지는 계획에 남는다.
+    def _topic_plan(self, request: PlanRequest, *, use_llm: bool = False) -> TopicPlanV1:
+        """첫 미리보기는 규칙 계획이다.
+
+        Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계). 이 설치의
+        Agent는 CLI로 돌아 한 번에 수십 초가 걸리는데, 버튼 한 번에 그만큼 기다리게
+        하면 계획 확인 자체가 쓸모없어진다. LLM 계획은 `replan`이 담당한다.
+        """
         raw = build_topic_plan(
             "custom",
             custom_label=request.question,
             user_context=request.userContext,
+            llm_override=use_llm,
         )
         raw["plannerMode"] = raw.get("plannerMode") or "rules"
         raw["candidateTickers"] = request.customTickers or raw.get("candidateTickers", {})
@@ -232,6 +238,42 @@ class ApprovedRequestService:
         grant = self._store.issue(approved.planHash)
         return PlanPreviewEnvelope(approvedRequest=approved, approval=grant, preview=preview)
 
+    def _swap_plan(self, approved: ApprovedRequest, plan: TopicPlanV1, proof) -> PlanPreviewEnvelope:
+        """계획만 갈아끼우고 승인을 새 해시로 옮긴다.
+
+        `confirm`과 같은 모양이다 — 서버가 payload를 고치고, 해시를 다시 계산하고,
+        기존 승인을 supersede한다. 클라이언트가 계획을 통째로 밀어넣는 통로는 없다.
+        """
+        payload = approved.model_dump(mode="json")
+        payload["topicPlan"] = plan.model_dump(mode="json")
+        # 계획이 바뀌면 앞서 받은 `근거 없음` 확인은 다른 계획에 대한 것이다.
+        payload["degradedConfirmation"] = None
+        payload["planHash"] = self.hash_approved_payload(payload)
+        replacement = ApprovedRequest.model_validate(payload)
+        grant = self._store.replace(proof, replacement.planHash)
+        preview, _prepared = self._preview(replacement)
+        return PlanPreviewEnvelope(approvedRequest=replacement, approval=grant, preview=preview)
+
+    def replan(self, request: ReplanRequest) -> PlanPreviewEnvelope:
+        """사용자가 눌렀을 때만 LLM/Agent로 계획을 다시 쓴다.
+
+        엔진이 없거나 실패하면 규칙 계획이 그대로 나온다. 그 사실은 `plannerMode`가
+        말한다 — 무엇이 쓴 계획인지 모르면 얼마나 믿을지 정할 수 없다.
+        """
+        approved = request.approvedRequest
+        self._validate_integrity(approved)
+        proof = self._proof(approved, request.approval.id, request.approval.token)
+        self._store.authorize(proof)
+        plan_request = PlanRequest(
+            question=approved.question,
+            userContext=approved.userContext,
+            deepResearch=approved.deepResearch,
+            customTickers=dict(approved.customTickers),
+            marketStatePolicy=approved.marketStatePolicy,
+            marketStateScope=approved.marketStateScope,
+        )
+        return self._swap_plan(approved, self._topic_plan(plan_request, use_llm=True), proof)
+
     def revise(self, request: RevisePlanRequest) -> PlanPreviewEnvelope:
         """승인 전 계획 수정. 새 계획 해시로 승인을 갈아끼운다.
 
@@ -243,16 +285,7 @@ class ApprovedRequestService:
         self._validate_integrity(approved)
         proof = self._proof(approved, request.approval.id, request.approval.token)
         self._store.authorize(proof)
-        revised = apply_plan_edits(approved.topicPlan, request.edits)
-        payload = approved.model_dump(mode="json")
-        payload["topicPlan"] = revised.model_dump(mode="json")
-        # 계획이 바뀌면 앞서 받은 `근거 없음` 확인은 다른 계획에 대한 것이다.
-        payload["degradedConfirmation"] = None
-        payload["planHash"] = self.hash_approved_payload(payload)
-        replacement = ApprovedRequest.model_validate(payload)
-        grant = self._store.replace(proof, replacement.planHash)
-        preview, _prepared = self._preview(replacement)
-        return PlanPreviewEnvelope(approvedRequest=replacement, approval=grant, preview=preview)
+        return self._swap_plan(approved, apply_plan_edits(approved.topicPlan, request.edits), proof)
 
     def confirm(self, request: ConfirmDegradedRequest) -> PlanPreviewEnvelope:
         approved = request.approvedRequest

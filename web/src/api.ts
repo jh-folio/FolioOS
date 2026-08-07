@@ -452,6 +452,12 @@ export type PlanEdits = {
   readonly axes?: readonly AxisEdit[];
 };
 
+/** 계획을 LLM/Agent로 다시 쓰기. 사용자가 누를 때만 실행한다. */
+export type ReplanRequest = {
+  readonly approvedRequest: ApprovedRequest;
+  readonly approval: ApprovalReference;
+};
+
 export type RevisePlanRequest = {
   readonly approvedRequest: ApprovedRequest;
   readonly approval: ApprovalReference;

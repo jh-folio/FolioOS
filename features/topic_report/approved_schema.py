@@ -213,6 +213,13 @@ class PlanEdits(StrictModel):
     axes: list[AxisEdit] = Field(default_factory=list, max_length=6)
 
 
+class ReplanRequest(StrictModel):
+    """계획을 LLM/Agent로 다시 쓰기. 사용자가 누를 때만 실행한다(§8 Agent 실행 경계)."""
+
+    approvedRequest: ApprovedRequest
+    approval: ApprovalReference
+
+
 class RevisePlanRequest(StrictModel):
     approvedRequest: ApprovedRequest
     approval: ApprovalReference

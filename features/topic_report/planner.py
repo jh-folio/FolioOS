@@ -7,6 +7,7 @@ userContext는 질문 의도 파악에만 쓰고 사실/근거로 다루지 않�
 from __future__ import annotations
 
 import json
+import os
 import re
 from copy import deepcopy
 
@@ -547,6 +548,24 @@ researchQuestions, analysisAxes, requiredMarketData, requiredMacroData, searchQu
 memoryQueries, candidateTickers, dataGapsLikely"""
 
 
+def _plan_via_cli(prompt: str, context: str) -> str:
+    """Agent CLI로 계획을 받아온다.
+
+    이 설치의 Agent는 API 키가 아니라 CLI(Codex/Claude)로 돈다. 플래너만 직접 API
+    경로를 보고 있어서, 보고서를 쓰는 엔진이 멀쩡히 있는데도 계획은 늘 규칙으로
+    떨어졌다. 켤 설정이 없는 게 아니라 플래너가 그 엔진을 몰랐던 것이다.
+    """
+    try:
+        from features.agent_mode.bridge import bridge_status, run_agent_prompt
+    except Exception:
+        return ""
+    if not bridge_status().get("available"):
+        return ""
+    timeout = max(30, int(os.environ.get("TOPIC_PLANNER_TIMEOUT_SECONDS", "120")))
+    result = run_agent_prompt(f"{prompt}\n\n---\n\n{context}", timeout=timeout)
+    return str(result.get("output") or "")
+
+
 def refine_plan_with_llm(rule_plan: dict, topic: str, user_context: str = "") -> tuple[dict, str]:
     """LLM으로 규칙 계획을 정제. 실패하면 (rule_plan, 사유) 반환."""
     try:
@@ -561,15 +580,19 @@ def refine_plan_with_llm(rule_plan: dict, topic: str, user_context: str = "") ->
     if not use_llm_analysis():
         return rule_plan, "llm_disabled"
     cfg = selected_llm_config()
-    if not cfg.get("apiKey"):
-        return rule_plan, "no_api_key"
     prompt = _PLANNER_PROMPT.format(report_types=", ".join(sorted(REPORT_TYPE_LABELS)))
     context_lines = [f"리서치 주제: {topic}"]
     if user_context.strip():
         context_lines.append(f"사용자 컨텍스트(관심 방향, 사실 아님): {user_context.strip()[:500]}")
     context_lines.append(f"규칙 기반 1차 계획(참고/수정 대상):\n{json.dumps(rule_plan, ensure_ascii=False, indent=1)[:3000]}")
+    context = "\n\n".join(context_lines)
     try:
-        text, _rid = request_llm_text(cfg, prompt, "\n\n".join(context_lines), json_mode=True, max_output_tokens=2500)
+        if cfg.get("apiKey"):
+            text, _rid = request_llm_text(cfg, prompt, context, json_mode=True, max_output_tokens=2500)
+        else:
+            text = _plan_via_cli(prompt, context)
+            if not text.strip():
+                return rule_plan, "no_engine"
         raw = extract_json_object(text)
         if not isinstance(raw, dict):
             return rule_plan, "parse_failed"
