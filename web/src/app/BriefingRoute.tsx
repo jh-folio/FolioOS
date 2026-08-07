@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useContentRevision } from "./useContentRevision";
 import { groupMeta, listDate } from "./savedListFormat";
+import { useMarketScope } from "./useMarketScope";
 import { getJson, isActiveJobStatus, postJson, MARKET_CODE_LABELS, type JobStatus } from "../api";
 import { openReactAgentDock, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -252,6 +253,9 @@ export function BriefingRoute() {
   const [actionBusy, setActionBusy] = useState("");
   // 생성 대상은 시장 집합이다. 하나만 고르면 그 시장, 여럿이면 각각 만들어진다.
   const [selectedMarkets, setSelectedMarkets] = useState<SingleMarket[]>(["us"]);
+  // 관심 시장 범위가 생성 선택지의 상한이다. 범위 밖 시장은 체크박스가 사라진다.
+  const { isSelected: marketInScope } = useMarketScope();
+  const scopedMarkets = SINGLE_MARKETS.filter((market) => marketInScope(market));
   const marketScope = selectionScope(selectedMarkets);
 
   // 시장 순서는 계약을 따른다. 클릭 순서로 두면 같은 조합이 다르게 저장된다.
@@ -599,7 +603,7 @@ export function BriefingRoute() {
             <div className="brief-gen-field brief-gen-market-field">
               <div className="brief-market-segment" role="group" aria-label="생성할 시장" data-scope={marketScope}>
                 <span className="brief-market-segment-title">시장</span>
-                {SINGLE_MARKETS.map((value) => (
+                {(scopedMarkets.length ? scopedMarkets : SINGLE_MARKETS).map((value) => (
                   <label key={value}>
                     <input
                       type="checkbox"

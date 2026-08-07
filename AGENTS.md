@@ -330,6 +330,14 @@ features/company_analysis/financial_quality_prompt.md
 - 쿼리 없는 회사/범위 필터는 in-memory 문서 목록을 그대로 사용한다.
 - `sanitize_fts_query()`가 특수문자를 이스케이프하고 토큰을 OR로 연결해 FTS5 에러를 방지한다.
 
+### 관심 시장 범위 (Market Scope)
+
+- 로직은 `features/common/market_scope.py`, 저장은 `data/market-scope.json`(기본 `US/KR`). API는 `GET/PUT /api/market-scope`.
+- **범위는 필터가 아니라 제품의 바깥 테두리다**(2026-08-07 사용자 결정). 꺼진 시장은 RSS 수집에서 해당 피드가 제외되고(GLOBAL 피드는 항상 수집), RSS 목록·시장 필터, 브리핑 생성 선택지, 시장 캘린더, 내러티브 세그먼트에서 함께 숨는다. Task 1.4의 필터는 범위 **안에서** 좁힐 때만 쓴다.
+- GLOBAL/UNKNOWN 태그 자료는 어떤 범위에서도 보인다. 유가·달러·공급망 기사는 특정 시장 소유가 아니다.
+- 시장을 다시 켜면 그 시장 피드만 즉시, 나이 제한 없이 수집한다(`--only-markets`, `--max-age-days 0`). RSS는 피드가 내어주는 최근 항목까지만 받을 수 있어 꺼져 있던 기간의 공백이 남는다 — 설정 화면이 그 한계를 먼저 말하고, 언제 켰는지는 `enabledAt`에 남는다.
+- 기업 분석은 회사 단위라 범위와 무관하다. 범위를 못 읽으면 화면은 전부 보이는 쪽으로 되돌아간다(서버 오류가 데이터 소실처럼 보이면 안 된다).
+
 ### RSS와 뉴스 검색 (Evidence Intake)
 
 - 수집은 RSS 단독이 아니라 Folio OS Evidence Intake 경로다. 최종 단위는 `IntakeEvidenceItem`이고 RSS는 `collector=rss` 입력원 중 하나다.

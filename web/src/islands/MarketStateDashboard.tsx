@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getJson } from "../api";
 import { openReactAgentDock } from "../app/agentContext";
 import { legacyBridge as bridge } from "../app/legacyBridge";
+import { useMarketScope } from "../app/useMarketScope";
 import { marketStateContextProjection, readMarketStateRef, type MarketStateRef, type MarketStateStatus } from "../app/marketStateContext";
 
 export { marketStateContextProjection } from "../app/marketStateContext";
@@ -352,7 +353,12 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
   const ref = readMarketStateRef(payload);
   const state: MarketStateStatus = ref?.status || "empty";
   const marketViews = payload?.marketViews || {};
-  const availableMarkets = MARKET_SCOPE_ORDER.filter((scope) => scope === "overall" || Boolean(marketViews[scope]));
+  // 관심 시장 범위 밖의 뷰는 세그먼트에 올리지 않는다. 스냅샷이 만들었더라도
+  // 사용자가 끈 시장이면 숨는다 — 범위는 화면 필터가 아니라 제품의 테두리다.
+  const { isSelected: marketInScope } = useMarketScope();
+  const availableMarkets = MARKET_SCOPE_ORDER.filter(
+    (scope) => scope === "overall" || (Boolean(marketViews[scope]) && marketInScope(scope)),
+  );
   const activeMarket = availableMarkets.includes(selectedMarket) ? selectedMarket : "overall";
   const activePayload = activeMarket === "overall" ? (marketViews.overall || payload) : (marketViews[activeMarket] || payload);
   const drivers = activePayload?.drivers ?? [];

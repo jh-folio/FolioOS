@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useContentRevision } from "./useContentRevision";
+import { useMarketScope } from "./useMarketScope";
 import { getJson, isActiveJobStatus, postJson, type JobStatus } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
@@ -173,6 +174,8 @@ function mapSearchDocument(doc: SearchDocument): RssItem {
 }
 
 export function RssRoute() {
+  // 관심 시장 범위가 필터의 상한이다. 범위 밖 시장은 선택지에서 사라진다.
+  const { isSelected } = useMarketScope();
   const contentRevision = useContentRevision("rss");
   const [indexedCount, setIndexedCount] = useState<number | null>(null);
   const [payload, setPayload] = useState<RssPayload | null>(null);
@@ -366,7 +369,7 @@ export function RssRoute() {
           <label className="find-bar__field">
             <span>시장</span>
             <select value={draftFilters.market} onChange={(event) => void updateFilter({ market: event.currentTarget.value })}>
-              {MARKET_OPTIONS.map((option) => (
+              {MARKET_OPTIONS.filter((option) => !option.value || isSelected(option.value)).map((option) => (
                 <option key={option.value || "all-market"} value={option.value}>{option.label}</option>
               ))}
             </select>

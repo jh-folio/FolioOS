@@ -740,6 +740,12 @@ def test_rss_api_preserves_original_local_language_text(tmp_path: Path, monkeypa
     monkeypatch.setattr(rss_service, "RESEARCH_DB_PATH", db_path)
     monkeypatch.setattr(rss_service, "_RSS_CACHE_LAST_REFRESH", 0.0)
     monkeypatch.setattr(rss_service, "_RSS_CACHE_MEDIA_REPAIRED", False)
+    # 이 테스트의 관심사는 언어 보존이다. JP 항목이 보이려면 범위에 JP가 있어야 한다.
+    from features.common import market_scope
+
+    scope_path = tmp_path / "market-scope.json"
+    market_scope.save_market_scope(["US", "KR", "JP"], scope_path)
+    monkeypatch.setattr(market_scope, "SCOPE_PATH", scope_path)
 
     payload = rss_service.rss_feed_payload({"limit": ["20"], "offset": ["0"]})
     assert payload["items"][0]["title"] == title

@@ -1300,6 +1300,33 @@ def api_import_rssarchive():
     )
 
 
+@fastapi_app.get("/api/market-scope")
+def api_get_market_scope():
+    from features.common.market_scope import MARKET_LABELS, MARKETS, load_market_scope
+
+    scope = load_market_scope()
+    return {**scope, "markets": [{"id": m, "label": MARKET_LABELS[m]} for m in MARKETS]}
+
+
+@fastapi_app.put("/api/market-scope")
+def api_put_market_scope(body: dict = Body(default={})):
+    from features.common.market_scope import MARKET_LABELS, MARKETS, save_market_scope
+    from features.common.research_library.rss.service import collect_markets_now
+
+    scope, newly_enabled = save_market_scope((body or {}).get("selected") or [])
+    payload = {**scope, "markets": [{"id": m, "label": MARKET_LABELS[m]} for m in MARKETS], "newlyEnabled": newly_enabled}
+    if newly_enabled:
+        # 방금 켠 시장은 즉시 수집한다. RSS는 피드가 내어주는 최근 항목까지만
+        # 받을 수 있으므로, 꺼져 있던 기간의 공백이 남을 수 있다.
+        payload["collectionJob"] = submit_job(
+            "rss",
+            f"{'·'.join(MARKET_LABELS[m] for m in newly_enabled)} 시장 자료 수집",
+            collect_markets_now,
+            markets=newly_enabled,
+        )
+    return payload
+
+
 @fastapi_app.get("/api/memory")
 def api_list_memory(request: Request):
     qs = query_lists(request)

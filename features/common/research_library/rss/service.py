@@ -488,6 +488,23 @@ def _selectable_sources(rows) -> list[str]:
     return [name for name in names if name in configured]
 
 
+def _scope_visibility_sql():
+    """관심 시장 범위의 SQL 절.
+
+    태그가 비었거나 GLOBAL/UNKNOWN이 섞인 항목은 항상 보인다. 시장 토큰은
+    서로의 부분 문자열이 아니므로(US/KR/EUROPE/JP/GLOBAL/UNKNOWN) LIKE로 안전하다.
+    """
+    from features.common.market_scope import ALWAYS_VISIBLE, load_market_scope
+
+    allowed = list(load_market_scope()["selected"]) + list(ALWAYS_VISIBLE)
+    clauses = ["markets = ''"]
+    params: list = []
+    for token in allowed:
+        clauses.append("(markets = ? OR markets LIKE ? OR markets LIKE ? OR markets LIKE ?)")
+        params.extend([token, f"{token},%", f"%,{token},%", f"%,{token}"])
+    return "(" + " OR ".join(clauses) + ")", params
+
+
 def _cache_where(start_dt=None, end_dt=None, source="", market="", country="", language=""):
     clauses = ["visible = 1", _HIDE_PRESS_RELEASE_SQL]
     params = []
@@ -504,6 +521,9 @@ def _cache_where(start_dt=None, end_dt=None, source="", market="", country="", l
     if market:
         clauses.append("(markets = ? OR markets LIKE ? OR markets LIKE ? OR markets LIKE ?)")
         params.extend([market, f"{market},%", f"%,{market},%", f"%,{market}"])
+    scope_sql, scope_params = _scope_visibility_sql()
+    clauses.append(scope_sql)
+    params.extend(scope_params)
     # 유럽은 6개국이 한 시장으로 묶이므로, 국가 필터가 없으면 독일 기사만 보는 방법이
     # 없다. 언어는 원문을 읽을 수 있는 항목만 추릴 때 쓴다.
     country = str(country or "").strip().upper()
@@ -654,7 +674,7 @@ def rss_save_full_text_enabled():
     return bool(rss_cfg.get("saveFullText", True))
 
 
-def _import_rssarchive_locked(run_collection=True, progress=None):
+def _import_rssarchive_locked(run_collection=True, progress=None, extra_args=None):
     output = []
     before = len(list(RSS_INBOX_DIR.glob("*.md")))
     collector_created = None
@@ -668,6 +688,8 @@ def _import_rssarchive_locked(run_collection=True, progress=None):
             command = [sys.executable, "-m", RSS_ARCHIVE_MODULE, "--archive-dir", str(RSS_INBOX_DIR), "--collectors", "rss"]
             if rss_save_full_text_enabled():
                 command.append("--save-full-text")
+            if extra_args:
+                command.extend(str(v) for v in extra_args)
             proc = subprocess.run(
                 command,
                 cwd=str(ROOT), text=True, encoding="utf-8", errors="replace",
@@ -706,8 +728,27 @@ def _import_rssarchive_locked(run_collection=True, progress=None):
     }
 
 
+def collect_markets_now(markets, progress=None):
+    """방금 켠 시장의 피드만 즉시, 나이 제한 없이 수집한다.
+
+    RSS는 피드가 내어주는 최근 항목까지만 받을 수 있다. 꺼져 있던 기간의
+    공백을 완전히 메우지는 못하므로, 받을 수 있는 것을 최대한 받는 통로다.
+    """
+    from features.common.market_scope import normalize_selected
+
+    wanted = normalize_selected(markets)
+    if not wanted:
+        return {"ok": False, "message": "수집할 시장이 없습니다."}
+    with _RSS_IMPORT_LOCK:
+        return _import_rssarchive_locked(
+            run_collection=True,
+            progress=progress,
+            extra_args=["--only-markets", ",".join(wanted), "--max-age-days", "0"],
+        )
+
+
 def import_rssarchive(run_collection=True, progress=None):
     # 자동화, 브리핑 prerequisite, 수동 버튼이 같은 저장소를 공유한다.
     # 한 번에 하나만 실행해 dedupe state와 실행별 신규 개수를 안정적으로 유지한다.
     with _RSS_IMPORT_LOCK:
-        return _import_rssarchive_locked(run_collection=run_collection, progress=progress)
+        return _import_rssarchive_locked(run_collection=run_collection, progress=progress, extra_args=None)

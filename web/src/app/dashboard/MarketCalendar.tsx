@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJson, postJson, MARKET_CODE_LABELS, MARKET_KO_LABELS } from "../../api";
+import { useMarketScope } from "../useMarketScope";
 
 type Event = {
   id: string; kind: string; title: string; startsAt: string; status: string;
@@ -77,6 +78,8 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   // 빈 집합 = 전체. 브리핑 시장 선택과 같은 규칙이라 조작을 새로 배우지 않는다.
   const [kinds, setKinds] = useState<string[]>([]);
   const [markets, setMarkets] = useState<string[]>([]);
+  // 관심 시장 범위 밖의 일정은 칩에서도 목록에서도 뺀다.
+  const { isSelected: marketInScope } = useMarketScope();
   const [watchOnly, setWatchOnly] = useState(false);
   const [anchor, setAnchor] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(() => dateKey(new Date()));
@@ -122,10 +125,11 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
 
   const filtered = useMemo(() => events.filter((event) => {
     if (kinds.length && !kinds.includes(event.kind)) return false;
+    if (!marketInScope(event.market || "")) return false;
     if (markets.length && !markets.includes((event.market || "").toUpperCase())) return false;
     if (watchOnly && !(event.tickers || []).some((t) => watchSymbols.has(t.toUpperCase()))) return false;
     return true;
-  }), [events, kinds, markets, watchOnly, watchSymbols]);
+  }), [events, kinds, markets, watchOnly, watchSymbols, marketInScope]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, Event[]>();
@@ -203,7 +207,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
       </div>
       <div className="cal-filter-row" role="group" aria-label="일정 시장 필터">
         <span className="cal-filter-label">시장</span>
-        {MARKET_FILTERS.map((value) => (
+        {MARKET_FILTERS.filter((value) => marketInScope(value)).map((value) => (
           <button key={value} type="button" className="cal-filter" aria-pressed={markets.includes(value)}
             onClick={() => {
               const next = markets.includes(value) ? markets.filter((v) => v !== value) : [...markets, value];

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getJson, postJson } from "../api";
+import { getJson, postJson, putJson } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
 import { useUiPreferences } from "./homePreference";
 import { RouteHero } from "./RouteHero";
@@ -180,6 +180,107 @@ const AUTOMATION_BRIEFING_TYPES: Record<string, string> = {
   market_focused: "시황 중심",
   concise: "요약",
 };
+
+type MarketScopeState = {
+  readonly selected: readonly string[];
+  readonly markets: ReadonlyArray<{ readonly id: string; readonly label: string }>;
+  readonly enabledAt: Readonly<Record<string, string>>;
+};
+
+/** 관심 시장 — 필터가 아니라 제품의 바깥 테두리.
+ *
+ *  여기서 끈 시장은 RSS 수집이 멈추고, 목록·브리핑 선택지·캘린더·내러티브
+ *  세그먼트에서 사라진다. 다시 켜면 그 시장 피드를 즉시 수집하지만, RSS는
+ *  피드가 내어주는 최근 항목까지만 받을 수 있어 꺼져 있던 기간의 공백이
+ *  남을 수 있다 — 그 한계를 화면이 먼저 말한다.
+ */
+function MarketScopePanel() {
+  const [scope, setScope] = useState<MarketScopeState | null>(null);
+  const [draft, setDraft] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const payload = await getJson<MarketScopeState>("/api/market-scope");
+        if (cancelled) return;
+        setScope(payload);
+        setDraft([...payload.selected]);
+      } catch {
+        if (!cancelled) setNote("관심 시장 설정을 불러오지 못했습니다.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!scope) return null;
+
+  const toggle = (id: string) => {
+    setDraft((current) => {
+      const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
+      // 전부 끄면 남는 화면이 없다. 마지막 하나는 끄지 않는다.
+      return next.length ? scope.markets.map((m) => m.id).filter((m) => next.includes(m)) : current;
+    });
+  };
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify([...scope.selected]);
+
+  const save = async () => {
+    setBusy(true);
+    setNote("");
+    try {
+      const payload = await putJson<MarketScopeState & { newlyEnabled?: string[]; collectionJob?: unknown }>(
+        "/api/market-scope",
+        { selected: draft },
+      );
+      setScope(payload);
+      setDraft([...payload.selected]);
+      const enabled = payload.newlyEnabled || [];
+      setNote(enabled.length
+        ? "저장했습니다. 방금 켠 시장의 자료 수집을 시작했습니다 — 꺼져 있던 기간의 기사는 피드가 아직 내어주는 범위까지만 들어옵니다."
+        : "저장했습니다.");
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "저장하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="settings-panel input-panel" data-qa="market-scope-panel">
+      <div className="input-panel-header">
+        <div>
+          <h3>관심 시장</h3>
+          <p>여기서 끈 시장은 자료 수집이 멈추고 화면 전체(RSS·브리핑·캘린더·내러티브)에서 숨습니다. 유가·달러 같은 글로벌 자료는 항상 보입니다.</p>
+        </div>
+      </div>
+      <div className="field">
+        <span id="marketScopeLabel">수집·표시할 시장</span>
+        <div className="settings-theme-options" role="group" aria-labelledby="marketScopeLabel">
+          {scope.markets.map((market) => (
+            <button
+              type="button"
+              key={market.id}
+              aria-pressed={draft.includes(market.id)}
+              disabled={busy}
+              onClick={() => toggle(market.id)}
+            >
+              {market.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="settings-actions">
+        <button className="btn btn--primary" type="button" onClick={() => void save()} disabled={busy || !dirty}>
+          {busy ? "저장 중" : "저장"}
+        </button>
+      </div>
+      {note && <p className="react-dashboard-warning" role="status">{note}</p>}
+    </section>
+  );
+}
 
 export function SettingsRoute() {
   const theme = useThemePreference();
@@ -510,6 +611,8 @@ export function SettingsRoute() {
               </label>
             </div>
           </section>
+
+          <MarketScopePanel />
 
           <section className="settings-panel input-panel">
             <div className="input-panel-header settings-agent-header">

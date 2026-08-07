@@ -160,6 +160,10 @@ def _parse_args():
                         help="Number of RSS feeds to fetch concurrently.")
     parser.add_argument("--article-workers", type=int, default=int(os.environ.get("RSS_ARTICLE_WORKERS", "6")),
                         help="Number of article pages to enrich concurrently.")
+    parser.add_argument("--only-markets", default=None,
+                        help="Collect only feeds for these markets (comma-separated), ignoring the saved market scope.")
+    parser.add_argument("--max-age-days", type=int, default=None,
+                        help="Override the recency window in days. 0 keeps every dated item.")
     return parser.parse_args()
 
 
@@ -190,6 +194,16 @@ def main():
     evidence_config = resolve_cli_config(args.evidence_config, "evidence_sources.yaml")
     selected_collectors = {x.strip().lower() for x in str(args.collectors or "rss").split(",") if x.strip()}
     feeds = load_rss_feeds(rss_config) if "rss" in selected_collectors else []
+    # 관심 시장 밖의 피드는 수집하지 않는다(범위가 수집을 막는다는 사용자 결정).
+    # `--only-markets`는 시장을 다시 켤 때 그 피드만 즉시 수집하는 통로다.
+    from features.common.market_scope import feed_in_scope, load_market_scope, normalize_selected
+
+    if args.only_markets:
+        wanted = set(normalize_selected(args.only_markets.split(",")))
+        feeds = [feed for feed in feeds if str(feed.get("default_market") or "").upper() in wanted]
+    else:
+        scope_selected = load_market_scope()["selected"]
+        feeds = [feed for feed in feeds if feed_in_scope(feed, scope_selected)]
     store_full_text = should_store_full_text(args.save_full_text, args.public_mode)
 
     if args.dry_run:
@@ -222,7 +236,7 @@ def main():
                 continue
             score = calculate_relevance_score(item, feed, baseline=args.min_relevance_score)
             item["relevance_score"] = score
-            if not item_within_recency_window(item, collected_at_utc=collected_at_utc):
+            if not item_within_recency_window(item, collected_at_utc=collected_at_utc, max_age_days=args.max_age_days):
                 rejected += 1
                 _record_rejection(rejected_samples, item.get("title"), item.get("link"), feed.get("media"), score)
                 continue
