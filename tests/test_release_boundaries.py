@@ -15,7 +15,10 @@ ROOT = Path(__file__).resolve().parents[1]
 # 예전에는 config/의 blob과 비교했는데 config/는 .gitignore 대상이라 새 파일이
 # 추적되지 않는다. 그래서 유럽/일본 구성종목 파일은 목록에도 못 들어가고 검사도
 # 받지 못했다. 이제 defaults/ 자신의 검토 시점 blob과 비교한다.
-BASE_COMMIT = "75d6b838a33097f03b7742e68f0584a2f23241e0"
+# 2026-08-07 검토하고 옮김: 일본·유럽 구성종목에 `englishName`을 채우고(각 225·199건,
+# yfinance longName) 한글 별칭 파일 `foreign_company_aliases.json`을 새로 넣었다.
+# 자국 표기만 있으면 "Toyota"로 찾을 때 도쿄 상장이 후보에 아예 없었기 때문이다.
+BASE_COMMIT = "91b1472575cd31f9db4a37da41e005ef58110015"
 sys.path.insert(0, str(ROOT))
 from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 

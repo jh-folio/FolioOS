@@ -209,18 +209,12 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
     assert (package_dir / "release-manifest.json").is_file()
     assert (package_dir / "defaults" / "config").is_dir()
     assert not (package_dir / "config").exists()
-    assert {
-        "company_aliases.json",
-        "company_master.json",
-        # 0.5에서 유럽·일본 히트맵 universe가 패키지에 함께 실린다.
-        "europe_core_constituents.json",
-        "evidence_sources.yaml",
-        "kospi200_constituents.json",
-        "nikkei225_constituents.json",
-        "rss_feeds.yaml",
-        "sp500_constituents.json",
-        "web_search_sources.yaml",
-    } == {path.name for path in (package_dir / "defaults" / "config").iterdir()}
+    # 목록을 손으로 적지 않는다. 0.5에서 유럽·일본 구성종목이 목록에서 빠져
+    # 패키지에 안 들어간 채 나갈 뻔했고, 여기 리터럴이 그때 남은 잔재다.
+    # 부트스트랩이 아는 파일과 패키지 내용이 갈라지면 첫 실행이 조용히 깨진다.
+    from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES
+
+    assert set(DEFAULT_CONFIG_NAMES) == {path.name for path in (package_dir / "defaults" / "config").iterdir()}
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
     assert build["version"] == "0.5.0"
     assert len(build["commit"]) == 40
