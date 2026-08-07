@@ -7,7 +7,9 @@ from pathlib import Path
 
 from features.common.data_reliability.fetch_runtime import FetchPolicy, ProviderFetchRuntime
 
-RANGES = {"5d": 7, "1m": 35, "3m": 100, "6m": 190, "1y": 370, "5y": 1830}
+# `1d`는 장중 흐름이라 5분봉으로 받는다. 이틀치를 요청하는 이유는 휴장 다음
+# 날이나 개장 직후에 당일 봉이 몇 개 없어 빈 차트가 되기 때문이다.
+RANGES = {"1d": 2, "5d": 7, "1m": 35, "3m": 100, "6m": 190, "1y": 370, "5y": 1830}
 INTERVALS = {"5m", "1d", "1wk"}
 
 
@@ -19,7 +21,7 @@ def normalize_chart_request(symbol: str, range_key: str, interval: str) -> tuple
     interval = str(interval or "1d").lower()
     if range_key not in RANGES or interval not in INTERVALS:
         raise ValueError("chart_range_or_interval_invalid")
-    if interval == "5m" and range_key != "5d":
+    if interval == "5m" and range_key not in {"1d", "5d"}:
         raise ValueError("chart_intraday_range_invalid")
     return symbol, range_key, interval
 

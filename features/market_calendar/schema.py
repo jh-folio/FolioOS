@@ -79,7 +79,13 @@ def normalize_event(value: dict) -> dict:
         # 발표된 지표의 실제 결과. 예정만 보여주면 캘린더를 다시 열 이유가 없다.
         # 값이 없으면 빈 문자열이며, 없는 것을 0으로 바꾸지 않는다.
         "actualValue": _number(row.get("actualValue")),
+        # 시장 예상치. 발표된 숫자는 예상 대비로 읽어야 의미가 생긴다 — 직전 대비만
+        # 보면 서프라이즈인지 예정된 흐름인지 구분되지 않는다. 제공처가 줄 때만 찬다.
+        "forecastValue": _number(row.get("forecastValue")),
         "previousValue": _number(row.get("previousValue")),
         "unit": _text(row.get("unit"), 24),
+        # 격자는 좁아 티커로 두고, 아래 표에서 이름을 펼친다. `8306.T`만으로는
+        # 어느 회사 실적인지 알 수 없다.
+        "companyName": _text(row.get("companyName"), 120),
         "observedAt": _text(row.get("observedAt"), 30),
     }

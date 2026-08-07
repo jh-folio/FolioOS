@@ -40,7 +40,7 @@ def ensure_calendar_table(connection: sqlite3.Connection) -> None:
     if "updated_at" not in columns:
         connection.execute("ALTER TABLE market_calendar_events ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''")
     # 발표된 지표의 실제 결과. 예정만 남기면 발표 후 캘린더를 다시 열 이유가 없다.
-    for name in ("actual_value", "previous_value", "unit", "observed_at"):
+    for name in ("actual_value", "previous_value", "unit", "observed_at", "forecast_value", "company_name"):
         if name not in columns:
             connection.execute(f"ALTER TABLE market_calendar_events ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
     connection.execute("CREATE INDEX IF NOT EXISTS idx_market_calendar_time ON market_calendar_events(starts_at, kind)")
@@ -59,16 +59,17 @@ def upsert_events(db_path: Path, events: list[dict]) -> int:
                 continue
             conn.execute(
                 """INSERT INTO market_calendar_events
-                   (id,kind,title,market,country,tickers_json,starts_at,ends_at,timezone,all_day,status,importance,source,source_url,as_of,fetched_at,provider,parser_version,cancelled,updated_at,actual_value,previous_value,unit,observed_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   (id,kind,title,market,country,tickers_json,starts_at,ends_at,timezone,all_day,status,importance,source,source_url,as_of,fetched_at,provider,parser_version,cancelled,updated_at,actual_value,previous_value,unit,observed_at,forecast_value,company_name)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(id) DO UPDATE SET title=excluded.title,market=excluded.market,country=excluded.country,
                    tickers_json=excluded.tickers_json,starts_at=excluded.starts_at,ends_at=excluded.ends_at,
                    timezone=excluded.timezone,all_day=excluded.all_day,status=excluded.status,importance=excluded.importance,
                    source=excluded.source,source_url=excluded.source_url,as_of=excluded.as_of,fetched_at=excluded.fetched_at,
                    provider=excluded.provider,parser_version=excluded.parser_version,cancelled=excluded.cancelled,
                    updated_at=excluded.updated_at,actual_value=excluded.actual_value,
-                   previous_value=excluded.previous_value,unit=excluded.unit,observed_at=excluded.observed_at""",
-                (row["id"], row["kind"], row["title"], row["market"], row["country"], json.dumps(row["tickers"], ensure_ascii=False), row["startsAt"], row["endsAt"], row["timezone"], int(row["allDay"]), row["status"], row["importance"], row["source"], row["sourceUrl"], row["asOf"], row["fetchedAt"], row["provider"], row["parserVersion"], int(row["cancelled"]), row["updatedAt"], row["actualValue"], row["previousValue"], row["unit"], row["observedAt"]),
+                   previous_value=excluded.previous_value,unit=excluded.unit,observed_at=excluded.observed_at,
+                   forecast_value=excluded.forecast_value,company_name=excluded.company_name""",
+                (row["id"], row["kind"], row["title"], row["market"], row["country"], json.dumps(row["tickers"], ensure_ascii=False), row["startsAt"], row["endsAt"], row["timezone"], int(row["allDay"]), row["status"], row["importance"], row["source"], row["sourceUrl"], row["asOf"], row["fetchedAt"], row["provider"], row["parserVersion"], int(row["cancelled"]), row["updatedAt"], row["actualValue"], row["previousValue"], row["unit"], row["observedAt"], row["forecastValue"], row["companyName"]),
             )
             count += 1
         conn.commit()
@@ -156,8 +157,9 @@ def list_events(db_path: Path, *, start: str = "", end: str = "", market: str = 
             "status": row["status"], "importance": row["importance"], "source": row["source"], "sourceUrl": row["source_url"],
             "asOf": row["as_of"], "fetchedAt": row["fetched_at"], "provider": row["provider"], "parserVersion": row["parser_version"],
             "cancelled": bool(row["cancelled"]), "updatedAt": row["updated_at"],
-            "actualValue": row["actual_value"], "previousValue": row["previous_value"],
-            "unit": row["unit"], "observedAt": row["observed_at"],
+            "actualValue": row["actual_value"], "forecastValue": row["forecast_value"],
+            "previousValue": row["previous_value"],
+            "unit": row["unit"], "observedAt": row["observed_at"], "companyName": row["company_name"],
         })
     return {"events": events, "count": len(events), "dataGaps": gaps}
 
@@ -194,6 +196,9 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
     providers: dict[str, int | str] = {"official_filing": len(events)}
 
     today = dt.date.today()
+    # 지표는 앞으로만 받으면 결과가 실린 발표가 하나도 안 들어온다. 7월 지표가
+    # 캘린더에 없던 이유가 이것이다 — 수집 창이 오늘부터 시작했다.
+    macro_start = (today - dt.timedelta(days=45)).isoformat()
     years = sorted({today.year, (today + dt.timedelta(days=90)).year})
     holidays = official_holiday_events(years)
     fomc = official_fomc_events(years)
@@ -212,7 +217,7 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
 
     key = fred_api_key()
     if key:
-        macro = fetch_fred_macro_events(key, start=today.isoformat(), end=(today + dt.timedelta(days=60)).isoformat())
+        macro = fetch_fred_macro_events(key, start=macro_start, end=(today + dt.timedelta(days=60)).isoformat())
         events.extend(macro)
         providers["fred_macro"] = len(macro)
     else:
@@ -223,7 +228,7 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
     bok_key = bok_api_key()
     if bok_key:
         kr_macro = fetch_bok_macro_events(
-            bok_key, start=today.isoformat(), end=(today + dt.timedelta(days=60)).isoformat()
+            bok_key, start=macro_start, end=(today + dt.timedelta(days=60)).isoformat()
         )
         events.extend(kr_macro)
         providers["bok_macro"] = len(kr_macro)
@@ -234,7 +239,7 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
     # 유일한 경로라 estimated로 넣는다. FRED 키가 없으면 미국까지 여기서 받아,
     # 키를 발급받지 않은 사용자도 지표 일정을 빈 화면으로 보지 않게 한다.
     overseas = fetch_yf_economic_events(
-        start=today.isoformat(),
+        start=macro_start,
         end=(today + dt.timedelta(days=60)).isoformat(),
         include_us=not key,
     )

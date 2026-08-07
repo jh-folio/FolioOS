@@ -149,15 +149,15 @@ function ChangeCard({ event }: { event: ChangeEvent }) {
   );
 }
 
-export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: ChangeEvent[] }) {
+export function ChangeFeed({ events }: { events: ChangeEvent[] }) {
   const [storyMarket, setStoryMarket] = useState<StoryMarket>("us");
-  // 의미 판정이 끝난 변화만 본문에 둔다. `내용 미평가`(LLM 없이 생성)와 보도량
-  // 이동만 있는 건은 "무엇이 달라졌다"를 아직 말할 수 없으므로 접힌 목록으로.
+  // 의미 판정이 끝난 변화만 보여준다. `내용 미평가`(LLM 없이 생성)와 보도량
+  // 이동만 있는 건은 "무엇이 달라졌다"를 아직 말할 수 없다. 접어서라도 두면
+  // 사용자는 열어보고 아무 판단도 얻지 못한다 — 화면에서 뺀다.
   const confirmed = events.filter((event) => {
     const verdict = String(primaryChangedItem(event)?.semanticVerdict || "");
     return verdict === "new_information" || verdict === "reversal" || verdict === "trend_development";
   });
-  const pending = [...events.filter((event) => !confirmed.includes(event)), ...(quiet || [])];
   return (
     <section className="cockpit-panel cockpit-change-feed" aria-labelledby="cockpit-change-title">
       <div className="cockpit-panel__head">
@@ -183,22 +183,7 @@ export function ChangeFeed({ events, quiet }: { events: ChangeEvent[]; quiet?: C
       </ol> : (
         <p className="cockpit-empty">아직 확인된 내용 변화가 없습니다.</p>
       )}
-      {pending.length ? (
-        <details className="cockpit-quiet">
-          {/* 기준선 생성·근거 부족·변화 없음·내용 미평가가 함께 들어가므로
-              "변화 없음"으로 뭉뚱그리지 않는다. */}
-          <summary>내용 미평가·보도량 이동 {pending.length}건 보기</summary>
-          <ol>
-            {pending.map((event) => (
-              <li key={eventKey(event)}>
-                <span>{CHANGE_STATUS_LABELS[event.status || ""] || event.status}</span>
-                <em>{artifactLabel(event)}{event.artifactId ? ` · ${String(event.artifactId).slice(0, 24)}` : ""}</em>
-                <time>{event.generatedAt ? new Date(event.generatedAt).toLocaleDateString("ko-KR") : ""}</time>
-              </li>
-            ))}
-          </ol>
-        </details>
-      ) : null}
+
     </section>
   );
 }

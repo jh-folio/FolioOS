@@ -14329,7 +14329,8 @@ main.page {
 .chart-next { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 0; color: var(--folio-ink-soft); font-size: 13px; }
 .chart-next b { color: var(--folio-ink); }
 .chart-next small { color: var(--folio-ink-subtle); }
-.cockpit-chart-stage { position: relative; height: 376px; min-height: 376px; max-height: 376px; padding-bottom: 8px; border: none; border-radius: var(--r-group); overflow: hidden; background: var(--surface-group); }
+/* padding-bottom을 두지 않는다. 차트는 autoSize로 컨테이너를 꽉 채운다. */
+.cockpit-chart-stage { position: relative; height: 376px; min-height: 376px; max-height: 376px; border: none; border-radius: var(--r-group); overflow: hidden; background: var(--surface-group); }
 /* 브리핑 본문 차트의 크로스헤어 툴팁과 같은 형식(색은 토큰). */
 .market-chart-tooltip {
   position: absolute;
@@ -14354,8 +14355,8 @@ main.page {
 .market-chart-tooltip__change[data-direction="up"] { color: var(--folio-green); }
 .market-chart-tooltip__change[data-direction="down"] { color: var(--folio-burgundy); }
 .cockpit-chart-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 9px; }
-.cockpit-chart table { width: 100%; margin-top: 10px; border-collapse: collapse; }
-.cockpit-chart th, .cockpit-chart td { padding: 7px; border-bottom: 1px solid var(--folio-border); text-align: right; font-variant-numeric: tabular-nums; }
+/* `표로 보기` 표를 없애면서 함께 지운다. 이 규칙의 margin-top이 lightweight-charts의
+   내부 <table>까지 10px 밀어내, 시간축 날짜 글자 아랫부분이 overflow에 잘렸다. */
 .cockpit-calendar { grid-column: 1 / -1; }
 .cockpit-calendar a { color: inherit; text-decoration: none; }
 .cockpit-calendar a:hover strong, .cockpit-calendar a:focus-visible strong { text-decoration: underline; }
@@ -14760,7 +14761,11 @@ main.page {
    같은데 앞에 있어서 졌고, Dark에서 --surface-control이 패널 배경과 같은 색이라
    선택된 종목이 선택되지 않은 것과 구분되지 않았다. */
 .cal-filter, .sym-chip { border: none; background: var(--surface-control); }
-.cal-filter:hover, .sym-chip:hover { background: var(--surface-control-hover); }
+/* 선택된 칩에는 회색 hover를 씌우지 않는다. 네이비 위에 회색이 덮이면 대비가 커서
+   마우스가 스칠 때마다 깜빡이는 것처럼 보인다(.sym-chip에는 이 가드가 있었다). */
+.cal-filter:not([aria-pressed="true"]):hover,
+.sym-chip:not([aria-pressed="true"]):not(.sym-chip--active):hover { background: var(--surface-control-hover); }
+.cal-filter[aria-pressed="true"]:hover { background: var(--folio-surface-dark-2); }
 .sym-chip--active, .sym-chip[aria-pressed="true"] {
   background: var(--folio-surface-dark);
   color: var(--folio-ink-inverse);

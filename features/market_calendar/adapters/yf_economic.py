@@ -161,6 +161,7 @@ def fetch_yf_economic_events(
                 # 발표가 끝난 건은 예정이 아니다. 값이 없으면 집계 상태를 유지한다.
                 "status": "actual" if actual else "estimated",
                 "actualValue": actual,
+                "forecastValue": _reading(record.get("Expected")),
                 "previousValue": previous,
                 "observedAt": str(record.get("For") or "").strip(),
                 # 링크를 붙이지 않는다. yfinance는 수집 경로일 뿐 사용자가 읽을

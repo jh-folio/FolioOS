@@ -8,7 +8,7 @@ VALID_MODES = {"cockpit"}
 VALID_CALENDAR_VIEWS = {"week", "month"}
 VALID_CALENDAR_KINDS = {"all", "earnings", "macro", "central_bank", "holiday", "filing", "dividend"}
 VALID_CALENDAR_MARKETS = {"all", *(market.value for market in PRODUCT_MARKETS)}
-VALID_CHART_RANGES = {"1m", "3m", "6m", "1y", "5y"}
+VALID_CHART_RANGES = {"1d", "1m", "3m", "1y", "5y"}
 VALID_CHART_STYLES = {"candle", "line"}
 
 
@@ -67,6 +67,8 @@ def normalize_dashboard_settings(value: dict | None) -> dict:
         "calendarKinds": calendar_kinds,
         "calendarMarkets": calendar_markets,
         "calendarWatchlistOnly": bool(value.get("calendarWatchlistOnly")),
+        # 중요도 하한(1=전부, 2=중간 이상, 3=최상위만).
+        "calendarMinImportance": min(max(int(value.get("calendarMinImportance") or 1), 1), 3),
         "chartRange": chart_range if chart_range in VALID_CHART_RANGES else "3m",
         "chartStyle": chart_style if chart_style in VALID_CHART_STYLES else "line",
         "chartSymbol": chart_symbol if re.fullmatch(r"\^?[A-Z0-9.=-]{1,20}", chart_symbol) else "",

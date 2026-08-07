@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 
+from features.market_calendar.adapters._company_name import company_name
 from features.market_calendar.adapters._ticker_market import market_for_ticker
 from features.market_calendar.schema import normalize_event
 

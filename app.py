@@ -1571,7 +1571,11 @@ def main():
     host = os.environ.get("FOLIO_HOST", "127.0.0.1").strip() or "127.0.0.1"
 
     print("Folio OS starting...")
-    print(f"Open this address on this PC: http://localhost:{port}")
+    # `localhost`가 아니라 127.0.0.1을 안내한다. Windows에서 localhost는 ::1을 먼저
+    # 시도하는데 서버는 IPv4 루프백만 열어 두므로, 새 연결마다 폴백까지 약 2초를
+    # 기다린다(실측: localhost 2.02초 / 127.0.0.1 0.01초). 화면 전환이 느리다고
+    # 느껴지던 주된 이유가 이것이다 — 모든 요청이 그 2초를 냈다.
+    print(f"Open this address on this PC: http://127.0.0.1:{port}")
 
     if host == "0.0.0.0":
         print(f"LAN access enabled. Open from your phone: http://<PC_LOCAL_IP>:{port}")

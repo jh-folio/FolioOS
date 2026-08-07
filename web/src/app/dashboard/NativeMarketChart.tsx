@@ -27,7 +27,10 @@ declare global { interface Window { LightweightCharts?: LightweightApi } }
 const FRESHNESS_KO: Record<string, string> = {
   snapshot: "스냅샷", current: "최신", fresh: "최신", cached: "최근 조회", delayed: "지연", stale: "오래됨", unavailable: "불러올 수 없음",
 };
-const RANGES = ["1m", "3m", "6m", "1y", "5y"];
+// 1D는 장중(5분봉), 나머지는 일봉이다.
+const RANGES = ["1d", "1m", "3m", "1y", "5y"];
+const RANGE_LABELS: Record<string, string> = { "1d": "1D", "1m": "1M", "3m": "3M", "1y": "1Y", "5y": "5Y" };
+const intervalFor = (value: string) => (value === "1d" ? "5m" : "1d");
 
 const INDEX_SYMBOLS: Array<{ symbol: string; label: string }> = [
   { symbol: "^GSPC", label: "S&P 500" },
@@ -141,7 +144,7 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
   useEffect(() => {
     let alive = true;
     setError("");
-    getJson<ChartPayload>(`/api/market/chart?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=1d`)
+    getJson<ChartPayload>(`/api/market/chart?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${intervalFor(range)}`)
       .then((row) => { if (alive) setPayload(row); })
       .catch((err) => { if (alive) setError(err instanceof Error ? err.message : "차트를 불러오지 못했습니다."); });
     return () => { alive = false; };
@@ -324,11 +327,11 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
             <button type="button" aria-pressed={style === "line"} onClick={() => pickStyle("line")}>라인</button>
             <button type="button" aria-pressed={style === "candle"} onClick={() => pickStyle("candle")}>캔들</button>
           </div>
-          <div className="segment" role="group" aria-label="차트 기간">{RANGES.map((value) => <button type="button" aria-pressed={range === value} onClick={() => pickRange(value)} key={value}>{value}</button>)}</div>
+          <div className="segment" role="group" aria-label="차트 기간">{RANGES.map((value) => <button type="button" aria-pressed={range === value} onClick={() => pickRange(value)} key={value}>{RANGE_LABELS[value] || value}</button>)}</div>
         </div>
       </div>
       {error && <p className="react-dashboard-error">{error}</p>}
-      <div className="cockpit-chart-stage" ref={targetRef}>{!window.LightweightCharts && <p>차트 라이브러리를 사용할 수 없습니다. 아래 표를 이용하세요.</p>}</div>
+      <div className="cockpit-chart-stage" ref={targetRef}>{!window.LightweightCharts && <p>차트 라이브러리를 사용할 수 없습니다.</p>}</div>
       {nextEvent && (
         <p className="chart-next">
           <span className={`chip certainty-badge--${nextEvent.status}`}>{STATUS_KO[nextEvent.status] || nextEvent.status}</span>
@@ -337,7 +340,6 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
         </p>
       )}
       {payload?.notice ? <div className="cockpit-chart-foot"><small>{payload.notice}</small></div> : null}
-      {payload?.series?.length ? <details><summary>표로 보기</summary><table><thead><tr><th>일자</th><th>종가</th></tr></thead><tbody>{payload.series.slice(-20).reverse().map((row) => <tr key={row.time}><td>{row.time}</td><td>{row.close.toLocaleString()}</td></tr>)}</tbody></table></details> : null}
     </section>
   );
 }

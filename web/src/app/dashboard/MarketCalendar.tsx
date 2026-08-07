@@ -5,7 +5,8 @@ import { useMarketScope } from "../useMarketScope";
 type Event = {
   id: string; kind: string; title: string; startsAt: string; status: string;
   market?: string; tickers?: string[]; source?: string; sourceUrl?: string;
-  actualValue?: string; previousValue?: string; unit?: string; observedAt?: string;
+  actualValue?: string; forecastValue?: string; previousValue?: string; unit?: string; observedAt?: string;
+  companyName?: string;
   allDay?: boolean; timezone?: string; importance?: number; provider?: string;
 };
 type FocusSymbol = { symbol: string; label?: string; source?: string };
@@ -22,8 +23,48 @@ const KIND_FILTERS: Array<{ value: string; label: string }> = [
   { value: "central_bank", label: "중앙은행" }, { value: "holiday", label: "휴장" },
   { value: "filing", label: "공시" }, { value: "dividend", label: "배당" },
 ];
+const numberOf = (value?: string) => {
+  const parsed = Number(String(value ?? "").replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+/** 발표 숫자를 무엇과 비교해 읽을지. 예상치가 있으면 그것이 우선이다. */
+function comparisonLabel(event: Event): string {
+  const actual = numberOf(event.actualValue);
+  const forecast = numberOf(event.forecastValue);
+  if (actual !== null && forecast !== null) {
+    const diff = actual - forecast;
+    const sign = diff > 0 ? "+" : "";
+    return `예상 ${event.forecastValue} 대비 ${sign}${Number(diff.toFixed(4))}`;
+  }
+  return event.previousValue ? `직전 ${event.previousValue}` : "";
+}
+
+function comparisonDirection(event: Event): "up" | "down" | "flat" {
+  const actual = numberOf(event.actualValue);
+  const base = numberOf(event.forecastValue) ?? numberOf(event.previousValue);
+  if (actual === null || base === null || actual === base) return "flat";
+  return actual > base ? "up" : "down";
+}
+
+/** 캘린더 격자는 좁아 티커로 두고, 아래 표에서는 이름을 펼친다. */
+function eventTitleWithName(event: Event): string {
+  const ticker = (event.tickers || [])[0];
+  const name = String(event.companyName || "").trim();
+  if (!ticker || !name) return event.title;
+  if (event.title.includes(name)) return event.title;
+  return event.title.replace(ticker, `${name} (${ticker})`);
+}
+
 export const MARKET_KO: Record<string, string> = MARKET_KO_LABELS;
 const MARKET_FILTERS = ["US", "KR", "EUROPE", "JP"];
+// 중요도는 하한 하나로 고른다. 3단계를 각각 토글하게 하면 "중간만 보기"처럼
+// 쓸 일 없는 조합이 생기고, 무엇이 켜졌는지 읽기 어려워진다.
+const IMPORTANCE_FILTERS = [
+  { value: 3, dots: 1, label: "최상위", hint: "FOMC·금리 결정 같은 최상위 일정만" },
+  { value: 2, dots: 2, label: "중간 이상", hint: "실적·주요 지표까지" },
+  { value: 1, dots: 3, label: "전부", hint: "휴장일·배당까지 전부" },
+];
 // 유럽은 거래소마다 휴장일이 달라 시장 하나로 묶이지 않는다. 칩에서도 어느 거래소가
 // 쉬는지 보여야 "유럽 휴장"으로 잘못 읽히지 않는다.
 const VENUE_KO: Record<string, string> = {
@@ -78,6 +119,9 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   // 빈 집합 = 전체. 브리핑 시장 선택과 같은 규칙이라 조작을 새로 배우지 않는다.
   const [kinds, setKinds] = useState<string[]>([]);
   const [markets, setMarkets] = useState<string[]>([]);
+  // 중요도 하한. 3=최상위만, 2=중간 이상, 1=전부. 일정이 넷 시장에서 몰려오면
+  // 무엇을 먼저 볼지 고르는 축이 필요하다.
+  const [minImportance, setMinImportance] = useState(1);
   // 관심 시장 범위 밖의 일정은 칩에서도 목록에서도 뺀다.
   const { isSelected: marketInScope } = useMarketScope();
   const [watchOnly, setWatchOnly] = useState(false);
@@ -103,13 +147,14 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    getJson<{ calendarView?: CalendarView; calendarKinds?: string[]; calendarMarkets?: string[]; calendarKind?: string; calendarMarket?: string; calendarWatchlistOnly?: boolean }>("/api/dashboard/settings")
+    getJson<{ calendarView?: CalendarView; calendarKinds?: string[]; calendarMarkets?: string[]; calendarKind?: string; calendarMarket?: string; calendarWatchlistOnly?: boolean; calendarMinImportance?: number }>("/api/dashboard/settings")
       .then((row) => {
         if (row.calendarView === "week" || row.calendarView === "month") setView(row.calendarView);
         // 예전 단일 선택 설정은 한 개짜리 배열로 읽어 기존 사용자의 선택을 잃지 않는다.
         setKinds(row.calendarKinds || (row.calendarKind && row.calendarKind !== "all" ? [row.calendarKind] : []));
         setMarkets(row.calendarMarkets || (row.calendarMarket && row.calendarMarket !== "all" ? [row.calendarMarket] : []));
         setWatchOnly(Boolean(row.calendarWatchlistOnly));
+        setMinImportance(Math.min(Math.max(Number(row.calendarMinImportance) || 1, 1), 3));
       })
       .catch(() => undefined);
   }, []);
@@ -126,10 +171,11 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   const filtered = useMemo(() => events.filter((event) => {
     if (kinds.length && !kinds.includes(event.kind)) return false;
     if (!marketInScope(event.market || "")) return false;
+    if ((event.importance || 1) < minImportance) return false;
     if (markets.length && !markets.includes((event.market || "").toUpperCase())) return false;
     if (watchOnly && !(event.tickers || []).some((t) => watchSymbols.has(t.toUpperCase()))) return false;
     return true;
-  }), [events, kinds, markets, watchOnly, watchSymbols, marketInScope]);
+  }), [events, kinds, markets, watchOnly, watchSymbols, marketInScope, minImportance]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, Event[]>();
@@ -220,6 +266,24 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
           보유·관심만
         </button>
       </div>
+      <div className="cal-filter-row" role="group" aria-label="일정 중요도 필터">
+        <span className="cal-filter-label">중요도</span>
+        {IMPORTANCE_FILTERS.map((row) => (
+          <button
+            key={row.value}
+            type="button"
+            className="cal-filter cal-imp-filter"
+            aria-pressed={minImportance === row.value}
+            data-tooltip={row.hint}
+            onClick={() => { setMinImportance(row.value); persist({ calendarMinImportance: row.value }); }}
+          >
+            <span className="imp" aria-hidden="true">
+              {[1, 2, 3].map((level) => <u key={level} className={level >= (4 - row.dots) ? "on" : ""} />)}
+            </span>
+            {row.label}
+          </button>
+        ))}
+      </div>
       {notice && <p className="react-reader-status">{notice}</p>}
       {error && <p className="react-dashboard-error" role="alert">{error}</p>}
 
@@ -272,7 +336,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
                 <td><span className="chip mkt-chip">{MARKET_KO[event.market || ""] || event.market || "—"}</span></td>
                 <td><span className="imp" aria-label={`중요도 ${event.importance || 1}/3`}>{[1, 2, 3].map((level) => <u key={level} className={(event.importance || 1) >= level ? "on" : ""} />)}</span></td>
                 <td>
-                  <strong>{event.title}</strong>
+                  <strong>{eventTitleWithName(event)}</strong>
                   <small>
                     {KIND_KO[event.kind] || event.kind}{event.source ? ` · ${event.source}` : ""}
                     {/* 링크는 사용자가 읽을 원문이 있을 때만 단다. 수집 경로(yfinance
@@ -284,7 +348,9 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
                   {event.actualValue ? (
                     <>
                       <b>{event.actualValue}{event.unit ? ` ${event.unit}` : ""}</b>
-                      {event.previousValue ? <small>직전 {event.previousValue}</small> : null}
+                      {/* 발표 숫자는 예상 대비로 읽어야 의미가 생긴다. 예상치를 주는
+                          제공처가 있을 때만 쓰고, 없으면 직전 대비로 내려간다. */}
+                      {comparisonLabel(event) ? <small data-direction={comparisonDirection(event)}>{comparisonLabel(event)}</small> : null}
                       {event.observedAt ? <small>{event.observedAt} 기준</small> : null}
                     </>
                   ) : <span className="cal-actual__pending">—</span>}

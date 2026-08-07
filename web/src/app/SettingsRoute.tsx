@@ -285,7 +285,8 @@ function MarketScopePanel() {
 export function SettingsRoute() {
   const theme = useThemePreference();
   const uiPreferences = useUiPreferences();
-  const [tab, setTab] = useState<SettingsTab>("integrations");
+  // 관리(화면·관심 시장·자동화)가 먼저다. 연동은 한 번 설정하면 다시 열 일이 적다.
+  const [tab, setTab] = useState<SettingsTab>("admin");
   const [settings, setSettings] = useState<SettingsPayload | null>(null);
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
   const [automation, setAutomation] = useState<AutomationSettings>({});
@@ -551,7 +552,7 @@ export function SettingsRoute() {
       <RouteHero
         eyebrow="Settings"
         title="설정"
-        description="LLM, 외부 데이터, 내보내기, 자동화 설정을 관리합니다."
+        description="화면, 관심 시장, 자동화와 LLM·외부 데이터·내보내기 연동을 관리합니다."
         actions={(
         <button className="btn" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>
           {busy === "load" ? "불러오는 중" : "새로고침"}
@@ -560,8 +561,8 @@ export function SettingsRoute() {
       />
 
       <nav className="sub-tabs" aria-label="설정 하위 탭">
-        <button aria-current={tab === "integrations" ? "page" : undefined} type="button" onClick={() => setTab("integrations")}>연동</button>
         <button aria-current={tab === "admin" ? "page" : undefined} type="button" onClick={() => setTab("admin")}>관리</button>
+        <button aria-current={tab === "integrations" ? "page" : undefined} type="button" onClick={() => setTab("integrations")}>연동</button>
       </nav>
 
       {error && <p className="react-dashboard-error">{error}</p>}
@@ -569,51 +570,6 @@ export function SettingsRoute() {
 
       {tab === "integrations" ? (
         <div id="settings-integrations" className="sub-tab-panel active">
-          <section className="settings-panel input-panel" data-display-settings>
-            <div className="input-panel-header">
-              <div>
-                <h3>화면</h3>
-                <p>이 브라우저의 색상 모드와 움직임 방식을 저장합니다.</p>
-              </div>
-              <span className="settings-theme-status" aria-live="polite">
-                현재 {theme.resolved === "dark" ? "다크" : "라이트"}
-              </span>
-            </div>
-            <div className="field">
-              <span id="themePreferenceLabel">테마</span>
-              <div className="settings-theme-options" role="group" aria-labelledby="themePreferenceLabel">
-                {([
-                  ["light", "라이트"],
-                  ["dark", "다크"],
-                  ["system", "시스템"],
-                ] as Array<[ThemePreference, string]>).map(([value, label]) => (
-                  <button
-                    type="button"
-                    aria-pressed={theme.preference === value}
-                    onClick={() => theme.setPreference(value)}
-                    key={value}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="settings-grid">
-              <label className="field">
-                <span>움직임</span>
-                <select
-                  value={uiPreferences.preferences.motion}
-                  onChange={(event) => uiPreferences.setMotion(event.currentTarget.value === "reduced" ? "reduced" : "system")}
-                >
-                  <option value="system">시스템 설정 따르기</option>
-                  <option value="reduced">움직임 줄이기</option>
-                </select>
-              </label>
-            </div>
-          </section>
-
-          <MarketScopePanel />
-
           <section className="settings-panel input-panel">
             <div className="input-panel-header settings-agent-header">
               <div>
@@ -763,6 +719,51 @@ export function SettingsRoute() {
         </div>
       ) : (
         <div id="settings-admin" className="sub-tab-panel active">
+          <section className="settings-panel input-panel" data-display-settings>
+            <div className="input-panel-header">
+              <div>
+                <h3>화면</h3>
+                <p>이 브라우저의 색상 모드와 움직임 방식을 저장합니다.</p>
+              </div>
+              <span className="settings-theme-status" aria-live="polite">
+                현재 {theme.resolved === "dark" ? "다크" : "라이트"}
+              </span>
+            </div>
+            <div className="field">
+              <span id="themePreferenceLabel">테마</span>
+              <div className="settings-theme-options" role="group" aria-labelledby="themePreferenceLabel">
+                {([
+                  ["light", "라이트"],
+                  ["dark", "다크"],
+                  ["system", "시스템"],
+                ] as Array<[ThemePreference, string]>).map(([value, label]) => (
+                  <button
+                    type="button"
+                    aria-pressed={theme.preference === value}
+                    onClick={() => theme.setPreference(value)}
+                    key={value}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-grid">
+              <label className="field">
+                <span>움직임</span>
+                <select
+                  value={uiPreferences.preferences.motion}
+                  onChange={(event) => uiPreferences.setMotion(event.currentTarget.value === "reduced" ? "reduced" : "system")}
+                >
+                  <option value="system">시스템 설정 따르기</option>
+                  <option value="reduced">움직임 줄이기</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <MarketScopePanel />
+
           <section className="settings-panel input-panel">
             <div className="input-panel-header"><h3>자동화</h3><p>수집, 중기 시장 정리, 브리핑 생성을 각각 독립 루틴으로 관리합니다.</p></div>
             <div className="automation-routines">
