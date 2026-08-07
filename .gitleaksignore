@@ -22,3 +22,6 @@ eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four
 eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:143
 eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:190
 eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:207
+# 그리고 이 파일 자신의 옛 판본 한 건. 인용을 지운 지금 판본은 걸리지 않지만,
+# 인용이 들어 있던 커밋(aec5b55)은 히스토리에 남아 계속 잡힌다.
+aec5b5576e643915c7cc371d920f2642a645cc33:.gitleaksignore:generic-api-key:6
