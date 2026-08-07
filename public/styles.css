@@ -9956,6 +9956,10 @@ body.report-reader-open { overflow: hidden; }
 }
 .topicrpt-action-row .btn--primary { margin-left: auto; }
 
+/* 액션 줄의 컨트롤은 버튼과 같은 36px이다. `.input-panel`의 48px은 질문 입력칸처럼
+   큰 폼 필드를 위한 값이라, 버튼 옆에 서면 줄이 48 vs 36으로 어긋난다. */
+.input-panel .topicrpt-action-row select { min-height: 36px; height: 36px; }
+
 .topicrpt-question-field textarea,
 .topicrpt-context-field textarea {
   min-height: 112px;
@@ -9998,7 +10002,10 @@ body.report-reader-open { overflow: hidden; }
 
 .topicrpt-plan-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* 분석 축이 든 첫 칸이 나머지보다 두 배 길다. 3등분하면 오른쪽 두 칸이 절반
+     넘게 빈 채로 축 카드 높이만큼 늘어난다. */
+  grid-template-columns: 1.4fr 1fr 1fr;
+  align-items: start;
   gap: 12px;
 }
 
@@ -10006,7 +10013,7 @@ body.report-reader-open { overflow: hidden; }
   min-width: 0;
   padding: 16px;
   border: 1px solid var(--folio-border);
-  border-radius: var(--folio-radius, 8px);
+  border-radius: var(--r-panel);
   background: var(--folio-surface-clean);
   overflow-wrap: anywhere;
 }
@@ -15803,4 +15810,52 @@ select { min-height: 36px; padding: 0 12px; }
 @media (max-width: 720px) {
   .topicrpt-plan-editor-row,
   .topicrpt-axis-edit-fields { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   계획 수정 요청 (Deep Research)
+   칸을 하나씩 고치는 대신 무엇을 바꿀지 적는다.
+   ============================================================ */
+.topicrpt-plan-revision {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-panel);
+  background: var(--surface-group);
+}
+
+.topicrpt-plan-revision-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.topicrpt-plan-revision-head strong { color: var(--folio-ink); }
+
+.topicrpt-plan-revision-head span {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-sm);
+}
+
+.topicrpt-plan-revision textarea { min-height: 84px; }
+
+/* 예시는 채워 넣는 버튼이다. 눌러 본 뒤 고쳐 쓰라는 뜻으로 칩 모양을 쓴다. */
+.topicrpt-plan-revision-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.topicrpt-plan-revision-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.topicrpt-plan-revision-actions .btn--primary { margin-left: auto; }
+
+@media (max-width: 900px) {
+  .topicrpt-plan-grid { grid-template-columns: 1fr; }
 }

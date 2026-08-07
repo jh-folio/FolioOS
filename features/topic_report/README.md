@@ -160,7 +160,9 @@ data/topic-reports/YYYY-MM-DD_<topic_key>_<id>.json
 - **한 단어 질의와 질문 전문 질의는 만들지 않는다.** 계획의 `searchQueries`는 그대로 `search_keywords`가 되어 근거 검색을 돌린다. 실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다(FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남긴다.
 - 조사 제거 목록에 `의`가 빠져 있어 `반도체의`가 검색어로 살아남았다. `_PARTICLES`가 단일 출처다.
 - **미리보기가 기본적으로 엔진에게 계획을 맡긴다**(`plannerEngine=auto`). 설정에서 엔진 경로를 넣은 순간부터 사용자는 Agent 사용을 허락한 것으로 본다 — 계획을 보려고 버튼을 두 번 누르게 하는 것은 확인이 아니라 절차다. 빠른 계획이 필요하면 `plannerEngine=rules`를 고른다. CLI는 40~50초가 걸리므로 화면이 그 사실을 먼저 말한다.
-- `POST /api/topic-reports/plan/replan`은 계획을 받은 뒤 다시 쓰고 싶을 때 쓴다. `revise`와 같은 `_swap_plan` 경로다.
+- `POST /api/topic-reports/plan/replan`은 계획을 받은 뒤 다시 쓸 때 쓴다. `instruction`이 있으면 **지금 계획을 그 요청대로 고치고**, 없으면 처음부터 다시 쓴다. `revise`와 같은 `_swap_plan` 경로다.
+- **화면의 계획 수정은 요청 문장 하나다.** 칸을 하나씩 편집하게 했더니 축 다섯 개에 텍스트 영역이 열한 개였다. 사람이 계획을 고칠 때 하는 말은 "밸류에이션 축은 빼고 공급 쪽을 자세히"에 가깝지 각 칸을 다시 타자하는 것이 아니다. 수정 요청은 `현재 계획`과 함께 엔진에 넘어가며, 규칙 계획에서 다시 시작하지 않는다 — 다시 시작하면 사용자가 앞서 받아 든 계획이 통째로 사라져 무엇이 반영됐는지 알 수 없다.
+- `POST /api/topic-reports/plan/revise`(PlanEdits)는 항목 단위 수정을 하는 결정적 경로로 남는다. 화면은 쓰지 않으며 엔진 없이 계획을 고쳐야 하는 호출자용이다.
 - **테스트는 Agent CLI를 부르지 않는다.** `tests/conftest.py`가 `run_agent_prompt`를 막는다. 막지 않았을 때 실제 CLI가 돌아 스위트가 멈춰 섰다.
 - 플래너는 **API 키와 Agent CLI 둘 다 쓴다.** 이 설치처럼 `AI_AGENT_MODE=cli`로 도는 환경에서는 `selected_llm_config()["apiKey"]`가 비어 있어, 보고서를 쓰는 엔진이 멀쩡히 있는데도 계획은 늘 규칙으로 떨어졌다. 키가 없으면 `run_agent_prompt()`로 같은 프롬프트를 보낸다. 타임아웃은 `TOPIC_PLANNER_TIMEOUT_SECONDS`(기본 120초).
 - LLM 결과에도 같은 검색어 위생을 코드가 다시 적용한다(§5 원칙 4 — 프롬프트는 부탁이지 제한이 아니다).

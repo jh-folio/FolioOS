@@ -115,7 +115,14 @@ class ApprovedRequestService:
         payload["degradedConfirmation"] = None
         return sha256_hex(payload)
 
-    def _topic_plan(self, request: PlanRequest, *, use_llm: bool | None = None) -> TopicPlanV1:
+    def _topic_plan(
+        self,
+        request: PlanRequest,
+        *,
+        use_llm: bool | None = None,
+        current_plan: TopicPlanV1 | None = None,
+        instruction: str = "",
+    ) -> TopicPlanV1:
         """계획은 기본적으로 설정된 엔진(API 키 또는 Agent CLI)이 쓴다.
 
         엔진을 설정해 둔 사용자는 그 순간부터 Agent 사용을 허락한 것으로 본다.
@@ -129,6 +136,8 @@ class ApprovedRequestService:
             custom_label=request.question,
             user_context=request.userContext,
             llm_override=use_llm,
+            current_plan=current_plan.model_dump(mode="json") if current_plan else None,
+            instruction=instruction,
         )
         raw["plannerMode"] = raw.get("plannerMode") or "rules"
         raw["candidateTickers"] = request.customTickers or raw.get("candidateTickers", {})
@@ -274,7 +283,13 @@ class ApprovedRequestService:
             marketStatePolicy=approved.marketStatePolicy,
             marketStateScope=approved.marketStateScope,
         )
-        return self._swap_plan(approved, self._topic_plan(plan_request, use_llm=True), proof)
+        revised = self._topic_plan(
+            plan_request,
+            use_llm=True,
+            current_plan=approved.topicPlan,
+            instruction=request.instruction,
+        )
+        return self._swap_plan(approved, revised, proof)
 
     def revise(self, request: RevisePlanRequest) -> PlanPreviewEnvelope:
         """승인 전 계획 수정. 새 계획 해시로 승인을 갈아끼운다.

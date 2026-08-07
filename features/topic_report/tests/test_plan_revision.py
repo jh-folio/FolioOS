@@ -198,3 +198,70 @@ def test_server_owned_fields_survive_editing(service):
     assert revised.deepResearch.falsificationTriggers == before.deepResearch.falsificationTriggers
     assert revised.deepResearch.requiredOutputs == before.deepResearch.requiredOutputs
     assert revised.topic == before.topic
+
+
+def test_a_revision_instruction_edits_the_plan_in_place(service, monkeypatch):
+    """칸을 하나씩 고치는 대신 무엇을 바꿀지 적는다.
+
+    수정 요청이 있으면 규칙 계획에서 다시 시작하지 않는다. 다시 시작하면 사용자가
+    앞서 받아 든 계획이 통째로 사라져 무엇이 반영됐는지 알 수 없다.
+    """
+    import json as _json
+
+    import features.llm_settings.client as client
+    from features.agent_mode import bridge
+    from features.topic_report.approved_schema import ReplanRequest
+
+    planned = _planned(service)
+    seen = {}
+
+    monkeypatch.setattr(client, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(client, "selected_llm_config", lambda: {"apiKey": ""})
+    monkeypatch.setattr(bridge, "bridge_status", lambda *a, **k: {"available": True})
+
+    def fake_prompt(prompt, **_kwargs):
+        seen["prompt"] = prompt
+        return {"output": _json.dumps({
+            "topic": QUESTION,
+            "topicLabel": "메모리 사이클",
+            "reportType": "supply_chain_theme",
+            "searchQueries": ["DRAM 고정거래가격"],
+            "analysisAxes": [
+                {"key": "supply", "label": "공급 규율", "questions": ["감산은 이어지는가?"], "searchQueries": ["메모리 감산"]}
+            ],
+        }, ensure_ascii=False)}
+
+    monkeypatch.setattr(bridge, "run_agent_prompt", fake_prompt)
+
+    revised = service.replan(ReplanRequest(
+        approvedRequest=planned.approvedRequest,
+        approval=_ref(planned.approval),
+        instruction="밸류에이션 축은 빼고 공급 쪽을 자세히 봐줘",
+    ))
+
+    assert "밸류에이션 축은 빼고" in seen["prompt"]
+    # 지금 계획을 고치는 것이지 규칙 계획에서 다시 시작하는 게 아니다.
+    assert "현재 계획(수정 대상)" in seen["prompt"]
+    assert planned.approvedRequest.topicPlan.analysisAxes[0].label in seen["prompt"]
+
+    plan = revised.approvedRequest.topicPlan
+    assert plan.topicLabel == "메모리 사이클"
+    assert plan.plannerMode == "llm"
+    assert revised.approvedRequest.planHash != planned.approvedRequest.planHash
+
+
+def test_replanning_without_an_engine_keeps_the_current_plan(service, monkeypatch):
+    from features.agent_mode import bridge
+    from features.topic_report.approved_schema import ReplanRequest
+
+    planned = _planned(service)
+    monkeypatch.setattr(bridge, "bridge_status", lambda *a, **k: {"available": False})
+
+    revised = service.replan(ReplanRequest(
+        approvedRequest=planned.approvedRequest,
+        approval=_ref(planned.approval),
+        instruction="검색어를 영어로 바꿔줘",
+    ))
+
+    assert revised.approvedRequest.topicPlan.plannerMode == "rules"
+    assert revised.approvedRequest.topicPlan.analysisAxes

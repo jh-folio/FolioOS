@@ -456,10 +456,11 @@ export type PlanEdits = {
   readonly axes?: readonly AxisEdit[];
 };
 
-/** 계획을 LLM/Agent로 다시 쓰기. 사용자가 누를 때만 실행한다. */
+/** 계획을 다시 쓰기. `instruction`이 있으면 지금 계획을 그 요청대로 고친다. */
 export type ReplanRequest = {
   readonly approvedRequest: ApprovedRequest;
   readonly approval: ApprovalReference;
+  readonly instruction: string;
 };
 
 export type RevisePlanRequest = {

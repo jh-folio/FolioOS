@@ -566,8 +566,19 @@ def _plan_via_cli(prompt: str, context: str) -> str:
     return str(result.get("output") or "")
 
 
-def refine_plan_with_llm(rule_plan: dict, topic: str, user_context: str = "") -> tuple[dict, str]:
-    """LLM으로 규칙 계획을 정제. 실패하면 (rule_plan, 사유) 반환."""
+def refine_plan_with_llm(
+    rule_plan: dict,
+    topic: str,
+    user_context: str = "",
+    *,
+    current_plan: dict | None = None,
+    instruction: str = "",
+) -> tuple[dict, str]:
+    """LLM으로 계획을 쓴다. 실패하면 (rule_plan, 사유) 반환.
+
+    `instruction`이 있으면 처음부터 쓰지 않고 `current_plan`을 그 요청대로 고친다.
+    사용자는 칸을 하나씩 고치기보다 "축 하나 빼고 검색어를 한국어로"처럼 말한다.
+    """
     try:
         from features.llm_settings.client import (
             extract_json_object,
@@ -584,7 +595,15 @@ def refine_plan_with_llm(rule_plan: dict, topic: str, user_context: str = "") ->
     context_lines = [f"리서치 주제: {topic}"]
     if user_context.strip():
         context_lines.append(f"사용자 컨텍스트(관심 방향, 사실 아님): {user_context.strip()[:500]}")
-    context_lines.append(f"규칙 기반 1차 계획(참고/수정 대상):\n{json.dumps(rule_plan, ensure_ascii=False, indent=1)[:3000]}")
+    # 수정 요청이 있으면 지금 계획을 고친다. 규칙 계획에서 다시 시작하면 사용자가
+    # 앞서 받아 든 계획이 통째로 사라져 무엇이 반영됐는지 알 수 없다.
+    base_plan = current_plan if (instruction.strip() and current_plan) else rule_plan
+    context_lines.append(f"현재 계획(수정 대상):\n{json.dumps(base_plan, ensure_ascii=False, indent=1)[:3500]}")
+    if instruction.strip():
+        context_lines.append(
+            "사용자 수정 요청 — 이 요청만 반영하고 나머지는 그대로 두세요:\n"
+            + instruction.strip()[:1000]
+        )
     context = "\n\n".join(context_lines)
     try:
         if cfg.get("apiKey"):
@@ -618,6 +637,8 @@ def build_topic_plan(
     *,
     llm_override=None,
     preset_config: dict | None = None,
+    current_plan: dict | None = None,
+    instruction: str = "",
 ) -> dict:
     """진입점. 프리셋이면 설정 기반 plan, custom이면 규칙 해석(+선택 LLM 정제)."""
     if topic_key != "custom":
@@ -631,7 +652,9 @@ def build_topic_plan(
     rule_plan = build_rule_plan(label, user_context=user_context)
     use_llm = True if llm_override is None else bool(llm_override)
     if use_llm:
-        plan, mode = refine_plan_with_llm(rule_plan, label, user_context)
+        plan, mode = refine_plan_with_llm(
+            rule_plan, label, user_context, current_plan=current_plan, instruction=instruction
+        )
     else:
         plan, mode = rule_plan, "rules"
     plan["plannerMode"] = "llm" if mode == "llm" else "rules"

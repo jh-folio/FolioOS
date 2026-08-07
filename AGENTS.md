@@ -392,7 +392,8 @@ features/company_analysis/financial_quality_prompt.md
 - **계획은 주제어 위에 세운다.** 사용자는 질문칸에 배경까지 한 문단으로 적는다. 그 240자를 주제 라벨로 쓰면 축 질문 다섯 개가 같은 문단이 되고 검색어에 질문 전문이 들어간다. `topic_subject()`가 첫 구획을 40자 이내로 끊고, 원문은 `topic`에 남는다.
 - **계획의 `searchQueries`는 그대로 근거 검색을 돌린다.** 한 단어 질의와 질문 전문 질의를 만들지 않는다(실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다 — FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남기며, 이 게이트는 LLM 계획에도 똑같이 적용한다.
 - **계획 미리보기는 기본적으로 설정된 엔진이 쓴다**(`plannerEngine=auto`). 계획을 보려고 버튼을 두 번 누르게 하는 것은 확인이 아니라 절차다. 빠른 계획이 필요할 때만 `plannerEngine=rules`를 고른다. CLI는 한 번에 40~50초가 걸리므로 화면이 그 사실을 먼저 말한다.
-- `POST /api/topic-reports/plan/replan`은 계획을 받은 뒤 다시 쓰고 싶을 때 쓴다(수정 후 재작성 포함). `revise`와 같은 `_swap_plan` 경로로 새 planHash를 만들고 기존 승인을 supersede한다.
+- `POST /api/topic-reports/plan/replan`은 계획을 다시 쓴다. `instruction`이 있으면 지금 계획을 그 요청대로 고치고, 없으면 처음부터 다시 쓴다. `revise`와 같은 `_swap_plan` 경로로 새 planHash를 만들고 기존 승인을 supersede한다.
+- **화면의 계획 수정은 요청 문장 하나로 받는다.** 칸을 하나씩 편집하는 UI는 축 다섯 개에 텍스트 영역이 열한 개가 됐다. 항목 단위 수정 API(`plan/revise`)는 엔진 없이 고쳐야 하는 호출자용으로 남는다.
 - 엔진이 없거나 실패하면 규칙 계획이 그대로 남는다. `plannerMode`(`rules|llm|preset|edited`)를 계획에 남겨 화면이 표시한다 — 무엇이 쓴 계획인지 모르면 얼마나 믿을지 정할 수 없다.
 - **테스트는 Agent CLI를 부르지 않는다.** `features/topic_report/tests/conftest.py`가 `run_agent_prompt`를 막는다. 막지 않았을 때 아무것도 stub하지 않은 테스트가 실제 CLI를 실행해 스위트가 멈춰 섰고, 멈춘 이유가 코드 문제인지 CLI 문제인지 구분되지 않았다.
 - 플래너는 API 키와 Agent CLI 둘 다 쓴다. `AI_AGENT_MODE=cli` 환경에서는 `apiKey`가 비어 있어 플래너만 엔진을 못 찾고 있었다. 키가 없으면 `run_agent_prompt()`로 같은 프롬프트를 보낸다(`TOPIC_PLANNER_TIMEOUT_SECONDS`, 기본 120초).

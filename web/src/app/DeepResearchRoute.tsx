@@ -19,12 +19,9 @@ import {
   type MarketStatePolicy,
   type MarketStateScope,
   type PlanPreviewEnvelope,
-  type PlanEdits,
   type PlannerEngine,
   type PlanRequest,
   type ReplanRequest,
-  type TopicPlan,
-  type RevisePlanRequest,
 } from "../api";
 import { openReactAgentDock, patchReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -43,7 +40,6 @@ import {
   parseTopicReportPayload,
   parseTopicReportSummaries,
   plannerModeLabel,
-  REPORT_TYPE_LABELS,
   reportTypeLabel,
   type MarketStateResolutionPayload,
   type TopicReport,
@@ -410,166 +406,64 @@ function renderList(items: readonly string[], empty = "없음") {
   return <ul className="topicrpt-inline-list">{items.map((item) => <li key={item}>{item}</li>)}</ul>;
 }
 
-type AxisDraft = {
-  key: string;
-  label: string;
-  questions: string;
-  searchQueries: string;
-  removed: boolean;
-};
-
-type PlanDraft = {
-  topicLabel: string;
-  reportType: string;
-  researchQuestions: string;
-  searchQueries: string;
-  axes: AxisDraft[];
-};
-
-const lines = (values: readonly string[]) => values.join("\n");
-const unlines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
-
-function planDraft(plan: TopicPlan): PlanDraft {
-  return {
-    topicLabel: plan.topicLabel,
-    reportType: plan.reportType,
-    researchQuestions: lines(plan.researchQuestions),
-    searchQueries: lines(plan.searchQueries),
-    axes: plan.analysisAxes.map((axis) => ({
-      key: axis.key,
-      label: axis.label,
-      questions: lines(axis.questions),
-      searchQueries: lines(axis.searchQueries),
-      removed: false,
-    })),
-  };
-}
-
-function draftEdits(draft: PlanDraft): PlanEdits {
-  return {
-    topicLabel: draft.topicLabel.trim(),
-    reportType: draft.reportType,
-    researchQuestions: unlines(draft.researchQuestions),
-    searchQueries: unlines(draft.searchQueries),
-    axes: draft.axes.map((axis) => ({
-      key: axis.key,
-      label: axis.label.trim(),
-      questions: unlines(axis.questions),
-      searchQueries: unlines(axis.searchQueries),
-      removed: axis.removed,
-    })),
-  };
-}
-
-/** 승인 전에 계획을 고친다.
+/** 계획을 말로 고친다.
  *
- *  화면은 "실행 전에 리서치 계획을 확인하세요"라고 말하면서 고칠 수단이 없었다.
- *  계획이 어긋났을 때 할 수 있는 일이 질문을 다시 쓰는 것뿐이면 확인이 아니다.
- *  수정은 서버가 적용하고 승인은 새 계획 해시로 갈아끼운다.
+ *  칸을 하나씩 편집하게 했더니 축 다섯 개에 텍스트 영역이 열한 개였다. 사람이
+ *  계획을 고칠 때 하는 말은 "밸류에이션 축은 빼고 공급 쪽을 자세히"에 가깝지,
+ *  각 칸을 다시 타자하는 것이 아니다. 요청을 그대로 엔진에 넘긴다.
  */
-function PlanEditor({
-  plan,
+const REVISION_EXAMPLES = [
+  "축 하나를 빼고 공급 쪽을 자세히 봐줘",
+  "검색어에 영어 키워드를 더해줘",
+  "한국 기업 중심으로 좁혀줘",
+];
+
+function PlanRevisionBox({
   busy,
-  onSave,
+  onSubmit,
   onCancel,
 }: {
-  readonly plan: TopicPlan;
   readonly busy: boolean;
-  readonly onSave: (edits: PlanEdits) => void;
+  readonly onSubmit: (instruction: string) => void;
   readonly onCancel: () => void;
 }) {
-  const [draft, setDraft] = useState<PlanDraft>(() => planDraft(plan));
-  const patch = (change: Partial<PlanDraft>) => setDraft((current) => ({ ...current, ...change }));
-  const patchAxis = (key: string, change: Partial<AxisDraft>) =>
-    setDraft((current) => ({
-      ...current,
-      axes: current.axes.map((axis) => (axis.key === key ? { ...axis, ...change } : axis)),
-    }));
-  const remaining = draft.axes.filter((axis) => !axis.removed).length;
+  const [instruction, setInstruction] = useState("");
+  const ready = instruction.trim().length > 0;
 
   return (
-    <div className="topicrpt-plan-editor" data-qa="dr-plan-editor">
-      <p className="topicrpt-plan-editor-head">
-        <strong>계획 수정</strong>
-        <span>고친 계획으로 승인이 다시 발급됩니다. 축은 뺄 수는 있어도 새로 만들 수는 없습니다.</span>
+    <div className="topicrpt-plan-revision" data-qa="dr-plan-revision">
+      <p className="topicrpt-plan-revision-head">
+        <strong>어떻게 고칠까요?</strong>
+        <span>요청한 부분만 바꾸고 나머지는 그대로 둡니다. 고친 계획으로 승인이 다시 발급됩니다.</span>
       </p>
-      <div className="topicrpt-plan-editor-row">
-        <label className="field">
-          <span>주제 이름</span>
-          <input
-            value={draft.topicLabel}
-            maxLength={200}
-            onChange={(event) => patch({ topicLabel: event.currentTarget.value })}
-            aria-label="주제 이름"
-          />
-        </label>
-        <label className="field">
-          <span>보고서 유형</span>
-          <select
-            value={draft.reportType}
-            onChange={(event) => patch({ reportType: event.currentTarget.value })}
-            aria-label="보고서 유형"
-          >
-            {Object.entries(REPORT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
-      </div>
       <label className="field">
-        <span>리서치 질문 (한 줄에 하나)</span>
-        <textarea rows={3} value={draft.researchQuestions} onChange={(event) => patch({ researchQuestions: event.currentTarget.value })} />
+        <span className="sr-only">수정 요청</span>
+        <textarea
+          rows={3}
+          value={instruction}
+          maxLength={1000}
+          disabled={busy}
+          placeholder="예: 밸류에이션 축은 빼고 공급 쪽을 자세히 봐줘"
+          onChange={(event) => setInstruction(event.currentTarget.value)}
+        />
       </label>
-      <label className="field">
-        <span>검색 질의 (한 줄에 하나)</span>
-        <textarea rows={4} value={draft.searchQueries} onChange={(event) => patch({ searchQueries: event.currentTarget.value })} />
-        <small className="topicrpt-plan-hint">이 질의가 그대로 자료 검색을 돌립니다. 한 단어나 질문 전문보다 2~5어절 구문이 정확합니다.</small>
-      </label>
-      <div className="topicrpt-axis-editor">
-        {draft.axes.map((axis) => (
-          <section className="topicrpt-axis-edit" key={axis.key} data-removed={axis.removed ? "true" : undefined}>
-            <div className="topicrpt-axis-edit-head">
-              <input
-                value={axis.label}
-                maxLength={160}
-                disabled={axis.removed}
-                onChange={(event) => patchAxis(axis.key, { label: event.currentTarget.value })}
-                aria-label={`${axis.key} 축 이름`}
-              />
-              <button
-                className="btn btn--text"
-                type="button"
-                onClick={() => patchAxis(axis.key, { removed: !axis.removed })}
-                disabled={!axis.removed && remaining <= 1}
-              >
-                {axis.removed ? "되살리기" : "이 축 빼기"}
-              </button>
-            </div>
-            {!axis.removed && (
-              <div className="topicrpt-axis-edit-fields">
-                <label className="field">
-                  <span>질문</span>
-                  <textarea rows={2} value={axis.questions} onChange={(event) => patchAxis(axis.key, { questions: event.currentTarget.value })} />
-                </label>
-                <label className="field">
-                  <span>검색 질의</span>
-                  <textarea rows={2} value={axis.searchQueries} onChange={(event) => patchAxis(axis.key, { searchQueries: event.currentTarget.value })} />
-                </label>
-              </div>
-            )}
-          </section>
+      <div className="topicrpt-plan-revision-examples">
+        {REVISION_EXAMPLES.map((example) => (
+          <button className="chip" type="button" key={example} disabled={busy} onClick={() => setInstruction(example)}>
+            {example}
+          </button>
         ))}
       </div>
-      <div className="topicrpt-plan-editor-actions">
+      <div className="topicrpt-plan-revision-actions">
         <button className="btn btn--text" type="button" onClick={onCancel} disabled={busy}>취소</button>
         <button
           className="btn btn--primary"
           type="button"
-          data-qa="dr-plan-save"
-          disabled={busy || !draft.topicLabel.trim() || remaining < 1}
-          onClick={() => onSave(draftEdits(draft))}
+          data-qa="dr-plan-revision-submit"
+          disabled={busy || !ready}
+          onClick={() => onSubmit(instruction.trim())}
         >
-          {busy ? "저장 중" : "계획 저장"}
+          {busy ? "고치는 중" : "이대로 고치기"}
         </button>
       </div>
     </div>
@@ -610,7 +504,7 @@ function PlanReview({
   readonly replanning: boolean;
   readonly onReplan: () => void;
   readonly onEditPlan: () => void;
-  readonly onRevise: (edits: PlanEdits) => void;
+  readonly onRevise: (instruction: string) => void;
   readonly onCancelEdit: () => void;
 }) {
   const { approvedRequest, preview } = envelope;
@@ -627,17 +521,15 @@ function PlanReview({
           <span className="chip">{plannerModeLabel(plan.plannerMode)}</span>
           {!editing && (
             <>
-              {/* Agent는 누를 때만 돈다. 미리보기가 자동으로 부르면 버튼 한 번에
-                  수십 초를 기다리게 된다(§8 Agent 실행 경계). */}
-              <button className="btn btn--text" type="button" data-qa="dr-plan-replan" onClick={onReplan} disabled={replanning}>
-                {replanning ? "AI가 계획을 쓰는 중" : "AI로 계획 다시 세우기"}
+              <button className="btn" type="button" data-qa="dr-plan-edit" onClick={onEditPlan} disabled={replanning || revising}>계획 고치기</button>
+              <button className="btn" type="button" data-qa="dr-plan-replan" onClick={onReplan} disabled={replanning || revising}>
+                {replanning ? "다시 쓰는 중" : "처음부터 다시"}
               </button>
-              <button className="btn btn--text" type="button" data-qa="dr-plan-edit" onClick={onEditPlan} disabled={replanning}>계획 수정</button>
             </>
           )}
         </p>
       </div>
-      {editing && <PlanEditor plan={plan} busy={revising} onSave={onRevise} onCancel={onCancelEdit} />}
+      {editing && <PlanRevisionBox busy={revising} onSubmit={onRevise} onCancel={onCancelEdit} />}
       {!editing && <div className="topicrpt-plan-grid">
         <div className="topicrpt-plan-card">
           <span className="topicrpt-plan-label">보고서 유형</span>
@@ -689,23 +581,31 @@ function PlanReview({
         </div>
       )}
       <div className="topicrpt-action-row">
-        <label className="field topicrpt-execution-field">
-          <span>실행 경로</span>
-          <select value={executionMode} onChange={(event) => onExecutionMode(event.currentTarget.value as ExecutionMode)}>
+        <div className="topicrpt-planner-choice">
+          <span id="dr-execution-label">실행 경로</span>
+          <select
+            aria-labelledby="dr-execution-label"
+            value={executionMode}
+            onChange={(event) => onExecutionMode(event.currentTarget.value as ExecutionMode)}
+          >
             <option value="direct">Direct API</option>
             <option value="cli">CLI</option>
           </select>
-        </label>
+        </div>
         {executionMode === "cli" && (
-          <label className="field topicrpt-execution-field">
-            <span>CLI 어댑터</span>
-            <select value={cliAdapter} onChange={(event) => onCliAdapter(event.currentTarget.value as CliAdapter)}>
+          <div className="topicrpt-planner-choice">
+            <span id="dr-adapter-label">CLI 어댑터</span>
+            <select
+              aria-labelledby="dr-adapter-label"
+              value={cliAdapter}
+              onChange={(event) => onCliAdapter(event.currentTarget.value as CliAdapter)}
+            >
               <option value="auto">자동 선택</option>
               <option value="codex">Codex</option>
               <option value="claude">Claude</option>
               <option value="antigravity">Antigravity</option>
             </select>
-          </label>
+          </div>
         )}
         <button className="btn" type="button" onClick={onEdit}>질문 수정</button>
         <button className="btn btn--primary" type="button" data-qa="dr-continue" onClick={onContinue}>
@@ -1018,27 +918,32 @@ export function DeepResearchRoute() {
     void executeEnvelope(planEnvelope);
   };
 
-  const replanWithAgent = async () => {
+  const runReplan = async (instruction: string) => {
     if (!planEnvelope) return;
     const request = beginRequest();
-    setPlanReplanning(true);
+    const editing = instruction.length > 0;
+    if (editing) setPlanRevising(true); else setPlanReplanning(true);
     setError("");
     setErrorKind(null);
     setErrorReason("");
-    setStatus("AI가 리서치 계획을 다시 쓰는 중입니다. 30초 이상 걸릴 수 있습니다.");
+    setStatus(editing
+      ? "요청하신 대로 계획을 고치는 중입니다. 30초 이상 걸릴 수 있습니다."
+      : "AI가 리서치 계획을 다시 쓰는 중입니다. 30초 이상 걸릴 수 있습니다.");
     const body: ReplanRequest = {
       approvedRequest: planEnvelope.approvedRequest,
       approval: approvalReference(planEnvelope),
+      instruction,
     };
     try {
       const replacement = await postJson<PlanPreviewEnvelope>("/api/topic-reports/plan/replan", body, { signal: request.signal });
       if (!isCurrentRequest(request.id)) return;
       setPlanEnvelope(replacement);
+      setPlanEditing(false);
       setDegradedConfirming(false);
       // 엔진이 없거나 실패하면 규칙 계획이 그대로 온다. 그 사실을 숨기지 않는다.
       setStatus(replacement.approvedRequest.topicPlan.plannerMode === "llm"
-        ? "AI가 계획을 다시 썼습니다."
-        : "AI 엔진을 쓸 수 없어 규칙 계획을 그대로 두었습니다.");
+        ? (editing ? "요청하신 대로 계획을 고쳤습니다." : "AI가 계획을 다시 썼습니다.")
+        : "AI 엔진을 쓸 수 없어 계획을 그대로 두었습니다.");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       if (!isCurrentRequest(request.id)) return;
@@ -1047,41 +952,15 @@ export function DeepResearchRoute() {
       setErrorReason(errorCode(err));
       setStatus("");
     } finally {
-      if (isCurrentRequest(request.id)) setPlanReplanning(false);
+      if (isCurrentRequest(request.id)) {
+        setPlanReplanning(false);
+        setPlanRevising(false);
+      }
     }
   };
 
-  const revisePlan = async (edits: PlanEdits) => {
-    if (!planEnvelope) return;
-    const request = beginRequest();
-    setPlanRevising(true);
-    setError("");
-    setErrorKind(null);
-    setErrorReason("");
-    setStatus("수정한 계획을 저장하는 중입니다.");
-    const body: RevisePlanRequest = {
-      approvedRequest: planEnvelope.approvedRequest,
-      approval: approvalReference(planEnvelope),
-      edits,
-    };
-    try {
-      const replacement = await postJson<PlanPreviewEnvelope>("/api/topic-reports/plan/revise", body, { signal: request.signal });
-      if (!isCurrentRequest(request.id)) return;
-      setPlanEnvelope(replacement);
-      setPlanEditing(false);
-      // 계획이 바뀌면 앞서 받은 `근거 없음` 확인은 다른 계획에 대한 것이다.
-      setDegradedConfirming(false);
-      setStatus("계획을 저장했습니다.");
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      if (!isCurrentRequest(request.id)) return;
-      setError(errorCopy("plan", err));
-      setErrorKind("plan");
-      setErrorReason(errorCode(err));
-      setStatus("");
-    } finally {
-      if (isCurrentRequest(request.id)) setPlanRevising(false);
-    }
+  const revisePlan = async (instruction: string) => {
+    await runReplan(instruction);
   };
 
   const confirmDegraded = async () => {
@@ -1412,9 +1291,9 @@ export function DeepResearchRoute() {
           editing={planEditing}
           revising={planRevising}
           replanning={planReplanning}
-          onReplan={() => void replanWithAgent()}
+          onReplan={() => void runReplan("")}
           onEditPlan={() => setPlanEditing(true)}
-          onRevise={(edits) => void revisePlan(edits)}
+          onRevise={(instruction) => void revisePlan(instruction)}
           onCancelEdit={() => setPlanEditing(false)}
           degradedConfirming={degradedConfirming}
           onConfirmDegraded={() => void confirmDegraded()}

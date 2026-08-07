@@ -217,10 +217,22 @@ class PlanEdits(StrictModel):
 
 
 class ReplanRequest(StrictModel):
-    """계획을 LLM/Agent로 다시 쓰기. 사용자가 누를 때만 실행한다(§8 Agent 실행 경계)."""
+    """계획을 다시 쓰기.
+
+    `instruction`이 있으면 지금 계획을 고쳐 쓰고, 없으면 처음부터 다시 쓴다.
+    칸을 하나씩 고치는 것보다 "무엇을 바꿔달라"고 적는 편이 계획 수정에 맞다.
+    """
 
     approvedRequest: ApprovedRequest
     approval: ApprovalReference
+    instruction: str = Field(default="", max_length=1000)
+
+    @field_validator("instruction", mode="before")
+    @classmethod
+    def normalize_instruction(cls, value: str) -> str:
+        if not isinstance(value, str):
+            raise ValueError("string_required")
+        return normalize_text(value)
 
 
 class RevisePlanRequest(StrictModel):
