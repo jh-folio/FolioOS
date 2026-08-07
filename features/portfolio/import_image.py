@@ -4,12 +4,14 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+from features.portfolio.agent_import import cli_available, extract_positions as extract_agent
 from features.portfolio.import_schema import import_preview
 from features.portfolio.local_ocr import extract_positions as extract_local, preprocess_image, tesseract_preflight, validate_image
 from features.portfolio.vision_import import extract_positions as extract_vision
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 ALLOWED_MIME = {"image/png", "image/jpeg", "image/webp"}
+MODES = ("local", "vision", "agent")
 
 
 def preview_image(data_dir: Path, image_bytes: bytes, *, content_type: str, mode: str = "local", consent: bool = False) -> dict:
@@ -27,6 +29,12 @@ def preview_image(data_dir: Path, image_bytes: bytes, *, content_type: str, mode
             rows = extract_vision(source, consent=consent, mime_type=content_type)
             engine = "external_vision"
             notices = ["선택한 crop만 외부 Vision provider에 전송했고 Folio OS에는 이미지를 보관하지 않았습니다."]
+        elif mode == "agent":
+            # 설정한 CLI가 파일을 직접 연다. 바이트는 프롬프트에 실리지 않고,
+            # 이 with 블록이 끝나면 임시 파일도 사라진다.
+            rows = extract_agent(source)
+            engine = "agent_cli"
+            notices = ["설정한 Agent CLI가 사진을 읽었습니다. 사진은 그 CLI 제공자에게 전달되며 Folio OS에는 보관하지 않았습니다."]
         else:
             preprocess_image(source, processed)
             rows, preflight = extract_local(processed)
@@ -38,4 +46,16 @@ def preview_image(data_dir: Path, image_bytes: bytes, *, content_type: str, mode
 
 
 def preflight_payload() -> dict:
-    return {**tesseract_preflight(), "autoInstall": False, "languagesRequired": ["kor", "eng"]}
+    """세 경로의 준비 상태를 함께 돌려준다.
+
+    `ready`는 계속 로컬 OCR의 상태다(기존 호출자 계약). Agent CLI 여부는
+    `agent.available`로 따로 싣는다 — 화면이 무엇을 고를 수 있는지 열기 전에
+    알아야 방식을 골랐다가 막히는 일이 없다.
+    """
+    agent_ok = cli_available()
+    return {
+        **tesseract_preflight(),
+        "autoInstall": False,
+        "languagesRequired": ["kor", "eng"],
+        "agent": {"available": agent_ok, "reason": "" if agent_ok else "agent_cli_unavailable"},
+    }

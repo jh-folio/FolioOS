@@ -424,7 +424,9 @@ features/company_analysis/financial_quality_prompt.md
 - 백테스트 실행 결과는 자동 저장하지 않는다. 사용자가 결과 카드의 저장 버튼을 눌렀을 때만 저장한다.
 - 거래 내역 기반 원가 계산, 배당 현금흐름, 자동 리밸런싱 제안은 아직 범위 밖이다.
 - 저장은 additive `revision`을 가지며 `expectedRevision` 불일치 시 409와 최신본을 반환한다. 동시 수정은 사용자가 최신본과 다시 합친다.
-- 스크린샷 가져오기는 사용자 설치 Tesseract(kor+eng) preflight 기반 로컬 OCR이 기본이고 자동 설치하지 않는다. preview는 draft만 반환하며 원본 이미지·raw OCR·word box를 저장하지 않고 temp 파일을 항상 정리한다. 외부 Vision은 매 요청 명시적 동의 후에만 사용한다.
+- 스크린샷 가져오기는 세 경로다(`mode=agent|local|vision`). **설정한 Agent CLI가 있으면 그쪽이 기본**이다(0.5.0) — 나머지 둘은 각각 Tesseract 설치와 OpenAI 키를 먼저 요구해서, 아무것도 더 깔지 않고 읽는 경로는 CLI뿐이다. 없으면 로컬 OCR(자동 설치하지 않음), 그것도 없으면 외부 Vision으로 내려간다.
+- 어느 경로든 preview는 draft만 반환하며 원본 이미지·raw OCR·word box를 저장하지 않고 temp 파일을 항상 정리한다. **외부 Vision만 매 요청 명시적 동의를 받는다.** Agent CLI 경로는 동의를 받지 않는다 — 설정에서 CLI 경로를 넣은 순간부터 Agent 사용은 허락된 것으로 보기 때문이다(§8 Agent 실행 경계). 대신 사진이 그 CLI 제공자에게 전달된다는 사실을 화면이 먼저 말한다.
+- Agent 경로는 프롬프트에 **파일 경로만** 싣고 바이트를 인라인하지 않는다(`features/portfolio/agent_import.py`). `run_agent_prompt()`는 job을 만들지 않아 `data/jobs.json`·Work Log에도 남지 않는다. 파싱 실패와 빈 결과를 섞지 않는다 — 빈 목록은 `사진에 종목이 없다`는 뜻이라, 읽기 실패를 거기 합치면 사용자가 사진 탓으로 오해한다.
 
 ### Obsidian 내보내기
 

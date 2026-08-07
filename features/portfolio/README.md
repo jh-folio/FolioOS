@@ -125,8 +125,9 @@ thesis, checkpoint, 보고서, Smart Collection과 연결할 수 있다. 연결 
 카드와 0.4.3의 Portfolio route에서 사용한다. 연결 결과는 리서치 점검을 돕는
 hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 아니다.
 
-이미지 가져오기는 로컬 Tesseract `kor+eng` preview를 기본으로 하며 설치 여부를 먼저
-표시한다. 원본 이미지, crop 이미지, raw OCR text와 bbox는 저장하지 않는다. 외부 Vision은
+이미지 가져오기는 세 경로다. **설정한 Agent CLI가 있으면 그쪽이 기본**이고(0.5.0),
+없으면 로컬 Tesseract `kor+eng`, 그것도 없으면 외부 Vision이다. 각 경로의 준비 여부는
+다이얼로그가 열릴 때 `preflight`로 먼저 표시한다. 원본 이미지, crop 이미지, raw OCR text와 bbox는 저장하지 않는다. 외부 Vision은
 매 요청의 명시적 동의가 있을 때만 crop/redaction 미리보기를 전송하며 결과를 즉시 저장하지
 않고 사용자가 편집표를 확인한 뒤 revision-safe 저장을 별도로 실행한다.
 
@@ -147,3 +148,19 @@ hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 �
 - 표 안이라 글자마다 부르지 않는다. 행이 여럿일 때 호출이 곱절로 늘어난다.
 - 해석된 회사명은 화면 확인용이며 저장 payload에 넣지 않는다.
 - 행을 지우면 아래 행 번호가 당겨지므로 표시용 이름도 함께 옮긴다.
+
+## 사진 가져오기 — Agent CLI 경로 (0.5.0)
+
+기존 두 경로는 둘 다 사용자에게 무언가를 먼저 시킨다 — 로컬 OCR은 Tesseract(kor+eng) 설치, 외부 Vision은 OpenAI 키 저장과 매 요청 동의다. 이미 CLI 경로를 설정한 사용자에게 그 CLI는 아무것도 더 깔지 않고 이미지를 읽는다. 그래서 사진 스캔의 진입 장벽을 없애는 경로는 이쪽 하나뿐이다.
+
+런타임은 `agent_import.py`이고 `/api/portfolio/import-image/preview?mode=agent`로 부른다.
+
+- **바이트는 프롬프트에 넣지 않는다.** Agent 도크 첨부(`agent_mode/attachment_files.py`)와 같은 방식으로 파일 경로만 알려주고 CLI가 그 파일을 직접 연다. 임시 파일은 `preview_image`의 `TemporaryDirectory`가 성공·실패·취소 어느 쪽이든 지운다. `run_agent_prompt()`는 job을 만들지 않으므로 `data/jobs.json`과 Work Log에도 남지 않는다.
+- **동의 체크박스가 없다.** 설정에서 CLI 경로를 넣은 순간부터 그 프로젝트의 모든 동작에 Agent 사용을 허락한 것으로 본다(AGENTS.md §8 Agent 실행 경계). 여기서 동의를 또 받으면 설치 부담을 없앤 자리에 절차 부담을 넣는 셈이다. 다만 **사진이 그 CLI 제공자에게 전달된다는 사실은 화면이 먼저 말한다** — 허락과 고지는 다른 문제다. 다이얼로그 상단 표기가 `LOCAL-FIRST IMPORT`에서 `PREVIEW ONLY IMPORT`로 바뀐 것도 같은 이유다.
+- **읽기 실패와 빈 결과를 섞지 않는다.** 파싱 실패(`agent_import_not_json`)와 이미지 열기 실패(`agent_import_image_unreadable`)는 오류로 올린다. 빈 목록은 "사진에 종목이 없다"는 뜻이고, 둘을 섞으면 사용자가 읽기 실패를 사진 탓으로 오해한다.
+- 프롬프트가 추정을 막는다. 안 보이는 값은 `null`이며 평가금액을 수량으로 나누는 역산을 금지한다. 합계·총자산·예수금 행은 종목이 아니므로 뺀다.
+- 한 번에 수십 초다(`PORTFOLIO_IMPORT_AGENT_TIMEOUT_SECONDS`, 기본 180초). 화면이 그 사실을 먼저 말한다. 실측(2026-08-07): 4종목 한국·미국 혼합 캡처를 11.9초에 4/4 정확히 읽었다.
+
+## 아직 미뤄 둔 것 — 화면 재연결 (0.5.X)
+
+백엔드 API는 18개가 등록돼 있는데 화면이 쓰는 것은 3개다(`/api/portfolio` 읽기·쓰기, 사진 가져오기). `/summary`·`/analytics`·`/resolve`·`/suggest`, `/presets` 4개, `/backtests` 6개가 끊겨 있다. `portfolio-backtest-form`·`backtest-metrics`·`backtest-compare-table`·`portfolio-donut-grid`·`portfolio-analysis-grid` 같은 CSS가 남아 있는데 이를 참조하는 컴포넌트는 0개다 — React 전환 때 화면만 안 옮겨왔다. **새로 만드는 게 아니라 다시 붙이는 작업**이며 사용자 결정으로 0.5.X에서 진행한다(2026-08-07).

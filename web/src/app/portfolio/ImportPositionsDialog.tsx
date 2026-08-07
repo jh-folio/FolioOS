@@ -3,7 +3,8 @@ import type { PositionDraft } from "./HoldingsTable";
 
 type ImportDraft = { ticker: string; name?: string; quantity: number | null; averagePrice: number | null; status: "confirmed" | "needs_review" | "unresolved"; action: "skip" | "merge" | "replace"; issues?: string[] };
 type PreviewPayload = { engine?: string; drafts?: ImportDraft[]; notices?: string[]; persisted?: boolean };
-type Preflight = { available?: boolean; ready?: boolean; reason?: string; languages?: string[]; languagesRequired?: string[] };
+type Preflight = { available?: boolean; ready?: boolean; reason?: string; languages?: string[]; languagesRequired?: string[]; agent?: { available?: boolean; reason?: string } };
+type ImportMode = "agent" | "local" | "vision";
 
 // 서버는 기계 코드를 던진다. 다이얼로그는 사람이 다음에 무엇을 할지 알 수 있는 말로 바꾼다.
 const IMPORT_ERRORS: Record<string, string> = {
@@ -15,6 +16,10 @@ const IMPORT_ERRORS: Record<string, string> = {
   tesseract_not_installed: "Tesseract가 설치되어 있지 않습니다.",
   tesseract_timeout: "로컬 인식이 시간 안에 끝나지 않았습니다. 잘라내기로 범위를 줄여 주세요.",
   tesseract_failed: "로컬 인식에 실패했습니다.",
+  agent_import_cli_failed: "Agent CLI 실행이 실패했거나 시간 안에 끝나지 않았습니다. 잘라내기로 범위를 줄이거나 다시 시도해 주세요.",
+  agent_import_image_unreadable: "Agent CLI가 사진을 열지 못했습니다.",
+  agent_import_not_json: "Agent CLI가 표 형식으로 답하지 않았습니다. 다시 시도해 주세요.",
+  agent_import_empty_output: "Agent CLI가 아무 답도 주지 않았습니다. 다시 시도해 주세요.",
 };
 
 function importErrorText(detail: string): string {
@@ -71,7 +76,8 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
   const crop = crops[activeIndex] || EMPTY_CROP;
   const setCrop = (next: CropBox) => setCrops((rows) => rows.map((row, index) => index === activeIndex ? next : row));
   const localBlocked = preflight != null && preflight.ready === false;
-  const [mode, setMode] = useState<"local" | "vision">("local");
+  const agentReady = preflight?.agent?.available === true;
+  const [mode, setMode] = useState<ImportMode>("local");
   const [consent, setConsent] = useState(false);
   const [preview, setPreview] = useState<PreviewPayload | null>(null);
   const [drafts, setDrafts] = useState<ImportDraft[]>([]);
@@ -84,7 +90,14 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
     let alive = true;
     fetch("/api/portfolio/import-image/preflight")
       .then((response) => response.json())
-      .then((payload: Preflight) => { if (alive) setPreflight(payload); })
+      .then((payload: Preflight) => {
+        if (!alive) return;
+        setPreflight(payload);
+        // 설정한 CLI가 있으면 그쪽이 기본이다. 아무것도 더 깔지 않고 읽는 유일한
+        // 경로라, 로컬 OCR을 기본으로 두면 Tesseract를 안 깐 사용자가 막힌
+        // 화면부터 만난다.
+        if (payload?.agent?.available) setMode("agent");
+      })
       .catch(() => { if (alive) setPreflight({ ready: false, reason: "preflight_unavailable" }); });
     return () => { alive = false; };
   }, []);
@@ -188,16 +201,22 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
   return (
     <div className="portfolio-import-backdrop" role="presentation">
       <section className="portfolio-import-dialog" role="dialog" aria-modal="true" aria-labelledby="portfolio-import-title">
-        <div className="cockpit-panel__head"><div><span>LOCAL-FIRST IMPORT</span><h2 id="portfolio-import-title">증권사 화면에서 가져오기</h2></div><button type="button" className="btn" onClick={onClose}>닫기</button></div>
-        <p className="section-subtitle">계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본과 OCR 원문은 저장하지 않습니다.</p>
+        {/* `LOCAL-FIRST`라고 적혀 있던 자리다. 기본 인식이 Agent CLI로 바뀌어
+            사진이 그 제공자에게 나가므로, 그 표현을 그대로 두면 화면이 사실과
+            다른 약속을 한다. */}
+        <div className="cockpit-panel__head"><div><span>PREVIEW ONLY IMPORT</span><h2 id="portfolio-import-title">증권사 화면에서 가져오기</h2></div><button type="button" className="btn" onClick={onClose}>닫기</button></div>
+        <p className="section-subtitle">계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본 사진과 인식 원문은 저장하지 않으며, 아래 편집표를 확인하고 Portfolio 저장을 눌러야 실제로 저장됩니다.</p>
         {/* 네이티브 파일 입력은 OS 기본 버튼으로 그려져 이 다이얼로그의 다른 버튼과 따로 논다.
             Agent 작성창과 같은 방식으로 입력을 숨기고 앱 버튼이 대신 열게 한다. */}
         {localBlocked && (
-          <div className="settings-notice warn" role="status">
+          <div className={`settings-notice${agentReady ? "" : " warn"}`} role="status">
             <strong>로컬 인식을 쓸 수 없습니다</strong>
             <span>
               {PREFLIGHT_REASONS[String(preflight?.reason || "")] || "로컬 OCR 준비 상태를 확인하지 못했습니다."}
-              {" "}Tesseract(kor+eng)를 설치하면 사진이 이 컴퓨터 밖으로 나가지 않습니다. 설치 전에는 아래에서 외부 Vision을 선택하고 매번 동의해야 합니다.
+              {" "}Tesseract(kor+eng)를 설치하면 사진이 이 컴퓨터 밖으로 나가지 않습니다.
+              {agentReady
+                ? " 설치하지 않아도 됩니다 — 설정해 두신 Agent CLI가 사진을 읽습니다(아래 기본 선택)."
+                : " 설치 전에는 아래에서 외부 Vision을 선택하고 매번 동의해야 합니다."}
             </span>
           </div>
         )}
@@ -247,9 +266,17 @@ export function ImportPositionsDialog({ current, onApply, onClose }: { current: 
             {(["top", "right", "bottom", "left", "redactTop"] as const).map((key) => <label key={key}><span>{key === "redactTop" ? "상단 가리기" : `crop ${key}`} {crop[key]}%</span><input type="range" min="0" max={key === "redactTop" ? "50" : "45"} value={crop[key]} onChange={(event) => setCrop({ ...crop, [key]: Number(event.currentTarget.value) })} /></label>)}
           </div>
           <canvas className="portfolio-crop-preview" ref={canvasRef} aria-label="전송될 이미지 미리보기" />
-          <fieldset className="portfolio-import-mode"><legend>인식 방식</legend><label><input type="radio" name="portfolio-import-mode" checked={mode === "local"} disabled={localBlocked} onChange={() => setMode("local")} /> 로컬 Tesseract (기본){localBlocked ? " — 사용 불가" : ""}</label><label><input type="radio" name="portfolio-import-mode" checked={mode === "vision"} onChange={() => setMode("vision")} /> 외부 Vision (선택)</label></fieldset>
+          <fieldset className="portfolio-import-mode">
+            <legend>인식 방식</legend>
+            <label><input type="radio" name="portfolio-import-mode" checked={mode === "agent"} disabled={!agentReady} onChange={() => setMode("agent")} /> Agent CLI{agentReady ? " (설치 필요 없음)" : " — 설정에서 CLI 경로를 먼저 지정하세요"}</label>
+            <label><input type="radio" name="portfolio-import-mode" checked={mode === "local"} disabled={localBlocked} onChange={() => setMode("local")} /> 로컬 Tesseract{localBlocked ? " — 사용 불가" : ""}</label>
+            <label><input type="radio" name="portfolio-import-mode" checked={mode === "vision"} onChange={() => setMode("vision")} /> 외부 Vision</label>
+          </fieldset>
+          {/* CLI 경로를 설정한 순간부터 Agent 사용은 허락된 것으로 본다(동의 체크박스 없음).
+              다만 사진이 그 제공자에게 전달된다는 사실은 먼저 말한다 — 허락과 고지는 다른 문제다. */}
+          {mode === "agent" && <p className="settings-notice"><span>위 미리보기 crop을 설정한 Agent CLI가 직접 읽습니다. 사진은 그 CLI 제공자에게 전달되며 Folio OS에는 저장하지 않습니다. 한 장에 수십 초 걸립니다.</span></p>}
           {mode === "vision" && <label className="settings-notice warn"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.currentTarget.checked)} /> <span>위 미리보기 crop이 설정된 외부 AI 제공자에게 전송되며, Folio OS 요청은 저장 비활성화를 사용한다는 점을 확인했습니다.</span></label>}
-          <button className="btn btn--primary" type="button" disabled={busy || (mode === "local" && localBlocked)} onClick={runPreview}>{busy ? "인식 중" : `저장하지 않고 미리보기${files.length > 1 ? ` (${files.length}장)` : ""}`}</button>
+          <button className="btn btn--primary" type="button" disabled={busy || (mode === "local" && localBlocked) || (mode === "agent" && !agentReady)} onClick={runPreview}>{busy ? (mode === "agent" ? `Agent CLI가 읽는 중 (수십 초)` : "인식 중") : `저장하지 않고 미리보기${files.length > 1 ? ` (${files.length}장)` : ""}`}</button>
         </>}
         {error && <p className="react-dashboard-error" role="alert">{error}</p>}
         {preview && <div className="portfolio-import-results">

@@ -24,7 +24,7 @@ from .service import (
     save_portfolio_preset,
     search_portfolio_tickers,
 )
-from .import_image import preflight_payload, preview_image
+from .import_image import MODES, preflight_payload, preview_image
 
 
 def create_portfolio_router(data_dir: Path) -> APIRouter:
@@ -63,7 +63,7 @@ def create_portfolio_router(data_dir: Path) -> APIRouter:
 
     @router.post("/import-image/preview")
     async def import_preview(request: Request, mode: str = "local", consent: bool = False):
-        if mode not in {"local", "vision"}:
+        if mode not in MODES:
             raise HTTPException(status_code=400, detail="portfolio_import_mode_invalid")
         content_type = str(request.headers.get("content-type") or "").split(";", 1)[0].lower()
         try:

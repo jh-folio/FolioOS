@@ -16007,7 +16007,11 @@ var Js = {
 	portfolio_image_size_invalid: "이미지 용량이 너무 큽니다. 잘라내기로 범위를 줄여 주세요.",
 	tesseract_not_installed: "Tesseract가 설치되어 있지 않습니다.",
 	tesseract_timeout: "로컬 인식이 시간 안에 끝나지 않았습니다. 잘라내기로 범위를 줄여 주세요.",
-	tesseract_failed: "로컬 인식에 실패했습니다."
+	tesseract_failed: "로컬 인식에 실패했습니다.",
+	agent_import_cli_failed: "Agent CLI 실행이 실패했거나 시간 안에 끝나지 않았습니다. 잘라내기로 범위를 줄이거나 다시 시도해 주세요.",
+	agent_import_image_unreadable: "Agent CLI가 사진을 열지 못했습니다.",
+	agent_import_not_json: "Agent CLI가 표 형식으로 답하지 않았습니다. 다시 시도해 주세요.",
+	agent_import_empty_output: "Agent CLI가 아무 답도 주지 않았습니다. 다시 시도해 주세요."
 };
 function Ys(e) {
 	let t = String(e || "").trim();
@@ -16050,11 +16054,11 @@ function Qs(e, t) {
 	return n;
 }
 function $s({ current: e, onApply: t, onClose: n }) {
-	let [r, i] = (0, d.useState)([]), [a, o] = (0, d.useState)(0), [s, c] = (0, d.useState)(""), [l, u] = (0, d.useState)([]), [p, m] = (0, d.useState)(null), h = r[a] || null, g = l[a] || Zs, _ = (e) => u((t) => t.map((t, n) => n === a ? e : t)), v = p != null && p.ready === !1, [y, b] = (0, d.useState)("local"), [x, S] = (0, d.useState)(!1), [C, w] = (0, d.useState)(null), [T, E] = (0, d.useState)([]), [D, O] = (0, d.useState)(!1), [k, A] = (0, d.useState)(""), j = (0, d.useRef)(null), M = (0, d.useRef)(null);
+	let [r, i] = (0, d.useState)([]), [a, o] = (0, d.useState)(0), [s, c] = (0, d.useState)(""), [l, u] = (0, d.useState)([]), [p, m] = (0, d.useState)(null), h = r[a] || null, g = l[a] || Zs, _ = (e) => u((t) => t.map((t, n) => n === a ? e : t)), v = p != null && p.ready === !1, y = p?.agent?.available === !0, [b, x] = (0, d.useState)("local"), [S, C] = (0, d.useState)(!1), [w, T] = (0, d.useState)(null), [E, D] = (0, d.useState)([]), [O, k] = (0, d.useState)(!1), [A, j] = (0, d.useState)(""), M = (0, d.useRef)(null), N = (0, d.useRef)(null);
 	(0, d.useEffect)(() => {
 		let e = !0;
 		return fetch("/api/portfolio/import-image/preflight").then((e) => e.json()).then((t) => {
-			e && m(t);
+			e && (m(t), t?.agent?.available && x("agent"));
 		}).catch(() => {
 			e && m({
 				ready: !1,
@@ -16071,10 +16075,10 @@ function $s({ current: e, onApply: t, onClose: n }) {
 		let e = URL.createObjectURL(h);
 		return c(e), () => URL.revokeObjectURL(e);
 	}, [h]), (0, d.useEffect)(() => {
-		if (!s || !j.current) return;
+		if (!s || !M.current) return;
 		let e = new Image();
 		e.onload = () => {
-			let t = e.width * g.left / 100, n = e.height * g.top / 100, r = e.width * Math.max(5, 100 - g.left - g.right) / 100, i = e.height * Math.max(5, 100 - g.top - g.bottom) / 100, a = j.current;
+			let t = e.width * g.left / 100, n = e.height * g.top / 100, r = e.width * Math.max(5, 100 - g.left - g.right) / 100, i = e.height * Math.max(5, 100 - g.top - g.bottom) / 100, a = M.current;
 			if (!a) return;
 			let o = Math.min(1, 1100 / r);
 			a.width = Math.round(r * o), a.height = Math.round(i * o);
@@ -16082,7 +16086,7 @@ function $s({ current: e, onApply: t, onClose: n }) {
 			s && (s.drawImage(e, t, n, r, i, 0, 0, a.width, a.height), g.redactTop > 0 && (s.fillStyle = "#111", s.fillRect(0, 0, a.width, a.height * g.redactTop / 100)));
 		}, e.src = s;
 	}, [s, g]);
-	async function N(e, t) {
+	async function P(e, t) {
 		let n = URL.createObjectURL(e);
 		try {
 			let r = await new Promise((t, r) => {
@@ -16097,17 +16101,17 @@ function $s({ current: e, onApply: t, onClose: n }) {
 			URL.revokeObjectURL(n);
 		}
 	}
-	async function P() {
+	async function F() {
 		if (r.length) {
-			if (y === "vision" && !x) {
-				A("외부 Vision 전송 동의가 필요합니다.");
+			if (b === "vision" && !S) {
+				j("외부 Vision 전송 동의가 필요합니다.");
 				return;
 			}
-			O(!0), A("");
+			k(!0), j("");
 			try {
 				let e = [], t = [], n = "";
 				for (let [i, a] of r.entries()) {
-					let r = await N(a, l[i] || Zs), o = await fetch(`/api/portfolio/import-image/preview?mode=${y}&consent=${x ? "true" : "false"}`, {
+					let r = await P(a, l[i] || Zs), o = await fetch(`/api/portfolio/import-image/preview?mode=${b}&consent=${S ? "true" : "false"}`, {
 						method: "POST",
 						headers: { "Content-Type": "image/png" },
 						body: r
@@ -16117,20 +16121,20 @@ function $s({ current: e, onApply: t, onClose: n }) {
 					for (let e of s.notices || []) t.includes(e) || t.push(e);
 					for (let t of s.drafts || []) e.some((e) => e.ticker.toUpperCase() === t.ticker.toUpperCase()) || e.push(t);
 				}
-				e.length || t.push(r.length > 1 ? "선택한 사진에서 종목을 읽지 못했습니다." : "이 사진에서 종목을 읽지 못했습니다."), w({
+				e.length || t.push(r.length > 1 ? "선택한 사진에서 종목을 읽지 못했습니다." : "이 사진에서 종목을 읽지 못했습니다."), T({
 					engine: n,
 					notices: t,
 					drafts: e
-				}), E(e);
+				}), D(e);
 			} catch (e) {
-				A(e instanceof Error ? e.message : "이미지를 인식하지 못했습니다.");
+				j(e instanceof Error ? e.message : "이미지를 인식하지 못했습니다.");
 			} finally {
-				O(!1);
+				k(!1);
 			}
 		}
 	}
-	function F(e, t, n) {
-		E((r) => r.map((r, i) => i === e ? {
+	function I(e, t, n) {
+		D((r) => r.map((r, i) => i === e ? {
 			...r,
 			[t]: t === "quantity" || t === "averagePrice" ? n === "" ? null : Number(n) : n
 		} : r));
@@ -16146,7 +16150,7 @@ function $s({ current: e, onApply: t, onClose: n }) {
 			children: [
 				/* @__PURE__ */ (0, f.jsxs)("div", {
 					className: "cockpit-panel__head",
-					children: [/* @__PURE__ */ (0, f.jsxs)("div", { children: [/* @__PURE__ */ (0, f.jsx)("span", { children: "LOCAL-FIRST IMPORT" }), /* @__PURE__ */ (0, f.jsx)("h2", {
+					children: [/* @__PURE__ */ (0, f.jsxs)("div", { children: [/* @__PURE__ */ (0, f.jsx)("span", { children: "PREVIEW ONLY IMPORT" }), /* @__PURE__ */ (0, f.jsx)("h2", {
 						id: "portfolio-import-title",
 						children: "증권사 화면에서 가져오기"
 					})] }), /* @__PURE__ */ (0, f.jsx)("button", {
@@ -16158,35 +16162,36 @@ function $s({ current: e, onApply: t, onClose: n }) {
 				}),
 				/* @__PURE__ */ (0, f.jsx)("p", {
 					className: "section-subtitle",
-					children: "계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본과 OCR 원문은 저장하지 않습니다."
+					children: "계좌번호·총자산 등 불필요한 영역은 crop 또는 상단 가리기로 제거하세요. 원본 사진과 인식 원문은 저장하지 않으며, 아래 편집표를 확인하고 Portfolio 저장을 눌러야 실제로 저장됩니다."
 				}),
 				v && /* @__PURE__ */ (0, f.jsxs)("div", {
-					className: "settings-notice warn",
+					className: `settings-notice${y ? "" : " warn"}`,
 					role: "status",
 					children: [/* @__PURE__ */ (0, f.jsx)("strong", { children: "로컬 인식을 쓸 수 없습니다" }), /* @__PURE__ */ (0, f.jsxs)("span", { children: [
 						Xs[String(p?.reason || "")] || "로컬 OCR 준비 상태를 확인하지 못했습니다.",
 						" ",
-						"Tesseract(kor+eng)를 설치하면 사진이 이 컴퓨터 밖으로 나가지 않습니다. 설치 전에는 아래에서 외부 Vision을 선택하고 매번 동의해야 합니다."
+						"Tesseract(kor+eng)를 설치하면 사진이 이 컴퓨터 밖으로 나가지 않습니다.",
+						y ? " 설치하지 않아도 됩니다 — 설정해 두신 Agent CLI가 사진을 읽습니다(아래 기본 선택)." : " 설치 전에는 아래에서 외부 Vision을 선택하고 매번 동의해야 합니다."
 					] })]
 				}),
 				/* @__PURE__ */ (0, f.jsxs)("div", {
 					className: "portfolio-import-file",
 					children: [
 						/* @__PURE__ */ (0, f.jsx)("input", {
-							ref: M,
+							ref: N,
 							type: "file",
 							accept: "image/png,image/jpeg,image/webp",
 							multiple: !0,
 							hidden: !0,
 							onChange: (e) => {
 								let t = Array.from(e.currentTarget.files || []);
-								t.length && (i(t), u(t.map(() => ({ ...Zs }))), o(0), w(null), E([]), e.currentTarget.value = "");
+								t.length && (i(t), u(t.map(() => ({ ...Zs }))), o(0), T(null), D([]), e.currentTarget.value = "");
 							}
 						}),
 						/* @__PURE__ */ (0, f.jsx)("button", {
 							type: "button",
 							className: "btn",
-							onClick: () => M.current?.click(),
+							onClick: () => N.current?.click(),
 							children: r.length ? "사진 다시 선택" : "사진 선택"
 						}),
 						/* @__PURE__ */ (0, f.jsx)("span", {
@@ -16237,7 +16242,7 @@ function $s({ current: e, onApply: t, onClose: n }) {
 					}),
 					/* @__PURE__ */ (0, f.jsx)("canvas", {
 						className: "portfolio-crop-preview",
-						ref: j,
+						ref: M,
 						"aria-label": "전송될 이미지 미리보기"
 					}),
 					/* @__PURE__ */ (0, f.jsxs)("fieldset", {
@@ -16248,28 +16253,43 @@ function $s({ current: e, onApply: t, onClose: n }) {
 								/* @__PURE__ */ (0, f.jsx)("input", {
 									type: "radio",
 									name: "portfolio-import-mode",
-									checked: y === "local",
-									disabled: v,
-									onChange: () => b("local")
+									checked: b === "agent",
+									disabled: !y,
+									onChange: () => x("agent")
 								}),
-								" 로컬 Tesseract (기본)",
+								" Agent CLI",
+								y ? " (설치 필요 없음)" : " — 설정에서 CLI 경로를 먼저 지정하세요"
+							] }),
+							/* @__PURE__ */ (0, f.jsxs)("label", { children: [
+								/* @__PURE__ */ (0, f.jsx)("input", {
+									type: "radio",
+									name: "portfolio-import-mode",
+									checked: b === "local",
+									disabled: v,
+									onChange: () => x("local")
+								}),
+								" 로컬 Tesseract",
 								v ? " — 사용 불가" : ""
 							] }),
 							/* @__PURE__ */ (0, f.jsxs)("label", { children: [/* @__PURE__ */ (0, f.jsx)("input", {
 								type: "radio",
 								name: "portfolio-import-mode",
-								checked: y === "vision",
-								onChange: () => b("vision")
-							}), " 외부 Vision (선택)"] })
+								checked: b === "vision",
+								onChange: () => x("vision")
+							}), " 외부 Vision"] })
 						]
 					}),
-					y === "vision" && /* @__PURE__ */ (0, f.jsxs)("label", {
+					b === "agent" && /* @__PURE__ */ (0, f.jsx)("p", {
+						className: "settings-notice",
+						children: /* @__PURE__ */ (0, f.jsx)("span", { children: "위 미리보기 crop을 설정한 Agent CLI가 직접 읽습니다. 사진은 그 CLI 제공자에게 전달되며 Folio OS에는 저장하지 않습니다. 한 장에 수십 초 걸립니다." })
+					}),
+					b === "vision" && /* @__PURE__ */ (0, f.jsxs)("label", {
 						className: "settings-notice warn",
 						children: [
 							/* @__PURE__ */ (0, f.jsx)("input", {
 								type: "checkbox",
-								checked: x,
-								onChange: (e) => S(e.currentTarget.checked)
+								checked: S,
+								onChange: (e) => C(e.currentTarget.checked)
 							}),
 							" ",
 							/* @__PURE__ */ (0, f.jsx)("span", { children: "위 미리보기 crop이 설정된 외부 AI 제공자에게 전송되며, Folio OS 요청은 저장 비활성화를 사용한다는 점을 확인했습니다." })
@@ -16278,21 +16298,21 @@ function $s({ current: e, onApply: t, onClose: n }) {
 					/* @__PURE__ */ (0, f.jsx)("button", {
 						className: "btn btn--primary",
 						type: "button",
-						disabled: D || y === "local" && v,
-						onClick: P,
-						children: D ? "인식 중" : `저장하지 않고 미리보기${r.length > 1 ? ` (${r.length}장)` : ""}`
+						disabled: O || b === "local" && v || b === "agent" && !y,
+						onClick: F,
+						children: O ? b === "agent" ? "Agent CLI가 읽는 중 (수십 초)" : "인식 중" : `저장하지 않고 미리보기${r.length > 1 ? ` (${r.length}장)` : ""}`
 					})
 				] }),
-				k && /* @__PURE__ */ (0, f.jsx)("p", {
+				A && /* @__PURE__ */ (0, f.jsx)("p", {
 					className: "react-dashboard-error",
 					role: "alert",
-					children: k
+					children: A
 				}),
-				C && /* @__PURE__ */ (0, f.jsxs)("div", {
+				w && /* @__PURE__ */ (0, f.jsxs)("div", {
 					className: "portfolio-import-results",
 					children: [
-						/* @__PURE__ */ (0, f.jsxs)("p", { children: [C.engine, " · Portfolio 저장 안 됨"] }),
-						(C.notices || []).map((e) => /* @__PURE__ */ (0, f.jsx)("p", {
+						/* @__PURE__ */ (0, f.jsxs)("p", { children: [w.engine, " · Portfolio 저장 안 됨"] }),
+						(w.notices || []).map((e) => /* @__PURE__ */ (0, f.jsx)("p", {
 							className: "section-subtitle",
 							children: e
 						}, e)),
@@ -16302,18 +16322,18 @@ function $s({ current: e, onApply: t, onClose: n }) {
 							/* @__PURE__ */ (0, f.jsx)("th", { children: "평균단가" }),
 							/* @__PURE__ */ (0, f.jsx)("th", { children: "판정" }),
 							/* @__PURE__ */ (0, f.jsx)("th", { children: "기존 종목" })
-						] }) }), /* @__PURE__ */ (0, f.jsx)("tbody", { children: T.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("tr", { children: [
+						] }) }), /* @__PURE__ */ (0, f.jsx)("tbody", { children: E.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("tr", { children: [
 							/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
 								value: e.ticker,
-								onChange: (e) => F(t, "ticker", e.currentTarget.value.toUpperCase())
+								onChange: (e) => I(t, "ticker", e.currentTarget.value.toUpperCase())
 							}) }),
 							/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
 								value: e.quantity ?? "",
-								onChange: (e) => F(t, "quantity", e.currentTarget.value)
+								onChange: (e) => I(t, "quantity", e.currentTarget.value)
 							}) }),
 							/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("input", {
 								value: e.averagePrice ?? "",
-								onChange: (e) => F(t, "averagePrice", e.currentTarget.value)
+								onChange: (e) => I(t, "averagePrice", e.currentTarget.value)
 							}) }),
 							/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsx)("span", {
 								className: `chip certainty-badge--${e.status === "confirmed" ? "confirmed" : "tentative"}`,
@@ -16321,7 +16341,7 @@ function $s({ current: e, onApply: t, onClose: n }) {
 							}) }),
 							/* @__PURE__ */ (0, f.jsx)("td", { children: /* @__PURE__ */ (0, f.jsxs)("select", {
 								value: e.action,
-								onChange: (e) => F(t, "action", e.currentTarget.value),
+								onChange: (e) => I(t, "action", e.currentTarget.value),
 								children: [
 									/* @__PURE__ */ (0, f.jsx)("option", {
 										value: "skip",
@@ -16343,7 +16363,7 @@ function $s({ current: e, onApply: t, onClose: n }) {
 							children: [/* @__PURE__ */ (0, f.jsx)("button", {
 								className: "btn btn--primary",
 								type: "button",
-								onClick: () => t(Qs(e, T)),
+								onClick: () => t(Qs(e, E)),
 								children: "편집표에 적용"
 							}), /* @__PURE__ */ (0, f.jsx)("span", { children: "적용 후 Portfolio 저장 버튼을 눌러야 실제 저장됩니다." })]
 						})
