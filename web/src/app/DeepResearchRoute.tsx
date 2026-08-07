@@ -52,6 +52,12 @@ import {
 import { SmartCollectionsPanel, SmartCollectionWorkspace } from "./SmartCollectionWorkspace";
 import { InvestmentContextCard } from "./InvestmentContextCard";
 
+/** 계획을 누가 쓰는가. 둘 중 하나이므로 세그먼트로 고른다. */
+const PLANNER_ENGINES: ReadonlyArray<{ value: PlannerEngine; label: string; hint: string }> = [
+  { value: "auto", label: "AI", hint: "설정한 엔진이 이 질문에 맞는 축과 검색어를 씁니다. 40초쯤 걸립니다." },
+  { value: "rules", label: "규칙", hint: "보고서 유형의 기본 축으로 즉시 만듭니다." },
+];
+
 type DeepResearchPhase =
   | "readiness"
   | "draft"
@@ -483,6 +489,10 @@ function PlanEditor({
 
   return (
     <div className="topicrpt-plan-editor" data-qa="dr-plan-editor">
+      <p className="topicrpt-plan-editor-head">
+        <strong>계획 수정</strong>
+        <span>고친 계획으로 승인이 다시 발급됩니다. 축은 뺄 수는 있어도 새로 만들 수는 없습니다.</span>
+      </p>
       <div className="topicrpt-plan-editor-row">
         <label className="field">
           <span>주제 이름</span>
@@ -536,7 +546,7 @@ function PlanEditor({
               </button>
             </div>
             {!axis.removed && (
-              <>
+              <div className="topicrpt-axis-edit-fields">
                 <label className="field">
                   <span>질문</span>
                   <textarea rows={2} value={axis.questions} onChange={(event) => patchAxis(axis.key, { questions: event.currentTarget.value })} />
@@ -545,12 +555,13 @@ function PlanEditor({
                   <span>검색 질의</span>
                   <textarea rows={2} value={axis.searchQueries} onChange={(event) => patchAxis(axis.key, { searchQueries: event.currentTarget.value })} />
                 </label>
-              </>
+              </div>
             )}
           </section>
         ))}
       </div>
       <div className="topicrpt-plan-editor-actions">
+        <button className="btn btn--text" type="button" onClick={onCancel} disabled={busy}>취소</button>
         <button
           className="btn btn--primary"
           type="button"
@@ -560,7 +571,6 @@ function PlanEditor({
         >
           {busy ? "저장 중" : "계획 저장"}
         </button>
-        <button className="btn" type="button" onClick={onCancel} disabled={busy}>취소</button>
       </div>
     </div>
   );
@@ -1362,18 +1372,25 @@ export function DeepResearchRoute() {
           </details>
           <div className="topicrpt-action-row">
             <span className="topicrpt-policy-note">심층 조사 · 최대 2라운드</span>
-            <label className="field topicrpt-policy-field">
-              <span>계획 작성</span>
-              <select
-                value={plannerEngine}
-                data-qa="dr-planner-engine"
-                onChange={(event) => setPlannerEngine(event.currentTarget.value as PlannerEngine)}
-                disabled={isBusy}
-              >
-                <option value="auto">AI가 작성</option>
-                <option value="rules">규칙으로 빠르게</option>
-              </select>
-            </label>
+            {/* 한 줄 안에서 고르는 자리라 라벨을 위가 아니라 옆에 둔다. 위에 두면
+                이 칸만 다른 것들보다 20px 높아져 줄이 어긋난다. */}
+            <div className="topicrpt-planner-choice">
+              <span id="dr-planner-engine-label">계획 작성</span>
+              <div className="segment" data-qa="dr-planner-engine" role="group" aria-labelledby="dr-planner-engine-label">
+                {PLANNER_ENGINES.map((option) => (
+                  <button
+                    type="button"
+                    key={option.value}
+                    aria-pressed={plannerEngine === option.value}
+                    disabled={isBusy}
+                    data-tooltip={option.hint}
+                    onClick={() => setPlannerEngine(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button className="btn btn--primary" type="submit" data-qa="dr-preview" disabled={isBusy}>
               {phase === "plan-loading" ? (plannerEngine === "rules" ? "계획 준비 중" : "AI가 계획을 쓰는 중") : "계획 미리보기"}
             </button>

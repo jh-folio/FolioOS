@@ -9975,6 +9975,16 @@ body.report-reader-open { overflow: hidden; }
   min-width: min(220px, 100%);
 }
 
+/* 라벨 + 세그먼트를 한 줄에 둔다. 라벨을 위로 올리면 이 칸만 높아져 줄이 어긋난다. */
+.topicrpt-planner-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
 .topicrpt-policy-note {
   align-self: center;
   color: var(--folio-ink-muted);
@@ -15718,11 +15728,30 @@ select { min-height: 36px; padding: 0 12px; }
   background: var(--surface-group);
 }
 
+.topicrpt-plan-editor-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.topicrpt-plan-editor-head strong { color: var(--folio-ink); }
+
+.topicrpt-plan-editor-head span {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-sm);
+}
+
 .topicrpt-plan-editor-row {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--sp-3);
 }
+
+/* 전역 textarea는 140px이 최소다. 계획 편집은 짧은 목록을 여럿 다루는 화면이라
+   그 높이로는 축 하나가 410px이 되고 다섯 축이면 2,600px을 스크롤해야 한다. */
+.topicrpt-plan-editor textarea { min-height: 84px; }
+.topicrpt-plan-editor > label > textarea { min-height: 108px; }
 
 .topicrpt-plan-hint {
   color: var(--folio-ink-subtle);
@@ -15745,6 +15774,14 @@ select { min-height: 36px; padding: 0 12px; }
   background: var(--folio-surface-clean);
 }
 
+/* 축 하나가 질문과 검색 질의를 나란히 갖는다. 세로로 쌓으면 화면 하나에 축이
+   하나도 다 안 들어와 무엇을 고치는 중인지 놓친다. */
+.topicrpt-axis-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+}
+
 /* 뺀 축은 지우지 않고 흐리게 남긴다. 되살릴 수 있어야 한다. */
 .topicrpt-axis-edit[data-removed="true"] { opacity: 0.55; }
 
@@ -15761,6 +15798,9 @@ select { min-height: 36px; padding: 0 12px; }
   gap: var(--sp-2);
 }
 
+.topicrpt-plan-editor-actions .btn--primary { margin-left: auto; }
+
 @media (max-width: 720px) {
-  .topicrpt-plan-editor-row { grid-template-columns: 1fr; }
+  .topicrpt-plan-editor-row,
+  .topicrpt-axis-edit-fields { grid-template-columns: 1fr; }
 }
