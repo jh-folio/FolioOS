@@ -4,9 +4,11 @@ Dashboard는 `cockpit` 하나입니다(0.5에서 Legacy 모드 삭제). initial 
 
 **Legacy 모드는 0.5에서 삭제했습니다.** 0.4에서 한 릴리즈 동안만 두기로 한 rollback 경로였고, Cockpit이 자리를 잡아 같은 화면을 두 벌 유지할 이유가 없습니다. 저장된 `dashboardMode: legacy`는 `cockpit`으로 승격됩니다. 사용자 설정 파일 `data/market-widget-settings.json`은 계약대로 **삭제하지 않고**, 집중 종목 fallback(`source: legacy_setting`)으로 계속 read-only로 읽습니다. 설정/Watchlist가 없으면 미국 `SPY`, 한국 `^KS11`을 사용합니다.
 
-cockpit payload의 변화 이벤트는 `major_change | developing_signal | conflicting_uncertain`만 `changes`로 노출하고, 나머지(기준선·근거부족·변화없음)는 `quietChanges`(최대 8건)와 `changeCounts.quiet`로 분리합니다. `changeCounts`는 요약 스트립용 상태별 카운트입니다. implications는 포트폴리오와 워치리스트 티커(`sec_ticker_for_name` 이름 해석 포함)를 모두 매칭하고 `source: portfolio|watchlist`를 표기합니다.
+cockpit payload의 변화 이벤트는 `major_change | developing_signal | conflicting_uncertain`만 `changes`로 노출하고, 나머지(기준선·근거부족·변화없음)는 `quietChanges`(최대 8건)와 `changeCounts.quiet`로 분리합니다. `changeCounts`는 요약 스트립용 상태별 카운트입니다. **`quietChanges`는 0.5.0에서 화면에 없습니다** — `무엇이 달라졌나`는 의미 판정이 끝난 건(`new_information|reversal|trend_development`)만 본문에 두고 나머지는 감춥니다. 다만 판정 자체를 못 한 경우(LLM 없이 생성하면 전부 `not_evaluated`)에는 빈 상태 문구가 `변화가 없다`가 아니라 `판정하지 못한 기록이 N건`이라고 말합니다. 판정 실패를 변화 없음으로 바꿔 말하지 않기 위해서입니다. implications는 포트폴리오와 워치리스트 티커(`sec_ticker_for_name` 이름 해석 포함)를 모두 매칭하고 `source: portfolio|watchlist`를 표기합니다.
 
-`POST /api/dashboard/settings`는 기존 저장값과 merge 후 정규화합니다(부분 갱신이 다른 키를 초기화하지 않음). 저장 키: `dashboardMode`, `calendarView`, `calendarKind`, `calendarMarket`, `calendarWatchlistOnly`, `chartRange`, `chartSymbol`.
+`POST /api/dashboard/settings`는 기존 저장값과 merge 후 정규화합니다(부분 갱신이 다른 키를 초기화하지 않음). 저장 키: `dashboardMode`, `calendarView`, `calendarKinds`, `calendarMarkets`, `calendarWatchlistOnly`, `calendarMinImportance`(1=전부·2=중간 이상·3=최상위만), `chartRange`, `chartStyle`, `chartSymbol`.
+
+차트 기간은 0.5에서 `1d/1m/3m/1y/5y`로 바뀌었다(`1d`는 5분봉). `6m`을 쓰던 저장값은 정규화 때 조용히 `3m`으로 떨어진다 — `legacy → cockpit`처럼 옮겨 주는 승격 경로는 두지 않았다.
 
 API: `GET /api/dashboard/cockpit`, `GET|POST /api/dashboard/settings`, `GET /api/dashboard/story-share?market=us|kr|europe|jp`. 기존 `GET /api/dashboard`는 그대로 유지합니다.
 

@@ -28,6 +28,10 @@ UNCLASSIFIED_DRIVERS = {"시장 전반"}
 _CACHE_TTL_SECONDS = 600
 _cache_lock = threading.Lock()
 _cache: dict[tuple[str, str], tuple[float, dict]] = {}
+# 무효화 세대. 인덱스를 읽는 동안 RSS 수집이 캐시를 비우면, 그 사이에 읽어 온
+# 낡은 문서로 만든 값을 다시 넣어선 안 된다. 네 시장을 함께 채우게 되면서
+# 계산 구간이 길어져 이 창이 더 넓어졌다.
+_cache_generation = 0
 
 
 def _story_counts(docs: list[dict], drivers_of=None) -> tuple[dict[str, int], int]:
@@ -177,6 +181,7 @@ def story_share_payload(date: str | None, scope: str) -> dict:
         cached = _cache.get((date, scope))
         if cached and now - cached[0] < _CACHE_TTL_SECONDS:
             return cached[1]
+        generation = _cache_generation
     documents = news_documents(load_index())
     work = _SharedWork(documents)
     payload = build_story_share(documents, date, scope, work)
@@ -191,12 +196,17 @@ def story_share_payload(date: str | None, scope: str) -> dict:
             continue
     stamped = time.monotonic()
     with _cache_lock:
-        for market, value in warmed.items():
-            _cache[(date, market)] = (stamped, value)
+        # 읽는 동안 누가 비웠으면 이 결과는 이미 낡았다. 답은 돌려주되 캐시에는
+        # 넣지 않는다 — 넣으면 네 시장이 10분 동안 낡은 값을 물고 있게 된다.
+        if generation == _cache_generation:
+            for market, value in warmed.items():
+                _cache[(date, market)] = (stamped, value)
     return payload
 
 
 def invalidate_story_share_cache() -> None:
     """RSS 수집 직후 다음 조회가 새 문서를 반영하도록 캐시를 비운다."""
+    global _cache_generation
     with _cache_lock:
         _cache.clear()
+        _cache_generation += 1

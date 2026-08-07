@@ -573,7 +573,7 @@ features/company_analysis/financial_quality_prompt.md
 - 로직은 `features/dashboard/`에 둔다. 화면은 `cockpit` 하나이며 0.5에서 Legacy 모드를 삭제했다(저장된 `legacy` 설정은 `cockpit`으로 승격). 패널 순서는 변화 피드 → 시장 캘린더 → 네이티브 차트다.
 - 기존 `data/market-widget-settings.json`은 삭제·수정하지 않고 read-only fallback으로만 읽는다. 새 설정은 `data/dashboard-settings.json`에 저장한다.
 - 초기 cockpit payload에는 외부 network 호출·chart series·iframe이 없고 차트/일정 상세는 lazy fetch한다. 네이티브 차트는 `GET /api/market/chart`와 기존 Lightweight Charts 전역을 재사용한다.
-- `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. **한 시장만 물어봐도 네 시장을 모두 계산해 캐시한다** — 인덱스 로드가 4.7초라 시장을 바꿀 때마다 그 값을 다시 치르고 있었다(시장당 6초). 문서를 한 번 읽어 온 김에 나머지를 채우면 첫 조회 8초·이후 전환 0초다. 날짜별 문서 선별과 문서별 동인 추론은 시장과 무관하므로 `_SharedWork`가 한 번만 계산한다. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
+- `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, 시장 토글 US/KR/EUROPE/JP). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. **한 시장만 물어봐도 네 시장을 모두 계산해 캐시한다** — 인덱스 로드가 4.7초라 시장을 바꿀 때마다 그 값을 다시 치르고 있었다(시장당 6초). 문서를 한 번 읽어 온 김에 나머지를 채우면 첫 조회 8초·이후 전환 0초다. 날짜별 문서 선별과 문서별 동인 추론은 시장과 무관하므로 `_SharedWork`가 한 번만 계산한다. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
 - 기존 `/api/dashboard` 응답은 기존 consumer 호환을 위해 유지한다.
 
 ### 입력 기업 판단 (Company Resolution)

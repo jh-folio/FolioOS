@@ -18,8 +18,27 @@ _CONSTITUENT_FILES = (
 )
 
 
-@lru_cache(maxsize=1)
-def _label_index() -> dict[str, str]:
+def _stamps() -> tuple:
+    """구성종목 파일이 다시 생성되면 색인도 다시 만든다.
+
+    프로세스당 한 번만 읽으면 파일을 갱신해도 재시작 전까지 옛 이름이 남는다.
+    같은 파일을 읽는 `company_resolution._config_stamps()`는 이미 이렇게 한다 —
+    두 모듈이 같은 파일을 두고 다른 답을 하면 안 된다.
+    """
+    from features.common.config_bootstrap import resolve_config
+
+    stamps = []
+    for name in _CONSTITUENT_FILES:
+        try:
+            stat = Path(resolve_config(name)).stat()
+            stamps.append((stat.st_mtime_ns, stat.st_size))
+        except Exception:
+            stamps.append((0, 0))
+    return tuple(stamps)
+
+
+@lru_cache(maxsize=4)
+def _label_index_for(_stamp: tuple) -> dict[str, str]:
     from features.common.config_bootstrap import resolve_config
 
     index: dict[str, str] = {}
@@ -46,6 +65,10 @@ def _label_index() -> dict[str, str]:
                     index.setdefault(f"{symbol}.KS", label)
                     index.setdefault(f"{symbol}.KQ", label)
     return index
+
+
+def _label_index() -> dict[str, str]:
+    return _label_index_for(_stamps())
 
 
 def company_name(ticker: str, fallback_lookup=None) -> str:

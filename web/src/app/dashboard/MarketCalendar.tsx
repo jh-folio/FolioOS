@@ -24,12 +24,19 @@ const KIND_FILTERS: Array<{ value: string; label: string }> = [
   { value: "filing", label: "공시" }, { value: "dividend", label: "배당" },
 ];
 const numberOf = (value?: string) => {
-  const parsed = Number(String(value ?? "").replace(/,/g, ""));
+  // `Number("")`은 NaN이 아니라 **0**이다. 빈 값을 먼저 걸러내지 않으면 값이 없는
+  // 예상치가 0으로 읽혀 `예상  대비 +3.2`처럼 숫자 없는 문구가 뜨고, 그 +3.2는
+  // 실제 서프라이즈가 아니라 발표치 그대로다. 서버는 결측을 빈 문자열로 주고
+  // (`market_calendar/schema.py::_number`) yfinance 컨센서스는 항상 비어 있어
+  // 거의 모든 지표 행이 이 경로를 탔다.
+  const text = String(value ?? "").replace(/,/g, "").trim();
+  if (!text) return null;
+  const parsed = Number(text);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
 /** 발표 숫자를 무엇과 비교해 읽을지. 예상치가 있으면 그것이 우선이다. */
-function comparisonLabel(event: Event): string {
+export function comparisonLabel(event: Event): string {
   const actual = numberOf(event.actualValue);
   const forecast = numberOf(event.forecastValue);
   if (actual !== null && forecast !== null) {
@@ -40,7 +47,7 @@ function comparisonLabel(event: Event): string {
   return event.previousValue ? `직전 ${event.previousValue}` : "";
 }
 
-function comparisonDirection(event: Event): "up" | "down" | "flat" {
+export function comparisonDirection(event: Event): "up" | "down" | "flat" {
   const actual = numberOf(event.actualValue);
   const base = numberOf(event.forecastValue) ?? numberOf(event.previousValue);
   if (actual === null || base === null || actual === base) return "flat";

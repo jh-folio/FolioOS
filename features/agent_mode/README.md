@@ -182,7 +182,7 @@ When the user explicitly asks to revise, create, update, schedule, or write back
 - 임시 파일 수명은 `StagedImages` 컨텍스트가 CLI 호출 구간으로 한정한다. 성공·실패·취소 모두에서 삭제한다. 원본을 `data/`에 남기지 않는다(0.4 스크린샷 계약과 동일).
 - **바이트는 프롬프트·잡 결과·Work Log 어디에도 남지 않는다.** 잡 결과는 `data/jobs.json`에 저장되므로 `companion.public_options()`가 `imageData`를 떼고 `hasImage: true` 플래그만 남긴다.
 - CLI가 없으면 이미지를 읽을 주체가 없다. 조용히 무시하지 않고 "Agent CLI가 없어 이미지를 열 수 없습니다"를 알린다.
-- 기존 로컬 OCR(Tesseract)·외부 Vision 경로는 **CLI를 쓰지 않는 사용자를 위한 fallback으로 그대로 남긴다.**
+- 포트폴리오 사진 가져오기는 **0.5.0 화면에서 빠졌다**(`features/portfolio/README.md`). 로컬 OCR·외부 Vision 런타임은 코드로만 남아 있고 화면도 route도 없다 — 0.5.X에서 사진 인식을 이 도크 경로 하나로 옮길 때 재료로 쓴다. **막힌 지점**: 이 첨부 경로는 CLI 전용이라(`_run_with_images`) 도크가 API 모드일 때는 이미지를 못 읽는다.
 
 Deep Research의 `Agent에게 변화 묻기`는 frontend가 `collectionId`와 strict 정수 `collectionRevision`만 전달하는 명시적 Companion action이다. 서버는 저장된 Collection을 다시 조회하고 revision을 검사한 뒤, 한 번의 read-only resolve로 현재/이전 스냅샷 metadata, change counts/reason, 현재 외부 evidence 카드 최대 12개를 구성한다. Collection 정의는 ID/revision/definition hash만 포함한 `saved_filter_metadata_not_evidence`, 외부 카드는 `external_evidence_untrusted`로 표시한다. 카드의 title/source/url/snippet은 인용 데이터일 뿐 prompt 지시가 아니며 별도 untrusted delimiter 안에 둔다. 사용자 note/context, frontend가 보낸 match/evidence body, 보고서, Agent 응답은 이 projection에 들어가지 않는다.
 

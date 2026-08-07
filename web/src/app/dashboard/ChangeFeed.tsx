@@ -158,6 +158,10 @@ export function ChangeFeed({ events }: { events: ChangeEvent[] }) {
     const verdict = String(primaryChangedItem(event)?.semanticVerdict || "");
     return verdict === "new_information" || verdict === "reversal" || verdict === "trend_development";
   });
+  // 의미 판정은 LLM이 한다. LLM 없이 생성한 설치에서는 모든 건이 `not_evaluated`라
+  // 위 필터가 전부를 걸러낸다. 그때 "변화가 없다"고 쓰면 판정을 못 한 것을 변화가
+  // 없었던 것으로 바꿔 말하게 된다 — 판정을 못 했다는 사실 자체를 보여준다.
+  const unjudged = events.length - confirmed.length;
   return (
     <section className="cockpit-panel cockpit-change-feed" aria-labelledby="cockpit-change-title">
       <div className="cockpit-panel__head">
@@ -181,7 +185,11 @@ export function ChangeFeed({ events }: { events: ChangeEvent[] }) {
       {confirmed.length ? <ol>
         {confirmed.map((event) => <ChangeCard event={event} key={eventKey(event)} />)}
       </ol> : (
-        <p className="cockpit-empty">아직 확인된 내용 변화가 없습니다.</p>
+        <p className="cockpit-empty">
+          {unjudged > 0
+            ? `내용 변화를 판정하지 못한 기록이 ${unjudged}건 있습니다. 설정에서 AI Agent를 연결하면 무엇이 달라졌는지 읽어 줍니다.`
+            : "아직 확인된 내용 변화가 없습니다."}
+        </p>
       )}
 
     </section>

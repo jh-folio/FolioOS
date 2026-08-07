@@ -6,7 +6,6 @@
 
 - 현재 보유 포지션 입력
 - `revision`/`expectedRevision` 기반 동시 편집 충돌 방지(불일치 시 409와 최신본 반환)
-- 증권사 화면 이미지의 local-first OCR preview/import (원본·raw OCR 비보관)
 - 티커 기반 종목명, 시장, 통화, 섹터, 자산군 자동 매칭
 - `yfinance` 현재가 기반 평가금액, 손익, 비중 계산
 - 여러 통화(USD/KRW/EUR/GBP/JPY)가 섞인 포트폴리오의 USD 기준 환산 비중 계산
@@ -75,7 +74,6 @@ data/portfolio-fx-cache.json
 ```text
 GET    /api/portfolio
 POST   /api/portfolio
-POST   /api/portfolio/import-image/preview?mode=local|vision&consent=false|true
 GET    /api/portfolio/summary
 GET    /api/portfolio/analytics
 GET    /api/portfolio/resolve?ticker=...
@@ -168,4 +166,4 @@ hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 �
 
 ## 아직 미뤄 둔 것 — 화면 재연결 (0.5.X)
 
-백엔드 API는 18개가 등록돼 있는데 화면이 쓰는 것은 3개다(`/api/portfolio` 읽기·쓰기, 사진 가져오기). `/summary`·`/analytics`·`/resolve`·`/suggest`, `/presets` 4개, `/backtests` 6개가 끊겨 있다. `portfolio-backtest-form`·`backtest-metrics`·`backtest-compare-table`·`portfolio-donut-grid`·`portfolio-analysis-grid` 같은 CSS가 남아 있는데 이를 참조하는 컴포넌트는 0개다 — React 전환 때 화면만 안 옮겨왔다. **새로 만드는 게 아니라 다시 붙이는 작업**이며 사용자 결정으로 0.5.X에서 진행한다(2026-08-07).
+백엔드 API는 16개가 등록돼 있는데 화면이 쓰는 것은 2개다(`/api/portfolio` 읽기·쓰기). `/summary`·`/analytics`·`/resolve`·`/suggest`, `/presets` 4개, `/backtests` 6개가 끊겨 있다. `portfolio-backtest-form`·`backtest-metrics`·`backtest-compare-table`·`portfolio-donut-grid`·`portfolio-analysis-grid` 같은 CSS가 남아 있는데 이를 참조하는 컴포넌트는 0개다 — React 전환 때 화면만 안 옮겨왔다. **새로 만드는 게 아니라 다시 붙이는 작업**이며 사용자 결정으로 0.5.X에서 진행한다(2026-08-07).

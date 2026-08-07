@@ -249,46 +249,75 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
         providers["us_macro_source"] = "yfinance_fallback"
 
     estimates: list[dict] = []
+    queried: set[str] = set()
     if include_estimates and tickers:
-        earnings = estimated_earnings_events(tickers)
-        dividends = estimated_dividend_events(tickers)
+        earnings, earnings_queried = estimated_earnings_events(tickers)
+        dividends, dividends_queried = estimated_dividend_events(tickers)
         estimates = [*earnings, *dividends]
+        queried = earnings_queried | dividends_queried
         events.extend(estimates)
         providers.update({"yfinance_earnings": len(earnings), "yfinance_dividends": len(dividends)})
     count = upsert_events(memory_db, events)
-    if estimates:
-        providers["pruned_estimates"] = prune_stale_estimates(memory_db, estimates)
+    if queried:
+        providers["pruned_estimates"] = prune_stale_estimates(memory_db, estimates, queried)
     return {"ok": True, "stored": count, "providers": providers, "dataGaps": macro_coverage_gaps(), "agentCalled": False}
 
 
-def prune_stale_estimates(db_path: Path, fresh: list[dict]) -> int:
-    """이번 수집에 안 나온 앞으로의 실적·배당 추정 일정을 지운다.
+def prune_stale_estimates(db_path: Path, fresh: list[dict], queried: set[str]) -> int:
+    """이번에 **물어본 티커**에 한해, 답에 없던 실적·배당 추정 행을 지운다.
 
-    이 두 종류는 매 수집마다 티커 목록에서 통째로 다시 만들어진다. 그래서 남아
-    있는 옛 행은 갱신되지 않은 것이 아니라 **더는 성립하지 않는 것**이다. 실제로
-    시장 판정을 고친 뒤 `8316.T` 실적이 도쿄와 뉴욕 두 줄로 보였다 — id가
-    `kind|provider|title|시작시각`인데 시간대가 바뀌면서 시작시각이 달라져 옛
-    행이 그대로 남았다.
+    이 두 종류는 매 수집마다 티커 목록에서 다시 만들어지므로, 물어봤는데 답에
+    없는 행은 갱신 실패가 아니라 더는 성립하지 않는 행이다. 실제로 시장 판정을
+    고친 뒤 `8316.T` 실적이 도쿄와 뉴욕 두 줄로 보였다 — id가
+    `kind|provider|title|시작시각`인데 시간대가 바뀌면서 옛 행이 남았다.
+
+    **물어본 티커로 범위를 좁히는 것이 핵심이다.** 어댑터는 티커별 예외를 삼키고
+    상한(30개)에서 자르므로 "결과에 없다"가 곧 "없어졌다"가 아니다. 좁히지 않으면
+    조회조차 안 된 티커의 멀쩡한 행이 지워진다 — 실측으로 대상 53개 중 앞 30개만
+    조회돼 `GEV`의 유효한 실적 행이 삭제 대상이었다. rate limit으로 일부가 실패한
+    날에도 같은 일이 난다.
 
     날짜로 자르지 않는다. yfinance가 주는 실적일은 최근 지나간 날짜일 수도 있어,
-    앞으로의 행만 지우면 옛 도쿄→뉴욕 중복이 과거 쪽에 그대로 남는다(실측:
-    `8316.T` 두 줄 모두 7월 31일).
+    앞으로의 행만 지우면 옛 중복이 과거 쪽에 그대로 남는다(실측: `8316.T` 두 줄
+    모두 7월 31일).
 
-    공식 일정(휴장·FOMC·지표)과 확정 상태 행은 건드리지 않는다. 그쪽은 지난
-    기록이 자산이고, 한 번 수집에 실패했다고 지울 것이 아니다.
+    공식 일정(휴장·FOMC·지표)과 확정 상태 행은 건드리지 않는다.
     """
-    keep = {str(row.get("id") or "") for row in fresh}
-    keep.discard("")
-    if not keep:
+    symbols = {str(t).strip().upper() for t in (queried or set()) if str(t).strip()}
+    if not symbols:
         return 0
-    placeholders = ",".join("?" * len(keep))
+    # id는 저장할 때 `normalize_event`가 만든다. 호출자가 정규화 전 dict를 넘기면
+    # keep이 비어 방금 넣은 행까지 지워지므로, 여기서 같은 방식으로 다시 만든다.
+    keep = set()
+    for row in fresh:
+        try:
+            keep.add(normalize_event(row)["id"])
+        except (TypeError, ValueError):
+            continue
     with sqlite3.connect(str(db_path)) as conn:
         ensure_calendar_table(conn)
+        # tickers_json은 리스트라 SQL로 정확히 매칭하기 어렵다. 후보만 SQL로 좁히고
+        # 티커 판정은 파이썬에서 한다 — LIKE로 걸러내면 `MU`가 `MUFG`를 문다.
+        rows = conn.execute(
+            """SELECT id, tickers_json FROM market_calendar_events
+               WHERE kind IN ('earnings','dividend') AND status = 'estimated'
+                 AND provider = 'yfinance'"""
+        ).fetchall()
+        doomed = []
+        for row_id, tickers_json in rows:
+            if row_id in keep:
+                continue
+            try:
+                row_tickers = {str(t).strip().upper() for t in json.loads(tickers_json or "[]")}
+            except (TypeError, ValueError):
+                continue
+            if row_tickers and row_tickers <= symbols:
+                doomed.append(row_id)
+        if not doomed:
+            return 0
+        placeholders = ",".join("?" * len(doomed))
         cursor = conn.execute(
-            f"""DELETE FROM market_calendar_events
-                WHERE kind IN ('earnings','dividend') AND status = 'estimated'
-                  AND provider = 'yfinance'
-                  AND id NOT IN ({placeholders})""",
-            tuple(sorted(keep)),
+            f"DELETE FROM market_calendar_events WHERE id IN ({placeholders})",
+            tuple(doomed),
         )
         return cursor.rowcount or 0

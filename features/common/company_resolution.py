@@ -449,6 +449,23 @@ def _representative_key(entry: dict, score: int, script: str, prefer_home: bool)
     return (score, *rank)
 
 
+def _merge_keys(entry: dict) -> list[str]:
+    """이 항목이 다른 상장과 "같은 회사"라고 주장할 수 있는 이름들.
+
+    표시 이름은 언제나 포함한다(`ASML HOLDING NV` ↔ `ASML Holding`처럼 예전부터
+    묶이던 경우). 나머지 이름은 **두 낱말 이상일 때만** 쓴다 — `Toyota Motor
+    Corporation`은 도쿄 원주와 뉴욕 ADR이 같은 회사라는 증거가 되지만 `JT`는
+    아니다. 별칭은 검색에 걸리라고 넣은 것이지 동일성을 주장하라고 넣은 게 아니다.
+    """
+    display = _key(entry.get("name"))
+    keys = [display] if display else []
+    for name in _names(entry):
+        candidate = _key(name)
+        if candidate and " " in candidate and candidate not in keys:
+            keys.append(candidate)
+    return keys or [_ticker_key(entry.get("ticker"))]
+
+
 def _dedupe(rows: list[tuple[dict, int]], script: str = "", prefer_home: bool = False) -> list[tuple[dict, int]]:
     """같은 회사는 한 줄로 모은다.
 
@@ -456,9 +473,14 @@ def _dedupe(rows: list[tuple[dict, int]], script: str = "", prefer_home: bool = 
     ASML은 SEC(ASML)와 암스테르담(ASML.AS) 양쪽에 있어 그대로 두면 "ASML Holding"이
     늘 애매로 떨어진다 — 사용자에게는 고를 의미가 없는 갈림길이다.
 
-    묶는 기준은 **표시 이름 하나가 아니라 그 항목이 가진 모든 이름**이다. 도쿄
-    상장 도요타의 표시 이름은 `トヨタ自動車`라 `TOYOTA MOTOR CORP`와 글자가 하나도
-    겹치지 않는다. 영문명과 별칭까지 대조해야 원주와 ADR이 한 회사로 만난다.
+    묶는 기준은 표시 이름과 **여러 낱말로 된** 다른 이름들이다(`_merge_keys`).
+    도쿄 상장 도요타의 위키 표기는 `トヨタ自動車`라 `TOYOTA MOTOR CORP`와 글자가
+    하나도 겹치지 않아 표시 이름만으로는 원주와 ADR이 만나지 못한다.
+
+    한때 **모든** 이름을 묶기 기준으로 썼는데 서로 다른 회사가 한 줄로 접혔다.
+    DART의 `corp_eng_name`은 고유하지 않아서다 — `JT`로 찾으면 한국의 제이티
+    (089790)가 일본 담배산업(2914.T)에 흡수되어 후보 목록에서 아예 사라졌다.
+    한두 글자짜리 약칭은 같은 회사라는 증거가 못 된다.
     """
     best: dict[str, tuple[dict, int]] = {}
     for entry, score in rows:
@@ -469,8 +491,7 @@ def _dedupe(rows: list[tuple[dict, int]], script: str = "", prefer_home: bool = 
     groups: list[tuple[dict, int]] = []
     owner: dict[str, int] = {}
     for entry, score in best.values():
-        keys = [k for k in (_key(name) for name in _names(entry)) if k]
-        keys = keys or [_ticker_key(entry.get("ticker"))]
+        keys = _merge_keys(entry)
         index = next((owner[k] for k in keys if k in owner), None)
         if index is None:
             index = len(groups)
@@ -535,9 +556,12 @@ def resolve_company_query(query: str, *, limit: int = 6, prefer_home: bool = Fal
     # 8058의 정식 이름인데, 미국장 가산점을 받은 MUFG의 접두 일치와 점수가
     # 같아져 매번 애매로 떨어졌다. 가산점은 같은 등급 안의 저울이지 등급을
     # 넘나드는 값이 아니다.
+    # 바로 다음 줄만 보면 안 된다. 가산점이 최대 10점(curated 2 + script 8)이라
+    # 정확 일치 두 건 사이에 접두 일치가 끼어들 수 있고, 그러면 똑같이 정확한
+    # 두 회사 중 하나를 확신으로 골라버린다. 정확 일치가 몇이든 다 센다.
+    exact_hits = sum(1 for entry, _score in ranked if _tier(entry, query_key, query_ticker) >= EXACT_NAME)
     top_exact = _tier(top_entry, query_key, query_ticker) >= EXACT_NAME
-    runner_exact = len(ranked) > 1 and _tier(ranked[1][0], query_key, query_ticker) >= EXACT_NAME
-    if top_exact and not runner_exact:
+    if top_exact and exact_hits == 1:
         return {
             "query": raw,
             "status": "confident",

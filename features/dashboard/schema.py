@@ -35,6 +35,14 @@ def _market_set(value: object) -> list[str]:
     return out
 
 
+def _importance(value) -> int:
+    """중요도 하한(1=전부, 2=중간 이상, 3=최상위만). 못 읽으면 1."""
+    try:
+        return min(max(int(value), 1), 3)
+    except (TypeError, ValueError):
+        return 1
+
+
 def normalize_dashboard_settings(value: dict | None) -> dict:
     value = value or {}
     mode = str(value.get("dashboardMode") or "cockpit").strip().lower()
@@ -68,7 +76,9 @@ def normalize_dashboard_settings(value: dict | None) -> dict:
         "calendarMarkets": calendar_markets,
         "calendarWatchlistOnly": bool(value.get("calendarWatchlistOnly")),
         # 중요도 하한(1=전부, 2=중간 이상, 3=최상위만).
-        "calendarMinImportance": min(max(int(value.get("calendarMinImportance") or 1), 1), 3),
+        # 다른 필드처럼 방어적으로 읽는다. 그냥 int()로 감싸면 문자열 하나에
+        # 400이 아니라 500이 난다.
+        "calendarMinImportance": _importance(value.get("calendarMinImportance")),
         "chartRange": chart_range if chart_range in VALID_CHART_RANGES else "3m",
         "chartStyle": chart_style if chart_style in VALID_CHART_STYLES else "line",
         "chartSymbol": chart_symbol if re.fullmatch(r"\^?[A-Z0-9.=-]{1,20}", chart_symbol) else "",

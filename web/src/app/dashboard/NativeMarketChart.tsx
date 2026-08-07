@@ -32,6 +32,34 @@ const RANGES = ["1d", "1m", "3m", "1y", "5y"];
 const RANGE_LABELS: Record<string, string> = { "1d": "1D", "1m": "1M", "3m": "3M", "1y": "1Y", "5y": "5Y" };
 const intervalFor = (value: string) => (value === "1d" ? "5m" : "1d");
 
+/** 5분봉 시각을 Lightweight Charts가 받는 형태로 바꾼다.
+ *
+ *  분봉은 거래소 현지 시각 문자열(`2026-08-07T09:30:00-04:00`)로 들어오는데,
+ *  라이브러리가 받는 것은 `yyyy-mm-dd` 문자열 아니면 UTC epoch 초다. ISO
+ *  문자열을 그대로 넘기면 예외 없이 통과한 뒤 하루로 접혀 78개 봉이 한 점에
+ *  겹친다(실측: 19개 봉을 넣었더니 보이는 범위의 from과 to가 같았다).
+ *
+ *  epoch를 그대로 쓰면 이번엔 축이 UTC로 그려져 미국장 09:30이 13:30으로
+ *  보인다. 그래서 벽시계 값을 UTC인 척 넘긴다 — `public/briefing-visuals.js`의
+ *  `intradayChartTime()`이 같은 이유로 같은 일을 한다.
+ */
+function intradayTime(rawTime: string): number {
+  const match = String(rawTime || "").match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!match) return NaN;
+  const wallClock = Date.UTC(
+    Number(match[1]), Number(match[2]) - 1, Number(match[3]),
+    Number(match[4]), Number(match[5]), Number(match[6] || 0),
+  );
+  return Number.isFinite(wallClock) ? Math.floor(wallClock / 1000) : NaN;
+}
+
+/** 일봉은 `yyyy-mm-dd` 그대로, 분봉은 epoch 초로. */
+export function chartTime(rawTime: string, intraday: boolean): string | number {
+  if (!intraday) return String(rawTime || "");
+  const stamp = intradayTime(rawTime);
+  return Number.isFinite(stamp) ? stamp : String(rawTime || "");
+}
+
 const INDEX_SYMBOLS: Array<{ symbol: string; label: string }> = [
   { symbol: "^GSPC", label: "S&P 500" },
   { symbol: "^IXIC", label: "NASDAQ" },
@@ -188,6 +216,7 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
     const upColor = token("--folio-green", "#3b6d11");
     const downColor = token("--folio-burgundy", "#8a1024");
     const rows = payload.series;
+    const intraday = payload.interval === "5m";
     const positive = rows.length > 1 ? rows[rows.length - 1].close >= rows[0].close : true;
     const lineColor = positive ? upColor : downColor;
     const chart = library.createChart(target, {
@@ -197,7 +226,8 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
       layout: { background: { type: "solid", color: token("--folio-surface-clean", "#ffffff") }, textColor: token("--folio-ink-muted", "#44505f"), attributionLogo: true },
       grid: { vertLines: { visible: false }, horzLines: { color: token("--folio-border", "#dde2e9"), style: library.LineStyle?.Dotted ?? 1 } },
       rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.12, bottom: 0.08 } },
-      timeScale: { borderVisible: false, rightOffset: 1, barSpacing: 8, minBarSpacing: 2, timeVisible: false, secondsVisible: false },
+      // 분봉은 축이 날짜만 찍으면 하루치가 같은 라벨로 반복된다. 시각을 보여준다.
+      timeScale: { borderVisible: false, rightOffset: 1, barSpacing: 8, minBarSpacing: 2, timeVisible: intraday, secondsVisible: false },
       localization: { locale: "ko-KR", dateFormat: "yyyy-MM-dd" },
       crosshair: { mode: library.CrosshairMode?.Normal ?? 0 },
       handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
@@ -209,10 +239,12 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
       ? chart.addSeries(library.CandlestickSeries, { upColor, downColor, wickUpColor: upColor, wickDownColor: downColor, borderVisible: false })
       : chart.addSeries(library.AreaSeries, { lineColor, topColor: `${lineColor}38`, bottomColor: `${lineColor}05`, lineWidth: 3, priceLineVisible: false, lastValueVisible: true });
     series.setData(useCandle
-      ? ohlcRows.map((row) => ({ time: row.time, open: row.open, high: row.high, low: row.low, close: row.close }))
-      : rows.map((row) => ({ time: row.time, value: row.close })));
+      ? ohlcRows.map((row) => ({ time: chartTime(row.time, intraday), open: row.open, high: row.high, low: row.low, close: row.close }))
+      : rows.map((row) => ({ time: chartTime(row.time, intraday), value: row.close })));
 
-    const closeByTime = new Map(rows.map((row, index) => [String(row.time), { close: row.close, previous: index > 0 ? rows[index - 1].close : null }]));
+    // 조회 키도 라이브러리가 돌려주는 값과 같은 형태여야 한다. 원본 ISO 문자열로
+    // 담아두면 분봉에서 crosshair가 무엇도 못 찾아 툴팁이 빈 채로 뜬다.
+    const closeByTime = new Map(rows.map((row, index) => [String(chartTime(row.time, intraday)), { close: row.close, previous: index > 0 ? rows[index - 1].close : null }]));
     const tooltip = document.createElement("div");
     tooltip.className = "market-chart-tooltip";
     tooltip.hidden = true;
@@ -234,12 +266,15 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
       const direction = change == null || change >= 0 ? "up" : "down";
       const priceText = close == null ? "가격 없음" : close.toLocaleString(undefined, { maximumFractionDigits: 2 });
       const changeText = change == null || changePctValue == null
-        ? "전일 대비 없음"
+        ? (intraday ? "직전 봉 대비 없음" : "전일 대비 없음")
         : `${change >= 0 ? "+" : ""}${change.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${changePctValue >= 0 ? "+" : ""}${changePctValue.toFixed(2)}%)`;
       tooltip.innerHTML = "";
       const dateNode = document.createElement("div");
       dateNode.className = "market-chart-tooltip__date";
-      dateNode.textContent = key;
+      // 분봉 키는 epoch 초다. 그대로 찍으면 `1786... `이 뜬다.
+      dateNode.textContent = intraday
+        ? new Date(Number(key) * 1000).toISOString().slice(11, 16)
+        : key;
       const priceNode = document.createElement("div");
       priceNode.className = "market-chart-tooltip__price";
       priceNode.textContent = priceText;
@@ -261,8 +296,14 @@ export function NativeMarketChart({ symbols }: { symbols: Array<{ symbol: string
 
   const series = payload?.series || [];
   const lastClose = series.length ? series[series.length - 1].close : null;
-  const prevClose = series.length > 1 ? series[series.length - 2].close : null;
-  const changePct = lastClose != null && prevClose ? ((lastClose - prevClose) / prevClose) * 100 : null;
+  // 일봉이면 직전 봉이 전일이지만, 5분봉에서 직전 봉은 5분 전이라 등락률이 늘
+  // 0%에 가깝게 나온다. 1D의 등락률은 그 세션 시초가 대비여야 하고, 차트 색을
+  // 정하는 기준(`rows[0].close`)과도 그래야 어긋나지 않는다.
+  const intradayHeadline = payload?.interval === "5m";
+  const baseClose = series.length > 1
+    ? (intradayHeadline ? series[0].close : series[series.length - 2].close)
+    : null;
+  const changePct = lastClose != null && baseClose ? ((lastClose - baseClose) / baseClose) * 100 : null;
   const freshnessLabel = FRESHNESS_KO[payload?.freshness || ""] || (payload ? payload.freshness : "불러오는 중");
 
   return (

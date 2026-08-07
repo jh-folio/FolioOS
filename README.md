@@ -40,7 +40,7 @@ Not included in the 0.5.0 user surface:
 - Company analysis for companies listed only in Europe or Japan. 0.5.0 reads official filings through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
 - Installer/tray-app polish.
 
-Fast-origin news is an early lead, not verified evidence. It is promoted from RSS items Folio OS already collected — no extra network call, credential, or provider setting. Folio OS does not scrape pages or bypass paywalls. External Vision import is off by default and requires consent for every cropped image request. Images, raw OCR text, and OCR bounding boxes are not retained by the import workflow.
+Fast-origin news is an early lead, not verified evidence. It is promoted from RSS items Folio OS already collected — no extra network call, credential, or provider setting. Folio OS does not scrape pages or bypass paywalls.
 
 ---
 

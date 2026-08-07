@@ -9,10 +9,17 @@
 같은 방식으로 파일 경로만 알려주고 CLI가 그 파일을 직접 연다. 이미지는 호출자의
 임시 폴더에서 살고 블록이 끝나면 사라지며 `data/`에도 job 결과에도 남지 않는다.
 
-**동의 체크박스를 두지 않는다.** 설정에서 Agent를 연결한 순간부터 그 프로젝트의
-모든 동작에 Agent 사용을 허락한 것으로 본다(AGENTS.md §8 Agent 실행 경계). 다만
-사진이 그 CLI 제공자에게 전달된다는 사실은 화면이 먼저 말한다 — 허락과 고지는
-다른 문제다.
+**사진을 보내는 행위 자체가 그 명시적 action이다.** AGENTS.md §8의 Agent 실행
+경계는 산출물 생성에 버튼을 한 번 더 누르게 하지 말라고 하면서, **사용자 개인
+맥락을 읽는 쪽에는 명시적 action이 계속 필요하다**고 못박는다. 증권사 화면은
+개인 맥락이고 이 경로는 그것을 제3자 CLI 제공자에게 내보낸다. 그래서 별도 동의
+체크박스를 두지 않은 것은 "허락받았으니 물어볼 필요 없다"가 아니라 사용자가
+사진을 골라 보낸 그 동작이 이미 건별 action이기 때문이다. 사진이 어디로 가는지는
+화면이 먼저 말한다.
+
+0.5.X에서 이 경로를 Agent 도크로 옮길 때 **이 구분을 지켜야 한다** — 도크는 대화
+흐름이라 첨부 한 번에 여러 요청이 붙을 수 있다. 사진마다 보내는 동작과 사전 고지가
+남아 있어야 §8을 지키는 것이고, "CLI를 연결했으니 다 허락"으로 읽으면 안 된다.
 """
 from __future__ import annotations
 
@@ -113,9 +120,9 @@ def extract_positions(image_path: Path, *, timeout: int = 0) -> list[dict]:
     effective = timeout or max(60, int(os.environ.get("PORTFOLIO_IMPORT_AGENT_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS)))
     try:
         result = run_agent_prompt(_PROMPT.format(path=Path(image_path)), timeout=effective)
-    except RuntimeError:
-        # 어댑터를 못 고른 경우다. 호출자가 503으로 옮긴다.
-        raise
-    except Exception as error:  # CLI 실행 실패·타임아웃
+    except Exception as error:  # 어댑터 선택 실패·CLI 실행 실패·타임아웃
+        # `RuntimeError`를 그대로 올리지 않는다. 브리지는 CLI stderr 꼬리를 메시지에
+        # 담아 던지는데(`bridge.py::_invoke_agent_cli`), 그게 그대로 HTTP detail로
+        # 나가면 화면이 사람 말 대신 스택 조각을 보여준다. 코드로 바꿔 넘긴다.
         raise RuntimeError("agent_import_cli_failed") from error
     return _positions_from_output(result.get("output"))
