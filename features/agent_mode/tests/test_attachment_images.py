@@ -76,8 +76,20 @@ class TestFilenameSafety:
     def test_a_traversing_name_stays_inside_the_scratch_directory(self):
         with StagedImages([_attachment(name="../../../evil.png")]) as staged:
             assert len(staged.images) == 1
-            assert staged.images[0].path.parent == staged.images[0].path.resolve().parent
-            assert ".." not in str(staged.images[0].path.name)
+            image = staged.images[0]
+            # 양쪽을 다 resolve해서 비교한다. 한쪽만 풀면 심볼릭 링크와 짧은 이름
+            # 때문에 경로 문자열이 달라져, 탈출하지 않았는데도 실패한다 —
+            # macOS는 /var를 /private/var로, Windows CI는 RUNNER~1을
+            # runneradmin으로 푼다.
+            #
+            # 이름이 실제로 탈출했다면 `scratch/../../../evil.png`가 되어 resolve
+            # 결과가 scratch 밖으로 나간다. 그게 이 테스트가 잡으려는 것이다.
+            # 기준은 StagedImages가 만든 임시 루트여야 한다. `path.parent`를 기준으로
+            # 삼으면 탈출했을 때 그 탈출한 폴더가 기준이 되어 언제나 참이 된다.
+            scratch = staged._root.resolve()
+            assert image.path.resolve().is_relative_to(scratch)
+            assert scratch.name.startswith("folio-agent-image-")
+            assert ".." not in image.path.name
 
 
 class TestLifetime:
