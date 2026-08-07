@@ -174,7 +174,8 @@ export const MARKET_KO_LABELS: Record<string, string> = {
   US: "미국", KR: "한국", EUROPE: "유럽", JP: "일본",
 };
 
-export const EXECUTION_MODES = ["direct", "cli"] as const;
+/** `auto`는 앱 설정(AI_AGENT_MODE)이 정한다. 리서치마다 고르는 값이 아니다. */
+export const EXECUTION_MODES = ["auto", "direct", "cli"] as const;
 export type ExecutionMode = (typeof EXECUTION_MODES)[number];
 
 export const CLI_ADAPTERS = ["auto", "codex", "claude", "antigravity"] as const;

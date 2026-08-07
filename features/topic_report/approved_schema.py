@@ -175,8 +175,10 @@ class PlanPreviewEnvelope(StrictModel):
 
 
 class ExecutionRequest(StrictModel):
-    mode: Literal["direct", "cli"]
-    adapter: Literal["auto", "codex", "claude", "antigravity"]
+    # `auto`는 설정(`AI_AGENT_MODE`)이 정한다. 실행 경로는 앱 전체 설정이지
+    # 리서치마다 고르는 값이 아니어서, 화면에서 묻지 않는다.
+    mode: Literal["direct", "cli", "auto"] = "auto"
+    adapter: Literal["auto", "codex", "claude", "antigravity"] = "auto"
     fallbackPolicy: Literal["rules_on_engine_failure"]
 
     @model_validator(mode="after")

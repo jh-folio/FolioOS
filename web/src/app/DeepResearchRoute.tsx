@@ -8,10 +8,8 @@ import {
   isActiveJobStatus,
   postJson,
   type ApprovalReference,
-  type CliAdapter,
   type CollectionRef,
   type ConfirmDegradedRequest,
-  type ExecutionMode,
   type ExecutionRequest,
   type GenerateApprovedRequest,
   type JobStatus,
@@ -390,6 +388,10 @@ function errorCopy(kind: ErrorKind, error: unknown): string {
   if (code === "no_index" || code === "index_unavailable") return "연구 인덱스를 아직 읽을 수 없습니다. RSS 자료를 수집하고 인덱스를 만든 뒤 다시 시도하세요.";
   if (code === "rss_unavailable") return "RSS 자료를 읽을 수 없습니다. RSS 수집 상태를 확인한 뒤 다시 시도하세요.";
   if (code === "cli_unavailable") return "선택한 CLI 어댑터를 사용할 수 없습니다. 자동 어댑터를 선택하거나 설정을 확인하세요.";
+  // 계획을 고치면 앞선 승인은 무효가 된다. 화면이 옛 승인을 들고 있으면 여기로 온다.
+  if (code === "approval_superseded" || code === "approval_expired" || code === "approval_mismatch") {
+    return "이 계획의 승인이 더 이상 유효하지 않습니다. 계획을 다시 미리보고 진행하세요.";
+  }
   if (kind === "degraded") return "근거가 없는 규칙 기반 보고서를 실행하려면 근거 부족 확인이 필요합니다.";
   if (kind === "generation") return "생성 작업에 실패했습니다. 입력과 승인 계획은 유지되므로 다시 실행할 수 있습니다.";
   if (kind === "report") return "저장된 리서치를 열지 못했습니다. 목록으로 돌아가 다시 시도하세요.";
@@ -472,10 +474,6 @@ function PlanRevisionBox({
 
 function PlanReview({
   envelope,
-  executionMode,
-  cliAdapter,
-  onExecutionMode,
-  onCliAdapter,
   onContinue,
   onEdit,
   degradedConfirming,
@@ -490,10 +488,6 @@ function PlanReview({
   onCancelEdit,
 }: {
   readonly envelope: PlanPreviewEnvelope;
-  readonly executionMode: ExecutionMode;
-  readonly cliAdapter: CliAdapter;
-  readonly onExecutionMode: (mode: ExecutionMode) => void;
-  readonly onCliAdapter: (adapter: CliAdapter) => void;
   readonly onContinue: () => void;
   readonly onEdit: () => void;
   readonly degradedConfirming: boolean;
@@ -581,33 +575,7 @@ function PlanReview({
         </div>
       )}
       <div className="topicrpt-action-row">
-        <div className="topicrpt-planner-choice">
-          <span id="dr-execution-label">실행 경로</span>
-          <select
-            aria-labelledby="dr-execution-label"
-            value={executionMode}
-            onChange={(event) => onExecutionMode(event.currentTarget.value as ExecutionMode)}
-          >
-            <option value="direct">Direct API</option>
-            <option value="cli">CLI</option>
-          </select>
-        </div>
-        {executionMode === "cli" && (
-          <div className="topicrpt-planner-choice">
-            <span id="dr-adapter-label">CLI 어댑터</span>
-            <select
-              aria-labelledby="dr-adapter-label"
-              value={cliAdapter}
-              onChange={(event) => onCliAdapter(event.currentTarget.value as CliAdapter)}
-            >
-              <option value="auto">자동 선택</option>
-              <option value="codex">Codex</option>
-              <option value="claude">Claude</option>
-              <option value="antigravity">Antigravity</option>
-            </select>
-          </div>
-        )}
-        <button className="btn" type="button" onClick={onEdit}>질문 수정</button>
+<button className="btn" type="button" onClick={onEdit}>질문 수정</button>
         <button className="btn btn--primary" type="button" data-qa="dr-continue" onClick={onContinue}>
           {zeroEvidence.required ? "계속하기" : "이 계획으로 생성"}
         </button>
@@ -632,8 +600,6 @@ export function DeepResearchRoute() {
   const [collectionBusy, setCollectionBusy] = useState(false);
   const [phase, setPhase] = useState<DeepResearchPhase>("readiness");
   const [planEnvelope, setPlanEnvelope] = useState<PlanPreviewEnvelope | null>(null);
-  const [executionMode, setExecutionMode] = useState<ExecutionMode>("direct");
-  const [cliAdapter, setCliAdapter] = useState<CliAdapter>("auto");
   const [degradedConfirming, setDegradedConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -865,8 +831,9 @@ export function DeepResearchRoute() {
     setErrorReason("");
     setStatus("승인된 계획으로 리서치를 생성하는 중입니다.");
     const execution: ExecutionRequest = {
-      mode: executionMode,
-      adapter: executionMode === "direct" ? "auto" : cliAdapter,
+      // 실행 경로는 앱 설정이 정한다. 리서치마다 고를 값이 아니다.
+      mode: "auto",
+      adapter: "auto",
       fallbackPolicy: FALLBACK_POLICY,
     };
     const body: GenerateApprovedRequest = {
@@ -950,6 +917,8 @@ export function DeepResearchRoute() {
       setError(errorCopy("plan", err));
       setErrorKind("plan");
       setErrorReason(errorCode(err));
+      // 이 줄이 없어 실패가 통째로 조용했다. 오류 상자는 `recoverable-error`에서만 뜬다.
+      setPhase("recoverable-error");
       setStatus("");
     } finally {
       if (isCurrentRequest(request.id)) {
@@ -1282,10 +1251,6 @@ export function DeepResearchRoute() {
       {phase === "plan-review" && planEnvelope && (
         <PlanReview
           envelope={planEnvelope}
-          executionMode={executionMode}
-          cliAdapter={cliAdapter}
-          onExecutionMode={setExecutionMode}
-          onCliAdapter={setCliAdapter}
           onContinue={handleContinue}
           onEdit={() => { setPhase("draft"); setPlanEditing(false); setStatus(""); }}
           editing={planEditing}

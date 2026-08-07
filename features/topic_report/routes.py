@@ -110,9 +110,23 @@ class ApprovedRequestBoundary:
         )
 
     @staticmethod
-    def _adapter(request: GenerateApprovedRequest) -> str:
+    def _mode(request: GenerateApprovedRequest) -> str:
+        """실행 경로. `auto`면 설정이 정한다.
+
+        화면에서 리서치마다 고르게 했더니 API 키가 없는 설치에서도 `Direct API`가
+        기본으로 선택돼 있었다. 이건 앱 전체 설정이지 요청마다 다른 값이 아니다.
+        """
+        mode = request.execution.mode
+        if mode != "auto":
+            return mode
+        from features.llm_settings.client import ai_agent_mode
+
+        return "cli" if ai_agent_mode() == "cli" else "direct"
+
+    @classmethod
+    def _adapter(cls, request: GenerateApprovedRequest) -> str:
         execution = request.execution
-        if execution.mode == "direct":
+        if cls._mode(request) == "direct":
             return "auto"
         if execution.adapter != "auto":
             return execution.adapter
@@ -174,15 +188,16 @@ class ApprovedRequestBoundary:
                 request.approvedRequest,
                 self._clock,
             )
+            resolved_mode = self._mode(request)
             job = self._jobs.queued_job(
-                requested_mode=request.execution.mode,
+                requested_mode=resolved_mode,
                 adapter=adapter,
                 confirmed_zero=preflight.preview.zeroEvidence.required,
             )
             command = ApprovedGenerationInput(
                 approved=request.approvedRequest,
                 approvalId=request.approval.id,
-                requestedMode=request.execution.mode,
+                requestedMode=resolved_mode,
                 adapter=adapter,
                 preview=preflight.preview,
                 research=preflight.preparedResearch,

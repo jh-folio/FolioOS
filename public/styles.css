@@ -15859,3 +15859,10 @@ select { min-height: 36px; padding: 0 12px; }
 @media (max-width: 900px) {
   .topicrpt-plan-grid { grid-template-columns: 1fr; }
 }
+
+/* 좁은 화면 히트맵은 섹터부터 보여준다. 들어가는 방법을 한 줄로 알려준다. */
+.briefing-heatmap-hint {
+  margin: 0 0 var(--sp-2);
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-meta);
+}
