@@ -39,6 +39,7 @@ CONSTITUENT_SOURCES = (
     ("nikkei225_constituents.json", "JP"),
     ("kospi200_constituents.json", "KR"),
 )
+ALIAS_OVERLAY_NAME = "foreign_company_aliases.json"
 
 # 점수. 정확 일치와 부분 일치 사이를 크게 벌려, 부분 일치가 정확 일치를 이기지 못하게 한다.
 EXACT_TICKER = 100
@@ -59,6 +60,7 @@ CONFIDENT_GAP = 8
 CANDIDATE_FLOOR = CONTAINS_NAME
 
 _KR_CODE = re.compile(r"^\d{6}$")
+_LATIN = re.compile(r"[A-Za-z]")
 # 법인격 표기는 나라마다 다르고 출처마다 붙였다 뗐다 한다. SEC는 "ASML HOLDING NV",
 # 구성종목 파일은 "ASML Holding"이라 적어 같은 회사가 다른 이름으로 갈린다.
 _SUFFIXES = re.compile(
@@ -231,10 +233,33 @@ def _curated_entries() -> list[dict]:
     return entries
 
 
+def _foreign_aliases() -> dict[str, list[str]]:
+    """자국 상장 종목의 한글 별칭. 키는 yfinance providerSymbol이다.
+
+    구성종목 파일은 위키백과에서 다시 만들기 때문에 손으로 적은 별칭을 거기
+    두면 재생성 때 사라진다. 별칭만 따로 두어 살아남게 한다.
+    """
+    from features.common.config_bootstrap import resolve_config
+
+    try:
+        payload = json.loads(resolve_config(ALIAS_OVERLAY_NAME).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    table = payload.get("aliases") if isinstance(payload, dict) else None
+    if not isinstance(table, dict):
+        return {}
+    return {
+        str(symbol).strip().upper(): [str(x).strip() for x in values if str(x).strip()]
+        for symbol, values in table.items()
+        if isinstance(values, list)
+    }
+
+
 def _constituent_entries() -> list[dict]:
     """지수 구성종목. 자국 표기 이름과 자국 거래소 티커를 함께 갖는다."""
     from features.common.config_bootstrap import resolve_config
 
+    overlay = _foreign_aliases()
     entries = []
     for filename, market in CONSTITUENT_SOURCES:
         try:
@@ -249,12 +274,23 @@ def _constituent_entries() -> list[dict]:
             label = str(row.get("label") or row.get("name") or "").strip()
             if not ticker or not label:
                 continue
+            # 일본 구성종목의 `ticker`는 `7203`이라 그대로 저장하면 시세도 차트도
+            # 안 나온다. 워치리스트에 넣을 값은 거래소가 붙은 심볼이다.
+            symbol = str(row.get("providerSymbol") or ticker).strip()
             aliases = [str(x) for x in (row.get("aliases") or []) if str(x).strip()]
+            aliases += overlay.get(symbol.upper(), [])
+            english = str(row.get("englishName") or row.get("labelEn") or "").strip()
+            # 표시 이름은 읽을 수 있는 쪽으로 고른다. 위키백과 표기가 한자·가나면
+            # 그대로 워치리스트에 `トヨタ自動車`가 저장된다. 자국 표기는 별칭으로
+            # 남아 일본어로 쳐도 계속 걸린다.
+            display = english if english and not _LATIN.search(label) else label
+            if display != label:
+                aliases.append(label)
             entries.append(
                 {
-                    "ticker": ticker,
-                    "name": label,
-                    "englishName": str(row.get("englishName") or row.get("labelEn") or "").strip(),
+                    "ticker": symbol if market != "KR" else ticker,
+                    "name": display,
+                    "englishName": english,
                     "market": market,
                     "cik": "",
                     "exchange": str(row.get("exchange") or ""),
@@ -306,9 +342,23 @@ def ensure_sec_exchange_cache(*, timeout: int = 20) -> bool:
     return True
 
 
+def _config_stamps() -> tuple:
+    """구성종목·별칭 파일을 고치면 다음 조회에 바로 반영되게 한다."""
+    from features.common.config_bootstrap import resolve_config
+
+    names = [name for name, _market in CONSTITUENT_SOURCES] + [ALIAS_OVERLAY_NAME]
+    stamps = []
+    for name in names:
+        try:
+            stamps.append(_stamp(resolve_config(name)))
+        except Exception:
+            stamps.append((0, 0))
+    return tuple(stamps)
+
+
 def _index() -> dict:
     global _INDEX_CACHE, _INDEX_STAMP
-    stamp = (_stamp(SEC_TICKER_CACHE_PATH), _stamp(SEC_TICKER_EXCHANGE_PATH), _stamp(DART_CORP_CODES_PATH))
+    stamp = (_stamp(SEC_TICKER_CACHE_PATH), _stamp(SEC_TICKER_EXCHANGE_PATH), _stamp(DART_CORP_CODES_PATH), _config_stamps())
     if _INDEX_CACHE is None or _INDEX_STAMP != stamp:
         _INDEX_CACHE = _build_index()
         _INDEX_STAMP = stamp
@@ -320,7 +370,8 @@ def _names(entry: dict) -> list[str]:
     return [v for v in (str(x or "").strip() for x in values) if v]
 
 
-def _score(entry: dict, query_key: str, query_ticker: str, script: str) -> int:
+def _tier(entry: dict, query_key: str, query_ticker: str) -> int:
+    """가산점 없는 일치 등급. 등급끼리의 비교는 가산점이 끼면 안 된다."""
     best = 0
     if query_ticker and _ticker_key(entry.get("ticker")) == query_ticker:
         best = EXACT_TICKER
@@ -337,6 +388,11 @@ def _score(entry: dict, query_key: str, query_ticker: str, script: str) -> int:
     if best < PREFIX_TICKER and query_ticker and len(query_ticker) >= 2:
         if _ticker_key(entry.get("ticker")).startswith(query_ticker):
             best = max(best, PREFIX_TICKER)
+    return best
+
+
+def _score(entry: dict, query_key: str, query_ticker: str, script: str) -> int:
+    best = _tier(entry, query_key, query_ticker)
     if best and entry.get("source") == "curated":
         best += CURATED_BONUS
     if best and best < EXACT_TICKER and script and entry.get("market") == script:
@@ -362,22 +418,47 @@ def _public(entry: dict, score: int) -> dict:
     }
 
 
-def _listing_rank(entry: dict, script: str) -> tuple:
-    """같은 회사의 여러 상장 중 무엇을 대표로 둘지. 큰 값이 이긴다."""
+def _listing_rank(entry: dict, script: str, prefer_home: bool) -> tuple:
+    """같은 회사의 여러 상장 중 무엇을 대표로 둘지. 큰 값이 이긴다.
+
+    `prefer_home`이면 자국 거래소 원주가 미국 ADR을 이긴다. 워치리스트는 회사를
+    따라다니는 화면이라 도쿄에 상장된 도요타를 봐야 하는데, ADR(TM)은 통화도
+    시간대도 가격도 다른 별개의 증권이다. 기업분석은 반대다 — SEC companyfacts와
+    10-K가 붙는 쪽이 아니면 보고서가 비므로 기본값은 계속 SEC 등록분이다.
+    """
+    home = 1 if entry.get("source") == "constituents" else 0
+    sec = 1 if entry.get("cik") else 0
     return (
-        # SEC 등록분은 0.5.0에서 기업분석까지 되는 유일한 경로다.
-        1 if entry.get("cik") else 0,
+        (home, sec) if prefer_home else (sec, home),
         1 if script and entry.get("market") == script else 0,
         -len(_ticker_key(entry.get("ticker"))),
     )
 
 
-def _dedupe(rows: list[tuple[dict, int]], script: str = "") -> list[tuple[dict, int]]:
+def _representative_key(entry: dict, score: int, script: str, prefer_home: bool) -> tuple:
+    """한 회사로 묶인 상장들 중 대표를 고르는 기준. 큰 값이 이긴다.
+
+    `prefer_home`이면 상장 성격이 점수보다 먼저다. 같은 회사로 묶인 뒤의 점수
+    차이는 표기 차이일 뿐이기 때문이다 — "Toyota"라고 라틴 문자로 쓰면 미국장
+    가산점이 붙어 ADV(TM)가 도쿄 원주(7203.T)를 8점 앞선다. 그 8점은 회사에
+    대한 정보가 아니라 사용자가 어느 문자로 물었는지에 대한 정보다.
+    """
+    rank = _listing_rank(entry, script, prefer_home)
+    if prefer_home:
+        return (rank[0], score, *rank[1:])
+    return (score, *rank)
+
+
+def _dedupe(rows: list[tuple[dict, int]], script: str = "", prefer_home: bool = False) -> list[tuple[dict, int]]:
     """같은 회사는 한 줄로 모은다.
 
     출처마다 한 번씩 나오는 것뿐 아니라, 한 회사가 여러 시장에 상장된 경우도 묶는다.
     ASML은 SEC(ASML)와 암스테르담(ASML.AS) 양쪽에 있어 그대로 두면 "ASML Holding"이
     늘 애매로 떨어진다 — 사용자에게는 고를 의미가 없는 갈림길이다.
+
+    묶는 기준은 **표시 이름 하나가 아니라 그 항목이 가진 모든 이름**이다. 도쿄
+    상장 도요타의 표시 이름은 `トヨタ自動車`라 `TOYOTA MOTOR CORP`와 글자가 하나도
+    겹치지 않는다. 영문명과 별칭까지 대조해야 원주와 ADR이 한 회사로 만난다.
     """
     best: dict[str, tuple[dict, int]] = {}
     for entry, score in rows:
@@ -385,28 +466,37 @@ def _dedupe(rows: list[tuple[dict, int]], script: str = "") -> list[tuple[dict, 
         if key not in best or score > best[key][1]:
             best[key] = (entry, score)
 
-    grouped: dict[str, tuple[dict, int]] = {}
+    groups: list[tuple[dict, int]] = []
+    owner: dict[str, int] = {}
     for entry, score in best.values():
-        name_key = _key(entry.get("name")) or _ticker_key(entry.get("ticker"))
-        current = grouped.get(name_key)
-        if current is None:
-            grouped[name_key] = (entry, score)
-            continue
-        # 이름이 같으면 한 회사로 본다. 점수가 앞서거나, 같으면 대표 상장을 고른다.
-        if score > current[1] or (
-            score == current[1] and _listing_rank(entry, script) > _listing_rank(current[0], script)
-        ):
-            grouped[name_key] = (entry, max(score, current[1]))
-    return sorted(grouped.values(), key=lambda row: (-row[1], row[0].get("name", "")))
+        keys = [k for k in (_key(name) for name in _names(entry)) if k]
+        keys = keys or [_ticker_key(entry.get("ticker"))]
+        index = next((owner[k] for k in keys if k in owner), None)
+        if index is None:
+            index = len(groups)
+            groups.append((entry, score))
+        else:
+            current = groups[index]
+            challenger = _representative_key(entry, score, script, prefer_home)
+            holder = _representative_key(current[0], current[1], script, prefer_home)
+            winner = entry if challenger > holder else current[0]
+            # 점수는 묶음 최고점을 쓴다. 다른 회사와의 순위는 대표를 누구로
+            # 골랐는지와 무관해야 한다.
+            groups[index] = (winner, max(score, current[1]))
+        for key in keys:
+            owner.setdefault(key, index)
+    return sorted(groups, key=lambda row: (-row[1], row[0].get("name", "")))
 
 
-def resolve_company_query(query: str, *, limit: int = 6) -> dict:
+def resolve_company_query(query: str, *, limit: int = 6, prefer_home: bool = False) -> dict:
     """입력이 어느 기업인지 판단한다. 확신할 수 없으면 후보를 돌려준다.
 
     status는 셋이다.
       confident  하나로 좁혀졌다. 바로 분석해도 된다.
       ambiguous  후보는 있는데 하나로 못 좁혔다. 사용자가 고른다.
       unknown    아는 기업이 없다. 조용히 진행하지 않는다.
+
+    `prefer_home`은 원주와 ADR이 갈릴 때 자국 상장을 대표로 세운다(워치리스트).
     """
     raw = str(query or "").strip()
     if not raw:
@@ -421,7 +511,7 @@ def resolve_company_query(query: str, *, limit: int = 6) -> dict:
         if score >= CANDIDATE_FLOOR:
             scored.append((entry, score))
 
-    ranked = _dedupe(scored, script)[: max(limit, 1) * 3]
+    ranked = _dedupe(scored, script, prefer_home)[: max(limit, 1) * 3]
     if not ranked:
         return {"query": raw, "status": "unknown", "match": None, "candidates": [], "reason": "no_match"}
 
@@ -439,6 +529,21 @@ def resolve_company_query(query: str, *, limit: int = 6) -> dict:
             "match": _public(top_entry, top_score),
             "candidates": candidates,
             "reason": "exact_ticker",
+        }
+
+    # 이름을 정확히 친 쪽이 접두 일치를 이긴다. "Mitsubishi Corporation"은
+    # 8058의 정식 이름인데, 미국장 가산점을 받은 MUFG의 접두 일치와 점수가
+    # 같아져 매번 애매로 떨어졌다. 가산점은 같은 등급 안의 저울이지 등급을
+    # 넘나드는 값이 아니다.
+    top_exact = _tier(top_entry, query_key, query_ticker) >= EXACT_NAME
+    runner_exact = len(ranked) > 1 and _tier(ranked[1][0], query_key, query_ticker) >= EXACT_NAME
+    if top_exact and not runner_exact:
+        return {
+            "query": raw,
+            "status": "confident",
+            "match": _public(top_entry, top_score),
+            "candidates": candidates,
+            "reason": "exact_name",
         }
 
     if top_score >= CONFIDENT_FLOOR and (len(ranked) == 1 or top_score - runner_score >= CONFIDENT_GAP):

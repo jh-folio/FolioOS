@@ -31,7 +31,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 566701129728.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "ASML Holding N.V."
     },
     {
       "ticker": "HSBA.L",
@@ -43,7 +44,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 308305750623.98,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "HSBC Holdings plc"
     },
     {
       "ticker": "MC.PA",
@@ -55,7 +57,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Luxury Goods",
       "marketCap": 235306958848.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "LVMH Moët Hennessy - Louis Vuitton, Société Européenne"
     },
     {
       "ticker": "SIE.DE",
@@ -67,7 +70,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 219441266688.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Siemens Aktiengesellschaft"
     },
     {
       "ticker": "SHELL.AS",
@@ -85,7 +89,8 @@
       ],
       "alsoInIndices": [
         "FTSE 100"
-      ]
+      ],
+      "englishName": "Shell plc"
     },
     {
       "ticker": "AZN.L",
@@ -97,7 +102,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 209947097410.12,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "AstraZeneca PLC"
     },
     {
       "ticker": "OR.PA",
@@ -109,7 +115,8 @@
       "sector": "Consumer Defensive",
       "industry": "Household & Personal Products",
       "marketCap": 208194699264.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "L'Oréal S.A."
     },
     {
       "ticker": "SAP.DE",
@@ -121,7 +128,8 @@
       "sector": "Technology",
       "industry": "Software - Application",
       "marketCap": 195129769984.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "SAP SE"
     },
     {
       "ticker": "AIR.PA",
@@ -136,7 +144,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 169574694912.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Airbus SE"
     },
     {
       "ticker": "SU.PA",
@@ -148,7 +157,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 167896334336.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Schneider Electric S.E."
     },
     {
       "ticker": "ALV.DE",
@@ -160,7 +170,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Diversified",
       "marketCap": 165937741824.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Allianz SE"
     },
     {
       "ticker": "TTE.PA",
@@ -172,7 +183,8 @@
       "sector": "Energy",
       "industry": "Oil & Gas Integrated",
       "marketCap": 165414191104.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "TotalEnergies SE"
     },
     {
       "ticker": "RMS.PA",
@@ -184,7 +196,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Luxury Goods",
       "marketCap": 160883605504.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Hermès International Société en commandite par actions"
     },
     {
       "ticker": "RR.L",
@@ -196,7 +209,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 149485596171.66,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Rolls-Royce Holdings plc"
     },
     {
       "ticker": "SAF.PA",
@@ -208,7 +222,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 148484587520.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Safran SA"
     },
     {
       "ticker": "RIO.L",
@@ -220,7 +235,8 @@
       "sector": "Basic Materials",
       "industry": "Other Industrial Metals & Mining",
       "marketCap": 141297139725.47,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Rio Tinto Group"
     },
     {
       "ticker": "DTE.DE",
@@ -232,7 +248,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 132852097024.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Deutsche Telekom AG"
     },
     {
       "ticker": "ENR.DE",
@@ -244,7 +261,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 130775425024.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Siemens Energy AG"
     },
     {
       "ticker": "BNP.PA",
@@ -256,7 +274,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 122861600768.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "BNP Paribas SA"
     },
     {
       "ticker": "UNA.AS",
@@ -274,7 +293,8 @@
       ],
       "alsoInIndices": [
         "FTSE 100"
-      ]
+      ],
+      "englishName": "Unilever PLC"
     },
     {
       "ticker": "BATS.L",
@@ -286,7 +306,8 @@
       "sector": "Consumer Defensive",
       "industry": "Tobacco",
       "marketCap": 110571078876.68,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "British American Tobacco p.l.c."
     },
     {
       "ticker": "AI.PA",
@@ -298,7 +319,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 110450434048.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "L'Air Liquide S.A."
     },
     {
       "ticker": "BP.L",
@@ -310,7 +332,8 @@
       "sector": "Energy",
       "industry": "Oil & Gas Integrated",
       "marketCap": 95516330983.9,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "BP p.l.c."
     },
     {
       "ticker": "CS.PA",
@@ -322,7 +345,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Diversified",
       "marketCap": 91282915328.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "AXA SA"
     },
     {
       "ticker": "GSK.L",
@@ -334,7 +358,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 89962142965.59,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "GSK plc"
     },
     {
       "ticker": "PRX.AS",
@@ -346,7 +371,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Internet Retail",
       "marketCap": 89502867456.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Prosus N.V."
     },
     {
       "ticker": "SAN.PA",
@@ -358,7 +384,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 88896700416.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Sanofi"
     },
     {
       "ticker": "INGA.AS",
@@ -370,7 +397,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 87092682752.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "ING Groep N.V."
     },
     {
       "ticker": "BARC.L",
@@ -382,7 +410,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 82445642778.12,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Barclays PLC"
     },
     {
       "ticker": "LLOY.L",
@@ -394,7 +423,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 78995742102.04,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Lloyds Banking Group plc"
     },
     {
       "ticker": "IFX.DE",
@@ -406,7 +436,8 @@
       "sector": "Technology",
       "industry": "Semiconductors",
       "marketCap": 78892621824.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Infineon Technologies AG"
     },
     {
       "ticker": "GLEN.L",
@@ -418,7 +449,8 @@
       "sector": "Basic Materials",
       "industry": "Other Industrial Metals & Mining",
       "marketCap": 78344424963.95,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Glencore plc"
     },
     {
       "ticker": "EL.PA",
@@ -430,7 +462,8 @@
       "sector": "Healthcare",
       "industry": "Medical Instruments & Supplies",
       "marketCap": 78222483456.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "EssilorLuxottica Société anonyme"
     },
     {
       "ticker": "BA.L",
@@ -442,7 +475,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 74947684356.2,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "BAE Systems plc"
     },
     {
       "ticker": "NG.L",
@@ -454,7 +488,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Regulated Electric",
       "marketCap": 70722297388.08,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "National Grid plc"
     },
     {
       "ticker": "DG.PA",
@@ -466,7 +501,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 69805064192.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Vinci SA"
     },
     {
       "ticker": "ENGI.PA",
@@ -478,7 +514,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Diversified",
       "marketCap": 68706631680.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Engie SA"
     },
     {
       "ticker": "MUV2.DE",
@@ -490,7 +527,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Reinsurance",
       "marketCap": 66079522816.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Münchener Rückversicherungs-Gesellschaft Aktiengesellschaft in München"
     },
     {
       "ticker": "NWG.L",
@@ -502,7 +540,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 65981720704.08,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "NatWest Group plc"
     },
     {
       "ticker": "MRK.DE",
@@ -514,7 +553,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 63118880768.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Merck KGaA"
     },
     {
       "ticker": "DHL.DE",
@@ -526,7 +566,8 @@
       "sector": "Industrials",
       "industry": "Integrated Freight & Logistics",
       "marketCap": 63102935040.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Deutsche Post AG"
     },
     {
       "ticker": "DBK.DE",
@@ -538,7 +579,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 61913055232.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Deutsche Bank Aktiengesellschaft"
     },
     {
       "ticker": "GLE.PA",
@@ -550,7 +592,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 61508575232.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Société Générale Société anonyme"
     },
     {
       "ticker": "ACA.PA",
@@ -562,7 +605,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 58437246976.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Crédit Agricole S.A."
     },
     {
       "ticker": "STAN.L",
@@ -574,7 +618,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 57201045712.88,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Standard Chartered PLC"
     },
     {
       "ticker": "RHM.DE",
@@ -586,7 +631,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 56780009472.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Rheinmetall AG"
     },
     {
       "ticker": "REN.AS",
@@ -604,7 +650,8 @@
       ],
       "alsoInIndices": [
         "FTSE 100"
-      ]
+      ],
+      "englishName": "RELX PLC"
     },
     {
       "ticker": "HO.PA",
@@ -616,7 +663,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 54323892224.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Thales S.A."
     },
     {
       "ticker": "EOAN.DE",
@@ -628,7 +676,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Diversified",
       "marketCap": 50158030848.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "E.ON SE"
     },
     {
       "ticker": "AAL.L",
@@ -640,7 +689,8 @@
       "sector": "Basic Materials",
       "industry": "Other Industrial Metals & Mining",
       "marketCap": 49866360889.88,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Anglo American plc"
     },
     {
       "ticker": "BAYN.DE",
@@ -652,7 +702,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 49121202176.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Bayer Aktiengesellschaft"
     },
     {
       "ticker": "LSEG.L",
@@ -664,7 +715,8 @@
       "sector": "Financial Services",
       "industry": "Financial Data & Stock Exchanges",
       "marketCap": 48864035373.94,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "London Stock Exchange Group plc"
     },
     {
       "ticker": "CPG.L",
@@ -676,7 +728,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Restaurants",
       "marketCap": 48564197326.35,
-      "capCurrency": "USD"
+      "capCurrency": "USD",
+      "englishName": "Compass Group PLC"
     },
     {
       "ticker": "MT.AS",
@@ -691,7 +744,8 @@
       "sector": "Basic Materials",
       "industry": "Steel",
       "marketCap": 48183267328.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "ArcelorMittal S.A."
     },
     {
       "ticker": "DB1.DE",
@@ -703,7 +757,8 @@
       "sector": "Financial Services",
       "industry": "Financial Data & Stock Exchanges",
       "marketCap": 48082722816.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Deutsche Börse AG"
     },
     {
       "ticker": "ANTO.L",
@@ -715,7 +770,8 @@
       "sector": "Basic Materials",
       "industry": "Copper",
       "marketCap": 46393637741.76,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Antofagasta plc"
     },
     {
       "ticker": "MBG.DE",
@@ -727,7 +783,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 45985353728.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Mercedes-Benz Group AG"
     },
     {
       "ticker": "HEIA.AS",
@@ -739,7 +796,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Brewers",
       "marketCap": 43923386368.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Heineken N.V."
     },
     {
       "ticker": "BN.PA",
@@ -751,7 +809,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 43920711680.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Danone S.A."
     },
     {
       "ticker": "BAS.DE",
@@ -763,7 +822,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 43855360000.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "BASF SE"
     },
     {
       "ticker": "SHL.DE",
@@ -775,7 +835,8 @@
       "sector": "Healthcare",
       "industry": "Medical Devices",
       "marketCap": 43738296320.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Siemens Healthineers AG"
     },
     {
       "ticker": "CBK.DE",
@@ -787,7 +848,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 43301715968.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Commerzbank AG"
     },
     {
       "ticker": "ORA.PA",
@@ -799,7 +861,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 43228614656.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Orange S.A."
     },
     {
       "ticker": "RWE.DE",
@@ -811,7 +874,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Diversified",
       "marketCap": 42673418240.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "RWE Aktiengesellschaft"
     },
     {
       "ticker": "DGE.L",
@@ -823,7 +887,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Wineries & Distilleries",
       "marketCap": 42509216690.48,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Diageo plc"
     },
     {
       "ticker": "SGO.PA",
@@ -835,7 +900,8 @@
       "sector": "Industrials",
       "industry": "Building Products & Equipment",
       "marketCap": 41669824512.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Compagnie de Saint-Gobain S.A."
     },
     {
       "ticker": "STMPA.PA",
@@ -847,7 +913,8 @@
       "sector": "Technology",
       "industry": "Semiconductors",
       "marketCap": 41641750528.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "STMicroelectronics N.V."
     },
     {
       "ticker": "CCEP.L",
@@ -859,7 +926,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Non-Alcoholic",
       "marketCap": 40729923834.49,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Coca-Cola Europacific Partners PLC"
     },
     {
       "ticker": "ASM.AS",
@@ -871,7 +939,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 39998332928.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "ASM International NV"
     },
     {
       "ticker": "RKT.L",
@@ -883,7 +952,8 @@
       "sector": "Consumer Defensive",
       "industry": "Household & Personal Products",
       "marketCap": 39393688878.82,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Reckitt Benckiser Group plc"
     },
     {
       "ticker": "VOW3.DE",
@@ -895,7 +965,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 38489448448.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Volkswagen AG"
     },
     {
       "ticker": "HLN.L",
@@ -907,7 +978,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 37436022900.58,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Haleon plc"
     },
     {
       "ticker": "DTG.DE",
@@ -919,7 +991,8 @@
       "sector": "Industrials",
       "industry": "Farm & Heavy Construction Machinery",
       "marketCap": 37032124416.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Daimler Truck Holding AG"
     },
     {
       "ticker": "LR.PA",
@@ -931,7 +1004,8 @@
       "sector": "Industrials",
       "industry": "Electrical Equipment & Parts",
       "marketCap": 36174782464.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Legrand SA"
     },
     {
       "ticker": "BMW.DE",
@@ -943,7 +1017,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 35848314880.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Bayerische Motoren Werke Aktiengesellschaft"
     },
     {
       "ticker": "TSCO.L",
@@ -955,7 +1030,8 @@
       "sector": "Consumer Defensive",
       "industry": "Grocery Stores",
       "marketCap": 35372404658.9,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Tesco PLC"
     },
     {
       "ticker": "III.L",
@@ -967,7 +1043,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 34210813928.8,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "3i Group Ord"
     },
     {
       "ticker": "KER.PA",
@@ -979,7 +1056,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Luxury Goods",
       "marketCap": 34161473536.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Kering SA"
     },
     {
       "ticker": "SSE.L",
@@ -991,7 +1069,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Diversified",
       "marketCap": 33613724646.87,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "SSE plc"
     },
     {
       "ticker": "ABN.AS",
@@ -1003,7 +1082,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 32450740224.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "ABN AMRO Bank N.V."
     },
     {
       "ticker": "PRU.L",
@@ -1015,7 +1095,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Life",
       "marketCap": 31372894233.48,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Prudential plc"
     },
     {
       "ticker": "VOD.L",
@@ -1027,7 +1108,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 31187548241.66,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Vodafone Group Public Limited Company"
     },
     {
       "ticker": "HEN3.DE",
@@ -1039,7 +1121,8 @@
       "sector": "Consumer Defensive",
       "industry": "Household & Personal Products",
       "marketCap": 31044354048.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Henkel AG & Co. KGaA"
     },
     {
       "ticker": "AD.AS",
@@ -1051,7 +1134,8 @@
       "sector": "Consumer Defensive",
       "industry": "Grocery Stores",
       "marketCap": 30302654464.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Koninklijke Ahold Delhaize N.V."
     },
     {
       "ticker": "HNR1.DE",
@@ -1063,7 +1147,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Reinsurance",
       "marketCap": 29908088832.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Hannover Rück SE"
     },
     {
       "ticker": "EXPN.L",
@@ -1075,7 +1160,8 @@
       "sector": "Industrials",
       "industry": "Consulting Services",
       "marketCap": 29557272703.13,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Experian plc"
     },
     {
       "ticker": "ADYEN.AS",
@@ -1087,7 +1173,8 @@
       "sector": "Technology",
       "industry": "Software - Infrastructure",
       "marketCap": 29505728512.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Adyen N.V."
     },
     {
       "ticker": "HEI.DE",
@@ -1099,7 +1186,8 @@
       "sector": "Basic Materials",
       "industry": "Building Materials",
       "marketCap": 28664500224.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Heidelberg Materials AG"
     },
     {
       "ticker": "ADS.DE",
@@ -1111,7 +1199,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Footwear & Accessories",
       "marketCap": 28290162688.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "adidas AG"
     },
     {
       "ticker": "DSY.PA",
@@ -1123,7 +1212,8 @@
       "sector": "Technology",
       "industry": "Software - Application",
       "marketCap": 28027574272.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Dassault Systèmes SE"
     },
     {
       "ticker": "UMG.AS",
@@ -1135,7 +1225,8 @@
       "sector": "Communication Services",
       "industry": "Entertainment",
       "marketCap": 27261925376.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Universal Music Group N.V."
     },
     {
       "ticker": "FRE.DE",
@@ -1147,7 +1238,8 @@
       "sector": "Healthcare",
       "industry": "Medical Care Facilities",
       "marketCap": 26241222656.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Fresenius SE & Co. KGaA"
     },
     {
       "ticker": "VIE.PA",
@@ -1159,7 +1251,8 @@
       "sector": "Industrials",
       "industry": "Waste Management",
       "marketCap": 25983744000.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Veolia Environnement SA"
     },
     {
       "ticker": "IMB.L",
@@ -1171,7 +1264,8 @@
       "sector": "Consumer Defensive",
       "industry": "Tobacco",
       "marketCap": 24493887273.1,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Imperial Brands PLC"
     },
     {
       "ticker": "AV.L",
@@ -1183,7 +1277,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Diversified",
       "marketCap": 24253835667.69,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Aviva plc"
     },
     {
       "ticker": "PUB.PA",
@@ -1195,7 +1290,8 @@
       "sector": "Communication Services",
       "industry": "Advertising Agencies",
       "marketCap": 23703523328.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Publicis Groupe S.A."
     },
     {
       "ticker": "EXO.AS",
@@ -1207,7 +1303,8 @@
       "sector": "Industrials",
       "industry": "Farm & Heavy Construction Machinery",
       "marketCap": 23566147584.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Exor N.V."
     },
     {
       "ticker": "BT-A.L",
@@ -1219,7 +1316,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 23308339397.08,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "BT Group plc"
     },
     {
       "ticker": "FRES.L",
@@ -1231,7 +1329,8 @@
       "sector": "Basic Materials",
       "industry": "Other Precious Metals & Mining",
       "marketCap": 23215437077.61,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Fresnillo plc"
     },
     {
       "ticker": "DSFIR.AS",
@@ -1243,7 +1342,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 23092787200.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "DSM-Firmenich AG"
     },
     {
       "ticker": "IAG.L",
@@ -1255,7 +1355,8 @@
       "sector": "Industrials",
       "industry": "Airlines",
       "marketCap": 22627795448.7,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "International Consolidated Airlines Group S.A."
     },
     {
       "ticker": "PHIA.AS",
@@ -1267,7 +1368,8 @@
       "sector": "Healthcare",
       "industry": "Medical Devices",
       "marketCap": 22431961088.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Koninklijke Philips N.V."
     },
     {
       "ticker": "CCH.L",
@@ -1279,7 +1381,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Non-Alcoholic",
       "marketCap": 21298081881.84,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Coca-Cola HBC AG"
     },
     {
       "ticker": "NN.AS",
@@ -1291,7 +1394,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Diversified",
       "marketCap": 21282695168.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "NN Group N.V."
     },
     {
       "ticker": "NXT.L",
@@ -1303,7 +1407,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Apparel Retail",
       "marketCap": 21050531873.7,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "NEXT plc"
     },
     {
       "ticker": "MTX.DE",
@@ -1315,7 +1420,8 @@
       "sector": "Industrials",
       "industry": "Aerospace & Defense",
       "marketCap": 20219324416.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "MTU Aero Engines AG"
     },
     {
       "ticker": "IHG.L",
@@ -1327,7 +1433,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Lodging",
       "marketCap": 20159498501.85,
-      "capCurrency": "USD"
+      "capCurrency": "USD",
+      "englishName": "InterContinental Hotels Group PLC"
     },
     {
       "ticker": "LGEN.L",
@@ -1339,7 +1446,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 19373560324.75,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Legal & General Group Plc"
     },
     {
       "ticker": "STLAP.PA",
@@ -1351,7 +1459,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 18927036416.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Stellantis N.V."
     },
     {
       "ticker": "EN.PA",
@@ -1363,7 +1472,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 18854014976.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Bouygues SA"
     },
     {
       "ticker": "VNA.DE",
@@ -1375,7 +1485,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate Services",
       "marketCap": 18114091008.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Vonovia SE"
     },
     {
       "ticker": "CAP.PA",
@@ -1387,7 +1498,8 @@
       "sector": "Technology",
       "industry": "Information Technology Services",
       "marketCap": 17928239104.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Capgemini SE"
     },
     {
       "ticker": "BEI.DE",
@@ -1399,7 +1511,8 @@
       "sector": "Consumer Defensive",
       "industry": "Household & Personal Products",
       "marketCap": 17582422016.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Beiersdorf Aktiengesellschaft"
     },
     {
       "ticker": "SMT.L",
@@ -1411,7 +1524,8 @@
       "sector": "Other",
       "industry": "Other",
       "marketCap": 17305765288.8,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Scottish Mortgage Ord"
     },
     {
       "ticker": "ABF.L",
@@ -1423,7 +1537,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 17260492995.51,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Associated British Foods plc"
     },
     {
       "ticker": "BESI.AS",
@@ -1435,7 +1550,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 17198217216.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "BE Semiconductor Industries N.V."
     },
     {
       "ticker": "RI.PA",
@@ -1447,7 +1563,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Wineries & Distilleries",
       "marketCap": 17007420416.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Pernod Ricard SA"
     },
     {
       "ticker": "HLMA.L",
@@ -1459,7 +1576,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 16695856580.86,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Halma plc"
     },
     {
       "ticker": "WKL.AS",
@@ -1471,7 +1589,8 @@
       "sector": "Industrials",
       "industry": "Specialty Business Services",
       "marketCap": 15727737856.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Wolters Kluwer N.V."
     },
     {
       "ticker": "KPN.AS",
@@ -1483,7 +1602,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 15442447360.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Koninklijke KPN N.V."
     },
     {
       "ticker": "SGRO.L",
@@ -1495,7 +1615,8 @@
       "sector": "Real Estate",
       "industry": "REIT - Industrial",
       "marketCap": 15304512306.58,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "SEGRO Plc"
     },
     {
       "ticker": "URW.PA",
@@ -1507,7 +1628,8 @@
       "sector": "Real Estate",
       "industry": "REIT - Retail",
       "marketCap": 15234635776.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Unibail-Rodamco-Westfield SE"
     },
     {
       "ticker": "ASRNL.AS",
@@ -1519,7 +1641,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Diversified",
       "marketCap": 14538280960.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "ASR Nederland N.V."
     },
     {
       "ticker": "AAF.L",
@@ -1531,7 +1654,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 14328532723.66,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Airtel Africa Plc"
     },
     {
       "ticker": "CON.DE",
@@ -1543,7 +1667,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 14040419328.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Continental Aktiengesellschaft"
     },
     {
       "ticker": "INF.L",
@@ -1555,7 +1680,8 @@
       "sector": "Communication Services",
       "industry": "Publishing",
       "marketCap": 13430398935.06,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Informa plc"
     },
     {
       "ticker": "ADM.L",
@@ -1567,7 +1693,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Property & Casualty",
       "marketCap": 13178565831.63,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Admiral Group plc"
     },
     {
       "ticker": "BVI.PA",
@@ -1579,7 +1706,8 @@
       "sector": "Industrials",
       "industry": "Consulting Services",
       "marketCap": 12723229696.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Bureau Veritas SA"
     },
     {
       "ticker": "SY1.DE",
@@ -1591,7 +1719,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 12535524352.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Symrise AG"
     },
     {
       "ticker": "UU.L",
@@ -1603,7 +1732,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Regulated Water",
       "marketCap": 12425273760.63,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "United Utilities Group PLC"
     },
     {
       "ticker": "AGN.AS",
@@ -1615,7 +1745,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Diversified",
       "marketCap": 12222238720.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Aegon Ltd."
     },
     {
       "ticker": "DPLM.L",
@@ -1627,7 +1758,8 @@
       "sector": "Industrials",
       "industry": "Industrial Distribution",
       "marketCap": 11988689473.37,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Diploma PLC"
     },
     {
       "ticker": "ERF.PA",
@@ -1639,7 +1771,8 @@
       "sector": "Healthcare",
       "industry": "Diagnostics & Research",
       "marketCap": 11971447808.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Eurofins Scientific SE"
     },
     {
       "ticker": "FME.DE",
@@ -1651,7 +1784,8 @@
       "sector": "Healthcare",
       "industry": "Medical Care Facilities",
       "marketCap": 11333428224.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Fresenius Medical Care AG"
     },
     {
       "ticker": "CA.PA",
@@ -1663,7 +1797,8 @@
       "sector": "Consumer Defensive",
       "industry": "Grocery Stores",
       "marketCap": 11292674048.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Carrefour SA"
     },
     {
       "ticker": "SVT.L",
@@ -1675,7 +1810,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Regulated Water",
       "marketCap": 10954741193.67,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Severn Trent PLC"
     },
     {
       "ticker": "RTO.L",
@@ -1687,7 +1823,8 @@
       "sector": "Industrials",
       "industry": "Specialty Business Services",
       "marketCap": 10917984926.42,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Rentokil Initial plc"
     },
     {
       "ticker": "AC.PA",
@@ -1699,7 +1836,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Lodging",
       "marketCap": 10910758912.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Accor SA"
     },
     {
       "ticker": "SN.L",
@@ -1711,7 +1849,8 @@
       "sector": "Healthcare",
       "industry": "Medical Devices",
       "marketCap": 10893256202.26,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Smith & Nephew plc"
     },
     {
       "ticker": "SDLF.L",
@@ -1723,7 +1862,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Life",
       "marketCap": 10887286623.28,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Standard Life plc"
     },
     {
       "ticker": "AKZA.AS",
@@ -1735,7 +1875,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 10794771456.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Akzo Nobel N.V."
     },
     {
       "ticker": "SDR.L",
@@ -1747,7 +1888,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 10722314596.71,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Schroders plc"
     },
     {
       "ticker": "SGE.L",
@@ -1759,7 +1901,8 @@
       "sector": "Technology",
       "industry": "Software - Application",
       "marketCap": 10667746338.38,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "The Sage Group plc"
     },
     {
       "ticker": "EDV.L",
@@ -1771,7 +1914,8 @@
       "sector": "Basic Materials",
       "industry": "Gold",
       "marketCap": 10543273808.47,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Endeavour Mining plc"
     },
     {
       "ticker": "BNZL.L",
@@ -1783,7 +1927,8 @@
       "sector": "Consumer Defensive",
       "industry": "Food Distribution",
       "marketCap": 10494135263.24,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Bunzl plc"
     },
     {
       "ticker": "G1A.DE",
@@ -1795,7 +1940,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 10476286976.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "GEA Group Aktiengesellschaft"
     },
     {
       "ticker": "ITRK.L",
@@ -1807,7 +1953,8 @@
       "sector": "Industrials",
       "industry": "Specialty Business Services",
       "marketCap": 10446865943.92,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Intertek Group plc"
     },
     {
       "ticker": "MNG.L",
@@ -1819,7 +1966,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 10050895815.1,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "M&G plc"
     },
     {
       "ticker": "MKS.L",
@@ -1831,7 +1979,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 9934804941.96,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Marks and Spencer Group plc"
     },
     {
       "ticker": "SMIN.L",
@@ -1843,7 +1992,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 9329406264.07,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Smiths Group plc"
     },
     {
       "ticker": "SBRY.L",
@@ -1855,7 +2005,8 @@
       "sector": "Consumer Defensive",
       "industry": "Grocery Stores",
       "marketCap": 9145461295.9,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "J Sainsbury plc"
     },
     {
       "ticker": "BNR.DE",
@@ -1867,7 +2018,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 9107829760.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Brenntag SE"
     },
     {
       "ticker": "PAH3.DE",
@@ -1879,7 +2031,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 8988437504.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Porsche Automobil Holding SE"
     },
     {
       "ticker": "BEZ.L",
@@ -1891,7 +2044,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Specialty",
       "marketCap": 8903594212.29,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Beazley plc"
     },
     {
       "ticker": "PSON.L",
@@ -1903,7 +2057,8 @@
       "sector": "Communication Services",
       "industry": "Publishing",
       "marketCap": 8747612983.21,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Pearson plc"
     },
     {
       "ticker": "PCT.L",
@@ -1915,7 +2070,8 @@
       "sector": "Other",
       "industry": "Other",
       "marketCap": 8739378834.04,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Polar Capital Technology Ord"
     },
     {
       "ticker": "IMI.L",
@@ -1927,7 +2083,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 8392333454.0,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "IMI plc"
     },
     {
       "ticker": "RNO.PA",
@@ -1939,7 +2096,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 8228567552.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Renault SA"
     },
     {
       "ticker": "WEIR.L",
@@ -1951,7 +2109,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 8218303743.92,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "The Weir Group PLC"
     },
     {
       "ticker": "CNA.L",
@@ -1963,7 +2122,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Independent Power Producers",
       "marketCap": 8143230137.04,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Centrica plc"
     },
     {
       "ticker": "PSH.L",
@@ -1975,7 +2135,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 8097152822.49,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Pershing Square Holdings, Ltd."
     },
     {
       "ticker": "QIA.DE",
@@ -1987,7 +2148,8 @@
       "sector": "Healthcare",
       "industry": "Diagnostics & Research",
       "marketCap": 7536375296.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Qiagen N.V."
     },
     {
       "ticker": "FCIT.L",
@@ -1999,7 +2161,8 @@
       "sector": "Other",
       "industry": "Other",
       "marketCap": 7502200310.64,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "F&C Investment Trust Ord"
     },
     {
       "ticker": "GAW.L",
@@ -2011,7 +2174,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Leisure",
       "marketCap": 7284721549.02,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Games Workshop Group PLC"
     },
     {
       "ticker": "MRO.L",
@@ -2023,7 +2187,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 7133665401.76,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Melrose Industries PLC"
     },
     {
       "ticker": "EDEN.PA",
@@ -2035,7 +2200,8 @@
       "sector": "Financial Services",
       "industry": "Credit Services",
       "marketCap": 6865153536.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Edenred SE"
     },
     {
       "ticker": "BAB.L",
@@ -2047,7 +2213,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 6849790899.64,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Babcock International Group PLC"
     },
     {
       "ticker": "ICG.L",
@@ -2059,7 +2226,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 6827039494.01,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "ICG plc"
     },
     {
       "ticker": "MTLN.L",
@@ -2071,7 +2239,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Diversified",
       "marketCap": 6774482944.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Metlen Energy & Metals PLC"
     },
     {
       "ticker": "HSX.L",
@@ -2083,7 +2252,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Property & Casualty",
       "marketCap": 6743081390.67,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Hiscox Ltd"
     },
     {
       "ticker": "RAND.AS",
@@ -2095,7 +2265,8 @@
       "sector": "Industrials",
       "industry": "Staffing & Employment Services",
       "marketCap": 6656597504.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Randstad N.V."
     },
     {
       "ticker": "STJ.L",
@@ -2107,7 +2278,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 6526713415.06,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "St. James's Place plc"
     },
     {
       "ticker": "DCC.L",
@@ -2119,7 +2291,8 @@
       "sector": "Energy",
       "industry": "Oil & Gas Refining & Marketing",
       "marketCap": 6356949481.56,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "DCC Energy plc"
     },
     {
       "ticker": "SPX.L",
@@ -2131,7 +2304,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 6326550374.0,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Spirax Group plc"
     },
     {
       "ticker": "LAND.L",
@@ -2143,7 +2317,8 @@
       "sector": "Real Estate",
       "industry": "REIT - Diversified",
       "marketCap": 6274344028.92,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Land Securities Group Plc"
     },
     {
       "ticker": "KGF.L",
@@ -2155,7 +2330,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Home Improvement Retail",
       "marketCap": 6140325905.73,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Kingfisher plc"
     },
     {
       "ticker": "ZAL.DE",
@@ -2167,7 +2343,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Internet Retail",
       "marketCap": 6051837440.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Zalando SE"
     },
     {
       "ticker": "ALW.L",
@@ -2179,7 +2356,8 @@
       "sector": "Other",
       "industry": "Other",
       "marketCap": 6005553523.0,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Alliance Witan Ord"
     },
     {
       "ticker": "BGEO.L",
@@ -2191,7 +2369,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 5995487174.12,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Lion Finance Group PLC"
     },
     {
       "ticker": "CCC.L",
@@ -2203,7 +2382,8 @@
       "sector": "Technology",
       "industry": "Information Technology Services",
       "marketCap": 5890955641.8,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Computacenter plc"
     },
     {
       "ticker": "IMCD.AS",
@@ -2215,7 +2395,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 5753340928.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "IMCD N.V."
     },
     {
       "ticker": "BBOX.L",
@@ -2227,7 +2408,8 @@
       "sector": "Other",
       "industry": "Other",
       "marketCap": 5449012707.86,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Tritax Big Box Ord"
     },
     {
       "ticker": "LMP.L",
@@ -2239,7 +2421,8 @@
       "sector": "Real Estate",
       "industry": "REIT - Industrial",
       "marketCap": 5409752991.72,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "LondonMetric Property Plc"
     },
     {
       "ticker": "CRDA.L",
@@ -2251,7 +2434,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 5394790823.66,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Croda International Plc"
     },
     {
       "ticker": "BLND.L",
@@ -2263,7 +2447,8 @@
       "sector": "Real Estate",
       "industry": "REIT - Diversified",
       "marketCap": 5391592834.92,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "British Land Company PLC"
     },
     {
       "ticker": "G24.DE",
@@ -2275,7 +2460,8 @@
       "sector": "Communication Services",
       "industry": "Internet Content & Information",
       "marketCap": 5384984064.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Scout24 SE"
     },
     {
       "ticker": "ABDN.L",
@@ -2287,7 +2473,8 @@
       "sector": "Financial Services",
       "industry": "Asset Management",
       "marketCap": 5280880315.96,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Aberdeen Group Plc"
     },
     {
       "ticker": "HWDN.L",
@@ -2299,7 +2486,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Furnishings, Fixtures & Appliances",
       "marketCap": 5269737221.29,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Howden Joinery Group Plc"
     },
     {
       "ticker": "IGG.L",
@@ -2311,7 +2499,8 @@
       "sector": "Financial Services",
       "industry": "Capital Markets",
       "marketCap": 5231556042.53,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "IG Group Holdings plc"
     },
     {
       "ticker": "JD.L",
@@ -2323,7 +2512,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Apparel Retail",
       "marketCap": 5149857731.79,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "JD Sports Fashion Plc"
     },
     {
       "ticker": "BTRW.L",
@@ -2335,7 +2525,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Residential Construction",
       "marketCap": 5134774332.79,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Barratt Redrow plc"
     },
     {
       "ticker": "CTEC.L",
@@ -2347,7 +2538,8 @@
       "sector": "Healthcare",
       "industry": "Medical Instruments & Supplies",
       "marketCap": 5133829567.49,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Convatec Group PLC"
     },
     {
       "ticker": "BRBY.L",
@@ -2359,7 +2551,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Luxury Goods",
       "marketCap": 5001267410.03,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Burberry Group plc"
     },
     {
       "ticker": "INVP.L",
@@ -2371,7 +2564,8 @@
       "sector": "Financial Services",
       "industry": "Capital Markets",
       "marketCap": 4926647971.3,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Investec Group"
     },
     {
       "ticker": "WTB.L",
@@ -2383,7 +2577,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Lodging",
       "marketCap": 4914787344.71,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Whitbread plc"
     },
     {
       "ticker": "AUTO.L",
@@ -2395,7 +2590,8 @@
       "sector": "Communication Services",
       "industry": "Internet Content & Information",
       "marketCap": 4817726146.88,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Autotrader Group plc"
     },
     {
       "ticker": "PSN.L",
@@ -2407,7 +2603,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Residential Construction",
       "marketCap": 4276790680.73,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Persimmon Plc"
     },
     {
       "ticker": "ENT.L",
@@ -2419,7 +2616,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Gambling",
       "marketCap": 4103645717.67,
-      "capCurrency": "GBP"
+      "capCurrency": "GBP",
+      "englishName": "Entain Plc"
     },
     {
       "ticker": "TEP.PA",
@@ -2431,7 +2629,8 @@
       "sector": "Industrials",
       "industry": "Specialty Business Services",
       "marketCap": 3929833472.0,
-      "capCurrency": "EUR"
+      "capCurrency": "EUR",
+      "englishName": "Teleperformance SE"
     }
   ]
 }

@@ -664,7 +664,10 @@ def api_company_resolve(request: Request):
         limit = max(1, min(12, int(qs.get("limit", ["6"])[0])))
     except ValueError:
         limit = 6
-    return resolve_company_query(query, limit=limit)
+    # `prefer=home`은 원주와 ADR이 갈릴 때 자국 상장을 대표로 세운다. 워치리스트가
+    # 쓴다 — 기업분석은 SEC 등록분이라야 companyfacts와 10-K가 붙는다.
+    prefer_home = qs.get("prefer", [""])[0].strip().lower() == "home"
+    return resolve_company_query(query, limit=limit, prefer_home=prefer_home)
 
 
 @fastapi_app.get("/api/analyze")

@@ -108,20 +108,33 @@ def fetch_yf_economic_events(
     except ValueError:
         return []
 
-    try:
-        calendars = yf.Calendars(start=start_date, end=end_date)
-    except Exception:
-        return []
+    # 지난 구간과 앞으로의 구간을 따로 받는다. 집계는 **최근 날짜부터** 내려주는데
+    # 한 창으로 45일 과거까지 물으면 앞쪽 몇 페이지가 전부 미래 일정으로 차서
+    # 발표가 끝난 지표에 절대 닿지 않는다(실측: 26건 전부 미래, 과거 0건).
+    # 창을 갈라야 페이지 예산을 결과가 있는 쪽에 쓴다.
+    today = dt.date.today()
+    windows = []
+    if start_date < today:
+        windows.append((start_date, min(end_date, today - dt.timedelta(days=1))))
+    if end_date >= today:
+        windows.append((max(start_date, today), end_date))
 
     frames = []
-    for offset in range(0, max(100, limit), 100):
+    for window_start, window_end in windows:
+        if window_start > window_end:
+            continue
         try:
-            frame = calendars.get_economic_events_calendar(limit=100, offset=offset)
+            calendars = yf.Calendars(start=window_start, end=window_end)
         except Exception:
-            break
-        if frame is None or getattr(frame, "empty", True):
-            break
-        frames.append(frame)
+            continue
+        for offset in range(0, max(100, limit), 100):
+            try:
+                frame = calendars.get_economic_events_calendar(limit=100, offset=offset)
+            except Exception:
+                break
+            if frame is None or getattr(frame, "empty", True):
+                break
+            frames.append(frame)
 
     seen: set[tuple] = set()
     rows: list[dict] = []
@@ -161,6 +174,10 @@ def fetch_yf_economic_events(
                 # 발표가 끝난 건은 예정이 아니다. 값이 없으면 집계 상태를 유지한다.
                 "status": "actual" if actual else "estimated",
                 "actualValue": actual,
+                # `Expected`(컨센서스)는 열은 있으나 값이 오지 않는다 — 과거·미래
+                # 네 구간 600여 건을 훑어 전부 비었다. 그래서 화면의 결과 비교는
+                # 예상치가 아니라 직전 값을 기준으로 읽는다. 열은 남겨둔다:
+                # 다른 provider가 컨센서스를 주면 그대로 실린다.
                 "forecastValue": _reading(record.get("Expected")),
                 "previousValue": previous,
                 "observedAt": str(record.get("For") or "").strip(),

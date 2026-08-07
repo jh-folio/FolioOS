@@ -248,11 +248,47 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
     if not key:
         providers["us_macro_source"] = "yfinance_fallback"
 
+    estimates: list[dict] = []
     if include_estimates and tickers:
         earnings = estimated_earnings_events(tickers)
         dividends = estimated_dividend_events(tickers)
-        events.extend(earnings)
-        events.extend(dividends)
+        estimates = [*earnings, *dividends]
+        events.extend(estimates)
         providers.update({"yfinance_earnings": len(earnings), "yfinance_dividends": len(dividends)})
     count = upsert_events(memory_db, events)
+    if estimates:
+        providers["pruned_estimates"] = prune_stale_estimates(memory_db, estimates)
     return {"ok": True, "stored": count, "providers": providers, "dataGaps": macro_coverage_gaps(), "agentCalled": False}
+
+
+def prune_stale_estimates(db_path: Path, fresh: list[dict]) -> int:
+    """이번 수집에 안 나온 앞으로의 실적·배당 추정 일정을 지운다.
+
+    이 두 종류는 매 수집마다 티커 목록에서 통째로 다시 만들어진다. 그래서 남아
+    있는 옛 행은 갱신되지 않은 것이 아니라 **더는 성립하지 않는 것**이다. 실제로
+    시장 판정을 고친 뒤 `8316.T` 실적이 도쿄와 뉴욕 두 줄로 보였다 — id가
+    `kind|provider|title|시작시각`인데 시간대가 바뀌면서 시작시각이 달라져 옛
+    행이 그대로 남았다.
+
+    날짜로 자르지 않는다. yfinance가 주는 실적일은 최근 지나간 날짜일 수도 있어,
+    앞으로의 행만 지우면 옛 도쿄→뉴욕 중복이 과거 쪽에 그대로 남는다(실측:
+    `8316.T` 두 줄 모두 7월 31일).
+
+    공식 일정(휴장·FOMC·지표)과 확정 상태 행은 건드리지 않는다. 그쪽은 지난
+    기록이 자산이고, 한 번 수집에 실패했다고 지울 것이 아니다.
+    """
+    keep = {str(row.get("id") or "") for row in fresh}
+    keep.discard("")
+    if not keep:
+        return 0
+    placeholders = ",".join("?" * len(keep))
+    with sqlite3.connect(str(db_path)) as conn:
+        ensure_calendar_table(conn)
+        cursor = conn.execute(
+            f"""DELETE FROM market_calendar_events
+                WHERE kind IN ('earnings','dividend') AND status = 'estimated'
+                  AND provider = 'yfinance'
+                  AND id NOT IN ({placeholders})""",
+            tuple(sorted(keep)),
+        )
+        return cursor.rowcount or 0

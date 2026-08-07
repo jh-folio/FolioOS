@@ -23,8 +23,14 @@ export type CompanyResolution = {
 
 const DEBOUNCE_MS = 250;
 
-/** 입력이 어느 기업인지 서버에 묻는다. 규칙 기반이라 LLM 토큰을 쓰지 않는다. */
-export function useCompanyResolution(query: string) {
+/** 입력이 어느 기업인지 서버에 묻는다. 규칙 기반이라 LLM 토큰을 쓰지 않는다.
+ *
+ *  `preferHome`은 원주와 미국 ADR이 갈릴 때 자국 상장을 대표로 세운다.
+ *  워치리스트가 쓴다 — 도요타를 담았는데 통화도 시간대도 다른 TM이 들어오면
+ *  안 된다. 기업분석은 반대로 SEC 등록분이라야 공시와 재무가 붙는다.
+ */
+export function useCompanyResolution(query: string, options?: { preferHome?: boolean }) {
+  const preferHome = options?.preferHome === true;
   const [resolution, setResolution] = useState<CompanyResolution | null>(null);
   const [pending, setPending] = useState(false);
   // 사용자가 후보를 고르면 그 선택이 이후 타이핑 전까지 이긴다.
@@ -45,7 +51,7 @@ export function useCompanyResolution(query: string) {
       void (async () => {
         try {
           const payload = await getJson<CompanyResolution>(
-            `/api/company/resolve?q=${encodeURIComponent(text)}&limit=6`,
+            `/api/company/resolve?q=${encodeURIComponent(text)}&limit=6${preferHome ? "&prefer=home" : ""}`,
           );
           // 늦게 도착한 옛 응답이 최신 입력을 덮어쓰지 않게 한다.
           if (requestId.current !== id) return;
@@ -60,7 +66,7 @@ export function useCompanyResolution(query: string) {
       })();
     }, DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [query]);
+  }, [query, preferHome]);
 
   useEffect(() => setPicked(null), [query]);
 

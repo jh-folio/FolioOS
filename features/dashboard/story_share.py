@@ -30,15 +30,49 @@ _cache_lock = threading.Lock()
 _cache: dict[tuple[str, str], tuple[float, dict]] = {}
 
 
-def _story_counts(docs: list[dict]) -> tuple[dict[str, int], int]:
+def _story_counts(docs: list[dict], drivers_of=None) -> tuple[dict[str, int], int]:
     """동인별 언급 문서 수. 한 문서가 여러 이야기에 속할 수 있으므로
     비중의 분모는 문서 수가 아니라 언급 수다."""
     counts: dict[str, int] = {}
+    resolve = drivers_of or infer_drivers
     for doc in docs:
-        drivers = [d for d in infer_drivers(doc) if d not in UNCLASSIFIED_DRIVERS]
+        drivers = [d for d in resolve(doc) if d not in UNCLASSIFIED_DRIVERS]
         for driver in drivers or [OTHER_LABEL]:
             counts[driver] = counts.get(driver, 0) + 1
     return counts, len(docs)
+
+
+class _SharedWork:
+    """네 시장이 같은 계산을 네 번 하지 않게 붙잡아 두는 메모.
+
+    시장을 바꿀 때마다 6초씩 기다린 이유가 이것이다. 날짜별 문서 선별
+    (`select_briefing_docs`)은 시장과 무관한데 시장마다 다시 돌았고, 문서의
+    동인 추론은 같은 문서에 대해 시장 수만큼 반복됐다. 선별은 날짜로, 동인은
+    문서로 기억하면 두 번째 시장부터는 남는 일이 `documents_for_scope` 필터
+    하나뿐이다.
+    """
+
+    def __init__(self, documents: list[dict]):
+        self._documents = documents
+        self._selected: dict[str, list[dict]] = {}
+        self._drivers: dict[int, list[str]] = {}
+
+    def selected(self, date: str) -> list[dict]:
+        if date not in self._selected:
+            # strict: 두 날짜를 같은 잣대로 비교해야 하므로 시장 window 날짜의
+            # 문서만 쓴다. 기본(비-strict) 모드는 pool을 오늘까지 확장해 직전
+            # 거래일 계산을 오염시킨다.
+            chosen, _, _windows = select_briefing_docs(self._documents, date, strict=True)
+            self._selected[date] = chosen
+        return self._selected[date]
+
+    def drivers(self, doc: dict) -> list[str]:
+        key = id(doc)
+        cached = self._drivers.get(key)
+        if cached is None:
+            cached = infer_drivers(doc)
+            self._drivers[key] = cached
+        return cached
 
 
 # 시장은 계약에서 파생한다. 유럽·일본 수집량이 적어 비중이 흔들리므로
@@ -52,11 +86,9 @@ def _normalized_scope(scope: str) -> str:
     return token if token in STORY_SHARE_MARKETS else "us"
 
 
-def _scoped_docs(documents: list[dict], date: str, scope: str) -> list[dict]:
-    # strict: 두 날짜를 같은 잣대로 비교해야 하므로 시장 window 날짜의 문서만 쓴다.
-    # 기본(비-strict) 모드는 pool을 오늘까지 확장해 직전 거래일 계산을 오염시킨다.
-    selected, _, _windows = select_briefing_docs(documents, date, strict=True)
-    return documents_for_scope(selected, scope)
+def _scoped_docs(documents: list[dict], date: str, scope: str, work: "_SharedWork | None" = None) -> list[dict]:
+    work = work or _SharedWork(documents)
+    return documents_for_scope(work.selected(date), scope)
 
 
 def _share_rows(counts: dict[str, int]) -> list[dict]:
@@ -78,12 +110,13 @@ def _share_rows(counts: dict[str, int]) -> list[dict]:
     return rows
 
 
-def build_story_share(documents: list[dict], date: str, scope: str) -> dict:
+def build_story_share(documents: list[dict], date: str, scope: str, work: "_SharedWork | None" = None) -> dict:
     """오늘·직전 거래일의 이야기 비중과 %p 델타. 순수 함수(주입식)라 DB 없이 테스트한다."""
     scope = _normalized_scope(scope)
     market = scope.upper()
-    today_docs = _scoped_docs(documents, date, scope)
-    counts, doc_count = _story_counts(today_docs)
+    work = work or _SharedWork(documents)
+    today_docs = _scoped_docs(documents, date, scope, work)
+    counts, doc_count = _story_counts(today_docs, work.drivers)
     rows = _share_rows(counts)
 
     day = dt.date.fromisoformat(date)
@@ -91,7 +124,7 @@ def build_story_share(documents: list[dict], date: str, scope: str) -> dict:
     anchor = latest_trading_day_on_or_before(day, market)
     previous_day = previous_trading_day(anchor if anchor < day else day, market)
     previous_date = previous_day.isoformat()
-    previous_counts, previous_doc_count = _story_counts(_scoped_docs(documents, previous_date, scope))
+    previous_counts, previous_doc_count = _story_counts(_scoped_docs(documents, previous_date, scope, work), work.drivers)
     previous_total = sum(previous_counts.values())
     for row in rows:
         if row["isOther"]:
@@ -128,21 +161,38 @@ def build_story_share(documents: list[dict], date: str, scope: str) -> dict:
 
 
 def story_share_payload(date: str | None, scope: str) -> dict:
-    """캐시 있는 API 진입점. 인덱스 로드가 비싸 10분 캐시한다."""
+    """캐시 있는 API 진입점. 인덱스 로드가 비싸 10분 캐시한다.
+
+    한 시장만 물어봐도 **네 시장을 모두 계산해 캐시한다.** 인덱스 로드가
+    4.7초라 시장을 바꿀 때마다 그 값을 다시 치르고 있었다. 문서를 한 번
+    읽어 온 김에 나머지 세 시장을 채우면 추가 비용은 시장당 0.2초 남짓이고,
+    두 번째 시장부터는 기다림이 없다.
+    """
     from features.common.research_library.indexing.service import load_index
 
     date = date or dt.datetime.now(dt.timezone.utc).astimezone(dt.timezone(dt.timedelta(hours=9))).date().isoformat()
     scope = _normalized_scope(scope)
-    key = (date, scope)
     now = time.monotonic()
     with _cache_lock:
-        cached = _cache.get(key)
+        cached = _cache.get((date, scope))
         if cached and now - cached[0] < _CACHE_TTL_SECONDS:
             return cached[1]
     documents = news_documents(load_index())
-    payload = build_story_share(documents, date, scope)
+    work = _SharedWork(documents)
+    payload = build_story_share(documents, date, scope, work)
+    warmed = {scope: payload}
+    for other in STORY_SHARE_MARKETS:
+        if other == scope:
+            continue
+        try:
+            warmed[other] = build_story_share(documents, date, other, work)
+        except Exception:
+            # 한 시장이 실패해도 물어본 시장의 답은 돌려준다.
+            continue
+    stamped = time.monotonic()
     with _cache_lock:
-        _cache[key] = (now, payload)
+        for market, value in warmed.items():
+            _cache[(date, market)] = (stamped, value)
     return payload
 
 

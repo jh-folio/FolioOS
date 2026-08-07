@@ -60,10 +60,13 @@ export const MARKET_KO: Record<string, string> = MARKET_KO_LABELS;
 const MARKET_FILTERS = ["US", "KR", "EUROPE", "JP"];
 // 중요도는 하한 하나로 고른다. 3단계를 각각 토글하게 하면 "중간만 보기"처럼
 // 쓸 일 없는 조합이 생기고, 무엇이 켜졌는지 읽기 어려워진다.
+// 막대는 `걸러내는 문턱의 높이`다. 최상위가 가장 꽉 차고 전부가 한 칸이다.
+// 처음에는 `보이는 등급 수`로 칠했는데(전부=3칸), 세 칸짜리 아이콘이 가장
+// 느슨한 선택지에 붙어 신호 세기 아이콘의 통념과 정반대로 읽혔다.
 const IMPORTANCE_FILTERS = [
-  { value: 3, dots: 1, label: "최상위", hint: "FOMC·금리 결정 같은 최상위 일정만" },
-  { value: 2, dots: 2, label: "중간 이상", hint: "실적·주요 지표까지" },
-  { value: 1, dots: 3, label: "전부", hint: "휴장일·배당까지 전부" },
+  { value: 3, label: "최상위", hint: "FOMC·금리 결정 같은 최상위 일정만" },
+  { value: 2, label: "중간 이상", hint: "실적·주요 지표까지" },
+  { value: 1, label: "전부", hint: "휴장일·배당까지 전부" },
 ];
 // 유럽은 거래소마다 휴장일이 달라 시장 하나로 묶이지 않는다. 칩에서도 어느 거래소가
 // 쉬는지 보여야 "유럽 휴장"으로 잘못 읽히지 않는다.
@@ -278,7 +281,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             onClick={() => { setMinImportance(row.value); persist({ calendarMinImportance: row.value }); }}
           >
             <span className="imp" aria-hidden="true">
-              {[1, 2, 3].map((level) => <u key={level} className={level >= (4 - row.dots) ? "on" : ""} />)}
+              {[1, 2, 3].map((level) => <u key={level} className={level <= row.value ? "on" : ""} />)}
             </span>
             {row.label}
           </button>

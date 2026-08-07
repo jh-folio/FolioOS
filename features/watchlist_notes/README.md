@@ -78,3 +78,6 @@ projection 조회는 `watchlist.json`을 다시 쓰지 않는다.
 - 예전에는 **티커 모양일 때만** 회사로 인식해서 "하우멧"과 "Howmet Aerospace"가 서로 다른 항목이 됐다.
 - 워치리스트는 주제 키워드도 받는다. 못 알아본 입력은 오류가 아니라 키워드다.
 - 이름 일부만 겹친 약한 후보(`strong: false`)에는 후보 목록을 띄우지 않는다. "반도체"에 한미반도체가 걸린다고 목록을 열면 주제어 입력을 방해한다.
+- **자국 원주를 등록한다.** 워치리스트는 회사를 따라다니는 화면이라 도쿄에 상장된 도요타(`7203.T`)를 봐야 한다. 미국 ADR(`TM`)은 통화도 시간대도 가격도 다른 별개의 증권이다. 그래서 워치리스트만 `prefer_home`으로 해석한다(`/api/company/resolve?prefer=home`). 기업분석은 반대다 — SEC 등록분이라야 공시와 재무가 붙는다.
+- 한글로 친 일본·유럽 기업도 잡힌다. 별칭은 `config/foreign_company_aliases.json`에 있고, 영문명은 구성종목 파일의 `englishName`에서 온다.
+- 후보 목록은 입력 패널 위에 뜬다. 패널에 transform이 걸려 있어 패널이 자기 쌓임 맥락을 만들기 때문에, 목록의 `z-index`가 아니라 **패널**이 아래 카드를 이겨야 한다(`.watchlist-editor.input-panel { position: relative; z-index: 5 }`).

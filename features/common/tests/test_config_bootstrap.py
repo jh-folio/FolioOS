@@ -14,6 +14,7 @@ EXPECTED_NAMES = frozenset(
         "company_master.json",
         "europe_core_constituents.json",
         "evidence_sources.yaml",
+        "foreign_company_aliases.json",
         "kospi200_constituents.json",
         "nikkei225_constituents.json",
         "rss_feeds.yaml",

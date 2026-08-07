@@ -14445,6 +14445,14 @@ main.page {
 .imp u { width: 4px; border-radius: 1px; background: var(--folio-border); }
 .imp u:nth-child(1) { height: 6px; } .imp u:nth-child(2) { height: 9px; } .imp u:nth-child(3) { height: 12px; }
 .imp u.on { background: var(--folio-blue); }
+/* 중요도 문턱 알약. 아이콘과 글자가 붙어 있으면 막대가 글자의 일부로 읽힌다.
+   선택된 알약은 남색 바탕이라 파란 막대와 회색 빈 막대가 둘 다 사라진다 —
+   켜진 칸은 흰색, 빈 칸은 반투명 흰색으로 바꿔 문턱이 계속 보이게 한다. */
+.cal-imp-filter { display: inline-flex; align-items: center; gap: 7px; }
+.cal-imp-filter .imp u { background: color-mix(in srgb, var(--folio-ink-subtle) 45%, transparent); }
+.cal-imp-filter .imp u.on { background: var(--folio-blue); }
+.cal-imp-filter[aria-pressed="true"] .imp u { background: color-mix(in srgb, var(--folio-ink-inverse) 32%, transparent); }
+.cal-imp-filter[aria-pressed="true"] .imp u.on { background: var(--folio-ink-inverse); }
 .certainty-badge { border-radius: var(--r-pill); padding: 2px 8px; font-size: 10.5px; font-weight: var(--fw-bold); }
 .certainty-badge--confirmed, .certainty-badge--actual { color: var(--folio-teal); background: var(--folio-teal-soft); }
 .certainty-badge--estimated, .certainty-badge--tentative { color: var(--folio-gold); background: var(--folio-gold-soft); }
@@ -15477,6 +15485,13 @@ select { min-height: 36px; padding: 0 12px; }
 
 /* 워치리스트 추가 입력. 자동완성이 라벨 안에서 뜬다. */
 .watchlist-add-field { position: relative; flex: 1 1 220px; min-width: 0; }
+
+/* 후보 목록이 아래 카드에 가리던 문제. 입력 패널에 transform이 걸려 있어 패널이
+   자기 쌓임 맥락을 만들고, 그 안의 `.ticker-suggest`는 z-index를 아무리 올려도
+   패널 **밖**의 카드를 이길 수 없다(측정: 목록 아래쪽에서 elementFromPoint가
+   `.watchlist-news-count`를 돌려줬다). 올려야 할 것은 목록이 아니라 패널이다. */
+.watchlist-editor.input-panel,
+.react-analysis-query { position: relative; z-index: 5; }
 
 /* ============================================================
    Agent 도크 대화 목록

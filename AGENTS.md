@@ -560,6 +560,10 @@ features/company_analysis/financial_quality_prompt.md
 - event kind는 `macro | central_bank | holiday | earnings | filing | dividend` 6종만 허용하고 `market-memory.sqlite3::market_calendar_events`에 upsert한다.
 - `confirmed | estimated | tentative | actual`을 source tier로 결정한다. 회사 IR/공식 일정이 우선이고 yfinance/Nasdaq 등 제3자 예정치는 `estimated`로만 표시한다.
 - NYSE/KRX 휴장일과 FOMC는 공식 발표 연간 일정을 adapter에 전사해 등재한다(confirmed + 공식 sourceUrl, 새 연도 공시 시 표만 갱신). 브리핑 세션 기준일은 코드가 결정하며, Toss Open API 거래소 캘린더가 연결되어 유효한 응답을 주면 해당 응답을 정적 휴장일 표보다 우선하고 미연결·실패·응답 불일치 시 정적 표로 fallback한다. 미국 지표 발표일은 `FRED_API_KEY`가 있을 때만 수집하고 없으면 `fred_key_required`를 남긴다. 실적/배당은 포트폴리오+워치리스트 티커 대상 yfinance estimated이며, 워치리스트 표시명은 SEC company_tickers 기반 `sec_ticker_for_name()`으로 해석한다.
+- **지표 수집 창은 과거 45일부터 연다.** 오늘부터 시작하면 결과가 실린 발표가 하나도 안 들어와 지난달 지표가 캘린더에 없다. 게다가 집계가 최근 날짜부터 내려주므로 한 창으로 과거까지 물으면 앞쪽 페이지가 전부 미래 일정으로 차서 과거에 닿지 못한다 — **과거 구간과 미래 구간을 따로 요청한다**(실측: 26건 전부 미래 → 83건 중 과거 57건 전부 결과 포함).
+- yfinance 경제 캘린더에 `Expected`(컨센서스) 열은 있으나 값이 오지 않는다(과거·미래 네 구간 600여 건 전부 결측). 그래서 화면의 결과 비교는 예상치가 아니라 **직전 값** 기준으로 읽는다. `forecastValue` 필드는 다른 provider가 컨센서스를 주면 실리도록 남긴다.
+- 실적·배당 추정은 매 수집마다 티커 목록에서 통째로 다시 만들어지므로, 이번 수집에 안 나온 `estimated` 행은 갱신 실패가 아니라 **더는 성립하지 않는 행**이다(`prune_stale_estimates`). 날짜로 자르지 않는다 — 시장 판정을 고쳤을 때 `8316.T` 실적이 도쿄와 뉴욕 두 줄로 남았고 둘 다 과거 날짜였다. 공식 일정(휴장·FOMC·지표)과 확정 행은 건드리지 않는다.
+- 실적·배당 행은 `companyName`을 함께 싣는다(`_company_name.py`). 일본 구성종목은 `englishName`을 우선해 `三井住友フィナンシャルグループ` 대신 읽히는 이름을 쓰고, KOSPI 구성종목은 `373220`으로 저장되므로 `.KS`/`.KQ` 형태도 함께 색인한다.
 - raw page/PDF를 장기 보존하지 않고 normalized event와 source URL만 저장한다. refresh는 automation job이며 Agent를 호출하지 않는다.
 
 ### Research Cockpit 대시보드
@@ -567,7 +571,7 @@ features/company_analysis/financial_quality_prompt.md
 - 로직은 `features/dashboard/`에 둔다. 화면은 `cockpit` 하나이며 0.5에서 Legacy 모드를 삭제했다(저장된 `legacy` 설정은 `cockpit`으로 승격). 패널 순서는 변화 피드 → 시장 캘린더 → 네이티브 차트다.
 - 기존 `data/market-widget-settings.json`은 삭제·수정하지 않고 read-only fallback으로만 읽는다. 새 설정은 `data/dashboard-settings.json`에 저장한다.
 - 초기 cockpit payload에는 외부 network 호출·chart series·iframe이 없고 차트/일정 상세는 lazy fetch한다. 네이티브 차트는 `GET /api/market/chart`와 기존 Lightweight Charts 전역을 재사용한다.
-- `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
+- `무엇이 달라졌나` 패널 상단 `오늘의 이야기 비중`(`story_share.py`)은 그날 수집된 articles/rss 전체를 동인별로 묶은 보도량 비중이다(상위 4 + 그 외, 직전 거래일 %p 델타, US/KR 토글). 규칙 계산 전용이고 브리핑과 독립이며, 비중 이동은 내용 변화가 아니라는 경고 문장을 UI에 고정한다. `GET /api/dashboard/story-share`는 10분 캐시, RSS 수집 시 무효화. **한 시장만 물어봐도 네 시장을 모두 계산해 캐시한다** — 인덱스 로드가 4.7초라 시장을 바꿀 때마다 그 값을 다시 치르고 있었다(시장당 6초). 문서를 한 번 읽어 온 김에 나머지를 채우면 첫 조회 8초·이후 전환 0초다. 날짜별 문서 선별과 문서별 동인 추론은 시장과 무관하므로 `_SharedWork`가 한 번만 계산한다. 내용의 변화 카드의 `Agent에게 묻기`는 dock을 열어 질문을 채울 뿐 자동 제출하지 않는다.
 - 기존 `/api/dashboard` 응답은 기존 consumer 호환을 위해 유지한다.
 
 ### 입력 기업 판단 (Company Resolution)
@@ -580,6 +584,11 @@ features/company_analysis/financial_quality_prompt.md
 - 정확한 티커 일치는 이름 접두 일치를 이긴다(`MU`가 MUELLER INDUSTRIES와 저울질되면 안 된다).
 - SEC는 클래스 구분에 하이픈을 쓴다. `BRK.B`는 `BRK-B`로 정규화한다.
 - SEC 파일에 한글 표기가 없으므로 한국 사용자가 실제로 치는 표기(마이크론·알파벳·존슨앤존슨 등)는 `company_lookup`의 수동 사전 별칭으로 보정한다(원칙 10의 "별칭·예외 보정" 용도).
+- **자국 원주와 미국 ADR은 다른 증권이다.** 도요타는 도쿄(`7203.T`)와 뉴욕 ADR(`TM`) 양쪽에 있고 통화·시간대·가격이 다르다. `prefer_home`(`GET /api/company/resolve?prefer=home`)은 둘이 갈릴 때 자국 상장을 대표로 세운다. **워치리스트만 쓴다** — 기업분석은 SEC companyfacts와 10-K가 붙는 등록분이라야 보고서가 채워지므로 기본값이 계속 SEC다.
+- 일본·유럽 구성종목 파일에 `englishName`을 함께 저장한다(생성 시 yfinance `longName`). 위키백과 표기만 두면 `トヨタ自動車`라 "Toyota"로 찾을 때 자국 상장이 후보에 아예 없었다. 표시 이름은 라틴 문자 쪽을 고르고 자국 표기는 별칭으로 남는다.
+- 한글 별칭은 `config/foreign_company_aliases.json`에 둔다(키는 yfinance providerSymbol). 구성종목 파일은 다시 생성되므로 거기 적으면 사라진다.
+- 같은 회사로 묶는 기준은 표시 이름 하나가 아니라 **그 항목의 모든 이름**(영문명·별칭 포함)이다. `トヨタ自動車`와 `TOYOTA MOTOR CORP`는 글자가 하나도 겹치지 않는다.
+- 가산점은 같은 등급 안의 저울이다. 정확한 이름 일치가 접두 일치를 이긴다(`_tier`) — "Mitsubishi Corporation"이 미국장 가산점을 받은 MUFG의 접두 일치와 동점이 되어 매번 애매로 떨어졌다.
 - 화면은 기업분석 입력칸에서 생성 전에 무엇으로 읽었는지 보여주고, 애매하면 후보 목록을, 모르면 경고를 낸다. 확정된 경우 `/api/analyze`에는 원문이 아니라 티커를 보낸다.
 - 워치리스트·포트폴리오 입력도 같은 해석기를 쓴다. 워치리스트는 주제 키워드를 함께 받으므로 `unknown`이 오류가 아니라 키워드이며, 이름 일부만 겹친 약한 후보(`strong: false`)에는 후보 목록을 띄우지 않는다("반도체"에 한미반도체가 걸린다고 목록을 열면 안 된다). 포트폴리오 보유 표는 입력을 벗어날 때 한 번만 해석해 티커로 바꾸고 비어 있는 시장 칸을 채운다(표 안이라 글자마다 호출하지 않는다).
 

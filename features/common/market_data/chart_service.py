@@ -32,6 +32,13 @@ def _download(symbol: str, range_key: str, interval: str) -> dict:
     end = dt.datetime.now(dt.timezone.utc)
     start = end - dt.timedelta(days=RANGES[range_key])
     frame = yf.Ticker(symbol).history(start=start.date().isoformat(), end=(end + dt.timedelta(days=1)).date().isoformat(), interval=interval, auto_adjust=False, prepost=False)
+    if frame is not None and not frame.empty and range_key == "1d":
+        # `1D`는 하루치 장중 흐름이다 — 시초가에서 종가까지 한 세션만 그린다.
+        # 이틀을 요청하는 건 휴장 다음 날이나 개장 직후에 당일 봉이 없어 빈
+        # 차트가 되지 않게 하기 위해서지, 이틀을 이어 붙이려는 게 아니다.
+        # 이어 붙이면 밤 사이 갭이 세션 안의 급락처럼 보인다.
+        last_session = frame.index[-1].date()
+        frame = frame[[stamp.date() == last_session for stamp in frame.index]]
     rows = []
     if frame is not None and not frame.empty:
         for index, row in frame.tail(2000).iterrows():

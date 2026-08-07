@@ -10634,37 +10634,37 @@ function Ni() {
 //#endregion
 //#region src/app/companyAnalysis/useCompanyResolution.ts
 var Pi = 250;
-function Fi(e) {
-	let [t, n] = (0, d.useState)(null), [r, i] = (0, d.useState)(!1), [a, o] = (0, d.useState)(null), s = (0, d.useRef)(0);
+function Fi(e, t) {
+	let n = t?.preferHome === !0, [r, i] = (0, d.useState)(null), [a, o] = (0, d.useState)(!1), [s, c] = (0, d.useState)(null), l = (0, d.useRef)(0);
 	return (0, d.useEffect)(() => {
 		let t = e.trim();
 		if (t.length < 1) {
-			n(null), i(!1);
+			i(null), o(!1);
 			return;
 		}
-		let r = s.current + 1;
-		s.current = r, i(!0);
+		let r = l.current + 1;
+		l.current = r, o(!0);
 		let a = window.setTimeout(() => {
 			(async () => {
 				try {
-					let e = await G(`/api/company/resolve?q=${encodeURIComponent(t)}&limit=6`);
-					if (s.current !== r) return;
-					n(e);
+					let e = await G(`/api/company/resolve?q=${encodeURIComponent(t)}&limit=6${n ? "&prefer=home" : ""}`);
+					if (l.current !== r) return;
+					i(e);
 				} catch {
-					if (s.current !== r) return;
-					n(null);
+					if (l.current !== r) return;
+					i(null);
 				} finally {
-					s.current === r && i(!1);
+					l.current === r && o(!1);
 				}
 			})();
 		}, Pi);
 		return () => window.clearTimeout(a);
-	}, [e]), (0, d.useEffect)(() => o(null), [e]), {
-		resolution: t,
-		pending: r,
-		picked: a,
-		setPicked: o,
-		effective: a || (t?.status === "confident" ? t.match : null)
+	}, [e, n]), (0, d.useEffect)(() => c(null), [e]), {
+		resolution: r,
+		pending: a,
+		picked: s,
+		setPicked: c,
+		effective: s || (r?.status === "confident" ? r.match : null)
 	};
 }
 //#endregion
@@ -11934,19 +11934,16 @@ var Ha = b, Ua = [
 ], Wa = [
 	{
 		value: 3,
-		dots: 1,
 		label: "최상위",
 		hint: "FOMC·금리 결정 같은 최상위 일정만"
 	},
 	{
 		value: 2,
-		dots: 2,
 		label: "중간 이상",
 		hint: "실적·주요 지표까지"
 	},
 	{
 		value: 1,
-		dots: 3,
 		label: "전부",
 		hint: "휴장일·배당까지 전부"
 	}
@@ -12219,7 +12216,7 @@ function $a({ focusSymbols: e }) {
 							1,
 							2,
 							3
-						].map((t) => /* @__PURE__ */ (0, f.jsx)("u", { className: t >= 4 - e.dots ? "on" : "" }, t))
+						].map((t) => /* @__PURE__ */ (0, f.jsx)("u", { className: t <= e.value ? "on" : "" }, t))
 					}), e.label]
 				}, e.value))]
 			}),
@@ -19496,7 +19493,7 @@ function Bl() {
 			v(!1);
 		}
 	}
-	let { resolution: D, pending: O, picked: k, setPicked: A } = Fi(a), j = a.trim() ? k ? `${k.name}로 추가합니다.` : O ? "확인 중…" : D?.status === "confident" && D.match ? `${D.match.name}로 추가합니다.` : D?.status === "ambiguous" && D.candidates.some((e) => e.strong) ? "여러 기업이 맞습니다. 고르거나, 이대로 주제 키워드로 추가합니다." : "주제 키워드로 추가합니다." : "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
+	let { resolution: D, pending: O, picked: k, setPicked: A } = Fi(a, { preferHome: !0 }), j = a.trim() ? k ? `${k.name}로 추가합니다.` : O ? "확인 중…" : D?.status === "confident" && D.match ? `${D.match.name}로 추가합니다.` : D?.status === "ambiguous" && D.candidates.some((e) => e.strong) ? "여러 기업이 맞습니다. 고르거나, 이대로 주제 키워드로 추가합니다." : "주제 키워드로 추가합니다." : "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
 	async function M(e) {
 		try {
 			return (await G(`/api/watchlist/resolve?keyword=${encodeURIComponent(e)}`)).keyword || e;

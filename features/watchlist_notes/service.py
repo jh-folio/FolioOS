@@ -221,27 +221,48 @@ def _constituent_matches_query(ticker: str, label: str, query: str) -> bool:
     return bool(label_base and (query_base == label_base or label_base in query_norm or query_base in label_norm))
 
 
+# 워치리스트도 네 시장을 본다. S&P 500만 읽던 때는 일본·유럽 기업이 여기서
+# 걸리지 않고 SEC 조회로 넘어가 미국 ADR로 등록됐다.
+_WATCHLIST_CONSTITUENTS = (
+    ("sp500_constituents.json", "US"),
+    ("europe_core_constituents.json", "EUROPE"),
+    ("nikkei225_constituents.json", "JP"),
+    ("kospi200_constituents.json", "KR"),
+)
+
+
 def watchlist_company_from_constituents(token: str):
+    from features.common.company_resolution import _foreign_aliases
+
     query = normalize(token).strip()
     if not query:
         return None
-    payload = read_json(resolve_config("sp500_constituents.json"), {})
-    rows = payload.get("companies", []) if isinstance(payload, dict) else []
-    for row in rows:
-        ticker = str(row.get("ticker") or row.get("providerSymbol") or "").strip().upper()
-        label = str(row.get("label") or row.get("name") or "").strip()
-        if not ticker or not label:
-            continue
-        if not _constituent_matches_query(ticker, label, query):
-            continue
-        company = normalize_company_entry({
-            "name": label,
-            "ticker": ticker,
-            "sector": row.get("sector") or row.get("industry") or "Unclassified",
-            "market": "US",
-            "aliases": [ticker, label, f"{label} Inc.", f"{label} Corporation"],
-        })
-        return company_public(company)
+    overlay = _foreign_aliases()
+    for filename, market in _WATCHLIST_CONSTITUENTS:
+        payload = read_json(resolve_config(filename), {})
+        rows = payload.get("companies", []) if isinstance(payload, dict) else []
+        for row in rows:
+            ticker = str(row.get("ticker") or row.get("providerSymbol") or "").strip().upper()
+            label = str(row.get("label") or row.get("name") or "").strip()
+            if not ticker or not label:
+                continue
+            # 도쿄 종목의 `ticker`는 `7203`이라 그대로는 시세가 안 나온다.
+            symbol = str(row.get("providerSymbol") or ticker).strip().upper()
+            if market == "KR":
+                symbol = ticker
+            english = str(row.get("englishName") or "").strip()
+            extra = list(overlay.get(symbol, []))
+            names = [label, english, *extra]
+            if not any(name and _constituent_matches_query(symbol, name, query) for name in names):
+                continue
+            company = normalize_company_entry({
+                "name": english or label,
+                "ticker": symbol,
+                "sector": row.get("sector") or row.get("industry") or "Unclassified",
+                "market": market,
+                "aliases": [symbol, ticker, *[n for n in names if n], f"{label} Inc.", f"{label} Corporation"],
+            })
+            return company_public(company)
     return None
 
 
@@ -255,6 +276,18 @@ def resolve_watchlist_company(query: str, hits: list[dict] | None = None) -> dic
                 return company_public(normalize_company_entry(raw_company))
     if _is_watchlist_theme_query(text):
         return {}
+    # 채점 해석기를 먼저 쓴다. 아래 사슬의 부분일치는 한 낱말 질의에 너무 헐거워,
+    # "Mitsubishi Corporation"이 시가총액 순서상 먼저 나오는 미쓰비시UFJ에 걸렸다.
+    scored = resolve_company_query(text, limit=1, prefer_home=True)
+    if scored.get("status") == "confident" and (scored.get("match") or {}).get("ticker"):
+        match = scored["match"]
+        return company_public(normalize_company_entry({
+            "name": match.get("name") or text,
+            "ticker": match["ticker"],
+            "sector": match.get("sector") or "Unclassified",
+            "market": match.get("market") or "",
+            "aliases": [match["ticker"], match.get("name") or ""],
+        }))
     return (
         watchlist_company_from_universe(text)
         or watchlist_company_from_constituents(text)
@@ -291,7 +324,7 @@ def normalize_watchlist_keyword(value: str):
     # 그대로 저장되어, "하우멧"과 "Howmet Aerospace"가 서로 다른 항목이 됐다.
     # 짧은 낱말은 건드리지 않는다 — 두 글자짜리는 테마일 때가 많고 티커와도 겹친다.
     if len(token) >= 3:
-        resolved = resolve_company_query(token, limit=1)
+        resolved = resolve_company_query(token, limit=1, prefer_home=True)
         if resolved.get("status") == "confident" and (resolved.get("match") or {}).get("name"):
             return resolved["match"]["name"]
     return raw

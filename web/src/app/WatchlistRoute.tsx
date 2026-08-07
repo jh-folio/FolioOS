@@ -221,7 +221,9 @@ export function WatchlistRoute() {
     }
   }
 
-  const { resolution, pending: resolvePending, picked, setPicked } = useCompanyResolution(keyword);
+  // 워치리스트는 회사를 따라다니는 화면이라 도쿄에 상장된 도요타를 봐야 한다.
+  // 미국 ADR(TM)은 통화도 시간대도 가격도 다른 별개의 증권이다.
+  const { resolution, pending: resolvePending, picked, setPicked } = useCompanyResolution(keyword, { preferHome: true });
   const watchlistResolutionMessage = (() => {
     const text = keyword.trim();
     if (!text) return "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";

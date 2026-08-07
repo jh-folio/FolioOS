@@ -67,6 +67,9 @@ def enrich_with_provider_metadata(
             continue
         enriched.append({
             **row,
+            # 위키백과 표기는 자국어다(`トヨタ自動車`). 그것만 두면 "Toyota"로
+            # 찾을 때 자국 상장이 후보에 아예 없고 미국 ADR만 걸린다.
+            "englishName": str(info.get("englishName") or "").strip(),
             "sector": str(info.get("sector") or "Other"),
             "industry": str(info.get("industry") or info.get("sector") or "Other"),
             "marketCap": float(cap),
@@ -91,4 +94,5 @@ def _yfinance_info(symbol: str) -> dict:  # pragma: no cover - network
         "marketCap": info.get("marketCap"),
         "currency": "GBP" if currency == "GBp" else currency,
         "financialCurrency": None,
+        "englishName": info.get("longName") or info.get("shortName"),
     }

@@ -21,7 +21,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 39931405664256.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi UFJ Financial Group, Inc."
     },
     {
       "ticker": "7203",
@@ -33,7 +34,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 34510747992064.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Toyota Motor Corporation"
     },
     {
       "ticker": "9984",
@@ -45,7 +47,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 33954186919936.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "SoftBank Group Corp."
     },
     {
       "ticker": "285A",
@@ -57,7 +60,8 @@
       "sector": "Technology",
       "industry": "Semiconductors",
       "marketCap": 29715268108288.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "KIOXIA HOLDINGS CORPORATION"
     },
     {
       "ticker": "8035",
@@ -69,7 +73,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 26619827716096.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokyo Electron Limited"
     },
     {
       "ticker": "8316",
@@ -81,7 +86,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Diversified",
       "marketCap": 25410796519424.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Mitsui Financial Group, Inc."
     },
     {
       "ticker": "6501",
@@ -93,7 +99,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 24556647481344.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Hitachi, Ltd."
     },
     {
       "ticker": "6857",
@@ -105,7 +112,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 24416454967296.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Advantest Corporation"
     },
     {
       "ticker": "9983",
@@ -117,7 +125,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Apparel Retail",
       "marketCap": 23587637428224.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Fast Retailing Co., Ltd."
     },
     {
       "ticker": "6861",
@@ -129,7 +138,8 @@
       "sector": "Technology",
       "industry": "Scientific & Technical Instruments",
       "marketCap": 21191846789120.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Keyence Corporation"
     },
     {
       "ticker": "6758",
@@ -141,7 +151,8 @@
       "sector": "Technology",
       "industry": "Consumer Electronics",
       "marketCap": 20935327350784.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sony Group Corporation"
     },
     {
       "ticker": "8411",
@@ -153,7 +164,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 20636634185728.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mizuho Financial Group, Inc."
     },
     {
       "ticker": "6098",
@@ -165,7 +177,8 @@
       "sector": "Communication Services",
       "industry": "Internet Content & Information",
       "marketCap": 17708420694016.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Recruit Holdings Co., Ltd."
     },
     {
       "ticker": "8058",
@@ -177,7 +190,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 16993015037952.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Corporation"
     },
     {
       "ticker": "8766",
@@ -189,7 +203,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Property & Casualty",
       "marketCap": 14708010647552.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokio Marine Holdings, Inc."
     },
     {
       "ticker": "6981",
@@ -201,7 +216,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 14251044372480.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Murata Manufacturing Co., Ltd."
     },
     {
       "ticker": "8001",
@@ -213,7 +229,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 13829541986304.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ITOCHU Corporation"
     },
     {
       "ticker": "7011",
@@ -225,7 +242,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 13440838008832.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Heavy Industries, Ltd."
     },
     {
       "ticker": "8031",
@@ -237,7 +255,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 13320684830720.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsui & Co., Ltd."
     },
     {
       "ticker": "9432",
@@ -249,7 +268,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 12261654528000.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NTT, Inc."
     },
     {
       "ticker": "2914",
@@ -261,7 +281,8 @@
       "sector": "Consumer Defensive",
       "industry": "Tobacco",
       "marketCap": 12116815773696.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Japan Tobacco Inc."
     },
     {
       "ticker": "6503",
@@ -273,7 +294,8 @@
       "sector": "Industrials",
       "industry": "Electrical Equipment & Parts",
       "marketCap": 11967557271552.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Electric Corporation"
     },
     {
       "ticker": "4063",
@@ -285,7 +307,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 11461298487296.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Shin-Etsu Chemical Co., Ltd."
     },
     {
       "ticker": "9434",
@@ -297,7 +320,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 11040022593536.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "SoftBank Corp."
     },
     {
       "ticker": "4519",
@@ -309,7 +333,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 11006863474688.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Chugai Pharmaceutical Co., Ltd."
     },
     {
       "ticker": "9433",
@@ -321,7 +346,8 @@
       "sector": "Communication Services",
       "industry": "Telecom Services",
       "marketCap": 10875663548416.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "KDDI Corporation"
     },
     {
       "ticker": "6752",
@@ -333,7 +359,8 @@
       "sector": "Technology",
       "industry": "Consumer Electronics",
       "marketCap": 10544521150464.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Panasonic Holdings Corporation"
     },
     {
       "ticker": "7741",
@@ -345,7 +372,8 @@
       "sector": "Healthcare",
       "industry": "Medical Instruments & Supplies",
       "marketCap": 8664029069312.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "HOYA Corporation"
     },
     {
       "ticker": "7974",
@@ -357,7 +385,8 @@
       "sector": "Communication Services",
       "industry": "Electronic Gaming & Multimedia",
       "marketCap": 8563542458368.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nintendo Co., Ltd."
     },
     {
       "ticker": "4502",
@@ -369,7 +398,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 8413283614720.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Takeda Pharmaceutical Company Limited"
     },
     {
       "ticker": "5803",
@@ -381,7 +411,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 8399369011200.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Fujikura Ltd."
     },
     {
       "ticker": "8053",
@@ -393,7 +424,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 8153185910784.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Corporation"
     },
     {
       "ticker": "8002",
@@ -405,7 +437,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 7909804081152.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Marubeni Corporation"
     },
     {
       "ticker": "8015",
@@ -417,7 +450,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 7646986371072.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Toyota Tsusho Corporation"
     },
     {
       "ticker": "5802",
@@ -429,7 +463,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 7398319718400.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Electric Industries, Ltd."
     },
     {
       "ticker": "8591",
@@ -441,7 +476,8 @@
       "sector": "Financial Services",
       "industry": "Financial Conglomerates",
       "marketCap": 7150847393792.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ORIX Corporation"
     },
     {
       "ticker": "6723",
@@ -453,7 +489,8 @@
       "sector": "Technology",
       "industry": "Semiconductors",
       "marketCap": 6917906235392.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Renesas Electronics Corporation"
     },
     {
       "ticker": "6146",
@@ -465,7 +502,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 6913732902912.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Disco Corporation"
     },
     {
       "ticker": "8750",
@@ -477,7 +515,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Life",
       "marketCap": 6891840733184.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Daiichi Life Group, Inc."
     },
     {
       "ticker": "8725",
@@ -489,7 +528,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Property & Casualty",
       "marketCap": 6887827832832.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "MS&AD Insurance Group Holdings, Inc."
     },
     {
       "ticker": "6178",
@@ -501,7 +541,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 6614489235456.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Japan Post Holdings Co., Ltd."
     },
     {
       "ticker": "6301",
@@ -513,7 +554,8 @@
       "sector": "Industrials",
       "industry": "Farm & Heavy Construction Machinery",
       "marketCap": 6380505268224.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Komatsu Ltd."
     },
     {
       "ticker": "7267",
@@ -525,7 +567,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 6368261570560.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Honda Motor Co., Ltd."
     },
     {
       "ticker": "4578",
@@ -537,7 +580,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 6202269368320.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Otsuka Holdings Co., Ltd."
     },
     {
       "ticker": "8630",
@@ -549,7 +593,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Property & Casualty",
       "marketCap": 6200669765632.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sompo Holdings, Inc."
     },
     {
       "ticker": "6367",
@@ -561,7 +606,8 @@
       "sector": "Industrials",
       "industry": "Building Products & Equipment",
       "marketCap": 6197153890304.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Daikin Industries,Ltd."
     },
     {
       "ticker": "6701",
@@ -573,7 +619,8 @@
       "sector": "Technology",
       "industry": "Information Technology Services",
       "marketCap": 6142299209728.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NEC Corporation"
     },
     {
       "ticker": "6702",
@@ -585,7 +632,8 @@
       "sector": "Technology",
       "industry": "Information Technology Services",
       "marketCap": 6045274996736.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Fujitsu Limited"
     },
     {
       "ticker": "6954",
@@ -597,7 +645,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 6028200509440.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Fanuc Corporation"
     },
     {
       "ticker": "6762",
@@ -609,7 +658,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 5979185348608.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "TDK Corporation"
     },
     {
       "ticker": "4062",
@@ -621,7 +671,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 5681593712640.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Ibiden Co.,Ltd."
     },
     {
       "ticker": "8308",
@@ -633,7 +684,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 5130170662912.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Resona Holdings, Inc."
     },
     {
       "ticker": "2802",
@@ -645,7 +697,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 5090677620736.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Ajinomoto Co., Inc."
     },
     {
       "ticker": "6971",
@@ -657,7 +710,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 5019348762624.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kyocera Corporation"
     },
     {
       "ticker": "5108",
@@ -669,7 +723,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 4879013642240.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Bridgestone Corporation"
     },
     {
       "ticker": "6902",
@@ -681,7 +736,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 4811005100032.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "DENSO Corporation"
     },
     {
       "ticker": "6273",
@@ -693,7 +749,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 4764824764416.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "SMC Corporation"
     },
     {
       "ticker": "4568",
@@ -705,7 +762,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 4703803408384.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Daiichi Sankyo Company, Limited"
     },
     {
       "ticker": "4661",
@@ -717,7 +775,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Leisure",
       "marketCap": 4690409422848.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Oriental Land Co., Ltd."
     },
     {
       "ticker": "3382",
@@ -729,7 +788,8 @@
       "sector": "Consumer Defensive",
       "industry": "Grocery Stores",
       "marketCap": 4600368201728.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Seven & i Holdings Co., Ltd."
     },
     {
       "ticker": "4901",
@@ -741,7 +801,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 4578239578112.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "FUJIFILM Holdings Corporation"
     },
     {
       "ticker": "8309",
@@ -753,7 +814,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 4573320708096.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Mitsui Trust Group, Inc."
     },
     {
       "ticker": "8604",
@@ -765,7 +827,8 @@
       "sector": "Financial Services",
       "industry": "Capital Markets",
       "marketCap": 4554860003328.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nomura Holdings, Inc."
     },
     {
       "ticker": "8802",
@@ -777,7 +840,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate - Diversified",
       "marketCap": 4552640167936.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Estate Co., Ltd."
     },
     {
       "ticker": "6920",
@@ -789,7 +853,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 4183959797760.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Lasertec Corporation"
     },
     {
       "ticker": "8801",
@@ -801,7 +866,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate - Diversified",
       "marketCap": 3987139723264.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsui Fudosan Co., Ltd."
     },
     {
       "ticker": "1605",
@@ -813,7 +879,8 @@
       "sector": "Energy",
       "industry": "Oil & Gas E&P",
       "marketCap": 3944472379392.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Inpex Corporation"
     },
     {
       "ticker": "4503",
@@ -825,7 +892,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - General",
       "marketCap": 3867831697408.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Astellas Pharma Inc."
     },
     {
       "ticker": "9020",
@@ -837,7 +905,8 @@
       "sector": "Industrials",
       "industry": "Railroads",
       "marketCap": 3803831861248.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "East Japan Railway Company"
     },
     {
       "ticker": "7751",
@@ -849,7 +918,8 @@
       "sector": "Technology",
       "industry": "Computer Hardware",
       "marketCap": 3787201445888.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Canon Inc."
     },
     {
       "ticker": "7269",
@@ -861,7 +931,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 3715781361664.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Suzuki Motor Corporation"
     },
     {
       "ticker": "8267",
@@ -873,7 +944,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 3665777917952.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Aeon Co., Ltd."
     },
     {
       "ticker": "9022",
@@ -885,7 +957,8 @@
       "sector": "Industrials",
       "industry": "Railroads",
       "marketCap": 3642591543296.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Central Japan Railway Company"
     },
     {
       "ticker": "5401",
@@ -897,7 +970,8 @@
       "sector": "Basic Materials",
       "industry": "Steel",
       "marketCap": 3512069521408.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nippon Steel Corporation"
     },
     {
       "ticker": "5020",
@@ -909,7 +983,8 @@
       "sector": "Energy",
       "industry": "Oil & Gas Refining & Marketing",
       "marketCap": 3424872562688.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ENEOS Holdings, Inc."
     },
     {
       "ticker": "4543",
@@ -921,7 +996,8 @@
       "sector": "Healthcare",
       "industry": "Medical Instruments & Supplies",
       "marketCap": 3374989967360.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Terumo Corporation"
     },
     {
       "ticker": "8830",
@@ -933,7 +1009,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate Services",
       "marketCap": 3244664029184.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Realty & Development Co., Ltd."
     },
     {
       "ticker": "4689",
@@ -945,7 +1022,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Internet Retail",
       "marketCap": 3164218064896.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "LY Corporation"
     },
     {
       "ticker": "6326",
@@ -957,7 +1035,8 @@
       "sector": "Industrials",
       "industry": "Farm & Heavy Construction Machinery",
       "marketCap": 2953562292224.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kubota Corporation"
     },
     {
       "ticker": "4004",
@@ -969,7 +1048,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 2927408447488.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Resonac Holdings Corporation"
     },
     {
       "ticker": "4452",
@@ -981,7 +1061,8 @@
       "sector": "Consumer Defensive",
       "industry": "Household & Personal Products",
       "marketCap": 2883997925376.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kao Corporation"
     },
     {
       "ticker": "7013",
@@ -993,7 +1074,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 2853425905664.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "IHI Corporation"
     },
     {
       "ticker": "7832",
@@ -1005,7 +1087,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Leisure",
       "marketCap": 2826499784704.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "BANDAI NAMCO Holdings Inc."
     },
     {
       "ticker": "1925",
@@ -1017,7 +1100,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate - Development",
       "marketCap": 2795113283584.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Daiwa House Industry Co., Ltd."
     },
     {
       "ticker": "5801",
@@ -1029,7 +1113,8 @@
       "sector": "Industrials",
       "industry": "Electrical Equipment & Parts",
       "marketCap": 2757008818176.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Furukawa Electric Co., Ltd."
     },
     {
       "ticker": "6361",
@@ -1041,7 +1126,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 2745467666432.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Ebara Corporation"
     },
     {
       "ticker": "9766",
@@ -1053,7 +1139,8 @@
       "sector": "Communication Services",
       "industry": "Electronic Gaming & Multimedia",
       "marketCap": 2736885334016.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Konami Group Corporation"
     },
     {
       "ticker": "9735",
@@ -1065,7 +1152,8 @@
       "sector": "Industrials",
       "industry": "Security & Protection Services",
       "marketCap": 2655825690624.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "SECOM CO., LTD."
     },
     {
       "ticker": "7532",
@@ -1077,7 +1165,8 @@
       "sector": "Consumer Defensive",
       "industry": "Discount Stores",
       "marketCap": 2641204084736.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Pan Pacific International Holdings Corporation"
     },
     {
       "ticker": "9503",
@@ -1089,7 +1178,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Renewable",
       "marketCap": 2608563748864.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "The Kansai Electric Power Company, Incorporated"
     },
     {
       "ticker": "7735",
@@ -1101,7 +1191,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 2588612231168.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "SCREEN Holdings Co., Ltd."
     },
     {
       "ticker": "4307",
@@ -1113,7 +1204,8 @@
       "sector": "Technology",
       "industry": "Information Technology Services",
       "marketCap": 2557817126912.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nomura Research Institute, Ltd."
     },
     {
       "ticker": "7012",
@@ -1125,7 +1217,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 2553231179776.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kawasaki Heavy Industries, Ltd."
     },
     {
       "ticker": "8601",
@@ -1137,7 +1230,8 @@
       "sector": "Financial Services",
       "industry": "Capital Markets",
       "marketCap": 2514697846784.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Daiwa Securities Group Inc."
     },
     {
       "ticker": "1812",
@@ -1149,7 +1243,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 2422745333760.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kajima Corporation"
     },
     {
       "ticker": "8795",
@@ -1161,7 +1256,8 @@
       "sector": "Financial Services",
       "industry": "Insurance - Life",
       "marketCap": 2408213643264.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "T&D Holdings, Inc."
     },
     {
       "ticker": "2502",
@@ -1173,7 +1269,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Brewers",
       "marketCap": 2372770201600.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Asahi Group Holdings, Ltd."
     },
     {
       "ticker": "4507",
@@ -1185,7 +1282,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 2346990174208.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Shionogi & Co., Ltd."
     },
     {
       "ticker": "9101",
@@ -1197,7 +1295,8 @@
       "sector": "Industrials",
       "industry": "Marine Shipping",
       "marketCap": 2339818438656.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nippon Yusen Kabushiki Kaisha"
     },
     {
       "ticker": "8697",
@@ -1209,7 +1308,8 @@
       "sector": "Financial Services",
       "industry": "Financial Data & Stock Exchanges",
       "marketCap": 2338379268096.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Japan Exchange Group, Inc."
     },
     {
       "ticker": "5713",
@@ -1221,7 +1321,8 @@
       "sector": "Basic Materials",
       "industry": "Other Industrial Metals & Mining",
       "marketCap": 2299020705792.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Metal Mining Co., Ltd."
     },
     {
       "ticker": "6988",
@@ -1233,7 +1334,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 2271638454272.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nitto Denko Corporation"
     },
     {
       "ticker": "7453",
@@ -1245,7 +1347,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 2261328592896.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Ryohin Keikaku Co., Ltd."
     },
     {
       "ticker": "2503",
@@ -1257,7 +1360,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Brewers",
       "marketCap": 2259295141888.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kirin Holdings Company, Limited"
     },
     {
       "ticker": "3407",
@@ -1269,7 +1373,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 2201098125312.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Asahi Kasei Corporation"
     },
     {
       "ticker": "6504",
@@ -1281,7 +1386,8 @@
       "sector": "Industrials",
       "industry": "Electrical Equipment & Parts",
       "marketCap": 2189871415296.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Fuji Electric Co., Ltd."
     },
     {
       "ticker": "1928",
@@ -1293,7 +1399,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Residential Construction",
       "marketCap": 2174191009792.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sekisui House, Ltd."
     },
     {
       "ticker": "1802",
@@ -1305,7 +1412,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 2158503526400.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Obayashi Corporation"
     },
     {
       "ticker": "1801",
@@ -1317,7 +1425,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 2118303481856.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Taisei Corporation"
     },
     {
       "ticker": "7186",
@@ -1329,7 +1438,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 2061790740480.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Yokohama Financial Group, Inc."
     },
     {
       "ticker": "9104",
@@ -1341,7 +1451,8 @@
       "sector": "Industrials",
       "industry": "Marine Shipping",
       "marketCap": 2051387555840.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsui O.S.K. Lines, Ltd."
     },
     {
       "ticker": "9502",
@@ -1353,7 +1464,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Diversified",
       "marketCap": 2044472590336.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Chubu Electric Power Company, Incorporated"
     },
     {
       "ticker": "5706",
@@ -1365,7 +1477,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 2024171372544.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsui Kinzoku Company, Limited"
     },
     {
       "ticker": "9532",
@@ -1377,7 +1490,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Regulated Gas",
       "marketCap": 2019336781824.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Osaka Gas Co., Ltd."
     },
     {
       "ticker": "9531",
@@ -1389,7 +1503,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Regulated Gas",
       "marketCap": 1962061594624.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokyo Gas Co.,Ltd."
     },
     {
       "ticker": "7733",
@@ -1401,7 +1516,8 @@
       "sector": "Healthcare",
       "industry": "Medical Devices",
       "marketCap": 1920515047424.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Olympus Corporation"
     },
     {
       "ticker": "6963",
@@ -1413,7 +1529,8 @@
       "sector": "Technology",
       "industry": "Semiconductors",
       "marketCap": 1833280602112.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ROHM Co., Ltd."
     },
     {
       "ticker": "3659",
@@ -1425,7 +1542,8 @@
       "sector": "Communication Services",
       "industry": "Electronic Gaming & Multimedia",
       "marketCap": 1829751095296.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NEXON Co., Ltd."
     },
     {
       "ticker": "4755",
@@ -1437,7 +1555,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Internet Retail",
       "marketCap": 1825899675648.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Rakuten Group, Inc."
     },
     {
       "ticker": "8331",
@@ -1449,7 +1568,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 1815261216768.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "The Chiba Bank, Ltd."
     },
     {
       "ticker": "7272",
@@ -1461,7 +1581,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 1751532437504.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Yamaha Motor Co., Ltd."
     },
     {
       "ticker": "7270",
@@ -1473,7 +1594,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 1744177070080.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Subaru Corporation"
     },
     {
       "ticker": "3402",
@@ -1485,7 +1607,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Textile Manufacturing",
       "marketCap": 1732044390400.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Toray Industries, Inc."
     },
     {
       "ticker": "5831",
@@ -1497,7 +1620,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 1708903366656.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Shizuoka Financial Group,Inc."
     },
     {
       "ticker": "5333",
@@ -1509,7 +1633,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 1668632805376.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NGK Corporation"
     },
     {
       "ticker": "6479",
@@ -1521,7 +1646,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 1644935249920.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "MINEBEA MITSUMI Inc."
     },
     {
       "ticker": "9107",
@@ -1533,7 +1659,8 @@
       "sector": "Industrials",
       "industry": "Marine Shipping",
       "marketCap": 1644101894144.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kawasaki Kisen Kaisha, Ltd."
     },
     {
       "ticker": "1803",
@@ -1545,7 +1672,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 1609027813376.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Shimizu Corporation"
     },
     {
       "ticker": "4188",
@@ -1557,7 +1685,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 1568443072512.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Chemical Group Corporation"
     },
     {
       "ticker": "7202",
@@ -1569,7 +1698,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 1534600544256.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Isuzu Motors Limited"
     },
     {
       "ticker": "5019",
@@ -1581,7 +1711,8 @@
       "sector": "Energy",
       "industry": "Oil & Gas Refining & Marketing",
       "marketCap": 1487277522944.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Idemitsu Kosan Co.,Ltd."
     },
     {
       "ticker": "9843",
@@ -1593,7 +1724,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Furnishings, Fixtures & Appliances",
       "marketCap": 1480449851392.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nitori Holdings Co., Ltd."
     },
     {
       "ticker": "2801",
@@ -1605,7 +1737,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 1476901076992.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kikkoman Corporation"
     },
     {
       "ticker": "8354",
@@ -1617,7 +1750,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 1418164699136.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Fukuoka Financial Group, Inc."
     },
     {
       "ticker": "6976",
@@ -1629,7 +1763,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 1397265137664.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Taiyo Yuden Co., Ltd."
     },
     {
       "ticker": "6506",
@@ -1641,7 +1776,8 @@
       "sector": "Industrials",
       "industry": "Electrical Equipment & Parts",
       "marketCap": 1395918372864.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "YASKAWA Electric Corporation"
     },
     {
       "ticker": "9202",
@@ -1653,7 +1789,8 @@
       "sector": "Industrials",
       "industry": "Airlines",
       "marketCap": 1372441542656.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ANA Holdings Inc."
     },
     {
       "ticker": "6841",
@@ -1665,7 +1802,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 1328508174336.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Yokogawa Electric Corporation"
     },
     {
       "ticker": "7911",
@@ -1677,7 +1815,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 1318539886592.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "TOPPAN Holdings Inc."
     },
     {
       "ticker": "9021",
@@ -1689,7 +1828,8 @@
       "sector": "Industrials",
       "industry": "Railroads",
       "marketCap": 1317012504576.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "West Japan Railway Company"
     },
     {
       "ticker": "3436",
@@ -1701,7 +1841,8 @@
       "sector": "Technology",
       "industry": "Semiconductor Equipment & Materials",
       "marketCap": 1313522843648.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumco Corporation"
     },
     {
       "ticker": "4911",
@@ -1713,7 +1854,8 @@
       "sector": "Consumer Defensive",
       "industry": "Household & Personal Products",
       "marketCap": 1306353205248.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Shiseido Company, Limited"
     },
     {
       "ticker": "9201",
@@ -1725,7 +1867,8 @@
       "sector": "Industrials",
       "industry": "Airlines",
       "marketCap": 1304527110144.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Japan Airlines Co., Ltd."
     },
     {
       "ticker": "4151",
@@ -1737,7 +1880,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 1284898422784.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kyowa Kirin Co., Ltd."
     },
     {
       "ticker": "4523",
@@ -1749,7 +1893,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 1275706736640.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Eisai Co., Ltd."
     },
     {
       "ticker": "7912",
@@ -1761,7 +1906,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 1273496076288.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Dai Nippon Printing Co., Ltd."
     },
     {
       "ticker": "3099",
@@ -1773,7 +1919,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 1267371212800.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Isetan Mitsukoshi Holdings Ltd."
     },
     {
       "ticker": "9147",
@@ -1785,7 +1932,8 @@
       "sector": "Industrials",
       "industry": "Integrated Freight & Logistics",
       "marketCap": 1245808295936.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nippon Express Holdings, Inc."
     },
     {
       "ticker": "5201",
@@ -1797,7 +1945,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 1224450244608.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "AGC Inc."
     },
     {
       "ticker": "5101",
@@ -1809,7 +1958,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 1190521602048.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "The Yokohama Rubber Company, Limited"
     },
     {
       "ticker": "9602",
@@ -1821,7 +1971,8 @@
       "sector": "Communication Services",
       "industry": "Entertainment",
       "marketCap": 1187467624448.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Toho Co., Ltd."
     },
     {
       "ticker": "5411",
@@ -1833,7 +1984,8 @@
       "sector": "Basic Materials",
       "industry": "Steel",
       "marketCap": 1169536581632.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "JFE Holdings, Inc."
     },
     {
       "ticker": "6645",
@@ -1845,7 +1997,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 1166208925696.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "OMRON Corporation"
     },
     {
       "ticker": "6305",
@@ -1857,7 +2010,8 @@
       "sector": "Industrials",
       "industry": "Farm & Heavy Construction Machinery",
       "marketCap": 1166006419456.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Hitachi Construction Machinery Co., Ltd."
     },
     {
       "ticker": "2413",
@@ -1869,7 +2023,8 @@
       "sector": "Healthcare",
       "industry": "Health Information Services",
       "marketCap": 1157990449152.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "M3, Inc."
     },
     {
       "ticker": "7201",
@@ -1881,7 +2036,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 1152757399552.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nissan Motor Co., Ltd."
     },
     {
       "ticker": "2768",
@@ -1893,7 +2049,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 1120820527104.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sojitz Corporation"
     },
     {
       "ticker": "5332",
@@ -1905,7 +2062,8 @@
       "sector": "Industrials",
       "industry": "Building Products & Equipment",
       "marketCap": 1092622352384.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "TOTO LTD."
     },
     {
       "ticker": "4021",
@@ -1917,7 +2075,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 1033607118848.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nissan Chemical Corporation"
     },
     {
       "ticker": "6532",
@@ -1929,7 +2088,8 @@
       "sector": "Industrials",
       "industry": "Consulting Services",
       "marketCap": 1029591924736.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Baycurrent, Inc."
     },
     {
       "ticker": "3092",
@@ -1941,7 +2101,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Internet Retail",
       "marketCap": 989816815616.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ZOZO, Inc."
     },
     {
       "ticker": "2269",
@@ -1953,7 +2114,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 978912083968.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Meiji Holdings Co., Ltd."
     },
     {
       "ticker": "6724",
@@ -1965,7 +2127,8 @@
       "sector": "Technology",
       "industry": "Computer Hardware",
       "marketCap": 973139083264.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Seiko Epson Corporation"
     },
     {
       "ticker": "9005",
@@ -1977,7 +2140,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 940824068096.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokyu Corporation"
     },
     {
       "ticker": "3289",
@@ -1989,7 +2153,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate - Diversified",
       "marketCap": 915863437312.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokyu Fudosan Holdings Corporation"
     },
     {
       "ticker": "6113",
@@ -2001,7 +2166,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 914985975808.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Amada Co., Ltd."
     },
     {
       "ticker": "4324",
@@ -2013,7 +2179,8 @@
       "sector": "Communication Services",
       "industry": "Advertising Agencies",
       "marketCap": 898947547136.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Dentsu Group Inc."
     },
     {
       "ticker": "7752",
@@ -2025,7 +2192,8 @@
       "sector": "Industrials",
       "industry": "Business Equipment & Supplies",
       "marketCap": 866140553216.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Ricoh Company, Ltd."
     },
     {
       "ticker": "9501",
@@ -2037,7 +2205,8 @@
       "sector": "Utilities",
       "industry": "Utilities - Renewable",
       "marketCap": 843021287424.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokyo Electric Power Company Holdings, Incorporated"
     },
     {
       "ticker": "4704",
@@ -2049,7 +2218,8 @@
       "sector": "Technology",
       "industry": "Software - Infrastructure",
       "marketCap": 839205388288.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Trend Micro Incorporated"
     },
     {
       "ticker": "4042",
@@ -2061,7 +2231,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 816525737984.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tosoh Corporation"
     },
     {
       "ticker": "4005",
@@ -2073,7 +2244,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 808426340352.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Chemical Company, Limited"
     },
     {
       "ticker": "5406",
@@ -2085,7 +2257,8 @@
       "sector": "Basic Materials",
       "industry": "Steel",
       "marketCap": 779833376768.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kobe Steel, Ltd."
     },
     {
       "ticker": "4183",
@@ -2097,7 +2270,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 773522980864.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsui Chemicals, Inc."
     },
     {
       "ticker": "2501",
@@ -2109,7 +2283,8 @@
       "sector": "Consumer Defensive",
       "industry": "Beverages - Brewers",
       "marketCap": 744792326144.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sapporo Breweries Limited"
     },
     {
       "ticker": "4751",
@@ -2121,7 +2296,8 @@
       "sector": "Communication Services",
       "industry": "Advertising Agencies",
       "marketCap": 740871766016.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "CyberAgent, Inc."
     },
     {
       "ticker": "543A",
@@ -2133,7 +2309,8 @@
       "sector": "Industrials",
       "industry": "Farm & Heavy Construction Machinery",
       "marketCap": 736007553024.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "ARCHION Corporation"
     },
     {
       "ticker": "4385",
@@ -2145,7 +2322,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Internet Retail",
       "marketCap": 728621907968.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mercari, Inc."
     },
     {
       "ticker": "3861",
@@ -2157,7 +2335,8 @@
       "sector": "Basic Materials",
       "industry": "Paper & Paper Products",
       "marketCap": 723802390528.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Oji Holdings Corporation"
     },
     {
       "ticker": "7261",
@@ -2169,7 +2348,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 723407405056.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mazda Motor Corporation"
     },
     {
       "ticker": "3086",
@@ -2181,7 +2361,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 717929775104.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "J. Front Retailing Co., Ltd."
     },
     {
       "ticker": "6302",
@@ -2193,7 +2374,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 712830746624.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Heavy Industries, Ltd."
     },
     {
       "ticker": "1808",
@@ -2205,7 +2387,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Residential Construction",
       "marketCap": 703821840384.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "HASEKO Corporation"
     },
     {
       "ticker": "6473",
@@ -2217,7 +2400,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 686164279296.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "JTEKT Corporation"
     },
     {
       "ticker": "8804",
@@ -2229,7 +2413,8 @@
       "sector": "Real Estate",
       "industry": "Real Estate Services",
       "marketCap": 678914752512.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokyo Tatemono Co., Ltd."
     },
     {
       "ticker": "8253",
@@ -2241,7 +2426,8 @@
       "sector": "Financial Services",
       "industry": "Credit Services",
       "marketCap": 658948030464.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Credit Saison Co., Ltd."
     },
     {
       "ticker": "8233",
@@ -2253,7 +2439,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Department Stores",
       "marketCap": 657817337856.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Takashimaya Company, Limited"
     },
     {
       "ticker": "7731",
@@ -2265,7 +2452,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Leisure",
       "marketCap": 650927538176.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nikon Corporation"
     },
     {
       "ticker": "1721",
@@ -2277,7 +2465,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 607142543360.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "COMSYS Holdings Corporation"
     },
     {
       "ticker": "9009",
@@ -2289,7 +2478,8 @@
       "sector": "Industrials",
       "industry": "Railroads",
       "marketCap": 605210214400.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Keisei Electric Railway Co., Ltd."
     },
     {
       "ticker": "9064",
@@ -2301,7 +2491,8 @@
       "sector": "Industrials",
       "industry": "Trucking",
       "marketCap": 595351961600.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Yamato Holdings Co., Ltd."
     },
     {
       "ticker": "6471",
@@ -2313,7 +2504,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Parts",
       "marketCap": 583515308032.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NSK Ltd."
     },
     {
       "ticker": "7951",
@@ -2325,7 +2517,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Leisure",
       "marketCap": 578464514048.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Yamaha Corporation"
     },
     {
       "ticker": "5711",
@@ -2337,7 +2530,8 @@
       "sector": "Basic Materials",
       "industry": "Other Industrial Metals & Mining",
       "marketCap": 572628533248.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Materials Corporation"
     },
     {
       "ticker": "9007",
@@ -2349,7 +2543,8 @@
       "sector": "Industrials",
       "industry": "Railroads",
       "marketCap": 571721383936.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Odakyu Electric Railway Co., Ltd."
     },
     {
       "ticker": "4506",
@@ -2361,7 +2556,8 @@
       "sector": "Healthcare",
       "industry": "Drug Manufacturers - Specialty & Generic",
       "marketCap": 571283734528.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sumitomo Pharma Co., Ltd."
     },
     {
       "ticker": "9001",
@@ -2373,7 +2569,8 @@
       "sector": "Industrials",
       "industry": "Railroads",
       "marketCap": 567040868352.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tobu Railway Co., Ltd."
     },
     {
       "ticker": "5631",
@@ -2385,7 +2582,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 564079362048.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "The Japan Steel Works, Ltd."
     },
     {
       "ticker": "1963",
@@ -2397,7 +2595,8 @@
       "sector": "Industrials",
       "industry": "Engineering & Construction",
       "marketCap": 562786598912.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "JGC Holdings Corporation"
     },
     {
       "ticker": "3405",
@@ -2409,7 +2608,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 552277704704.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kuraray Co., Ltd."
     },
     {
       "ticker": "2282",
@@ -2421,7 +2621,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 550469500928.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NH Foods Ltd."
     },
     {
       "ticker": "2002",
@@ -2433,7 +2634,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 536859508736.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nisshin Seifun Group Inc."
     },
     {
       "ticker": "2871",
@@ -2445,7 +2647,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 533313650688.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nichirei Corporation"
     },
     {
       "ticker": "8252",
@@ -2457,7 +2660,8 @@
       "sector": "Financial Services",
       "industry": "Credit Services",
       "marketCap": 511200854016.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Marui Group Co., Ltd."
     },
     {
       "ticker": "5714",
@@ -2469,7 +2673,8 @@
       "sector": "Basic Materials",
       "industry": "Other Industrial Metals & Mining",
       "marketCap": 506250264576.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Dowa Holdings Co., Ltd."
     },
     {
       "ticker": "7211",
@@ -2481,7 +2686,8 @@
       "sector": "Consumer Cyclical",
       "industry": "Auto Manufacturers",
       "marketCap": 456244396032.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Mitsubishi Motors Corporation"
     },
     {
       "ticker": "8304",
@@ -2493,7 +2699,8 @@
       "sector": "Financial Services",
       "industry": "Banks - Regional",
       "marketCap": 445725442048.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Aozora Bank, Ltd."
     },
     {
       "ticker": "5233",
@@ -2505,7 +2712,8 @@
       "sector": "Basic Materials",
       "industry": "Building Materials",
       "marketCap": 445634019328.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Taiheiyo Cement Corporation"
     },
     {
       "ticker": "9008",
@@ -2517,7 +2725,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 438548955136.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Keio Corporation"
     },
     {
       "ticker": "6770",
@@ -2529,7 +2738,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 421057331200.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Alps Alpine Co., Ltd."
     },
     {
       "ticker": "6753",
@@ -2541,7 +2751,8 @@
       "sector": "Technology",
       "industry": "Consumer Electronics",
       "marketCap": 403609026560.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Sharp Corporation"
     },
     {
       "ticker": "1332",
@@ -2553,7 +2764,8 @@
       "sector": "Consumer Defensive",
       "industry": "Packaged Foods",
       "marketCap": 368020389888.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nissui Corporation"
     },
     {
       "ticker": "6526",
@@ -2565,7 +2777,8 @@
       "sector": "Industrials",
       "industry": "Electrical Equipment & Parts",
       "marketCap": 366354300928.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Socionext Inc."
     },
     {
       "ticker": "5214",
@@ -2577,7 +2790,8 @@
       "sector": "Technology",
       "industry": "Electronic Components",
       "marketCap": 363260510208.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Nippon Electric Glass Co., Ltd."
     },
     {
       "ticker": "5301",
@@ -2589,7 +2803,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 346307035136.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokai Carbon Co., Ltd."
     },
     {
       "ticker": "4061",
@@ -2601,7 +2816,8 @@
       "sector": "Basic Materials",
       "industry": "Chemicals",
       "marketCap": 333679099904.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Denka Company Limited"
     },
     {
       "ticker": "3401",
@@ -2613,7 +2829,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 314645839872.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Teijin Limited"
     },
     {
       "ticker": "4208",
@@ -2625,7 +2842,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 312710365184.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "UBE Corporation"
     },
     {
       "ticker": "6103",
@@ -2637,7 +2855,8 @@
       "sector": "Industrials",
       "industry": "Specialty Industrial Machinery",
       "marketCap": 309994422272.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Okuma Corporation"
     },
     {
       "ticker": "4902",
@@ -2649,7 +2868,8 @@
       "sector": "Industrials",
       "industry": "Business Equipment & Supplies",
       "marketCap": 298882269184.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Konica Minolta, Inc."
     },
     {
       "ticker": "4043",
@@ -2661,7 +2881,8 @@
       "sector": "Basic Materials",
       "industry": "Specialty Chemicals",
       "marketCap": 291090104320.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Tokuyama Corporation"
     },
     {
       "ticker": "2432",
@@ -2673,7 +2894,8 @@
       "sector": "Industrials",
       "industry": "Conglomerates",
       "marketCap": 230497255424.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "DeNA Co., Ltd."
     },
     {
       "ticker": "6472",
@@ -2685,7 +2907,8 @@
       "sector": "Industrials",
       "industry": "Tools & Accessories",
       "marketCap": 230430654464.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "NTN Corporation"
     },
     {
       "ticker": "3697",
@@ -2697,7 +2920,8 @@
       "sector": "Technology",
       "industry": "Software - Application",
       "marketCap": 217136529408.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "SHIFT Inc."
     },
     {
       "ticker": "7004",
@@ -2709,7 +2933,8 @@
       "sector": "Industrials",
       "industry": "Pollution & Treatment Controls",
       "marketCap": 207428304896.0,
-      "capCurrency": "JPY"
+      "capCurrency": "JPY",
+      "englishName": "Kanadevia Corporation"
     }
   ]
 }

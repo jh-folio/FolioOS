@@ -29,13 +29,22 @@ def _label_index() -> dict[str, str]:
         except Exception:
             continue
         for row in payload.get("companies") or []:
-            label = str((row or {}).get("label") or "").strip()
+            # 일본 구성종목의 라벨은 한자·가나다. 한국어 화면에서 `三井住友
+            # フィナンシャルグループ`보다 `Sumitomo Mitsui Financial Group`이 읽힌다.
+            label = str((row or {}).get("englishName") or "").strip() or str((row or {}).get("label") or "").strip()
             if not label:
                 continue
-            for key in ((row or {}).get("ticker"), (row or {}).get("providerSymbol")):
+            keys = [(row or {}).get("ticker"), (row or {}).get("providerSymbol")]
+            for key in list(keys):
                 symbol = str(key or "").strip().upper()
-                if symbol:
-                    index.setdefault(symbol, label)
+                if not symbol:
+                    continue
+                index.setdefault(symbol, label)
+                # KOSPI 구성종목은 `373220`으로 저장되는데 캘린더가 받는 티커는
+                # yfinance 표기라 `373220.KS`다. 접미사를 붙인 형태도 색인한다.
+                if symbol.isdigit() and len(symbol) == 6:
+                    index.setdefault(f"{symbol}.KS", label)
+                    index.setdefault(f"{symbol}.KQ", label)
     return index
 
 
