@@ -49,6 +49,12 @@ research-inbox/
 
 RSS 피드 탭의 `RSS 수집/가져오기`는 공개 RSS를 읽어 `research-inbox/rss/`에 Markdown으로 저장합니다.
 내부 수집기는 Folio OS Evidence Intake 경로를 사용하며, RSS는 `collector=rss`인 입력원입니다.
+
+수집 범위는 설정의 **관심 시장**(`features/common/market_scope.py`, `data/market-scope.json`, 기본 US/KR)이
+정합니다. 범위 밖 시장 전용 피드는 수집에서 제외되고(GLOBAL 피드는 항상 수집), 시장을 다시 켜면
+그 시장 피드만 즉시 나이 제한 없이 수집합니다(`--only-markets`, `--max-age-days 0`). RSS는 피드가
+내어주는 최근 항목까지만 받을 수 있으므로 꺼져 있던 기간의 공백은 남습니다. 목록 API도 같은 범위를
+지키며, GLOBAL/UNKNOWN 태그 항목은 어떤 범위에서도 보입니다.
 신규 Markdown은 YAML front matter에 `collector`, `source_type`, `normalized_url`, `collection_status`,
 `query_source`, `reliability_tier`, `language`, `country`를 저장하고, 기존 list-style RSSArchive Markdown은 계속 읽기 호환합니다.
 

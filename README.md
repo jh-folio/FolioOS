@@ -153,6 +153,8 @@ Write the target however you think of it — a ticker, a company name, a Korean 
 
 Ask an investment question and Folio OS shows you the research plan and the material it can actually use before anything runs. You approve, then it generates.
 
+The plan itself is written by AI by default — it takes around 40 seconds to shape axes and search phrases that fit your question, and you can pick the instant rule-based plan when you are in a hurry. If the plan misses the point, describe the change in plain words ("drop the valuation axis and go deeper on supply") and only that part is rewritten; there is also a button to start the plan over.
+
 You can add your own context — holdings you care about, a period to check — under the optional analysis conditions. That text is carried as **your own thinking and is never counted as a source**. You can also narrow the search with a saved collection of material; those are search rules stored in `data/smart-collections.json`, not evidence themselves. The detail view shows how many items currently match and what changed since last time. Opening or refreshing it never starts the AI on its own.
 
 Reports are saved under `data/topic-reports/` with the plan you approved, the sources used, the gaps that remain, a quality assessment, and the market state at the time. Inside a report, external sources and your own thinking are always shown as separate layers.
@@ -177,7 +179,9 @@ None of these screens tell you what to buy or sell.
 
 ### Settings
 
-Configure appearance and motion, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+Configure appearance and motion, interest markets, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+
+**Interest markets** picks which of the four markets (US, Korea, Europe, Japan) Folio OS collects and shows — the default is US and Korea. A market you turn off stops being collected and disappears from the RSS list, briefing generation choices, the market calendar, and the market narrative. Global material such as oil and dollar news always stays visible. Turning a market back on starts collecting it immediately, but articles from the time it was off only come back as far as the feeds still publish them.
 
 ---
 
