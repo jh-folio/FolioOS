@@ -11,10 +11,10 @@ WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 
 EXPECTED_OSES = {"windows-2022", "macos-14", "ubuntu-24.04"}
 ACTION_PINS = {
-    "actions/checkout": "08eba0b27e820071cde6df949e0beb9ba4906955",
-    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
-    "actions/setup-node": "49933ea5288caeca8642d1e84afbd3f7d6820020",
-    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
+    "actions/setup-node": "820762786026740c76f36085b0efc47a31fe5020",
+    "actions/upload-artifact": "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
 }
 GITLEAKS_CHECKSUMS = {
     "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
@@ -24,7 +24,7 @@ GITLEAKS_CHECKSUMS = {
 }
 LOCK_COMPILE = (
     "python -m uv pip compile --universal --python-version 3.12 --resolution highest "
-    "--generate-hashes --exclude-newer 2026-07-16T00:00:00Z"
+    "--generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z"
 )
 LOCK_COMPILE_FULL = f"{LOCK_COMPILE} --output-file requirements.lock.py312.txt requirements.txt"
 TEST_LOCK_COMPILE_FULL = (
@@ -61,14 +61,14 @@ jobs:
       GITLEAKS_DARWIN_X64_SHA256: dfe101a4db2255fc85120ac7f3d25e4342c3c20cf749f2c20a18081af1952709
       GITLEAKS_DARWIN_ARM64_SHA256: b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5
     steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12.10"
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: "22.17.0"
       - name: Regenerate runtime and test locks twice, normalize LF, and byte-compare
@@ -76,14 +76,14 @@ jobs:
           python -m pip install --require-hashes --no-deps -r requirements-bootstrap.lock.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.committed.txt')"
           python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.committed.txt')"
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
           python scripts/normalize_lock_lf.py requirements.lock.py312.txt
           python scripts/normalize_lock_lf.py requirements-test.lock.py312.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.first.txt')"
           python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.first.txt')"
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
           python scripts/normalize_lock_lf.py requirements.lock.py312.txt
           python scripts/normalize_lock_lf.py requirements-test.lock.py312.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.second.txt')"
@@ -109,7 +109,7 @@ jobs:
       GITLEAKS_VERSION: "8.30.1"
       GITLEAKS_LINUX_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
-      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           ref: ${{ github.sha }}
@@ -120,7 +120,7 @@ jobs:
           python scripts/package_release.py --output dist/release
           python scripts/verify_release.py --release-dir dist/release/FolioOS-v0.2.0 --expected-commit "${{ github.sha }}"
           gitleaks dir dist/release/FolioOS-v0.2.0 --redact=100 --report-path .qa/gitleaks/artifact.sarif
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: FolioOS-v0.2.0
           path: dist/release/FolioOS-v0.2.0.zip
@@ -248,7 +248,7 @@ def test_validator_accepts_exact_compliant_workflow_shape() -> None:
         ("extra_os", COMPLIANT_WORKFLOW.replace("ubuntu-24.04]", "ubuntu-24.04, ubuntu-latest]", 1)),
         (
             "multiple_upload_jobs",
-            COMPLIANT_WORKFLOW.replace("      - run: python -m pytest features tests -q", "      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02\n      - run: python -m pytest features tests -q"),
+            COMPLIANT_WORKFLOW.replace("      - run: python -m pytest features tests -q", "      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a\n      - run: python -m pytest features tests -q"),
         ),
         ("mutable_checkout", COMPLIANT_WORKFLOW.replace(f"actions/checkout@{ACTION_PINS['actions/checkout']}", "actions/checkout@v4", 1)),
         ("mutable_setup_python", COMPLIANT_WORKFLOW.replace(f"actions/setup-python@{ACTION_PINS['actions/setup-python']}", "actions/setup-python@v6")),
