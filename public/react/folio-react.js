@@ -11043,7 +11043,7 @@ function Qi({ chart: e }) {
 					p !== null && o && s.length > 0 && /* @__PURE__ */ (0, f.jsxs)("div", {
 						className: "analysis-chart-hover",
 						"data-side": p > h.width / 2 ? "left" : "right",
-						style: { left: `${p + h.offset}px` },
+						style: p > h.width / 2 ? { right: `calc(100% - ${p + h.offset}px)` } : { left: `${p + h.offset}px` },
 						children: [/* @__PURE__ */ (0, f.jsx)("b", { children: c[v] || "" }), s.map((e, t) => /* @__PURE__ */ (0, f.jsxs)("p", { children: [
 							/* @__PURE__ */ (0, f.jsx)("span", {
 								className: "analysis-chart-swatch",
@@ -13981,7 +13981,7 @@ function Ro(e) {
 }
 function zo(e, t) {
 	let n = Ro(t);
-	return e === "validation" ? "투자 질문을 1~500자로 입력하세요." : n === "evidence_confirmation_required" || n === "resolution_changed" ? "자료 상태가 계획 미리보기와 달라졌습니다. 최신 계획을 다시 미리보고 확인하세요." : n === "no_index" || n === "index_unavailable" ? "연구 인덱스를 아직 읽을 수 없습니다. RSS 자료를 수집하고 인덱스를 만든 뒤 다시 시도하세요." : n === "rss_unavailable" ? "RSS 자료를 읽을 수 없습니다. RSS 수집 상태를 확인한 뒤 다시 시도하세요." : n === "cli_unavailable" ? "선택한 CLI 어댑터를 사용할 수 없습니다. 자동 어댑터를 선택하거나 설정을 확인하세요." : e === "degraded" ? "근거가 없는 규칙 기반 보고서를 실행하려면 근거 부족 확인이 필요합니다." : e === "generation" ? "생성 작업에 실패했습니다. 입력과 승인 계획은 유지되므로 다시 실행할 수 있습니다." : e === "report" ? "저장된 보고서를 열지 못했습니다. 목록으로 돌아가 다시 시도하세요." : t instanceof Error && t.message ? t.message : "요청을 처리하지 못했습니다. 입력을 확인하고 다시 시도하세요.";
+	return e === "validation" ? "투자 질문을 1~500자로 입력하세요." : n === "evidence_confirmation_required" || n === "resolution_changed" ? "자료 상태가 계획 미리보기와 달라졌습니다. 최신 계획을 다시 미리보고 확인하세요." : n === "no_index" || n === "index_unavailable" ? "연구 인덱스를 아직 읽을 수 없습니다. RSS 자료를 수집하고 인덱스를 만든 뒤 다시 시도하세요." : n === "rss_unavailable" ? "RSS 자료를 읽을 수 없습니다. RSS 수집 상태를 확인한 뒤 다시 시도하세요." : n === "cli_unavailable" ? "선택한 CLI 어댑터를 사용할 수 없습니다. 자동 어댑터를 선택하거나 설정을 확인하세요." : e === "degraded" ? "근거가 없는 규칙 기반 보고서를 실행하려면 근거 부족 확인이 필요합니다." : e === "generation" ? "생성 작업에 실패했습니다. 입력과 승인 계획은 유지되므로 다시 실행할 수 있습니다." : e === "report" ? "저장된 리서치를 열지 못했습니다. 목록으로 돌아가 다시 시도하세요." : t instanceof Error && t.message ? t.message : "요청을 처리하지 못했습니다. 입력을 확인하고 다시 시도하세요.";
 }
 function Bo(e) {
 	return {
@@ -14485,7 +14485,7 @@ function Uo() {
 				}),
 				/* @__PURE__ */ (0, f.jsx)("h1", {
 					tabIndex: -1,
-					children: "저장된 리포트를 여는 중입니다"
+					children: "저장된 리서치를 여는 중입니다"
 				}),
 				/* @__PURE__ */ (0, f.jsx)("p", { children: "보고서 본문과 함께 사용한 자료 목록을 불러오는 중입니다." })
 			]
@@ -14506,7 +14506,7 @@ function Uo() {
 						className: "section-kicker",
 						children: "DEEP RESEARCH"
 					}),
-					/* @__PURE__ */ (0, f.jsx)("h1", { children: e ? "저장된 리포트를 찾을 수 없습니다" : "리포트를 열 수 없습니다" }),
+					/* @__PURE__ */ (0, f.jsx)("h1", { children: e ? "저장된 리서치를 찾을 수 없습니다" : "리서치를 열 수 없습니다" }),
 					/* @__PURE__ */ (0, f.jsx)("p", {
 						"data-qa": e ? "dr-not-found" : void 0,
 						children: z || "보고서 주소나 저장 데이터를 확인한 뒤 목록에서 다시 여세요."
@@ -14647,7 +14647,7 @@ function Uo() {
 				className: "react-dashboard-warning",
 				"data-qa": "dr-readiness-loading",
 				role: "status",
-				children: "저장된 리포트와 자료 상태를 확인하는 중입니다."
+				children: "저장된 리서치와 자료 상태를 확인하는 중입니다."
 			}),
 			ne && D === "recoverable-error" && /* @__PURE__ */ (0, f.jsx)("p", {
 				className: "react-dashboard-error",
@@ -14849,21 +14849,23 @@ function Uo() {
 				role: "status",
 				children: ie
 			}),
-			/* @__PURE__ */ (0, f.jsx)("div", {
-				className: "section-head compact analysis-archive-head topicrpt-saved-panel",
-				children: /* @__PURE__ */ (0, f.jsxs)("div", { children: [/* @__PURE__ */ (0, f.jsx)("h2", {
-					ref: pe,
-					className: "section-title",
-					tabIndex: -1,
-					children: "저장된 리포트"
-				}), /* @__PURE__ */ (0, f.jsx)("p", {
-					className: "section-subtitle",
-					children: "카드를 누르면 원문·근거·개인 레이어를 확인할 수 있습니다."
-				})] })
-			}),
-			/* @__PURE__ */ (0, f.jsx)("div", {
-				className: "report-feed",
-				children: ke.length ? ke.map((e) => /* @__PURE__ */ (0, f.jsxs)("section", {
+			/* @__PURE__ */ (0, f.jsxs)("section", {
+				className: "react-analysis-feed",
+				"aria-label": "저장된 리서치",
+				children: [/* @__PURE__ */ (0, f.jsxs)("div", {
+					className: "react-section-heading",
+					children: [/* @__PURE__ */ (0, f.jsxs)("div", { children: [/* @__PURE__ */ (0, f.jsx)("p", {
+						className: "section-kicker",
+						children: "Saved Research"
+					}), /* @__PURE__ */ (0, f.jsx)("h2", {
+						ref: pe,
+						tabIndex: -1,
+						children: "저장된 리서치"
+					})] }), /* @__PURE__ */ (0, f.jsx)("span", {
+						"aria-live": "polite",
+						children: `${t.length}건`
+					})]
+				}), ke.length ? ke.map((e) => /* @__PURE__ */ (0, f.jsxs)("section", {
 					className: "report-feed-group",
 					children: [/* @__PURE__ */ (0, f.jsxs)("div", {
 						className: "report-feed-group-head",
@@ -14929,7 +14931,7 @@ function Uo() {
 					className: "report-feed-empty",
 					"data-qa": "dr-report-list-empty",
 					children: "저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요."
-				})
+				})]
 			})
 		]
 	});

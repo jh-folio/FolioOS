@@ -15671,14 +15671,17 @@ select { min-height: 36px; padding: 0 12px; }
   font-size: var(--fs-body-sm, 13px);
   white-space: nowrap;
   pointer-events: none;
+  /* 내용이 요구하는 폭을 먼저 잡는다. 절대 배치의 기본값(남은 자리에 맞춰 줄이기)에
+     맡기면 칸이 서로 포개지고, nowrap이라 줄바꿈으로 도망갈 곳도 없다. */
+  width: max-content;
+  max-width: 100%;
 }
-/* 좁은 화면에서는 상자가 카드를 넘는다. 이름을 줄이고 숫자를 남긴다. */
+/* 좁은 화면에서는 상자가 카드를 넘는다. 이름을 줄이고 숫자는 남긴다. */
 @media (max-width: 720px) {
-  .analysis-chart-hover { max-width: 60%; }
   .analysis-chart-hover p span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
 }
 .analysis-chart-hover[data-side="right"] { transform: translateX(12px); }
-.analysis-chart-hover[data-side="left"] { transform: translateX(-100%) translateX(-12px); }
+.analysis-chart-hover[data-side="left"] { transform: translateX(-12px); }
 .analysis-chart-hover b { color: var(--folio-ink); font-weight: var(--fw-medium); }
 .analysis-chart-hover p {
   display: grid;

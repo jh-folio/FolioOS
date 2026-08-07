@@ -364,7 +364,7 @@ function errorCopy(kind: ErrorKind, error: unknown): string {
   if (code === "cli_unavailable") return "선택한 CLI 어댑터를 사용할 수 없습니다. 자동 어댑터를 선택하거나 설정을 확인하세요.";
   if (kind === "degraded") return "근거가 없는 규칙 기반 보고서를 실행하려면 근거 부족 확인이 필요합니다.";
   if (kind === "generation") return "생성 작업에 실패했습니다. 입력과 승인 계획은 유지되므로 다시 실행할 수 있습니다.";
-  if (kind === "report") return "저장된 보고서를 열지 못했습니다. 목록으로 돌아가 다시 시도하세요.";
+  if (kind === "report") return "저장된 리서치를 열지 못했습니다. 목록으로 돌아가 다시 시도하세요.";
   if (error instanceof Error && error.message) return error.message;
   return "요청을 처리하지 못했습니다. 입력을 확인하고 다시 시도하세요.";
 }
@@ -917,7 +917,7 @@ export function DeepResearchRoute() {
       <div className="react-deep-research-route" data-deep-research-route>
         <section className="topicrpt-report-state" data-qa="dr-report-loading" role="status" aria-live="polite" aria-busy="true">
           <p className="section-kicker">DEEP RESEARCH</p>
-          <h1 tabIndex={-1}>저장된 리포트를 여는 중입니다</h1>
+          <h1 tabIndex={-1}>저장된 리서치를 여는 중입니다</h1>
           <p>보고서 본문과 함께 사용한 자료 목록을 불러오는 중입니다.</p>
         </section>
       </div>
@@ -935,7 +935,7 @@ export function DeepResearchRoute() {
           aria-live="assertive"
         >
           <p className="section-kicker">DEEP RESEARCH</p>
-          <h1>{notFound ? "저장된 리포트를 찾을 수 없습니다" : "리포트를 열 수 없습니다"}</h1>
+          <h1>{notFound ? "저장된 리서치를 찾을 수 없습니다" : "리서치를 열 수 없습니다"}</h1>
           <p data-qa={notFound ? "dr-not-found" : undefined}>{error || "보고서 주소나 저장 데이터를 확인한 뒤 목록에서 다시 여세요."}</p>
           <button className="btn" type="button" data-qa="dr-report-return" onClick={returnToReportList}>딥 리서치 목록으로 돌아가기</button>
         </section>
@@ -999,7 +999,7 @@ export function DeepResearchRoute() {
         actions={<button className="btn" type="button" onClick={() => void loadReports()} disabled={loading}>{loading ? "불러오는 중" : "새로고침"}</button>}
       />
 
-      {phase === "readiness" && <p className="react-dashboard-warning" data-qa="dr-readiness-loading" role="status">저장된 리포트와 자료 상태를 확인하는 중입니다.</p>}
+      {phase === "readiness" && <p className="react-dashboard-warning" data-qa="dr-readiness-loading" role="status">저장된 리서치와 자료 상태를 확인하는 중입니다.</p>}
       {readinessKind && phase === "recoverable-error" && <p className="react-dashboard-error" data-qa={`dr-readiness-${readinessKind}`}>{error}</p>}
       {showError && <div className="react-dashboard-error topicrpt-recoverable-error" data-qa={`dr-error-${errorKind || "request"}`} role="alert"><strong>다시 시도할 수 있습니다</strong><span data-qa={`dr-error-${(errorReason || "request").replace(/_/g, "-")}`} data-error-code={errorReason || "request"}>{error}</span><p>입력한 질문과 컨텍스트, 마지막 계획은 유지됩니다.</p><button className="btn" type="button" onClick={() => { setError(""); setErrorKind(null); setErrorReason(""); setPhase(planEnvelope ? "plan-review" : "draft"); }}>돌아가서 수정</button></div>}
 
@@ -1076,10 +1076,16 @@ export function DeepResearchRoute() {
 
       {status && phase !== "generation" && phase !== "report" && <p className="react-dashboard-warning" data-qa="dr-status" role="status">{status}</p>}
 
-      <div className="section-head compact analysis-archive-head topicrpt-saved-panel">
-        <div><h2 ref={listHeadingRef} className="section-title" tabIndex={-1}>저장된 리포트</h2><p className="section-subtitle">카드를 누르면 원문·근거·개인 레이어를 확인할 수 있습니다.</p></div>
-      </div>
-      <div className="report-feed">
+      {/* 저장 목록은 브리핑·기업분석과 같은 서식을 쓴다. 화면마다 제목·건수 표시가
+          달라 보이면 같은 종류의 목록이라는 것이 읽히지 않는다. */}
+      <section className="react-analysis-feed" aria-label="저장된 리서치">
+        <div className="react-section-heading">
+          <div>
+            <p className="section-kicker">Saved Research</p>
+            <h2 ref={listHeadingRef} tabIndex={-1}>저장된 리서치</h2>
+          </div>
+          <span aria-live="polite">{`${reports.length}건`}</span>
+        </div>
         {groupedReports.length ? groupedReports.map((group) => (
           <section className="report-feed-group" key={group.key}>
             <div className="report-feed-group-head"><span className="report-feed-group-name">{group.key}</span><span className="report-feed-group-meta">{groupMeta(group.rows.length, group.rows[0]?.generatedAt || group.rows[0]?.date)}</span></div>
@@ -1096,7 +1102,7 @@ export function DeepResearchRoute() {
             </div>
           </section>
         )) : <div className="report-feed-empty" data-qa="dr-report-list-empty">저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요.</div>}
-      </div>
+      </section>
     </div>
   );
 }

@@ -609,7 +609,13 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
           <div
             className="analysis-chart-hover"
             data-side={anchor > plot.width / 2 ? "left" : "right"}
-            style={{ left: `${anchor + plot.offset}px` }}
+            /* 오른쪽 절반에서는 left가 아니라 right로 세운다. left만 주면 상자가
+               쓸 수 있는 폭이 `컨테이너 - left`로 잘려, 이름과 숫자가 서로 겹친다. */
+            style={
+              anchor > plot.width / 2
+                ? { right: `calc(100% - ${anchor + plot.offset}px)` }
+                : { left: `${anchor + plot.offset}px` }
+            }
           >
             <b>{labels[index] || ""}</b>
             {series.map((item, seriesIndex) => (
