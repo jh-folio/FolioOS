@@ -801,12 +801,7 @@
       const compact = heatmapCompact(stage);
       const nodes = heatmapNodes(snapshot.rows || [], compact);
       card.dataset.heatmapCompact = compact ? "true" : "false";
-      if (compact && !card.querySelector(".briefing-heatmap-hint")) {
-        const hint = document.createElement("p");
-        hint.className = "briefing-heatmap-hint";
-        hint.textContent = "업종을 누르면 그 안의 종목을 봅니다.";
-        stage.insertAdjacentElement("beforebegin", hint);
-      }
+      if (compact) buildHeatmapPath(card, stage, nodes);
       return Promise.resolve(root.Plotly.newPlot(stage, [{
         type: "treemap",
         ids: nodes.ids,
@@ -826,7 +821,9 @@
         textposition: "middle center",
         hovertemplate: "%{customdata[0]}<br>등락 %{customdata[1]:+.2f}%<br>종가 %{customdata[2]:,.2f}<br>%{customdata[3]}<extra></extra>",
         tiling: { packing: "squarify", pad: 0 },
-        pathbar: { visible: true, thickness: compact ? 18 : 12, textfont: { color: chartTheme().text, size: compact ? 11 : 8 } },
+        // 좁은 화면에서는 Plotly pathbar를 끈다. 18px짜리 띠에 글자도 비어 있어
+        // 나갈 방법이 보이지 않았다. 대신 우리 경로 버튼을 stage 위에 둔다.
+        pathbar: { visible: !compact, thickness: 12, textfont: { color: chartTheme().text, size: 8 } },
         // 좁을 때는 한 층씩 본다. 253x620에서 재보면 깊이를 열수록 읽을 수 있는
         // 타일이 줄어든다 — 전체 637개 중 ~50개, 산업까지 137개 중 24개,
         // 섹터만 12개 중 12개. 들어가는 일은 아래 handler가 한다.
@@ -846,6 +843,70 @@
     // `maxdepth`를 걸면 하위가 렌더되지 않아 Plotly의 기본 드릴다운이 걸릴 대상을
     // 못 찾는다(섹터를 눌러도 아무 일이 없었다). 우리가 직접 `level`을 옮긴다.
     // 뿌리에서는 한 층(섹터)만, 들어간 뒤에는 그 노드와 자식 한 층을 그린다.
+    let heatmapPath = null;
+
+    function goToLevel(id) {
+      root.Plotly.restyle(stage, { level: [id], maxdepth: [id ? 2 : 1] });
+      heatmapPath?.render(id);
+    }
+
+    /** 어디까지 들어왔고 어떻게 나가는지. Plotly pathbar를 대신한다. */
+    function buildHeatmapPath(cardEl, stageEl, nodes) {
+      const nav = cardEl.querySelector(".briefing-heatmap-path") || document.createElement("nav");
+      nav.className = "briefing-heatmap-path";
+      nav.setAttribute("aria-label", "히트맵 위치");
+      if (!nav.isConnected) stageEl.insertAdjacentElement("beforebegin", nav);
+      const labelOf = (id) => {
+        const index = nodes.ids.indexOf(id);
+        return index >= 0 ? nodes.labels[index] : "";
+      };
+      const parentOf = (id) => {
+        const index = nodes.ids.indexOf(id);
+        return index >= 0 ? nodes.parents[index] : "";
+      };
+      heatmapPath = {
+        render(levelId) {
+          const chain = [];
+          let cursor = String(levelId || "");
+          while (cursor) {
+            chain.unshift(cursor);
+            cursor = parentOf(cursor);
+          }
+          const steps = [{ id: "", label: "전체" }, ...chain.map((id) => ({ id, label: labelOf(id) }))];
+          nav.innerHTML = "";
+          steps.forEach((step, index) => {
+            const last = index === steps.length - 1;
+            if (index > 0) {
+              const sep = document.createElement("span");
+              sep.className = "briefing-heatmap-path-sep";
+              sep.setAttribute("aria-hidden", "true");
+              sep.textContent = "›";
+              nav.appendChild(sep);
+            }
+            if (last) {
+              const here = document.createElement("span");
+              here.className = "briefing-heatmap-path-here";
+              here.setAttribute("aria-current", "true");
+              here.textContent = step.label;
+              nav.appendChild(here);
+              return;
+            }
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btn btn--text";
+            button.textContent = step.label;
+            button.addEventListener("click", () => goToLevel(step.id));
+            nav.appendChild(button);
+          });
+          const hint = document.createElement("span");
+          hint.className = "briefing-heatmap-hint";
+          hint.textContent = steps.length > 2 ? "" : "칸을 누르면 그 안을 봅니다.";
+          if (hint.textContent) nav.appendChild(hint);
+        },
+      };
+      heatmapPath.render("");
+    }
+
     function bindCompactDrill() {
       if (stage.dataset.drillBound === "true" || typeof stage.on !== "function") return;
       stage.dataset.drillBound = "true";
@@ -853,7 +914,7 @@
         const id = String(event?.points?.[0]?.id || "");
         // 종목이 마지막 층이다. 더 들어갈 곳이 없다.
         if (id.startsWith("ticker:")) return false;
-        root.Plotly.restyle(stage, { level: [id], maxdepth: [id ? 2 : 1] });
+        goToLevel(id);
         return false;
       });
     }
@@ -867,7 +928,8 @@
       root.Plotly?.purge?.(stage);
       stage.dataset.rendered = "";
       stage.dataset.drillBound = "";
-      card.querySelector(".briefing-heatmap-hint")?.remove();
+      card.querySelector(".briefing-heatmap-path")?.remove();
+      heatmapPath = null;
       plot();
     };
     root.addEventListener?.("resize", syncDepth);
