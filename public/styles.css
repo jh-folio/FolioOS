@@ -15697,3 +15697,70 @@ select { min-height: 36px; padding: 0 12px; }
   color: var(--folio-ink);
   font-weight: var(--fw-medium);
 }
+
+/* ============================================================
+   승인 전 계획 수정 (Deep Research)
+   화면은 "확인하세요"라고 하면서 고칠 수단을 주지 않았다.
+   ============================================================ */
+.topicrpt-plan-origin {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-2) 0 0;
+}
+
+.topicrpt-plan-editor {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-panel);
+  background: var(--surface-group);
+}
+
+.topicrpt-plan-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--sp-3);
+}
+
+.topicrpt-plan-hint {
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-meta);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--fw-normal);
+}
+
+.topicrpt-axis-editor {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.topicrpt-axis-edit {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--r-group);
+  background: var(--folio-surface-clean);
+}
+
+/* 뺀 축은 지우지 않고 흐리게 남긴다. 되살릴 수 있어야 한다. */
+.topicrpt-axis-edit[data-removed="true"] { opacity: 0.55; }
+
+.topicrpt-axis-edit-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.topicrpt-axis-edit-head input { flex: 1 1 auto; min-width: 0; }
+
+.topicrpt-plan-editor-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+@media (max-width: 720px) {
+  .topicrpt-plan-editor-row { grid-template-columns: 1fr; }
+}

@@ -19,7 +19,10 @@ import {
   type MarketStatePolicy,
   type MarketStateScope,
   type PlanPreviewEnvelope,
+  type PlanEdits,
   type PlanRequest,
+  type TopicPlan,
+  type RevisePlanRequest,
 } from "../api";
 import { openReactAgentDock, patchReactAgentContextScope, setReactAgentContextScope } from "./agentContext";
 import { PROPOSAL_LIFECYCLE_EVENT, proposalTargetsContext, type ProposalLifecycleResult } from "./agentProposalLifecycle";
@@ -37,6 +40,9 @@ import {
   parsePersonalOverlayPayload,
   parseTopicReportPayload,
   parseTopicReportSummaries,
+  plannerModeLabel,
+  REPORT_TYPE_LABELS,
+  reportTypeLabel,
   type MarketStateResolutionPayload,
   type TopicReport,
   type TopicReportSummary,
@@ -107,7 +113,7 @@ function DeepResearchProvenance({ report }: { readonly report: TopicReport }) {
             <>
               <dl className="topicrpt-provenance-facts">
                 <div><dt>주제</dt><dd>{plan.topic || "미기록"}</dd></div>
-                <div><dt>보고서 유형</dt><dd>{plan.reportType || "미기록"}</dd></div>
+                <div><dt>보고서 유형</dt><dd>{plan.reportType ? reportTypeLabel(plan.reportType) : "미기록"}</dd></div>
                 <div><dt>사용자 의도</dt><dd>{plan.userIntent || "미기록"}</dd></div>
               </dl>
               <h4>리서치 질문</h4>{renderList(plan.researchQuestions)}
@@ -396,6 +402,168 @@ function renderList(items: readonly string[], empty = "없음") {
   return <ul className="topicrpt-inline-list">{items.map((item) => <li key={item}>{item}</li>)}</ul>;
 }
 
+type AxisDraft = {
+  key: string;
+  label: string;
+  questions: string;
+  searchQueries: string;
+  removed: boolean;
+};
+
+type PlanDraft = {
+  topicLabel: string;
+  reportType: string;
+  researchQuestions: string;
+  searchQueries: string;
+  axes: AxisDraft[];
+};
+
+const lines = (values: readonly string[]) => values.join("\n");
+const unlines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
+
+function planDraft(plan: TopicPlan): PlanDraft {
+  return {
+    topicLabel: plan.topicLabel,
+    reportType: plan.reportType,
+    researchQuestions: lines(plan.researchQuestions),
+    searchQueries: lines(plan.searchQueries),
+    axes: plan.analysisAxes.map((axis) => ({
+      key: axis.key,
+      label: axis.label,
+      questions: lines(axis.questions),
+      searchQueries: lines(axis.searchQueries),
+      removed: false,
+    })),
+  };
+}
+
+function draftEdits(draft: PlanDraft): PlanEdits {
+  return {
+    topicLabel: draft.topicLabel.trim(),
+    reportType: draft.reportType,
+    researchQuestions: unlines(draft.researchQuestions),
+    searchQueries: unlines(draft.searchQueries),
+    axes: draft.axes.map((axis) => ({
+      key: axis.key,
+      label: axis.label.trim(),
+      questions: unlines(axis.questions),
+      searchQueries: unlines(axis.searchQueries),
+      removed: axis.removed,
+    })),
+  };
+}
+
+/** 승인 전에 계획을 고친다.
+ *
+ *  화면은 "실행 전에 리서치 계획을 확인하세요"라고 말하면서 고칠 수단이 없었다.
+ *  계획이 어긋났을 때 할 수 있는 일이 질문을 다시 쓰는 것뿐이면 확인이 아니다.
+ *  수정은 서버가 적용하고 승인은 새 계획 해시로 갈아끼운다.
+ */
+function PlanEditor({
+  plan,
+  busy,
+  onSave,
+  onCancel,
+}: {
+  readonly plan: TopicPlan;
+  readonly busy: boolean;
+  readonly onSave: (edits: PlanEdits) => void;
+  readonly onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState<PlanDraft>(() => planDraft(plan));
+  const patch = (change: Partial<PlanDraft>) => setDraft((current) => ({ ...current, ...change }));
+  const patchAxis = (key: string, change: Partial<AxisDraft>) =>
+    setDraft((current) => ({
+      ...current,
+      axes: current.axes.map((axis) => (axis.key === key ? { ...axis, ...change } : axis)),
+    }));
+  const remaining = draft.axes.filter((axis) => !axis.removed).length;
+
+  return (
+    <div className="topicrpt-plan-editor" data-qa="dr-plan-editor">
+      <div className="topicrpt-plan-editor-row">
+        <label className="field">
+          <span>주제 이름</span>
+          <input
+            value={draft.topicLabel}
+            maxLength={200}
+            onChange={(event) => patch({ topicLabel: event.currentTarget.value })}
+            aria-label="주제 이름"
+          />
+        </label>
+        <label className="field">
+          <span>보고서 유형</span>
+          <select
+            value={draft.reportType}
+            onChange={(event) => patch({ reportType: event.currentTarget.value })}
+            aria-label="보고서 유형"
+          >
+            {Object.entries(REPORT_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="field">
+        <span>리서치 질문 (한 줄에 하나)</span>
+        <textarea rows={3} value={draft.researchQuestions} onChange={(event) => patch({ researchQuestions: event.currentTarget.value })} />
+      </label>
+      <label className="field">
+        <span>검색 질의 (한 줄에 하나)</span>
+        <textarea rows={4} value={draft.searchQueries} onChange={(event) => patch({ searchQueries: event.currentTarget.value })} />
+        <small className="topicrpt-plan-hint">이 질의가 그대로 자료 검색을 돌립니다. 한 단어나 질문 전문보다 2~5어절 구문이 정확합니다.</small>
+      </label>
+      <div className="topicrpt-axis-editor">
+        {draft.axes.map((axis) => (
+          <section className="topicrpt-axis-edit" key={axis.key} data-removed={axis.removed ? "true" : undefined}>
+            <div className="topicrpt-axis-edit-head">
+              <input
+                value={axis.label}
+                maxLength={160}
+                disabled={axis.removed}
+                onChange={(event) => patchAxis(axis.key, { label: event.currentTarget.value })}
+                aria-label={`${axis.key} 축 이름`}
+              />
+              <button
+                className="btn btn--text"
+                type="button"
+                onClick={() => patchAxis(axis.key, { removed: !axis.removed })}
+                disabled={!axis.removed && remaining <= 1}
+              >
+                {axis.removed ? "되살리기" : "이 축 빼기"}
+              </button>
+            </div>
+            {!axis.removed && (
+              <>
+                <label className="field">
+                  <span>질문</span>
+                  <textarea rows={2} value={axis.questions} onChange={(event) => patchAxis(axis.key, { questions: event.currentTarget.value })} />
+                </label>
+                <label className="field">
+                  <span>검색 질의</span>
+                  <textarea rows={2} value={axis.searchQueries} onChange={(event) => patchAxis(axis.key, { searchQueries: event.currentTarget.value })} />
+                </label>
+              </>
+            )}
+          </section>
+        ))}
+      </div>
+      <div className="topicrpt-plan-editor-actions">
+        <button
+          className="btn btn--primary"
+          type="button"
+          data-qa="dr-plan-save"
+          disabled={busy || !draft.topicLabel.trim() || remaining < 1}
+          onClick={() => onSave(draftEdits(draft))}
+        >
+          {busy ? "저장 중" : "계획 저장"}
+        </button>
+        <button className="btn" type="button" onClick={onCancel} disabled={busy}>취소</button>
+      </div>
+    </div>
+  );
+}
+
 function PlanReview({
   envelope,
   executionMode,
@@ -407,6 +575,11 @@ function PlanReview({
   degradedConfirming,
   onConfirmDegraded,
   onCancelDegraded,
+  editing,
+  revising,
+  onEditPlan,
+  onRevise,
+  onCancelEdit,
 }: {
   readonly envelope: PlanPreviewEnvelope;
   readonly executionMode: ExecutionMode;
@@ -418,6 +591,11 @@ function PlanReview({
   readonly degradedConfirming: boolean;
   readonly onConfirmDegraded: () => void;
   readonly onCancelDegraded: () => void;
+  readonly editing: boolean;
+  readonly revising: boolean;
+  readonly onEditPlan: () => void;
+  readonly onRevise: (edits: PlanEdits) => void;
+  readonly onCancelEdit: () => void;
 }) {
   const { approvedRequest, preview } = envelope;
   const plan = approvedRequest.topicPlan;
@@ -429,11 +607,18 @@ function PlanReview({
         <span className="section-kicker">조사 계획 확인</span>
         <h2 id="dr-plan-heading">실행 전에 리서치 계획을 확인하세요</h2>
         <p>계획의 범위와 자료 상태를 확인한 뒤에만 생성 작업을 시작합니다. 이 계획은 승인한 요청의 일부로 기록됩니다.</p>
+        <p className="topicrpt-plan-origin">
+          <span className="chip">{plannerModeLabel(plan.plannerMode)}</span>
+          {!editing && (
+            <button className="btn btn--text" type="button" data-qa="dr-plan-edit" onClick={onEditPlan}>계획 수정</button>
+          )}
+        </p>
       </div>
-      <div className="topicrpt-plan-grid">
+      {editing && <PlanEditor plan={plan} busy={revising} onSave={onRevise} onCancel={onCancelEdit} />}
+      {!editing && <div className="topicrpt-plan-grid">
         <div className="topicrpt-plan-card">
           <span className="topicrpt-plan-label">보고서 유형</span>
-          <strong>{plan.reportType}</strong>
+          <strong>{reportTypeLabel(plan.reportType)}</strong>
           <span className="topicrpt-plan-label">분석 축</span>
           {plan.analysisAxes.length ? (
             <ul className="topicrpt-axis-list">
@@ -467,7 +652,7 @@ function PlanReview({
           <span className="topicrpt-plan-label">시장 상태 배경</span>
           <p>{approvedRequest.marketStatePolicy === "exclude" ? "제외" : "현재 상태 포함"} · 범위 {approvedRequest.marketStateScope === "AUTO" ? "자동" : approvedRequest.marketStateScope}<br /><small>실행 시 상태, 기준 시각, 최신성, 출처를 별도 배경으로 기록합니다.</small></p>
         </div>
-      </div>
+      </div>}
       {zeroEvidence.required && reason && zeroEvidence.resolutionFingerprint && (
         <div className="topicrpt-degraded-panel" data-qa={`dr-degraded-${reason === "no_index" ? "no-index" : reason}`} data-reason-code={reason} role="alert">
           <strong>근거 부족 상태를 확인해야 합니다</strong>
@@ -535,6 +720,8 @@ export function DeepResearchRoute() {
   const [status, setStatus] = useState("");
   const [actionBusy, setActionBusy] = useState("");
   const [proposalReloadKey, setProposalReloadKey] = useState(0);
+  const [planEditing, setPlanEditing] = useState(false);
+  const [planRevising, setPlanRevising] = useState(false);
   const [reportQuery, setReportQuery] = useState("");
   const [reportView, setReportView] = useState<SavedViewMode>("recent");
   const requestId = useRef(0);
@@ -799,6 +986,39 @@ export function DeepResearchRoute() {
       return;
     }
     void executeEnvelope(planEnvelope);
+  };
+
+  const revisePlan = async (edits: PlanEdits) => {
+    if (!planEnvelope) return;
+    const request = beginRequest();
+    setPlanRevising(true);
+    setError("");
+    setErrorKind(null);
+    setErrorReason("");
+    setStatus("수정한 계획을 저장하는 중입니다.");
+    const body: RevisePlanRequest = {
+      approvedRequest: planEnvelope.approvedRequest,
+      approval: approvalReference(planEnvelope),
+      edits,
+    };
+    try {
+      const replacement = await postJson<PlanPreviewEnvelope>("/api/topic-reports/plan/revise", body, { signal: request.signal });
+      if (!isCurrentRequest(request.id)) return;
+      setPlanEnvelope(replacement);
+      setPlanEditing(false);
+      // 계획이 바뀌면 앞서 받은 `근거 없음` 확인은 다른 계획에 대한 것이다.
+      setDegradedConfirming(false);
+      setStatus("계획을 저장했습니다.");
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (!isCurrentRequest(request.id)) return;
+      setError(errorCopy("plan", err));
+      setErrorKind("plan");
+      setErrorReason(errorCode(err));
+      setStatus("");
+    } finally {
+      if (isCurrentRequest(request.id)) setPlanRevising(false);
+    }
   };
 
   const confirmDegraded = async () => {
@@ -1104,7 +1324,12 @@ export function DeepResearchRoute() {
           onExecutionMode={setExecutionMode}
           onCliAdapter={setCliAdapter}
           onContinue={handleContinue}
-          onEdit={() => { setPhase("draft"); setStatus(""); }}
+          onEdit={() => { setPhase("draft"); setPlanEditing(false); setStatus(""); }}
+          editing={planEditing}
+          revising={planRevising}
+          onEditPlan={() => setPlanEditing(true)}
+          onRevise={(edits) => void revisePlan(edits)}
+          onCancelEdit={() => setPlanEditing(false)}
           degradedConfirming={degradedConfirming}
           onConfirmDegraded={() => void confirmDegraded()}
           onCancelDegraded={() => setDegradedConfirming(false)}

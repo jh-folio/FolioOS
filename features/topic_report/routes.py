@@ -31,7 +31,9 @@ from features.topic_report.approved_schema import (
     ConfirmDegradedRequest,
     GenerateApprovedRequest,
     PlanRequest,
+    RevisePlanRequest,
 )
+from features.topic_report.plan_edits import PlanEditError
 from features.topic_report.approved_generation import ApprovedGenerationInput
 from features.topic_report.approved_jobs import ApprovedTopicJobs
 from features.topic_report.approved_research import prepare_approved_research, prepare_market_state
@@ -128,6 +130,16 @@ class ApprovedRequestBoundary:
             return _failure_response(error)
         return _response(200, envelope.model_dump(mode="json"))
 
+    def revise(self, body: dict[str, JsonValue]) -> JSONResponse:
+        try:
+            request = RevisePlanRequest.model_validate(body)
+            envelope = self._service.revise(request)
+        except PlanEditError as error:
+            return _response(400, {"error": str(error)})
+        except (ValidationError, ApprovalStoreError, ApprovedRequestError, CollectionServiceError) as error:
+            return _failure_response(error)
+        return _response(200, envelope.model_dump(mode="json"))
+
     def confirm(self, body: dict[str, JsonValue]) -> JSONResponse:
         try:
             request = ConfirmDegradedRequest.model_validate(body)
@@ -181,6 +193,7 @@ class ApprovedRequestBoundary:
     def router(self, include_preflight: bool = True) -> APIRouter:
         router = APIRouter(prefix="/api/topic-reports", tags=["topic-reports"])
         router.add_api_route("/plan", self.plan, methods=["POST"])
+        router.add_api_route("/plan/revise", self.revise, methods=["POST"])
         router.add_api_route("/confirm-degraded", self.confirm, methods=["POST"])
         if include_preflight:
             router.add_api_route("", self.preflight, methods=["POST"])

@@ -114,6 +114,8 @@ class TopicPlanV1(StrictModel):
     topic: str = Field(min_length=1, max_length=300)
     topicLabel: str = Field(min_length=1, max_length=200)
     reportType: ReportType
+    # 이 계획을 무엇이 썼는가. 화면이 규칙 계획과 LLM 계획을 구분해 보여준다.
+    plannerMode: Literal["rules", "llm", "preset", "edited"] = "rules"
     regions: list[str] = Field(max_length=6)
     assetClasses: list[str] = Field(max_length=6)
     timeHorizon: str = Field(max_length=60)

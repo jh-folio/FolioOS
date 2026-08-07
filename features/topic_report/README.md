@@ -137,6 +137,7 @@ data/topic-reports/YYYY-MM-DD_<topic_key>_<id>.json
 - `features/topic_report/service.py`: 보고서 생성·저장·목록·조회·삭제 + 재평가/overlay attach
 - `features/topic_report/topic_schema.py`: report_type/evidenceRole enum, TopicPlan 정규화
 - `features/topic_report/planner.py`: Topic Planner (규칙 해석 + 선택적 LLM 정제)
+- `features/topic_report/plan_edits.py`: 승인 전 계획 수정 적용(허용 항목만, 서버가 적용)
 - `features/topic_report/evidence.py`: Evidence Pack (축별 검색, 역할 분류, 커버리지)
 - `features/topic_report/source_ledger.py`: Source Ledger (출처 원장)
 - `features/topic_report/templates.py` + `templates/*.md`: report_type별 지침 결합
@@ -153,12 +154,29 @@ data/topic-reports/YYYY-MM-DD_<topic_key>_<id>.json
 - `app.py`: 테마분석 API 라우팅
 - `public/app.js`: `renderTopicReport()`, `renderTopicPlanPanel()`, `renderTopicQualityPanel()`
 
+## 계획(TopicPlan) 만들기
+
+- 계획은 **주제어(subject) 위에 세운다.** 사용자는 질문칸에 배경까지 한 문단으로 적는데, 그 240자를 주제 라벨로 쓰면 축 질문 다섯 개가 전부 같은 문단이 되고 검색어에 질문 전문이 들어간다. `topic_subject()`가 첫 구획(콜론·줄바꿈·` - `·문장 끝 앞)을 40자 이내로 끊어 쓴다. 원문 질문은 `topic`에 그대로 남는다.
+- **한 단어 질의와 질문 전문 질의는 만들지 않는다.** 계획의 `searchQueries`는 그대로 `search_keywords`가 되어 근거 검색을 돌린다. 실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다(FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남긴다.
+- 조사 제거 목록에 `의`가 빠져 있어 `반도체의`가 검색어로 살아남았다. `_PARTICLES`가 단일 출처다.
+- 계획 미리보기는 **LLM이 켜져 있으면 LLM 계획을 쓴다.** 규칙 계획은 실패했을 때의 바닥이지 화면에 보여줄 최선이 아니다. LLM 결과에도 같은 검색어 위생을 코드가 다시 적용한다(§5 원칙 4 — 프롬프트는 부탁이지 제한이 아니다).
+- `plannerMode`(`rules|llm|preset|edited`)가 계획에 남고 화면이 그대로 표시한다. 무엇이 쓴 계획인지 모르면 얼마나 믿을지 정할 수 없다.
+
+## 승인 전 계획 수정
+
+- `POST /api/topic-reports/plan/revise`는 `confirm-degraded`와 같은 모양이다 — 무결성 확인 → 승인 권한 확인 → **서버가** payload를 고침 → planHash 재계산 → 기존 승인 supersede.
+- 클라이언트가 계획을 통째로 밀어넣는 통로는 없다. `PlanEdits`에 적힌 항목(주제 이름·보고서 유형·리서치 질문·검색 질의·축별 질문/질의/제거)만 반영하고 `expectedSections`, deep research 고정 문구 같은 서버 소유 값은 그대로 둔다.
+- 축은 **key로 찾을 뿐 새로 만들 수 없다.** 축 목록은 보고서 유형이 정한다. 마지막 축은 뺄 수 없다.
+- 축을 빼면 그 축을 가리키던 하위 질문도 함께 지운다. 남겨두면 실행이 없는 축을 조사한다.
+- 계획이 바뀌면 앞서 받은 `근거 없음` 확인은 다른 계획에 대한 것이므로 `degradedConfirmation`을 비운다.
+
 ## API
 
 ```text
 GET    /api/topic-reports/presets
 GET    /api/topic-reports
 POST   /api/topic-reports/plan                       # 승인 가능한 TopicPlan + 자료 preview
+POST   /api/topic-reports/plan/revise                # 승인 전 계획 수정 (새 planHash로 승인 교체)
 POST   /api/topic-reports/confirm-degraded           # zero-evidence 규칙 fallback 명시 확인
 POST   /api/topic-reports                             # 승인 envelope를 202 SharedJob으로 실행
 GET    /api/topic-reports/{report_id}?includePersonal # personalOverlay 포함 조회

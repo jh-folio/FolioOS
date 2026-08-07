@@ -27,7 +27,9 @@ from features.topic_report.approved_schema import (
     GenerateApprovedRequest,
     PlanPreviewEnvelope,
     PlanRequest,
+    RevisePlanRequest,
 )
+from features.topic_report.plan_edits import PlanEditError, apply_plan_edits
 from features.topic_report.planner import apply_deep_research_plan, build_topic_plan
 from features.topic_report.approved_research import PreparedResearch
 from features.topic_report.resolution_schema import ResearchPreview, ResolutionSnapshotV1, ZeroEvidence
@@ -113,13 +115,14 @@ class ApprovedRequestService:
         return sha256_hex(payload)
 
     def _topic_plan(self, request: PlanRequest) -> TopicPlanV1:
+        # LLM이 켜져 있으면 계획을 정제한다. 규칙 계획은 실패했을 때의 바닥이지
+        # 화면에 보여줄 최선이 아니다. 어느 쪽으로 만들었는지는 계획에 남는다.
         raw = build_topic_plan(
             "custom",
             custom_label=request.question,
             user_context=request.userContext,
-            llm_override=False,
         )
-        raw.pop("plannerMode", None)
+        raw["plannerMode"] = raw.get("plannerMode") or "rules"
         raw["candidateTickers"] = request.customTickers or raw.get("candidateTickers", {})
         if request.deepResearch:
             raw = apply_deep_research_plan(raw)
@@ -228,6 +231,28 @@ class ApprovedRequestService:
         preview, _prepared = self._preview(approved)
         grant = self._store.issue(approved.planHash)
         return PlanPreviewEnvelope(approvedRequest=approved, approval=grant, preview=preview)
+
+    def revise(self, request: RevisePlanRequest) -> PlanPreviewEnvelope:
+        """승인 전 계획 수정. 새 계획 해시로 승인을 갈아끼운다.
+
+        `confirm`과 같은 모양이다 — 무결성 확인 → 권한 확인 → 서버가 payload를 고침
+        → 해시 재계산 → 기존 승인 supersede. 클라이언트가 계획을 통째로 밀어넣는
+        통로를 만들지 않는 이유가 여기 있다.
+        """
+        approved = request.approvedRequest
+        self._validate_integrity(approved)
+        proof = self._proof(approved, request.approval.id, request.approval.token)
+        self._store.authorize(proof)
+        revised = apply_plan_edits(approved.topicPlan, request.edits)
+        payload = approved.model_dump(mode="json")
+        payload["topicPlan"] = revised.model_dump(mode="json")
+        # 계획이 바뀌면 앞서 받은 `근거 없음` 확인은 다른 계획에 대한 것이다.
+        payload["degradedConfirmation"] = None
+        payload["planHash"] = self.hash_approved_payload(payload)
+        replacement = ApprovedRequest.model_validate(payload)
+        grant = self._store.replace(proof, replacement.planHash)
+        preview, _prepared = self._preview(replacement)
+        return PlanPreviewEnvelope(approvedRequest=replacement, approval=grant, preview=preview)
 
     def confirm(self, request: ConfirmDegradedRequest) -> PlanPreviewEnvelope:
         approved = request.approvedRequest

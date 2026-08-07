@@ -365,10 +365,14 @@ export type DeepResearchPlan = {
   readonly requiredOutputs: readonly string[];
 };
 
+export type PlannerMode = "rules" | "llm" | "preset" | "edited";
+
 export type TopicPlan = {
   readonly topic: string;
   readonly topicLabel: string;
   readonly reportType: string;
+  /** 이 계획을 무엇이 썼는가. 규칙 계획과 LLM 계획은 신뢰도가 다르다. */
+  readonly plannerMode?: PlannerMode;
   readonly regions: readonly string[];
   readonly assetClasses: readonly string[];
   readonly timeHorizon: string;
@@ -430,6 +434,29 @@ export type ApprovalGrant = {
 };
 
 export type ApprovalReference = Pick<ApprovalGrant, "id" | "token">;
+
+/** 승인 전 계획 수정. 서버가 이 항목만 반영하고 나머지는 계속 서버가 소유한다. */
+export type AxisEdit = {
+  readonly key: string;
+  readonly label?: string;
+  readonly questions?: readonly string[];
+  readonly searchQueries?: readonly string[];
+  readonly removed?: boolean;
+};
+
+export type PlanEdits = {
+  readonly topicLabel?: string;
+  readonly reportType?: string;
+  readonly researchQuestions?: readonly string[];
+  readonly searchQueries?: readonly string[];
+  readonly axes?: readonly AxisEdit[];
+};
+
+export type RevisePlanRequest = {
+  readonly approvedRequest: ApprovedRequest;
+  readonly approval: ApprovalReference;
+  readonly edits: PlanEdits;
+};
 
 export type ProviderGenerations = {
   readonly indexGeneration: string | null;

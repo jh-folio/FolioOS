@@ -81,7 +81,7 @@ class PlanRequest(StrictModel):
         return normalize_tickers(value)
 
 
-from features.topic_report.approved_plan_schema import TopicPlanV1
+from features.topic_report.approved_plan_schema import ReportType, TopicPlanV1
 from features.topic_report.resolution_schema import ResearchPreview
 
 
@@ -187,6 +187,36 @@ class GenerateApprovedRequest(StrictModel):
     approvedRequest: ApprovedRequest
     approval: ApprovalReference
     execution: ExecutionRequest
+
+
+class AxisEdit(StrictModel):
+    """한 분석 축에 대한 수정. 축은 key로 찾으며 새 축은 만들지 않는다."""
+
+    key: str = Field(min_length=1, max_length=60)
+    label: str | None = Field(default=None, max_length=160)
+    questions: list[str] | None = Field(default=None, max_length=4)
+    searchQueries: list[str] | None = Field(default=None, max_length=6)
+    removed: bool = False
+
+
+class PlanEdits(StrictModel):
+    """사용자가 승인 전에 고칠 수 있는 범위.
+
+    통째로 받은 계획을 그대로 믿지 않는다. 여기 적힌 필드만 반영하고
+    나머지(expectedSections, deepResearch 고정값 등)는 서버가 계속 소유한다.
+    """
+
+    topicLabel: str | None = Field(default=None, max_length=200)
+    reportType: ReportType | None = None
+    researchQuestions: list[str] | None = Field(default=None, max_length=6)
+    searchQueries: list[str] | None = Field(default=None, max_length=12)
+    axes: list[AxisEdit] = Field(default_factory=list, max_length=6)
+
+
+class RevisePlanRequest(StrictModel):
+    approvedRequest: ApprovedRequest
+    approval: ApprovalReference
+    edits: PlanEdits
 
 
 class ConfirmDegradedRequest(StrictModel):

@@ -161,7 +161,13 @@ _STOPWORDS = {
     "영향", "분석", "전망", "관련", "대한", "대해", "어떻게", "무엇", "정말", "주는", "미치는",
     "있는", "있나", "인가", "에서", "에게", "와", "과", "의", "이", "가", "은", "는", "을", "를",
     "the", "and", "for", "what", "how", "impact", "analysis",
+    # 질문 문장에서 흔히 딸려오는 서술어. 검색어가 되면 아무 기사나 물어온다.
+    "존재함", "가능성", "무엇인지", "파악해볼", "검토해서", "바라보는", "맞으면서", "자라고",
+    "오르던", "최근", "이번", "여러", "다수", "가장", "내내", "대로", "반대로", "때문",
 }
+
+# 조사. `의`가 빠져 있어 `반도체의`가 검색어로 살아남았다.
+_PARTICLES = "이가은는을를와과에의로서도만"
 
 
 def _label_keywords(label: str, limit: int = 8) -> list[str]:
@@ -172,14 +178,43 @@ def _label_keywords(label: str, limit: int = 8) -> list[str]:
         clean = token.strip(".,?!")
         if len(clean) < 2 or clean.lower() in _STOPWORDS:
             continue
-        # 조사 제거 (간단 규칙: ~이/가/은/는/을/를/와/과/에 로 끝나는 3자 이상)
-        if len(clean) >= 3 and clean[-1] in "이가은는을를와과에":
+        if len(clean) >= 3 and clean[-1] in _PARTICLES:
             clean = clean[:-1]
+        if clean.lower() in _STOPWORDS:
+            continue
         if clean and clean not in out:
             out.append(clean)
         if len(out) >= limit:
             break
     return out
+
+
+# 질문 문단에서 주제어를 끊어낼 자리. 사람이 "주제: 배경 - 배경" 순으로 쓴다.
+_SUBJECT_SPLIT = re.compile(r"[:：\n\r]|\s[-–—]\s|(?<=[.?!])\s")
+_SUBJECT_MAX = 40
+
+
+def topic_subject(label: str) -> str:
+    """긴 질문에서 짧은 주제어를 뽑는다.
+
+    사용자는 질문칸에 배경까지 한 문단으로 적는다. 그 240자를 `주제 라벨`로 쓰면
+    축 질문도 검색어도 전부 같은 문단이 되고, 검색은 토큰이 OR로 풀려 아무 기사나
+    물어온다. 계획이 흐린 게 아니라 근거가 흐려진다.
+
+    첫 구획(콜론·줄바꿈·` - `·문장 끝 앞)을 주제로 보고, 그래도 길면 키워드로 줄인다.
+    """
+    text = str(label or "").strip()
+    if not text:
+        return ""
+    head = _SUBJECT_SPLIT.split(text, maxsplit=1)[0].strip(" -–—·,")
+    if head and len(head) <= _SUBJECT_MAX:
+        return head
+    # 첫 구획도 길면 앞쪽 키워드 몇 개로 압축한다.
+    words = _label_keywords(head or text, limit=4)
+    if words:
+        subject = " ".join(words)
+        return subject[:_SUBJECT_MAX].strip()
+    return text[:_SUBJECT_MAX].strip()
 
 
 def _detect_report_type(text: str) -> str:
@@ -240,14 +275,67 @@ def _required_macro(text: str) -> list[str]:
     return out
 
 
-def _axis_queries(axis_label: str, keywords: list[str]) -> list[str]:
-    base = keywords[:3]
-    axis_terms = [w for w in re.findall(r"[A-Za-z가-힣]{2,}", axis_label) if w not in _STOPWORDS][:2]
+_QUERY_MAX = 40
+
+
+def _josa(word: str, with_batchim: str, without_batchim: str) -> str:
+    """받침에 맞는 조사를 고른다. `요인은(는)`처럼 둘 다 적어두지 않는다."""
+    text = str(word or "").strip()
+    if not text:
+        return without_batchim
+    last = text[-1]
+    if "가" <= last <= "힣":
+        return with_batchim if (ord(last) - 0xAC00) % 28 else without_batchim
+    # 숫자·라틴 문자는 읽는 사람마다 갈리므로 받침 없는 쪽으로 통일한다.
+    return without_batchim
+
+
+def _term(word: str) -> str:
+    """축 이름에서 뽑은 낱말의 꼬리 조사를 떼어낸다(`병목과` → `병목`)."""
+    clean = str(word or "").strip()
+    if len(clean) >= 3 and clean[-1] in _PARTICLES:
+        clean = clean[:-1]
+    return clean
+
+
+def _usable_query(text: str) -> str:
+    """검색어로 쓸 만한 형태인가.
+
+    한 단어짜리(`피크`)와 질문 전문은 버린다. 전자는 전력망 기사를, 후자는 토큰이
+    OR로 풀려 그날 시장 기사 아무거나 물어온다. 둘 다 실제로 확인한 결과다.
+    """
+    clean = " ".join(str(text or "").split())
+    if not clean or len(clean) > _QUERY_MAX:
+        return ""
+    return clean if len(clean.split()) >= 2 else ""
+
+
+def _clean_queries(queries, fallback) -> list[str]:
+    """질문 전문과 한 단어짜리를 걸러낸다. 전부 걸리면 규칙 질의로 되돌린다."""
+    out: list[str] = []
+    for item in queries or []:
+        query = _usable_query(item)
+        if query and query not in out:
+            out.append(query)
+    return out[:12] or [q for q in (fallback or []) if q][:4]
+
+
+def _axis_queries(subject: str, axis_label: str, keywords: list[str]) -> list[str]:
+    """축 검색어 = 주제어 + 그 축을 가리키는 말 하나."""
+    axis_terms = [
+        term for term in (_term(w) for w in re.findall(r"[A-Za-z가-힣]{2,}", axis_label))
+        if term and term not in _STOPWORDS
+    ][:2]
+    base = subject or " ".join(keywords[:2])
     queries = []
-    if base:
-        queries.append(" ".join(base))
-    if base and axis_terms:
-        queries.append(" ".join(base[:2] + axis_terms[:1]))
+    for term in axis_terms[:2]:
+        query = _usable_query(f"{base} {term}")
+        if query and query not in queries:
+            queries.append(query)
+    if not queries:
+        fallback = _usable_query(base)
+        if fallback:
+            queries.append(fallback)
     return queries[:3]
 
 
@@ -269,6 +357,8 @@ def _data_gaps(report_type: str, regions: list[str]) -> list[str]:
 def build_rule_plan(topic: str, *, user_context: str = "") -> dict:
     """규칙 기반 TopicPlan. LLM 없이 항상 동작해야 한다 (절대 규칙 4)."""
     label = str(topic or "").strip()
+    # 분류는 질문 전문을 본다(단서가 배경 문단에 있다). 파생물은 주제어 위에 세운다.
+    subject = topic_subject(label)
     # userContext는 의도 파악 보조로만 — 분류 텍스트에 합치되 근거로는 쓰지 않음
     intent_text = f"{label} {str(user_context or '')[:300]}"
     report_type = _detect_report_type(intent_text)
@@ -282,21 +372,18 @@ def build_rule_plan(topic: str, *, user_context: str = "") -> dict:
         axes.append({
             "key": key,
             "label": axis_label,
-            "questions": [f"{label} 관점에서 {axis_label}은(는) 어떤 상태인가?"],
+            "questions": [f"{subject} 관점에서 {axis_label}{_josa(axis_label, '은', '는')} 어떤 상태인가?"],
             "requiredData": list(tickers.keys())[:4],
-            "searchQueries": _axis_queries(axis_label, keywords),
+            "searchQueries": _axis_queries(subject, axis_label, keywords),
         })
         if i >= 5:
             break
 
     search_queries = []
-    if label:
-        search_queries.append(label)
-    if keywords:
-        search_queries.append(" ".join(keywords[:4]))
-        for kw in keywords[:4]:
-            if kw not in search_queries:
-                search_queries.append(kw)
+    for candidate in (subject, " ".join(keywords[:3])):
+        query = _usable_query(candidate)
+        if query and query not in search_queries:
+            search_queries.append(query)
     for axis in axes:
         for q in axis["searchQueries"]:
             if q not in search_queries:
@@ -304,14 +391,15 @@ def build_rule_plan(topic: str, *, user_context: str = "") -> dict:
 
     plan = {
         "topic": label,
-        "topicLabel": label,
+        # 목록과 보고서 제목에 쓰이는 이름. 240자 문단을 제목으로 달지 않는다.
+        "topicLabel": subject or label,
         "reportType": report_type,
         "regions": regions,
         "assetClasses": assets,
         "userIntent": "investment implication",
         "researchQuestions": [
-            f"{label}의 현재 상황과 핵심 동인은 무엇인가?",
-            f"{label}이(가) 시장 가격·실적·수급에 어떤 경로로 작동하는가?",
+            f"{subject}의 현재 상황과 핵심 동인은 무엇인가?",
+            f"{subject}{_josa(subject, '이', '가')} 시장 가격·실적·수급에 어떤 경로로 작동하는가?",
             "이 판단이 틀릴 수 있는 반대 근거는 무엇인가?",
         ],
         "analysisAxes": axes,
@@ -323,7 +411,7 @@ def build_rule_plan(topic: str, *, user_context: str = "") -> dict:
         "expectedSections": list(EXPECTED_SECTIONS_V2),
         "dataGapsLikely": _data_gaps(report_type, regions),
     }
-    return normalize_topic_plan(plan, topic=label, topic_label=label)
+    return normalize_topic_plan(plan, topic=label, topic_label=subject or label)
 
 
 def apply_deep_research_plan(plan: dict, *, max_rounds: int = 2, max_questions: int = 8) -> dict:
@@ -448,7 +536,9 @@ _PLANNER_PROMPT = """당신은 투자 리서치 플래너입니다. 사용자의
 - reportType은 다음 중 하나만: {report_types}
 - 사용자 컨텍스트는 관심 방향 파악에만 쓰고, 그 전제를 사실로 간주하지 마세요.
 - analysisAxes는 3~5개. 각 축에 key(영문 snake_case), label(한국어), questions(1~2개), searchQueries(1~3개, 한국어+영어 혼합)를 넣으세요.
-- searchQueries는 로컬 뉴스 검색용 짧은 구문으로. candidateTickers는 yfinance 형식 심볼로.
+- topicLabel은 40자 이내의 짧은 주제어입니다. 질문 문단을 그대로 옮기지 마세요.
+- searchQueries는 로컬 뉴스 검색용 2~5어절 구문입니다. 질문 전문이나 한 단어짜리는 넣지 마세요.
+- candidateTickers는 yfinance 형식 심볼로.
 - dataGapsLikely에는 로컬 자료만으로 부족할 법한 데이터를 적으세요.
 - JSON 객체 하나만 출력하세요. 다른 텍스트 금지.
 
@@ -483,11 +573,16 @@ def refine_plan_with_llm(rule_plan: dict, topic: str, user_context: str = "") ->
         raw = extract_json_object(text)
         if not isinstance(raw, dict):
             return rule_plan, "parse_failed"
-        refined = normalize_topic_plan(raw, topic=topic, topic_label=topic)
+        refined = normalize_topic_plan(raw, topic=topic, topic_label=topic_subject(topic) or topic)
         # LLM이 비워버린 핵심 필드는 규칙 계획으로 보강 (계획이 후퇴하지 않게)
         for key in ("searchQueries", "memoryQueries", "candidateTickers", "analysisAxes", "dataGapsLikely"):
             if not refined.get(key):
                 refined[key] = rule_plan.get(key, refined.get(key))
+        # 검색어 위생은 코드가 정한다. 프롬프트로 부탁한 것과 지킨 것은 다르고,
+        # 여기서 새는 질의는 곧 근거 품질이다(§5 원칙 4).
+        refined["searchQueries"] = _clean_queries(refined.get("searchQueries"), rule_plan.get("searchQueries"))
+        for axis in refined.get("analysisAxes") or []:
+            axis["searchQueries"] = _clean_queries(axis.get("searchQueries"), refined["searchQueries"][:2])
         return refined, "llm"
     except Exception:
         return rule_plan, "llm_generation_failed"

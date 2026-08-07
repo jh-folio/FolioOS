@@ -388,6 +388,10 @@ features/company_analysis/financial_quality_prompt.md
 - 저장 JSON에는 `checkpoints`, `evidenceItems`, `sourceLedger`, `dataGaps`, `marketTape`를 공통 schema 형태로 포함한다. 구조화 필드 생성은 기본 `markdown`을 수정하지 않는다.
 - `reportType`(12종)·`evidenceRole`(5종)은 `topic_schema.py`에서 enum 검증한다. LLM 자유 텍스트 분류를 그대로 신뢰하지 않는다.
 - custom 주제는 planner가 `searchQueries`/분석 축/후보 티커를 만든다. 기존 `label.split()` 검색은 폐기. 프리셋은 `plan_from_preset`으로 backward compatible.
+- **계획은 주제어 위에 세운다.** 사용자는 질문칸에 배경까지 한 문단으로 적는다. 그 240자를 주제 라벨로 쓰면 축 질문 다섯 개가 같은 문단이 되고 검색어에 질문 전문이 들어간다. `topic_subject()`가 첫 구획을 40자 이내로 끊고, 원문은 `topic`에 남는다.
+- **계획의 `searchQueries`는 그대로 근거 검색을 돌린다.** 한 단어 질의와 질문 전문 질의를 만들지 않는다(실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다 — FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남기며, 이 게이트는 LLM 계획에도 똑같이 적용한다.
+- 계획 미리보기는 LLM이 켜져 있으면 LLM 계획을 쓰고 실패하면 규칙 계획으로 떨어진다. `plannerMode`(`rules|llm|preset|edited`)를 계획에 남겨 화면이 표시한다.
+- 승인 전 계획 수정은 `POST /api/topic-reports/plan/revise`다. `confirm-degraded`와 같은 모양으로 **서버가** payload를 고치고 planHash를 다시 계산해 기존 승인을 supersede한다. 클라이언트가 계획을 통째로 밀어넣는 통로는 없고, 축은 key로 찾을 뿐 새로 만들 수 없다.
 - `userContext`는 관심 방향이지 evidence가 아니다. 외부 자료와 충돌하면 충돌을 명시하고 반대 근거를 함께 제시한다.
 - Quality Gate(`evaluation.py`)는 규칙 기반이다. markdown 섹션 존재 + Evidence Pack 커버리지로 점수/등급/경고를 만든다. LLM 없이 동작한다.
 - Personal Overlay와 Quality 재평가는 **저장된 보고서에만** 동작한다(파일 기준). overlay 생성은 기본 `markdown`을 수정하지 않는다(Step 2 `with_overlay` 재사용).

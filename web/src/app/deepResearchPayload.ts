@@ -453,3 +453,40 @@ export function parseTopicReportSummaries(value: unknown): TopicReportSummary[] 
     engine: stringValue(row.engine), engineDetail: stringValue(row.engineDetail),
   })).filter((row) => Boolean(row.id));
 }
+
+/** 보고서 유형의 한국어 이름. 서버 `topic_schema.REPORT_TYPE_LABELS`와 같은 표다.
+ *  화면에 `industry_theme`을 그대로 내보내면 사용자는 그것이 무엇인지 알 수 없다. */
+export const REPORT_TYPE_LABELS: Record<string, string> = {
+  macro_analysis: "거시 분석",
+  cross_asset_analysis: "크로스에셋 분석",
+  industry_theme: "산업 테마",
+  supply_chain_theme: "공급망 테마",
+  policy_regulation: "정책·규제",
+  geopolitical_risk: "지정학 리스크",
+  earnings_theme: "실적 테마",
+  factor_style: "팩터·스타일",
+  company_basket: "기업군 비교",
+  country_market: "국가 시장",
+  portfolio_implication: "포트폴리오 영향",
+  custom_research: "자유 리서치",
+};
+
+export function reportTypeLabel(value?: string): string {
+  const key = String(value || "");
+  return REPORT_TYPE_LABELS[key] || key || "유형 미상";
+}
+
+/** 계획을 무엇이 썼는지. 규칙 계획과 LLM 계획은 신뢰도가 다르고, 사용자가 고친
+ *  계획은 또 다르다. 어느 쪽인지 모르면 계획을 얼마나 믿을지 정할 수 없다. */
+export function plannerModeLabel(value?: string): string {
+  switch (value) {
+    case "llm":
+      return "LLM이 작성";
+    case "edited":
+      return "직접 수정함";
+    case "preset":
+      return "저장된 주제";
+    default:
+      return "규칙으로 작성";
+  }
+}
