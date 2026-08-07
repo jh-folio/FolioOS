@@ -340,6 +340,24 @@ function displayDate(value?: string) {
   return listDate(value) || "날짜 미상";
 }
 
+function displayMonth(value?: string) {
+  if (!value) return "월 미상";
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${parsed.getFullYear()}.${String(parsed.getMonth() + 1).padStart(2, "0")}`;
+  }
+  const match = String(value).match(/^(\d{4})[-.](\d{1,2})/);
+  return match ? `${match[1]}.${String(match[2]).padStart(2, "0")}` : "월 미상";
+}
+
+function normalizeText(value?: string) {
+  return String(value || "").trim().toLowerCase();
+}
+
+/** 저장 목록을 훑는 기준. 기업분석과 같은 세 가지다. */
+type SavedViewMode = "recent" | "topic" | "month";
+const RECENT_RESEARCH_LIMIT = 8;
+
 function setTopicHash(reportId?: string) {
   window.location.hash = reportId ? deepResearchReportHash(reportId) : "#/deep-research";
 }
@@ -517,6 +535,8 @@ export function DeepResearchRoute() {
   const [status, setStatus] = useState("");
   const [actionBusy, setActionBusy] = useState("");
   const [proposalReloadKey, setProposalReloadKey] = useState(0);
+  const [reportQuery, setReportQuery] = useState("");
+  const [reportView, setReportView] = useState<SavedViewMode>("recent");
   const requestId = useRef(0);
   const requestController = useRef<AbortController | null>(null);
   const listHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -868,17 +888,36 @@ export function DeepResearchRoute() {
     }
   }
 
+  const filteredReports = useMemo(() => {
+    const query = normalizeText(reportQuery);
+    if (!query) return reports;
+    return reports.filter((report) => normalizeText([
+      reportLabel(report),
+      presetLabel(report),
+      report.topicKey,
+      report.engine,
+      report.engineDetail,
+      displayDate(report.generatedAt || report.date),
+    ].filter(Boolean).join(" ")).includes(query));
+  }, [reportQuery, reports]);
+
   const groupedReports = useMemo(() => {
+    const at = (report: TopicReportSummary) => String(report.generatedAt || report.date || "");
+    const sorted = [...filteredReports].sort((a, b) => at(b).localeCompare(at(a)));
+    if (reportView === "recent") {
+      if (!sorted.length) return [];
+      return [{ key: `최근 리서치 ${Math.min(sorted.length, RECENT_RESEARCH_LIMIT)}건`, rows: sorted.slice(0, RECENT_RESEARCH_LIMIT) }];
+    }
     const groups = new Map<string, TopicReportSummary[]>();
-    for (const report of reports) {
-      const key = presetLabel(report);
+    for (const report of sorted) {
+      const key = reportView === "month" ? displayMonth(report.generatedAt || report.date) : presetLabel(report);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)?.push(report);
     }
     return Array.from(groups.entries())
-      .map(([key, rows]) => ({ key, rows: rows.sort((a, b) => String(b.generatedAt || b.date || "").localeCompare(String(a.generatedAt || a.date || ""))) }))
-      .sort((a, b) => String(b.rows[0]?.generatedAt || b.rows[0]?.date || "").localeCompare(String(a.rows[0]?.generatedAt || a.rows[0]?.date || "")));
-  }, [reports]);
+      .map(([key, rows]) => ({ key, rows }))
+      .sort((a, b) => at(b.rows[0]).localeCompare(at(a.rows[0])));
+  }, [filteredReports, reportView]);
 
   const readerContent = splitReportTitle(selected?.markdown || "", selected ? reportLabel(selected) : "딥 리서치");
   const selectedMarketStateContext = marketStateContextProjection(selected?.marketStateResolution);
@@ -1078,13 +1117,43 @@ export function DeepResearchRoute() {
 
       {/* 저장 목록은 브리핑·기업분석과 같은 서식을 쓴다. 화면마다 제목·건수 표시가
           달라 보이면 같은 종류의 목록이라는 것이 읽히지 않는다. */}
+      <section className="find-bar" aria-label="저장된 리서치 검색">
+        <input
+          className="find-bar__search"
+          type="search"
+          value={reportQuery}
+          onChange={(event) => setReportQuery(event.currentTarget.value)}
+          placeholder="주제·질문·모델 검색"
+          aria-label="저장된 리서치 검색"
+        />
+        <label className="find-bar__field">
+          <span>보기</span>
+          <select
+            aria-label="저장된 리서치 보기 방식"
+            value={reportView}
+            onChange={(event) => setReportView(event.currentTarget.value as SavedViewMode)}
+          >
+            <option value="recent">최근</option>
+            <option value="topic">주제별</option>
+            <option value="month">월별</option>
+          </select>
+        </label>
+        <button
+          className="btn btn--text find-bar__reset"
+          type="button"
+          onClick={() => { setReportQuery(""); setReportView("recent"); }}
+        >
+          초기화
+        </button>
+      </section>
+
       <section className="react-analysis-feed" aria-label="저장된 리서치">
         <div className="react-section-heading">
           <div>
             <p className="section-kicker">Saved Research</p>
             <h2 ref={listHeadingRef} tabIndex={-1}>저장된 리서치</h2>
           </div>
-          <span aria-live="polite">{`${reports.length}건`}</span>
+          <span aria-live="polite">{`${filteredReports.length}건${reportQuery ? " · 검색 결과" : ""}`}</span>
         </div>
         {groupedReports.length ? groupedReports.map((group) => (
           <section className="report-feed-group" key={group.key}>
@@ -1101,7 +1170,7 @@ export function DeepResearchRoute() {
               })}
             </div>
           </section>
-        )) : <div className="report-feed-empty" data-qa="dr-report-list-empty">저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요.</div>}
+        )) : <div className="report-feed-empty" data-qa="dr-report-list-empty">{reportQuery ? "검색 결과가 없습니다." : "저장된 딥 리서치가 없습니다. 질문을 입력해 실행 계획을 미리보세요."}</div>}
       </section>
     </div>
   );
