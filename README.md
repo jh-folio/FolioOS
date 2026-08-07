@@ -25,7 +25,7 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - See released figures on the market calendar, not just the schedule.
 - Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, Smart Collection scope, and your own thinking kept as separate layers.
 - Review rule-based change summaries produced together with each new Briefing, Company Analysis, Topic Report, and Market Memory update — without an extra Agent call.
-- Manage your Portfolio holdings (a save made elsewhere is flagged before it gets overwritten), import positions from one or more cropped broker screenshots — the Agent CLI you already set up reads them with nothing else to install, and locally installed Tesseract or an external Vision provider stand in when you have no CLI — and review every row yourself before saving. The dialog says which reader it will use and where the picture goes.
+- Manage your Portfolio holdings — type each position in, with company names resolved to tickers as you go, and a save made elsewhere is flagged before it gets overwritten.
 - Carry on a conversation about a watchlist entry, a holding, or a report from the Agent dock, and come back to it later — the list of conversations lives there too. Conversation text is kept on your computer, separate from report sources, and only becomes an investment note when you explicitly choose “노트로 정리” (save as note).
 - Keep your own notes beside a report and check how old they are, what argues against them, and what you said you would follow up on — no AI required.
 - See the tickers you track quietly linked into related research screens, without exposing quantities, prices, weights, or note bodies.

@@ -125,9 +125,8 @@ thesis, checkpoint, 보고서, Smart Collection과 연결할 수 있다. 연결 
 카드와 0.4.3의 Portfolio route에서 사용한다. 연결 결과는 리서치 점검을 돕는
 hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 아니다.
 
-이미지 가져오기는 세 경로다. **설정한 Agent CLI가 있으면 그쪽이 기본**이고(0.5.0),
-없으면 로컬 Tesseract `kor+eng`, 그것도 없으면 외부 Vision이다. 각 경로의 준비 여부는
-다이얼로그가 열릴 때 `preflight`로 먼저 표시한다. 원본 이미지, crop 이미지, raw OCR text와 bbox는 저장하지 않는다. 외부 Vision은
+이미지 가져오기는 **0.5.0 화면에 없다**(아래 "사진 가져오기" 절). 보유 종목은 직접
+입력하며, 이름으로 적어도 `features/common/company_resolution.py`가 티커로 바꾼다. 원본 이미지, crop 이미지, raw OCR text와 bbox는 저장하지 않는다. 외부 Vision은
 매 요청의 명시적 동의가 있을 때만 crop/redaction 미리보기를 전송하며 결과를 즉시 저장하지
 않고 사용자가 편집표를 확인한 뒤 revision-safe 저장을 별도로 실행한다.
 
@@ -149,17 +148,23 @@ hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 �
 - 해석된 회사명은 화면 확인용이며 저장 payload에 넣지 않는다.
 - 행을 지우면 아래 행 번호가 당겨지므로 표시용 이름도 함께 옮긴다.
 
-## 사진 가져오기 — Agent CLI로 읽기 (0.5.0)
+## 사진 가져오기 — 0.5.0에서 뺐다
 
-기존 두 경로는 둘 다 사용자에게 무언가를 먼저 시킨다 — 로컬 OCR은 Tesseract(kor+eng) 설치, 외부 Vision은 OpenAI 키 저장과 매 요청 동의다. 이미 Agent CLI를 쓰고 있는 사용자에게 그 CLI는 아무것도 더 깔지 않고 이미지를 읽는다. 그래서 사진 스캔의 진입 장벽을 없애는 경로는 이쪽 하나뿐이다.
+0.5.0에는 `사진에서 가져오기` 버튼도 다이얼로그도 없다. 실제로 써 보니 시간이 걸리는 데 비해 인식 결과가 만족스럽지 않았고(2026-08-07 사용자), 무엇보다 **첫 설정에 한 번 쓰는 도구**라 손으로 치는 것 대비 이득이 크지 않았다.
 
-런타임은 `agent_import.py`이고 `/api/portfolio/import-image/preview?mode=agent`로 부른다.
+한 가지는 인식이 아니라 우리 코드 문제였다는 것을 남겨 둔다. 한국 증권사 화면은 미국 종목도 한글 이름으로 보여주고 티커 칸이 없는 경우가 많은데, `normalize_draft()`가 티커 모양 문자열만 받아 **이름만 읽힌 행을 전부 `unresolved`로 버렸다**. 모델은 제대로 읽었는데 우리가 버린 것이다 — `알파벳`→GOOGL, `브로드컴`→AVGO, `히타치`→6501.T 모두 `company_resolution`이 confident로 답한다. 다시 만들 때 여기부터 붙인다.
 
-- **바이트는 프롬프트에 넣지 않는다.** Agent 도크 첨부(`agent_mode/attachment_files.py`)와 같은 방식으로 파일 경로만 알려주고 CLI가 그 파일을 직접 연다. 임시 파일은 `preview_image`의 `TemporaryDirectory`가 성공·실패·취소 어느 쪽이든 지운다. `run_agent_prompt()`는 job을 만들지 않으므로 `data/jobs.json`과 Work Log에도 남지 않는다.
-- **동의 체크박스가 없다.** 설정에서 Agent를 연결한 순간부터 그 프로젝트의 모든 동작에 Agent 사용을 허락한 것으로 본다(AGENTS.md §8 Agent 실행 경계). 여기서 동의를 또 받으면 설치 부담을 없앤 자리에 절차 부담을 넣는 셈이다. 다만 **사진이 그 CLI 제공자에게 전달된다는 사실은 화면이 먼저 말한다** — 허락과 고지는 다른 문제다. 다이얼로그 상단 표기가 `LOCAL-FIRST IMPORT`에서 `PREVIEW ONLY IMPORT`로 바뀐 것도 같은 이유다.
-- **읽기 실패와 빈 결과를 섞지 않는다.** 파싱 실패(`agent_import_not_json`)와 이미지 열기 실패(`agent_import_image_unreadable`)는 오류로 올린다. 빈 목록은 "사진에 종목이 없다"는 뜻이고, 둘을 섞으면 사용자가 읽기 실패를 사진 탓으로 오해한다.
-- 프롬프트가 추정을 막는다. 안 보이는 값은 `null`이며 평가금액을 수량으로 나누는 역산을 금지한다. 합계·총자산·예수금 행은 종목이 아니므로 뺀다.
-- 한 번에 수십 초다(`PORTFOLIO_IMPORT_AGENT_TIMEOUT_SECONDS`, 기본 180초). 화면이 그 사실을 먼저 말한다. 실측(2026-08-07): 4종목 한국·미국 혼합 캡처를 11.9초에 4/4 정확히 읽었다.
+**남은 코드는 죽은 코드가 아니다.** `import_image.py`(임시 파일 수명·`validate_image` 가드·`import_preview` 정규화), `agent_import.py`(CLI 추출), `vision_import.py`(API 추출), `import_schema.py`(초안 정규화)는 0.5.X가 그대로 쓴다. 지우기 전에 `roadmap/release/0.5_PLAN.md`를 본다.
+
+## 다시 만들 때 — Agent 도크로 통일 (0.5.X)
+
+전용 진입점을 만들지 않는다. **사용자가 도크에 사진을 붙이고 포지션 입력을 요청할 때만** 인식한다(2026-08-07 사용자 결정).
+
+- 엔진 선택을 따로 두지 않는다. 도크가 설정의 CLI/API 모드를 따르므로 그 선택이 곧 인식 엔진이다. 로컬 Tesseract는 도크에 자리가 없어 함께 사라진다(`local_ocr.py`, `import_image.py`의 `local` 모드).
+- **막힌 지점**: 도크 API 모드는 지금 이미지를 못 읽는다. `chat.py::_run_with_images`가 `bridge.run_agent_prompt`(CLI 전용)를 부르고, CLI가 없으면 "이미지를 열 수 없습니다"라고 답한다. `vision_import.py`가 하는 base64 vision 입력을 그 경로에 붙여야 "도크 하나로 통일"이 성립한다.
+- crop 슬라이더 5개는 없앤다. CLI/모델이 전체 화면을 읽고 합계·예수금 행을 알아서 거른다. 계좌번호를 가리는 용도의 상단 가리기 하나만 남길지는 다시 만들 때 정한다.
+- **리뷰 표는 없애지 못한다.** 저장 전 확인이 안전 계약이다. 다만 별도 표를 만들지 말고 읽은 행을 Portfolio 편집표에 얹고(화면 상단 배너로 알림) 기존 `Portfolio 저장` 버튼이 커밋하게 하면, 다이얼로그·crop·모드 라디오·preflight가 모두 사라져 남는 UI가 오히려 줄어든다.
+- 기존 제안(proposal) 배관은 쓸 수 없다. markdown 보고서 전용이라 diff·섹션 검증·base revision이 전제이고 `ReportKind`도 셋뿐이다. 포트폴리오는 JSON 포지션이라 짧은 별도 경로가 필요하다.
 
 ## 아직 미뤄 둔 것 — 화면 재연결 (0.5.X)
 

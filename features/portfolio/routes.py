@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Body, HTTPException, Query, Request
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from .service import (
     PortfolioRevisionConflict,
@@ -24,7 +24,6 @@ from .service import (
     save_portfolio_preset,
     search_portfolio_tickers,
 )
-from .import_image import MODES, preflight_payload, preview_image
 
 
 def create_portfolio_router(data_dir: Path) -> APIRouter:
@@ -56,24 +55,6 @@ def create_portfolio_router(data_dir: Path) -> APIRouter:
     @router.get("/analytics")
     def analytics():
         return portfolio_analytics()
-
-    @router.get("/import-image/preflight")
-    def import_preflight():
-        return preflight_payload()
-
-    @router.post("/import-image/preview")
-    async def import_preview(request: Request, mode: str = "local", consent: bool = False):
-        if mode not in MODES:
-            raise HTTPException(status_code=400, detail="portfolio_import_mode_invalid")
-        content_type = str(request.headers.get("content-type") or "").split(";", 1)[0].lower()
-        try:
-            return preview_image(data_dir, await request.body(), content_type=content_type, mode=mode, consent=consent)
-        except PermissionError as exc:
-            raise HTTPException(status_code=403, detail=str(exc)) from exc
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-        except RuntimeError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     @router.get("/presets")
     def presets():

@@ -217,7 +217,7 @@ features/company_analysis/financial_quality_prompt.md
 | 기업 분석 | `company_analysis` | SEC 숫자+10-K 기반 분석 | Canonical |
 | 테마분석 (Topic Report v2) | `topic_report` | 투자 질문 해결기: Planner→Evidence Pack→유형별 템플릿→Quality Gate→Personal Overlay | Canonical + Personal Overlay |
 | Smart Collections | `smart_collections` | Deep Research 안의 결정적 저장 필터·상태·snapshot 변화/recovery | metadata |
-| 포트폴리오 | `portfolio` | 보유·목표·백테스트·revision 저장·스크린샷 가져오기(로컬 OCR 기본, 외부 Vision은 매 요청 동의). 0.4에서 공개 화면 복귀 | — |
+| 포트폴리오 | `portfolio` | 보유 종목 직접 입력·revision 저장. 0.4에서 공개 화면 복귀. 0.5.0에서 스크린샷 가져오기를 뺐고(도크로 재설계 예정) 목표·백테스트 화면은 API만 남아 0.5.X 재연결 대상 | — |
 | 시장 내러티브 메모리 / Regime 추적 v2 | `market_memory` | 중기 내러티브 상태·taxonomy·momentum/confidence·thesis 연결 | source-grounded |
 | 워치리스트 | `watchlist_notes` | 워치리스트·상세 모달(기업 정보/차트/수집 뉴스) | — |
 | Native Investment Notes | `investment_notes` | Obsidian 없이 운용되는 Folio 로컬 투자 노트와 `native_note_index` | hypothesis 입력 |
@@ -242,7 +242,7 @@ features/company_analysis/financial_quality_prompt.md
 0.4 기본 사용자 화면에서의 노출 상태:
 
 - **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
-- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio `짚어보기` 대화와 `노트로 정리`, Portfolio 스크린샷 가져오기.
+- **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio `짚어보기` 대화와 `노트로 정리`.
 - **Agent 실행 경계**: 설정에서 LLM API 키를 넣거나 Agent CLI를 연결한 순간부터, 사용자는 그 프로젝트의 모든 동작에 대해 Agent 사용을 허락한 것으로 본다. 사용자가 요청한 산출물을 만드는 일(계획 작성·보고서 생성·분석)은 버튼을 한 번 더 누르게 하지 않는다. **명시적 action이 계속 필요한 것은 사용자 개인 맥락을 읽거나 저장물을 바꾸는 쪽이다** — Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 대화 답변, 보고서 수정 제안. freshness/health/context 배지와 `changeSummary`는 계속 규칙으로 자동 계산한다(Agent를 쓰지 않는다).
 - 엔진을 부르는 화면은 **얼마나 걸리는지 미리 말하고**, 실패하면 규칙 결과로 내려간 사실을 숨기지 않는다. Agent CLI는 한 번에 수십 초가 걸린다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
@@ -424,10 +424,9 @@ features/company_analysis/financial_quality_prompt.md
 - 백테스트 실행 결과는 자동 저장하지 않는다. 사용자가 결과 카드의 저장 버튼을 눌렀을 때만 저장한다.
 - 거래 내역 기반 원가 계산, 배당 현금흐름, 자동 리밸런싱 제안은 아직 범위 밖이다.
 - 저장은 additive `revision`을 가지며 `expectedRevision` 불일치 시 409와 최신본을 반환한다. 동시 수정은 사용자가 최신본과 다시 합친다.
-- 스크린샷 가져오기는 세 경로다(`mode=agent|local|vision`). **설정한 Agent CLI가 있으면 그쪽이 기본**이다(0.5.0) — 나머지 둘은 각각 Tesseract 설치와 OpenAI 키를 먼저 요구해서, 아무것도 더 깔지 않고 읽는 경로는 CLI뿐이다. 없으면 로컬 OCR(자동 설치하지 않음), 그것도 없으면 외부 Vision으로 내려간다.
-- 어느 경로든 preview는 draft만 반환하며 원본 이미지·raw OCR·word box를 저장하지 않고 temp 파일을 항상 정리한다. **외부 Vision만 매 요청 명시적 동의를 받는다.** Agent CLI는 동의를 받지 않는다 — 설정에서 Agent를 연결한 순간부터 사용은 허락된 것으로 보기 때문이다(§8 Agent 실행 경계). 대신 사진이 그 CLI 제공자에게 전달된다는 사실을 화면이 먼저 말한다.
-- **설정 화면에 CLI 경로를 넣는 칸은 없다.** 경로는 `shutil.which()`로 PATH에서 찾고, `.env`의 `FOLIO_AGENT_<이름>_COMMAND`가 PATH 밖에 둔 경우의 예외 통로다(UI 없음). 설정이 소유하는 것은 `AI Agent 사용` 토글, 실행 방식(CLI/API), 사용할 CLI와 모델 선택, 그리고 어댑터별 상태 표시다. 그러니 사용자에게 `설정에서 경로를 지정하라`고 안내하면 없는 칸을 찾게 만든다 — 안내는 `CLI를 설치하고 로그인하라`거나 `토글을 켜라`여야 한다.
-- Agent 경로는 프롬프트에 **파일 경로만** 싣고 바이트를 인라인하지 않는다(`features/portfolio/agent_import.py`). `run_agent_prompt()`는 job을 만들지 않아 `data/jobs.json`·Work Log에도 남지 않는다. 파싱 실패와 빈 결과를 섞지 않는다 — 빈 목록은 `사진에 종목이 없다`는 뜻이라, 읽기 실패를 거기 합치면 사용자가 사진 탓으로 오해한다.
+- **스크린샷 가져오기는 0.5.0 화면에 없다.** 시간 대비 인식이 만족스럽지 않았고 첫 설정에 한 번 쓰는 도구였다(2026-08-07 사용자 결정). 버튼·다이얼로그·`/import-image/*` route를 걷어냈고 보유 종목은 직접 입력한다.
+- 다시 만들 때는 **Agent 도크 하나로 통일한다** — 사용자가 도크에 사진을 붙이고 포지션 입력을 요청할 때만 인식한다. 도크가 설정의 CLI/API 모드를 따르므로 엔진 선택을 따로 두지 않고, 로컬 Tesseract는 도크에 자리가 없어 함께 사라진다. **막힌 지점**: 도크 API 모드는 지금 이미지를 못 읽는다(`chat.py::_run_with_images`가 CLI 전용). 리뷰 표는 없애지 못한다 — 저장 전 확인이 안전 계약이라, 읽은 행을 Portfolio 편집표에 얹고 기존 저장 버튼이 커밋하게 한다. 기존 proposal 배관은 markdown 보고서 전용이라 쓸 수 없다.
+- `features/portfolio/import_image.py`·`agent_import.py`·`vision_import.py`·`import_schema.py`는 호출자가 없어도 **죽은 코드가 아니라 0.5.X용으로 남긴 것이다.** 지우기 전에 `roadmap/release/0.5_PLAN.md`를 본다.
 
 ### Obsidian 내보내기
 

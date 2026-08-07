@@ -1126,6 +1126,10 @@ body:has(#folioReactRoot .react-shell) main.page {
 .react-agent-logo {
   display: inline-grid;
   place-items: center;
+  /* 제목이 두 줄로 접히면(`Claude Code CLI`) flex가 이 칸의 폭을 뺏어간다 —
+     실측 36px 지정에 23.8px로 눌렸고, 안쪽 22px 마크는 그대로라 아이콘이
+     찌그러져 보였다. 정사각을 지키게 줄지 않도록 고정한다. */
+  flex: none;
   width: 36px;
   height: 36px;
   border: 1px solid var(--folio-border, #dde2e9);
@@ -14223,19 +14227,6 @@ main.page {
 .portfolio-holdings-table th, .portfolio-holdings-table td { padding: 8px; border-bottom: 1px solid var(--folio-border); text-align: left; }
 .portfolio-holdings-table input { min-width: 96px; width: 100%; }
 .portfolio-research { display: grid; gap: 14px; }
-.portfolio-import-backdrop { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 18px; background: rgba(10, 16, 22, .62); }
-.portfolio-import-dialog { width: min(1100px, 100%); max-height: calc(100vh - 36px); overflow: auto; padding: 20px 22px; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); background: var(--folio-surface-clean); box-shadow: var(--elev-2, 0 24px 60px rgba(7, 17, 31, .32)); }
-.portfolio-crop-controls { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); gap: 10px; margin: 14px 0; }
-.portfolio-crop-controls label { display: grid; gap: 4px; font-size: 12px; color: var(--folio-ink-muted); }
-.portfolio-crop-preview { display: block; width: min(100%, 900px); max-height: 420px; object-fit: contain; margin: 0 auto 14px; border: 1px solid var(--folio-border); border-radius: var(--folio-radius); background: var(--folio-surface-dark); }
-.portfolio-import-mode { display: flex; flex-wrap: wrap; gap: 12px 18px; margin: 12px 0; border: 0; padding: 0; }
-.portfolio-import-file { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
-.portfolio-import-file__name { min-width: 0; color: var(--folio-ink-subtle); font-size: 12.5px; overflow-wrap: anywhere; }
-.portfolio-import-pages { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
-.portfolio-import-mode legend { width: 100%; font-weight: var(--fw-bold); }
-.portfolio-import-results { margin-top: 16px; overflow-x: auto; }
-.portfolio-import-results table { width: 100%; border-collapse: collapse; }
-.portfolio-import-results th, .portfolio-import-results td { padding: 8px; border-bottom: 1px solid var(--folio-border); text-align: left; }
 .consultation-panel { position: fixed; inset: 58px 0 0 auto; z-index: 1150; width: min(980px, calc(100vw - 24px)); display: grid; grid-template-rows: auto auto minmax(0, 1fr); padding: 16px; border-left: 1px solid var(--folio-border); background: var(--folio-surface-clean); box-shadow: var(--elev-2, -20px 0 50px rgba(7, 17, 31, .2)); }
 .consultation-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .consultation-panel > header span { color: var(--folio-gold); font-size: 11px; font-weight: var(--fw-bold); letter-spacing: 0.08em; text-transform: uppercase; }
@@ -14463,7 +14454,6 @@ main.page {
 
 @media (max-width: 900px) {
   .portfolio-route-grid { grid-template-columns: 1fr; }
-  .portfolio-crop-controls { grid-template-columns: 1fr 1fr; }
   .consultation-panel { inset: 0; width: 100vw; padding: 12px; }
   .consultation-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .consultation-sessions { max-height: 120px; grid-auto-flow: column; grid-auto-columns: minmax(170px, 1fr); overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--folio-border); padding: 0 0 8px; }

@@ -3,7 +3,6 @@ import { ApiRequestError, getJson, postJson } from "../api";
 import { setReactAgentContextScope } from "./agentContext";
 import { RouteHero } from "./RouteHero";
 import { HoldingsTable, type PositionDraft } from "./portfolio/HoldingsTable";
-import { ImportPositionsDialog } from "./portfolio/ImportPositionsDialog";
 import { ConsultationEntry } from "./portfolio/ConsultationEntry";
 
 type Portfolio = { revision: number; positions: PositionDraft[]; cash?: Array<{ currency: string; amount: number }>; updatedAt?: string };
@@ -11,7 +10,6 @@ type Portfolio = { revision: number; positions: PositionDraft[]; cash?: Array<{ 
 export function PortfolioRoute() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [positions, setPositions] = useState<PositionDraft[]>([]);
-  const [showImport, setShowImport] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -42,7 +40,7 @@ export function PortfolioRoute() {
       <div className="portfolio-route-grid">
         <section className="cockpit-panel portfolio-holdings" aria-labelledby="portfolio-holdings-title">
           <div className="cockpit-panel__head"><div><span>HOLDINGS</span><h2 id="portfolio-holdings-title">현재 보유 종목</h2></div><b>버전 {portfolio?.revision ?? 0}</b></div>
-          <div className="portfolio-actions"><button className="btn" type="button" onClick={() => setPositions([...positions, { ticker: "", quantity: "", averagePrice: "" }])}>종목 추가</button><button className="btn" type="button" onClick={() => setShowImport(true)}>사진에서 가져오기</button><button className="btn btn--primary" type="button" disabled={busy || !portfolio} onClick={save}>{busy ? "저장 중" : "Portfolio 저장"}</button></div>
+          <div className="portfolio-actions"><button className="btn" type="button" onClick={() => setPositions([...positions, { ticker: "", quantity: "", averagePrice: "" }])}>종목 추가</button><button className="btn btn--primary" type="button" disabled={busy || !portfolio} onClick={save}>{busy ? "저장 중" : "Portfolio 저장"}</button></div>
           <HoldingsTable positions={positions} onChange={setPositions} />
           {status && <p className="react-reader-status">{status}</p>}{error && <p className="react-dashboard-error" role="alert">{error}</p>}
         </section>
@@ -53,7 +51,6 @@ export function PortfolioRoute() {
           <small>대화 내용은 보고서 근거로 사용되지 않습니다.</small>
         </aside>
       </div>
-      {showImport && <ImportPositionsDialog current={positions} onApply={(next) => { setPositions(next); setShowImport(false); setStatus("이미지 인식 결과를 편집표에 적용했습니다. 아직 저장되지 않았습니다."); }} onClose={() => setShowImport(false)} />}
     </main>
   );
 }

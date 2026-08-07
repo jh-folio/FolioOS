@@ -1,4 +1,13 @@
-"""Privacy-bounded screenshot preview orchestration."""
+"""Privacy-bounded screenshot preview orchestration.
+
+**0.5.0에서는 이 모듈을 부르는 화면도 route도 없다.** 죽은 코드가 아니라 0.5.X를
+위해 남겨 둔 것이다 — 사진 인식을 Agent 도크 하나로 옮기기로 했고(2026-08-07 사용자
+결정), 그때 여기의 임시 파일 수명 관리·`validate_image` 가드·`import_preview`
+정규화를 그대로 쓴다. 0.5.X가 정리할 것은 `local` 모드와 `local_ocr.py`다: 도크는
+설정에 따라 CLI 아니면 API로 동작하므로 Tesseract가 설 자리가 없다.
+
+지우기 전에 `roadmap/release/0.5_PLAN.md`의 해당 절을 먼저 본다.
+"""
 from __future__ import annotations
 
 import tempfile
