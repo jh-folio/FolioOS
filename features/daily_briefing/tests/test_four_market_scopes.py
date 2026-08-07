@@ -81,8 +81,8 @@ def test_aggregate_scopes_share_the_dated_base_file(scope):
 def test_read_returns_the_requested_market(scope):
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key, generation_scope="all")
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written, generation_scope="all")
         with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
             from features.daily_briefing.service import resolve_briefing
 
@@ -95,8 +95,8 @@ def test_an_aggregate_read_records_what_generated_and_what_was_asked_for():
     """An `all` run that lost Europe still says `all` — the lists show the gap."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in ("us", "kr", "jp"):
-            _write(root, key, generation_scope="all")
+        for written in ("us", "kr", "jp"):
+            _write(root, written, generation_scope="all")
         with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
             from features.daily_briefing.service import resolve_briefing
 
@@ -125,8 +125,8 @@ def test_the_generation_response_carries_the_same_coverage_contract_as_the_read(
 def test_a_legacy_both_read_never_reaches_for_europe_or_japan():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key, generation_scope="both")
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written, generation_scope="both")
         with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
             from features.daily_briefing.service import resolve_briefing
 
@@ -142,8 +142,8 @@ def test_a_legacy_both_read_never_reaches_for_europe_or_japan():
 def test_an_all_run_collapses_to_one_card_naming_its_markets():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key, generation_scope="all")
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written, generation_scope="all")
         payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
         assert payload["total"] == 1
         item = payload["items"][0]
@@ -155,8 +155,8 @@ def test_an_all_run_collapses_to_one_card_naming_its_markets():
 def test_a_partial_all_run_reports_three_markets_not_four():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in ("us", "kr", "jp"):
-            _write(root, key, generation_scope="all")
+        for written in ("us", "kr", "jp"):
+            _write(root, written, generation_scope="all")
         item = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"][0]
         assert item["includedMarkets"] == ["us", "kr", "jp"]
         assert item["expectedMarkets"] == ["us", "kr", "europe", "jp"]
@@ -179,8 +179,8 @@ def test_a_both_run_and_an_all_run_on_one_date_stay_separate_cards():
 def test_the_archive_filters_by_each_market(scope):
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key)
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written)
         payload = BriefingArchiveIndex(root, ttl_seconds=0).query(market_scope=scope)
         assert [item["marketScope"] for item in payload["items"]] == [scope]
 
@@ -189,8 +189,8 @@ def test_archive_all_means_no_filter_not_the_four_market_scope():
     """`all` names a briefing scope and an archive filter; they mean different things."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key)
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written)
         assert BriefingArchiveIndex(root, ttl_seconds=0).query(market_scope="all")["total"] == 4
         assert BriefingArchiveIndex(root, ttl_seconds=0).query(market_scope="aggregate")["total"] == 0
 
@@ -202,8 +202,8 @@ def test_archive_all_means_no_filter_not_the_four_market_scope():
 def test_deleting_one_market_leaves_the_others(scope):
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key, generation_scope="all")
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written, generation_scope="all")
         with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
             from features.daily_briefing.service import delete_briefing
 
@@ -219,8 +219,8 @@ def test_deleting_one_market_leaves_the_others(scope):
 def test_a_date_wide_delete_removes_every_market():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        for key in SINGLE_MARKET_SCOPES:
-            _write(root, key, generation_scope="all")
+        for written in SINGLE_MARKET_SCOPES:
+            _write(root, written, generation_scope="all")
         with patch("features.daily_briefing.service.BRIEFINGS_DIR", root):
             from features.daily_briefing.service import delete_briefing
 

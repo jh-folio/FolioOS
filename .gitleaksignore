@@ -1,0 +1,20 @@
+# gitleaks 오탐 목록. 지문(commit:file:rule:line) 단위라 여기 적힌 그 발견 하나만
+# 넘어간다 — 새로 생기는 유출은 그대로 걸린다. 규칙이나 파일 전체를 열지 않는다.
+#
+# 아래 7건은 `features/daily_briefing/tests/test_four_market_scopes.py`의
+#     for key in SINGLE_MARKET_SCOPES:
+#         _write(root, key, generation_scope="all")
+# 두 줄이다. `generic-api-key` 규칙이 `key, ... ="all"`을 "key 이름 뒤에 값이 온다"로
+# 읽어 비밀값으로 오인했다. 실제로는 시장 범위 문자열("us"/"kr"/"europe"/"jp")이며
+# 비밀값이 아니다. 현재 파일에서는 루프 변수를 `written`으로 바꿔 더는 걸리지 않지만,
+# git 히스토리는 고쳐 쓰지 않으므로 그 커밋의 지문은 남는다.
+#
+# 이 목록에 줄을 더할 때는 반드시 값을 직접 확인하고, 진짜 유출이면 무시하지 말고
+# 자격증명을 폐기·재발급한다.
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:83
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:97
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:113
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:130
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:143
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:190
+eb78b998e80eca896725262410357c4f022da5db:features/daily_briefing/tests/test_four_market_scopes.py:generic-api-key:207
