@@ -135,12 +135,12 @@ const MIN_WIDTH = 200;
  */
 function useMeasuredWidth() {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [width, setWidth] = useState(520);
+  const [box, setBox] = useState(520);
   useLayoutEffect(() => {
     const node = ref.current;
     if (!node) return;
     const apply = (value: number) => {
-      if (value > 0) setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(value))));
+      if (value > 0) setBox(Math.round(value));
     };
     apply(node.getBoundingClientRect().width);
     // 창 크기는 따로 듣는다. ResizeObserver가 멈춘 환경에서도 최소한 이건 온다.
@@ -156,7 +156,23 @@ function useMeasuredWidth() {
       observer?.disconnect();
     };
   }, []);
-  return { ref, width };
+  const width = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, box));
+  // 상한에 걸려 남는 자리는 좌우로 나눈다. 마우스 옆 상자도 그만큼 밀린다.
+  return { ref, width, offset: Math.max(0, Math.round((box - width) / 2)) };
+}
+
+/** 라벨 한 줄의 대략적인 폭. 한글은 라틴 문자의 두 배 가까이 넓다. */
+function labelWidth(label: string) {
+  let width = 0;
+  for (const char of label) width += /[ᄀ-ᇿ　-ヿ一-鿿가-힯＀-￯]/.test(char) ? 13 : 7.2;
+  return width;
+}
+
+/** 칸보다 넓은 라벨은 이웃과 겹친다. `2026 Q1`은 52px인데 분기 여덟 칸이면
+ *  칸이 43px밖에 안 된다. 최근 것부터 두고 들어갈 만큼만 남긴다. */
+export function labelStride(labels: string[], slot: number) {
+  const widest = labels.reduce((max, label) => Math.max(max, labelWidth(label)), 0);
+  return Math.max(1, Math.ceil((widest + 6) / Math.max(1, slot)));
 }
 
 function niceTicks(min: number, max: number, count = 4): number[] {
@@ -189,6 +205,7 @@ function BarsChart({
   const barWidth = Math.max(6, Math.min(groupWidth / (amounts.length + 1.6), (groupWidth - 18) / Math.max(1, amounts.length)));
   const zeroY = yFor(0, min, max, top, plot);
   const centre = (index: number) => left + index * groupWidth + groupWidth / 2;
+  const stride = labelStride(labels, groupWidth);
 
   return (
     <svg
@@ -273,18 +290,20 @@ function BarsChart({
       {/* 막대 하나가 아니라 그 기간 전체가 대상이다. 조준할 필요가 없다.
           입력을 받는 사각형은 맨 위에 두되 칠하지 않는다 — 칠하면 그 아래 그래프를
           덮는다. 강조 배경은 마크보다 먼저 그려 뒤에 깔린다. */}
-      {labels.map((label, index) => (
-        <text
-          className="analysis-chart-axis"
-          data-active={index === activeIndex ? "true" : undefined}
-          key={`x-${label}`}
-          x={centre(index)}
-          y={height - 16}
-          textAnchor="middle"
-        >
-          {label}
-        </text>
-      ))}
+      {labels.map((label, index) =>
+        index === activeIndex || (labels.length - 1 - index) % stride === 0 ? (
+          <text
+            className="analysis-chart-axis"
+            data-active={index === activeIndex ? "true" : undefined}
+            key={`x-${label}`}
+            x={centre(index)}
+            y={height - 16}
+            textAnchor="middle"
+          >
+            {label}
+          </text>
+        ) : null,
+      )}
       {/* 배경 음영만으로는 어느 기간을 짚었는지 잘 안 보인다. 축 위에 표시를 남긴다. */}
       {labels.length > 0 && (
         <rect
@@ -333,6 +352,7 @@ function LineChart({
   const { height, top, plot, left, right } = BARS;
   const step = (width - left - right) / Math.max(1, labels.length - 1);
   const at = (index: number) => left + index * step;
+  const stride = labelStride(labels, step);
 
   return (
     <svg
@@ -394,27 +414,12 @@ function LineChart({
         );
       })}
 
-      {labels.map((label, index) => (
-        <text
-          className="analysis-chart-axis"
-          data-active={index === activeIndex ? "true" : undefined}
-          key={`x-${label}`}
-          x={at(index)}
-          y={height - 16}
-          textAnchor="middle"
-        >
-          {label}
-        </text>
-      ))}
-      {labels.length > 0 && (
-        <rect
-          className="analysis-chart-marker"
-          x={at(activeIndex) - step * 0.3}
-          y={top + plot + 6}
-          width={step * 0.6}
-          height={2}
-          rx="1"
-        />
+      {labels.map((label, index) =>
+        index === activeIndex || (labels.length - 1 - index) % stride === 0 ? (
+          <text className="analysis-chart-axis" key={`x-${label}`} x={at(index)} y={height - 16} textAnchor="middle">
+            {label}
+          </text>
+        ) : null,
       )}
       {labels.map((label, index) => (
         <rect
@@ -604,7 +609,7 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
           <div
             className="analysis-chart-hover"
             data-side={anchor > plot.width / 2 ? "left" : "right"}
-            style={{ left: `${anchor}px` }}
+            style={{ left: `${anchor + plot.offset}px` }}
           >
             <b>{labels[index] || ""}</b>
             {series.map((item, seriesIndex) => (
