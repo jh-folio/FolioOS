@@ -11738,66 +11738,9 @@ main.page {
   line-height: 1.55;
 }
 
+/* 시장 범위 선택은 .segment 프리미티브를 쓴다. 이 클래스는 배치 훅만 남는다. */
 .market-scope-tabs {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   width: fit-content;
-  padding: 4px;
-  border: 1px solid var(--folio-border);
-  border-radius: var(--r-pill);
-  background: var(--folio-surface-soft, #f5f7fa);
-}
-
-.market-scope-tabs::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 4px;
-  width: calc((100% - 16px) / 3);
-  border-radius: var(--r-pill);
-  background: var(--folio-surface-dark, #101829);
-  box-shadow: var(--elev-1, 0 4px 12px rgba(7, 17, 31, 0.045));
-  transform: translateX(0);
-  transition: transform 180ms var(--ease, ease), background 180ms var(--ease, ease);
-  pointer-events: none;
-}
-
-.market-scope-tabs[data-count="2"]::before {
-  width: calc((100% - 12px) / 2);
-}
-
-.market-scope-tabs[data-scope="us"]::before {
-  transform: translateX(calc(100% + 4px));
-}
-
-.market-scope-tabs[data-scope="kr"]::before {
-  transform: translateX(calc((100% + 4px) * 2));
-}
-
-.market-scope-tabs[data-count="2"][data-scope="kr"]::before {
-  transform: translateX(calc(100% + 4px));
-}
-
-.market-scope-tabs button {
-  position: relative;
-  z-index: 1;
-  min-width: 70px;
-  height: 30px;
-  padding: 0 13px;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--folio-muted);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  cursor: pointer;
-}
-
-.market-scope-tabs button[aria-selected="true"] {
-  color: #fff;
 }
 
 .market-state-overview {

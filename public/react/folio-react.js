@@ -15472,15 +15472,12 @@ function ys({ payload: e, selectedMarket: t = "overall", loading: n = !1, updati
 			/* @__PURE__ */ (0, f.jsx)(gs, { stateRef: l }),
 			u === "stale" && l ? /* @__PURE__ */ (0, f.jsx)(_s, { stateRef: l }) : null,
 			x && m.length > 1 ? /* @__PURE__ */ (0, f.jsx)("div", {
-				className: "market-scope-tabs",
-				role: "tablist",
+				className: "segment market-scope-tabs",
+				role: "group",
 				"aria-label": "시장 범위 선택",
-				"data-scope": h,
-				"data-count": m.length,
 				children: m.map((e) => /* @__PURE__ */ (0, f.jsx)("button", {
 					type: "button",
-					role: "tab",
-					"aria-selected": h === e,
+					"aria-pressed": h === e,
 					onClick: () => o?.(e),
 					children: rs[e]
 				}, e))

@@ -390,14 +390,16 @@ export function MarketStateDashboardView({ payload, selectedMarket = "overall", 
       </div>
       <StateMeta stateRef={ref} />
       {state === "stale" && ref ? <StaleNotice stateRef={ref} /> : null}
+      {/* 상호배타 선택은 .segment 프리미티브가 소유한다. 예전 커스텀 알약은
+          ::before 위치가 종합/us/kr 셋에 하드코딩돼 있어, 유럽·일본을 켜
+          항목이 4~5개가 되는 순간 폭과 위치가 깨졌다. */}
       {showsSnapshot && availableMarkets.length > 1 ? (
-        <div className="market-scope-tabs" role="tablist" aria-label="시장 범위 선택" data-scope={activeMarket} data-count={availableMarkets.length}>
+        <div className="segment market-scope-tabs" role="group" aria-label="시장 범위 선택">
           {availableMarkets.map((key) => (
             <button
               key={key}
               type="button"
-              role="tab"
-              aria-selected={activeMarket === key}
+              aria-pressed={activeMarket === key}
               onClick={() => onSelectMarket?.(key)}
             >
               {MARKET_SCOPE_LABELS[key]}

@@ -124,7 +124,8 @@ test("scope tabs render only backed distinct market views", async (t) => {
   assert.doesNotMatch(overallOnly, /market-scope-tabs/);
   const withUs = { ...marketStateFixtures.current, marketViews: { us: { ...marketStateFixtures.current, title: "미국 시장" } } };
   const withUsHtml = renderToStaticMarkup(React.createElement(MarketStateDashboardView, { payload: withUs }));
-  assert.match(withUsHtml, /aria-selected="true">종합</);
+  // 선택 상태는 aria-pressed가 소유한다(.segment 프리미티브 계약).
+  assert.match(withUsHtml, /aria-pressed="true">종합</);
   assert.match(withUsHtml, />US</);
   assert.doesNotMatch(withUsHtml, />KR</);
   // 백엔드가 authoring하는 네 시장이 모두 열려야 한다. europe/jp는 화면에서 빠져 있었다.
