@@ -20,6 +20,7 @@ import {
   type MarketStateScope,
   type PlanPreviewEnvelope,
   type PlanEdits,
+  type PlannerEngine,
   type PlanRequest,
   type ReplanRequest,
   type TopicPlan,
@@ -732,6 +733,9 @@ export function DeepResearchRoute() {
   const [status, setStatus] = useState("");
   const [actionBusy, setActionBusy] = useState("");
   const [proposalReloadKey, setProposalReloadKey] = useState(0);
+  // 엔진을 설정해 둔 사용자는 그 순간부터 Agent 사용을 허락한 것으로 본다.
+  // 빠른 계획이 필요한 때를 위해 고를 수는 있게 둔다.
+  const [plannerEngine, setPlannerEngine] = useState<PlannerEngine>("auto");
   const [planEditing, setPlanEditing] = useState(false);
   const [planRevising, setPlanRevising] = useState(false);
   const [planReplanning, setPlanReplanning] = useState(false);
@@ -912,10 +916,13 @@ export function DeepResearchRoute() {
     setError("");
     setErrorKind(null);
     setErrorReason("");
-    setStatus("질문을 실행 계획으로 바꾸는 중입니다.");
+    setStatus(plannerEngine === "rules"
+      ? "질문을 실행 계획으로 바꾸는 중입니다."
+      : "AI가 리서치 계획을 쓰는 중입니다. 30초 이상 걸릴 수 있습니다.");
     const body: PlanRequest = {
       question: normalizedQuestion,
       userContext: userContext.normalize("NFKC").trim(),
+      plannerEngine,
       deepResearch: true,
       customTickers: {},
       marketStatePolicy,
@@ -1355,7 +1362,21 @@ export function DeepResearchRoute() {
           </details>
           <div className="topicrpt-action-row">
             <span className="topicrpt-policy-note">심층 조사 · 최대 2라운드</span>
-            <button className="btn btn--primary" type="submit" data-qa="dr-preview" disabled={isBusy}>{phase === "plan-loading" ? "계획 준비 중" : "계획 미리보기"}</button>
+            <label className="field topicrpt-policy-field">
+              <span>계획 작성</span>
+              <select
+                value={plannerEngine}
+                data-qa="dr-planner-engine"
+                onChange={(event) => setPlannerEngine(event.currentTarget.value as PlannerEngine)}
+                disabled={isBusy}
+              >
+                <option value="auto">AI가 작성</option>
+                <option value="rules">규칙으로 빠르게</option>
+              </select>
+            </label>
+            <button className="btn btn--primary" type="submit" data-qa="dr-preview" disabled={isBusy}>
+              {phase === "plan-loading" ? (plannerEngine === "rules" ? "계획 준비 중" : "AI가 계획을 쓰는 중") : "계획 미리보기"}
+            </button>
           </div>
           <input type="hidden" value={customLabel} data-legacy-topic={topicKey} readOnly aria-hidden="true" />
           <input type="hidden" value={deepResearch ? "true" : "false"} readOnly aria-hidden="true" />

@@ -115,13 +115,15 @@ class ApprovedRequestService:
         payload["degradedConfirmation"] = None
         return sha256_hex(payload)
 
-    def _topic_plan(self, request: PlanRequest, *, use_llm: bool = False) -> TopicPlanV1:
-        """첫 미리보기는 규칙 계획이다.
+    def _topic_plan(self, request: PlanRequest, *, use_llm: bool | None = None) -> TopicPlanV1:
+        """계획은 기본적으로 설정된 엔진(API 키 또는 Agent CLI)이 쓴다.
 
-        Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계). 이 설치의
-        Agent는 CLI로 돌아 한 번에 수십 초가 걸리는데, 버튼 한 번에 그만큼 기다리게
-        하면 계획 확인 자체가 쓸모없어진다. LLM 계획은 `replan`이 담당한다.
+        엔진을 설정해 둔 사용자는 그 순간부터 Agent 사용을 허락한 것으로 본다.
+        엔진이 없거나 실패하면 규칙 계획이 그대로 나오고, `plannerMode`가 그 사실을
+        말한다. 빠른 규칙 계획이 필요하면 요청에서 `plannerEngine=rules`를 고른다.
         """
+        if use_llm is None:
+            use_llm = request.plannerEngine != "rules"
         raw = build_topic_plan(
             "custom",
             custom_label=request.question,

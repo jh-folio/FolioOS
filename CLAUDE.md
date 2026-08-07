@@ -243,7 +243,8 @@ features/company_analysis/financial_quality_prompt.md
 
 - **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
 - **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio `짚어보기` 대화와 `노트로 정리`, Portfolio 스크린샷 가져오기.
-- **Agent 실행 경계**: freshness/health/context 배지와 `changeSummary`는 규칙으로 자동 계산하지만 Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 대화 답변은 사용자의 명시적 action에서만 Agent를 실행한다.
+- **Agent 실행 경계**: 설정에서 LLM API 키나 Agent CLI 경로를 넣은 순간부터, 사용자는 그 프로젝트의 모든 동작에 대해 Agent 사용을 허락한 것으로 본다. 사용자가 요청한 산출물을 만드는 일(계획 작성·보고서 생성·분석)은 버튼을 한 번 더 누르게 하지 않는다. **명시적 action이 계속 필요한 것은 사용자 개인 맥락을 읽거나 저장물을 바꾸는 쪽이다** — Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 대화 답변, 보고서 수정 제안. freshness/health/context 배지와 `changeSummary`는 계속 규칙으로 자동 계산한다(Agent를 쓰지 않는다).
+- 엔진을 부르는 화면은 **얼마나 걸리는지 미리 말하고**, 실패하면 규칙 결과로 내려간 사실을 숨기지 않는다. Agent CLI는 한 번에 수십 초가 걸린다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.
 - **숨김/축소 유지**: Investment Review의 독립 화면은 전면 재출시로 설명하지 않으며, 개인 맥락은 보이는 리서치 화면의 제한된 projection으로만 노출한다. Portfolio 독립 화면은 0.4에서 공개로 복귀했다.
 - **문서 원칙**: 사용자용 README는 현재 릴리즈에서 실제로 보이는 기능만 현재 기능으로 설명한다. 숨김/축소 기능은 개발자 문서나 후속 로드맵에서 다룬다.
@@ -390,7 +391,10 @@ features/company_analysis/financial_quality_prompt.md
 - custom 주제는 planner가 `searchQueries`/분석 축/후보 티커를 만든다. 기존 `label.split()` 검색은 폐기. 프리셋은 `plan_from_preset`으로 backward compatible.
 - **계획은 주제어 위에 세운다.** 사용자는 질문칸에 배경까지 한 문단으로 적는다. 그 240자를 주제 라벨로 쓰면 축 질문 다섯 개가 같은 문단이 되고 검색어에 질문 전문이 들어간다. `topic_subject()`가 첫 구획을 40자 이내로 끊고, 원문은 `topic`에 남는다.
 - **계획의 `searchQueries`는 그대로 근거 검색을 돌린다.** 한 단어 질의와 질문 전문 질의를 만들지 않는다(실제로 `피크`는 전력망 기사를, 질문 전문은 그날 시장 기사 아무거나 물어왔다 — FTS에서 토큰이 OR로 풀린다). 2어절 이상 40자 이하만 남기며, 이 게이트는 LLM 계획에도 똑같이 적용한다.
-- **첫 미리보기는 규칙 계획이고, LLM 계획은 `AI로 계획 다시 세우기`(`POST /api/topic-reports/plan/replan`)로만 만든다.** Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계) — 미리보기에서 자동 실행하게 했더니 CLI 한 번에 48초가 걸렸다. `plannerMode`(`rules|llm|preset|edited`)를 계획에 남겨 화면이 표시한다.
+- **계획 미리보기는 기본적으로 설정된 엔진이 쓴다**(`plannerEngine=auto`). 계획을 보려고 버튼을 두 번 누르게 하는 것은 확인이 아니라 절차다. 빠른 계획이 필요할 때만 `plannerEngine=rules`를 고른다. CLI는 한 번에 40~50초가 걸리므로 화면이 그 사실을 먼저 말한다.
+- `POST /api/topic-reports/plan/replan`은 계획을 받은 뒤 다시 쓰고 싶을 때 쓴다(수정 후 재작성 포함). `revise`와 같은 `_swap_plan` 경로로 새 planHash를 만들고 기존 승인을 supersede한다.
+- 엔진이 없거나 실패하면 규칙 계획이 그대로 남는다. `plannerMode`(`rules|llm|preset|edited`)를 계획에 남겨 화면이 표시한다 — 무엇이 쓴 계획인지 모르면 얼마나 믿을지 정할 수 없다.
+- **테스트는 Agent CLI를 부르지 않는다.** `features/topic_report/tests/conftest.py`가 `run_agent_prompt`를 막는다. 막지 않았을 때 아무것도 stub하지 않은 테스트가 실제 CLI를 실행해 스위트가 멈춰 섰고, 멈춘 이유가 코드 문제인지 CLI 문제인지 구분되지 않았다.
 - 플래너는 API 키와 Agent CLI 둘 다 쓴다. `AI_AGENT_MODE=cli` 환경에서는 `apiKey`가 비어 있어 플래너만 엔진을 못 찾고 있었다. 키가 없으면 `run_agent_prompt()`로 같은 프롬프트를 보낸다(`TOPIC_PLANNER_TIMEOUT_SECONDS`, 기본 120초).
 - 승인 전 계획 수정은 `POST /api/topic-reports/plan/revise`다. `confirm-degraded`와 같은 모양으로 **서버가** payload를 고치고 planHash를 다시 계산해 기존 승인을 supersede한다. 클라이언트가 계획을 통째로 밀어넣는 통로는 없고, 축은 key로 찾을 뿐 새로 만들 수 없다.
 - `userContext`는 관심 방향이지 evidence가 아니다. 외부 자료와 충돌하면 충돌을 명시하고 반대 근거를 함께 제시한다.

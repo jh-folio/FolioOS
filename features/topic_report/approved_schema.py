@@ -58,6 +58,9 @@ class CollectionRefRequest(StrictModel):
 class PlanRequest(StrictModel):
     question: str = Field(min_length=1, max_length=500)
     userContext: str = Field(default="", max_length=4000)
+    # 엔진을 설정해 둔 사용자는 그 순간부터 Agent 사용을 허락한 것으로 본다.
+    # `rules`는 빠른 규칙 계획을 일부러 고를 때만 쓴다.
+    plannerEngine: Literal["auto", "rules"] = "auto"
     deepResearch: bool = False
     customTickers: dict[str, str] = Field(default_factory=dict)
     marketStatePolicy: Literal["exclude", "include_current"] = "exclude"

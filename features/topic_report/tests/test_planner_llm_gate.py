@@ -118,16 +118,35 @@ def test_with_no_key_and_no_cli_it_stays_on_rules(monkeypatch):
     assert plan["analysisAxes"]
 
 
-def test_the_preview_never_runs_the_agent_by_itself(monkeypatch):
-    """Agent는 사용자의 명시적 action에서만 실행한다(§8 Agent 실행 경계).
+def test_the_preview_uses_the_engine_by_default(monkeypatch):
+    """엔진을 설정해 둔 사용자는 그 순간부터 Agent 사용을 허락한 것으로 본다.
 
-    미리보기가 CLI를 부르면 버튼 한 번에 수십 초를 기다린다. 실제로 이 경로를
-    열었을 때 테스트 스위트가 멈춰 섰다.
+    계획을 보려고 버튼을 두 번 누르게 하는 것은 확인이 아니라 절차다.
     """
+    import features.llm_settings.client as client
+    from features.agent_mode import bridge
+
+    monkeypatch.setattr(client, "use_llm_analysis", lambda: True)
+    monkeypatch.setattr(client, "selected_llm_config", lambda: {"apiKey": ""})
+    monkeypatch.setattr(bridge, "bridge_status", lambda *a, **k: {"available": True})
+    monkeypatch.setattr(bridge, "run_agent_prompt", lambda *a, **k: {"output": json.dumps({
+        "topic": LONG,
+        "reportType": "industry_theme",
+        "searchQueries": ["메모리 반도체 가격"],
+        "analysisAxes": [{"key": "demand", "label": "수요", "questions": ["수요는?"], "searchQueries": ["메모리 수요 전망"]}],
+    }, ensure_ascii=False)})
+
+    plan = planner.build_topic_plan("custom", custom_label=LONG)
+
+    assert plan["plannerMode"] == "llm"
+
+
+def test_the_rules_choice_skips_the_engine(monkeypatch):
+    """빠른 계획이 필요할 때가 있다. 그때만 규칙으로 내려간다."""
     from features.agent_mode import bridge
 
     def explode(*_args, **_kwargs):
-        raise AssertionError("미리보기가 Agent CLI를 호출했다")
+        raise AssertionError("규칙 계획을 골랐는데 Agent CLI를 호출했다")
 
     monkeypatch.setattr(bridge, "run_agent_prompt", explode)
 

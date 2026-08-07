@@ -331,9 +331,13 @@ export type SmartCollectionRefreshEnvelope = {
   readonly recentEvidence: readonly SmartCollectionPreviewItem[];
 };
 
+/** `auto`는 설정된 엔진(API 키 또는 Agent CLI)이 계획을 쓴다. `rules`는 빠른 규칙 계획. */
+export type PlannerEngine = "auto" | "rules";
+
 export type PlanRequest = {
   readonly question: string;
   readonly userContext: string;
+  readonly plannerEngine: PlannerEngine;
   readonly deepResearch: true;
   readonly customTickers: Readonly<Record<string, string>>;
   readonly marketStatePolicy: MarketStatePolicy;
