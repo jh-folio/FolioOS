@@ -473,6 +473,36 @@
     });
   }
 
+  /** 지금 보고 있는 층의 형제들 기준으로 글자 크기를 다시 매긴다.
+   *
+   *  원래 크기는 전체 지도 기준으로 한 번만 계산된다. 전체에서 산업·종목은 작게
+   *  그려지는 게 맞지만, 좁은 화면에서 섹터에 들어가면 그 산업들이 화면을 가득
+   *  채우는데도 6px 이름표를 그대로 들고 온다. 층이 바뀌면 기준도 바뀌어야 한다.
+   */
+  function compactLevelText(nodes, levelId) {
+    const children = nodes.ids
+      .map((id, index) => index)
+      .filter((index) => nodes.parents[index] === String(levelId || ""));
+    const maxValue = Math.max(1, ...children.map((index) => finite(nodes.values[index]) || 0));
+    const text = nodes.text.slice();
+    for (const index of children) {
+      const value = Math.max(0, finite(nodes.values[index]) || 0);
+      const size = Math.round(12 + 10 * Math.sqrt(value / maxValue));
+      const id = nodes.ids[index];
+      if (id.startsWith("ticker:")) {
+        const ticker = escapeHtml(nodes.labels[index] || "—");
+        const pct = nodes.customdata[index] ? finite(nodes.customdata[index][1]) : null;
+        const change = pct === null ? "" : `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
+        const changeSize = Math.max(9, Math.round(size * 0.6));
+        const changeLine = change ? `<br><span style="font-size:${changeSize}px">${escapeHtml(change)}</span>` : "";
+        text[index] = `<span style="font-size:${size}px"><b>${ticker}</b></span>${changeLine}`;
+      } else {
+        text[index] = `<span style="font-size:${size}px">${escapeHtml(nodes.labels[index] || "")}</span>`;
+      }
+    }
+    return text;
+  }
+
   function createRequestGate() {
     let current = 0;
     return {
@@ -801,6 +831,7 @@
       const compact = heatmapCompact(stage);
       const nodes = heatmapNodes(snapshot.rows || [], compact);
       card.dataset.heatmapCompact = compact ? "true" : "false";
+      compactNodes = compact ? nodes : null;
       if (compact) buildHeatmapPath(card, stage, nodes);
       return Promise.resolve(root.Plotly.newPlot(stage, [{
         type: "treemap",
@@ -844,9 +875,12 @@
     // 못 찾는다(섹터를 눌러도 아무 일이 없었다). 우리가 직접 `level`을 옮긴다.
     // 뿌리에서는 한 층(섹터)만, 들어간 뒤에는 그 노드와 자식 한 층을 그린다.
     let heatmapPath = null;
+    let compactNodes = null;
 
     function goToLevel(id) {
-      root.Plotly.restyle(stage, { level: [id], maxdepth: [id ? 2 : 1] });
+      const update = { level: [id], maxdepth: [id ? 2 : 1] };
+      if (compactNodes) update.text = [compactLevelText(compactNodes, id)];
+      root.Plotly.restyle(stage, update);
       heatmapPath?.render(id);
     }
 
@@ -930,6 +964,7 @@
       stage.dataset.drillBound = "";
       card.querySelector(".briefing-heatmap-path")?.remove();
       heatmapPath = null;
+      compactNodes = null;
       plot();
     };
     root.addEventListener?.("resize", syncDepth);
@@ -1210,6 +1245,7 @@
     preferredIndexTicker,
     buildSectionSlots,
     heatmapNodes,
+    compactLevelText,
     abbreviateHeatmapLabel,
     heatmapLayoutHeight,
     createRequestGate,

@@ -19,6 +19,7 @@ const {
   sectionMarket,
   preferredIndexTicker,
   heatmapNodes,
+  compactLevelText,
   abbreviateHeatmapLabel,
   heatmapLayoutHeight,
   createRequestGate,
@@ -426,4 +427,51 @@ test("snapshot selection cancels a pending current request", () => {
   assert.equal(viewAction("snapshot", "select_snapshot", true), "render_snapshot");
   assert.equal(viewAction("snapshot", "select_snapshot", false), "noop");
   assert.equal(viewAction("current", "select_snapshot", false), "render_snapshot");
+});
+
+// ---------------------------------------------------------------------------
+// 층에 들어가면 글자 크기도 그 층 기준이어야 한다.
+// 전체 지도 기준으로 한 번만 계산하면 섹터에 들어간 산업들이 화면을 가득
+// 채우는데도 6px 이름표를 그대로 들고 온다(모바일에서 읽을 수 없었다).
+// ---------------------------------------------------------------------------
+test("drilling into a sector re-sizes its industries for the visible layer", () => {
+  const nodes = heatmapNodes([
+    { ticker: "NVDA", sector: "Tech", industry: "Semis", marketCap: 3000, changePct: 2.5 },
+    { ticker: "MU", sector: "Tech", industry: "Semis", marketCap: 300, changePct: 0.5 },
+    { ticker: "MSFT", sector: "Tech", industry: "Software", marketCap: 2500, changePct: 1.0 },
+    { ticker: "JPM", sector: "Fin", industry: "Banks", marketCap: 700, changePct: -0.4 },
+  ], true);
+  const sectorId = nodes.ids.find((id) => id === "sector:Tech");
+  const text = compactLevelText(nodes, sectorId);
+  for (const [index, id] of nodes.ids.entries()) {
+    if (nodes.parents[index] !== sectorId) continue;
+    const match = String(text[index]).match(/font-size:(\d+)px/);
+    assert.ok(match, `${id} 라벨에 크기가 없다`);
+    assert.ok(Number(match[1]) >= 12, `${id} 라벨이 ${match[1]}px — 층 기준으로 커져야 한다`);
+  }
+});
+
+test("ticker tiles keep their change line after the level resize", () => {
+  const nodes = heatmapNodes([
+    { ticker: "NVDA", sector: "Tech", industry: "Semis", marketCap: 3000, changePct: 2.93 },
+    { ticker: "MU", sector: "Tech", industry: "Semis", marketCap: 300, changePct: -1.2 },
+  ], true);
+  const industryId = nodes.ids.find((id) => id.startsWith("industry:"));
+  const text = compactLevelText(nodes, industryId);
+  const nvda = nodes.ids.indexOf("ticker:NVDA");
+  assert.match(String(text[nvda]), /NVDA/);
+  assert.match(String(text[nvda]), /\+2\.93%/);
+});
+
+test("the root level resize keeps every sector label readable", () => {
+  const nodes = heatmapNodes([
+    { ticker: "A", sector: "Big", industry: "X", marketCap: 5000, changePct: 1 },
+    { ticker: "B", sector: "Small", industry: "Y", marketCap: 50, changePct: -1 },
+  ], true);
+  const text = compactLevelText(nodes, "");
+  for (const [index, id] of nodes.ids.entries()) {
+    if (nodes.parents[index] !== "") continue;
+    const match = String(text[index]).match(/font-size:(\d+)px/);
+    assert.ok(Number(match[1]) >= 12, `${id}가 ${match[1]}px`);
+  }
 });
