@@ -7750,8 +7750,9 @@ button:disabled {
 }
 
 .analysis-chart-svg {
-  width: 100%;
-  height: auto;
+  /* 폭·높이를 컴포넌트가 픽셀로 넣는다. 여기서 100%로 늘리면 좌표 한 칸이
+     한 픽셀이 아니게 되고, 축 글자가 카드 폭을 따라 함께 커진다. */
+  max-width: 100%;
   display: block;
   overflow: visible;
 }

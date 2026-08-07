@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 type AnalysisChartsPayload = {
   available?: boolean;
@@ -120,8 +120,36 @@ function yFor(value: number, min: number, max: number, top = 16, height = 150) {
   return top + (1 - (value - min) / (max - min)) * height;
 }
 
-/** 원래 비율로 돌아온다. 축 눈금과 오른쪽 비율 축이 들어갈 여백만 남긴다. */
-const BARS = { width: 520, height: 220, top: 16, plot: 148, left: 46, right: 40 };
+/** 축 눈금과 오른쪽 비율 축이 들어갈 여백만 남긴다. 폭은 카드에서 재서 넣는다. */
+const BARS = { height: 220, top: 16, plot: 148, left: 46, right: 40 };
+/** 넓은 화면에서도 이 폭을 넘지 않는다. 4년치 막대가 더 넓어져 봐야 여백만 는다. */
+const MAX_WIDTH = 720;
+const MIN_WIDTH = 200;
+
+/** 그릴 폭을 화면 픽셀로 잰다.
+ *
+ *  viewBox 하나를 카드 폭에 맞춰 늘리면 그림만 커지는 게 아니라 축 글자와 연도까지
+ *  같이 커진다. 좁은 그리드에서는 드러나지 않고 넓은 단일 컬럼에서만 본문 글씨보다
+ *  서너 배 큰 숫자가 된다. 좌표 한 칸을 화면 한 픽셀로 맞추면 그림은 폭을 채우고
+ *  글자는 CSS에 적힌 크기 그대로 남는다.
+ */
+function useMeasuredWidth() {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(520);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const apply = (value: number) => {
+      if (value > 0) setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.round(value))));
+    };
+    apply(node.getBoundingClientRect().width);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => apply(entries[0]?.contentRect.width ?? 0));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, width };
+}
 
 function niceTicks(min: number, max: number, count = 4): number[] {
   if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return [min, max];
@@ -134,11 +162,13 @@ function BarsChart({
   series,
   activeIndex,
   onIndex,
+  width,
 }: {
   chart: AnalysisChart;
   series: Series[];
   activeIndex: number;
   onIndex: (index: number) => void;
+  width: number;
 }) {
   const labels = Array.isArray(chart.years) ? chart.years : [];
   // 금액과 비율은 축을 나눈다. 한 축에 얹으면 비율이 0에 붙어 사라진다.
@@ -146,14 +176,21 @@ function BarsChart({
   const rates = series.filter((item) => item.kind === "percent");
   const { min, max } = valueRange(amounts.flatMap((item) => item.values));
   const rate = valueRange(rates.flatMap((item) => item.values));
-  const { width, height, top, plot, left, right } = BARS;
+  const { height, top, plot, left, right } = BARS;
   const groupWidth = (width - left - right) / Math.max(1, labels.length);
-  const barWidth = Math.max(6, Math.min(26, (groupWidth - 18) / Math.max(1, amounts.length)));
+  const barWidth = Math.max(6, Math.min(groupWidth / (amounts.length + 1.6), (groupWidth - 18) / Math.max(1, amounts.length)));
   const zeroY = yFor(0, min, max, top, plot);
   const centre = (index: number) => left + index * groupWidth + groupWidth / 2;
 
   return (
-    <svg className="analysis-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={chart.title || "기업 분석 차트"}>
+    <svg
+      className="analysis-chart-svg"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={chart.title || "기업 분석 차트"}
+    >
       {labels.map((label, index) => (
         <rect
           className="analysis-chart-band"
@@ -257,20 +294,29 @@ function LineChart({
   series,
   activeIndex,
   onIndex,
+  width,
 }: {
   chart: AnalysisChart;
   series: Series[];
   activeIndex: number;
   onIndex: (index: number) => void;
+  width: number;
 }) {
   const labels = Array.isArray(chart.years) ? chart.years : [];
   const { min, max } = valueRange(series.flatMap((item) => item.values));
-  const { width, height, top, plot, left, right } = BARS;
+  const { height, top, plot, left, right } = BARS;
   const step = (width - left - right) / Math.max(1, labels.length - 1);
   const at = (index: number) => left + index * step;
 
   return (
-    <svg className="analysis-chart-svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={chart.title || "기업 분석 차트"}>
+    <svg
+      className="analysis-chart-svg"
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label={chart.title || "기업 분석 차트"}
+    >
       {niceTicks(min, max).map((tick) => {
         const y = yFor(tick, min, max, top, plot);
         return (
@@ -474,10 +520,11 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
   const labels = Array.isArray(banded?.chart.years) ? (banded?.chart.years as string[]) : [];
   // 마우스를 올리지 않아도 최신 기간 숫자가 보인다. 짚기 전에는 마지막 기간이다.
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const plot = useMeasuredWidth();
   const last = Math.max(0, labels.length - 1);
   const index = Math.min(activeIndex ?? last, last);
   const tooltipStyle = tooltip?.x !== undefined
-    ? { left: `${Math.max(7, Math.min(93, (tooltip.x / 520) * 100))}%`, top: `${Math.max(10, tooltip.y || 10)}px` }
+    ? { left: `${Math.max(7, Math.min(93, (tooltip.x / plot.width) * 100))}%`, top: `${Math.max(10, tooltip.y || 10)}px` }
     : undefined;
 
   return (
@@ -486,12 +533,12 @@ function ChartCard({ chart }: { chart: AnalysisChart }) {
         <h4>{chart.title || "기업 분석 차트"}</h4>
         {chart.subtitle && <p>{chart.subtitle}</p>}
       </div>
-      <div className="analysis-chart-plot">
+      <div className="analysis-chart-plot" ref={plot.ref}>
         {line && line.series.length ? (
-          <LineChart chart={line.chart} series={line.series} activeIndex={index} onIndex={setActiveIndex} />
+          <LineChart chart={line.chart} series={line.series} activeIndex={index} onIndex={setActiveIndex} width={plot.width} />
         ) : null}
         {bars && bars.series.length ? (
-          <BarsChart chart={bars.chart} series={bars.series} activeIndex={index} onIndex={setActiveIndex} />
+          <BarsChart chart={bars.chart} series={bars.series} activeIndex={index} onIndex={setActiveIndex} width={plot.width} />
         ) : null}
         {(kind === "dcf" || kind === "scenario_price") ? <ScenarioChart chart={chart} onPoint={setTooltip} onLeave={() => setTooltip(null)} /> : null}
         {!series.length && !["dcf", "scenario_price"].includes(kind) && (
