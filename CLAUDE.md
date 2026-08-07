@@ -451,6 +451,7 @@ features/company_analysis/financial_quality_prompt.md
 - 모든 이슈를 바로 현재 상태로 올리지 않는다. `issue` 메모 중 반복 근거가 있거나, 중요도가 높고 복수 출처가 있을 때만 active/watch 상태 후보가 된다.
 - 시장 내러티브 탭의 기본 UI는 Market State Dashboard v3(`GET /api/memory/state-dashboard`) 하나다. 상단은 `시장 해석`과 `판단 및 투자 행동` 두 개의 큰 본문으로 보여주고, 스냅샷에 `marketViews.overall/us/kr`가 있으면 `종합 / 미국장 / 한국장` 세그먼트로 전환한다. 드라이버 카드는 짧은 판단 요약과 방향 칩만 먼저 보여준다. 세부 근거는 카드 안 `근거 보기` 접기에 `근거 요약`, `시장 영향`, `다음 확인`만 간결하게 표시한다. taxonomy·story map·audit·패밀리 제안·개별 기록 목록 UI는 제거되었고 API로만 접근한다.
 - Market State Snapshot context는 `rssCandidates`, `shortTermDigest`, `existingStates`에 더해 yfinance 기반 `marketTape`와 FRED/BOK ECOS 기반 `macroSnapshot`을 포함할 수 있다. 이 값은 LLM이 시장 판단을 작성하기 위한 structured evidence이며, 코드는 provider/freshness/결측을 정리할 뿐 시장 결론을 규칙으로 확정하지 않는다.
+- **시장 해석 문장은 뉴스 흐름에서 시작한다.** `rssCandidates`가 1차 근거 풀이고 `marketTape`/`macroSnapshot`은 그 이야기를 확인·반박하는 맥락이다. 해석을 지수 레벨이나 퍼센트 나열로 열지 않는다(프롬프트 규칙으로 강제, `snapshot.py`). 수치가 앞장서면 근거 위계가 뒤집힌다.
 - audit, story-map, family-review, narrative-report는 API로 유지되므로 품질 저하나 잘못 묶인 패밀리는 API 응답으로 점검한다.
 - active/watch 상태의 추세·근거 카운트 갱신은 `run_rss_market_memory_update()`가 규칙 기반 `refresh_all_regimes`로 자동 수행한다(RSS/Market Memory 자동화 실행 시 포함). 화면에는 상태별 수동 갱신 버튼이 없다.
 - LLM 기반 정리는 사용자가 `시장 메모리 업데이트` 버튼을 눌렀을 때만 실행한다. 이 버튼은 `/api/memory/llm`으로 기존 중기 내러티브 row를 누적한 뒤 `/api/memory/state-snapshot`으로 화면용 현재 시장 상태 스냅샷을 이어 생성한다. 자동 브리핑 생성 과정에서는 규칙 기반 후보 저장을 유지한다.

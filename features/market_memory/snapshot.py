@@ -52,6 +52,7 @@ Rules:
 - marketViews.overall/us/kr/europe/jp keyDrivers are not labels. Each market view driver must include the same rich fields as top-level keyDrivers: title, summary, directionLabel, marketImpact, nextMemoryCheck, evidenceSummary, whyItMatters, sourceRefs.
 - If a market-specific view has weak evidence, say that in marketInterpretation/counterEvidence instead of filling it with short factor names.
 - Use marketTape and macroSnapshot as structured evidence. They are not conclusions. They help decide whether news flows are confirmed or contradicted by prices and macro data.
+- marketInterpretation and oneLineSummary must start from what happened — the news flow in rssCandidates (events, announcements, policy remarks) — and then bring in prices or macro numbers to confirm or contradict that story. Do not open any view with index levels or a run of percentages; numbers support the interpretation, they do not lead it.
 - marketTape and macroSnapshot are supporting evidence only. If they are unavailable, stale, weak, or hard to match, do not list that as user-facing uncertainties; keep those limitations as internal data diagnostics.
 - Treat existingStates as prior hypotheses to re-check, not as conclusions to preserve.
 - Do not anchor on past Market Memory. If rssCandidates contradict, weaken, or invalidate an existing state, say so and update the current judgment.
