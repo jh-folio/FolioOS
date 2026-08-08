@@ -4,13 +4,13 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.5.0 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance. It covers four markets: the US, Korea, Europe, and Japan.
+Folio OS 0.5.1 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance. It covers four markets: the US, Korea, Europe, and Japan.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.5.0
+## What You Can Do In 0.5.1
 
 - Chat with the Folio OS AI Agent from the Home screen. Conversations are saved on your computer, so you can close the app, come back, and pick up where you left off — the Agent reads the earlier context.
 - Follow four markets: the US, Korea, Europe, and Japan. Briefings, market state, the RSS feed, the calendar, and the charts all use the same four.
@@ -25,19 +25,21 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - See released figures on the market calendar, not just the schedule.
 - Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, Smart Collection scope, and your own thinking kept as separate layers.
 - Review rule-based change summaries produced together with each new Briefing, Company Analysis, Topic Report, and Market Memory update — without an extra Agent call.
-- Manage your Portfolio holdings — type each position in, with company names resolved to tickers as you go, and a save made elsewhere is flagged before it gets overwritten.
+- Manage your Portfolio holdings — type each position in, with company names resolved to tickers as you go, and a save made elsewhere is flagged before it gets overwritten. See what they are worth now in one currency, how the weight sits across markets, sectors, and currencies, and where a single position has grown large. Save today's weights as a target, see how far each holding has drifted from it, and run that target back over past prices against a benchmark.
 - Carry on a conversation about a watchlist entry, a holding, or a report from the Agent dock, and come back to it later — the list of conversations lives there too. Conversation text is kept on your computer, separate from report sources, and only becomes an investment note when you explicitly choose “노트로 정리” (save as note).
 - Keep your own notes beside a report and check how old they are, what argues against them, and what you said you would follow up on — no AI required.
 - See the tickers you track quietly linked into related research screens, without exposing quantities, prices, weights, or note bodies.
 - Read a work log that shows what the AI did without storing what it wrote, and approve or reject any change it proposes to a saved report.
 - Write report-side Folio Notes.
 - Export generated reports to Obsidian or Notion.
+- Get a short first-run guide that sets up AI and your markets, skippable at any step.
+- See where your research data is stored and move it out of the app folder, so updating no longer means copying it by hand.
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Not included in the 0.5.0 user surface:
+Not included in the 0.5.1 user surface:
 
-- Company analysis for companies listed only in Europe or Japan. 0.5.0 reads official filings through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
+- Company analysis for companies listed only in Europe or Japan. 0.5.1 reads official filings through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
 - Installer/tray-app polish.
 
 Fast-origin news is an early lead, not verified evidence. It is promoted from RSS items Folio OS already collected — no extra network call, credential, or provider setting. Folio OS does not scrape pages or bypass paywalls.
@@ -65,13 +67,21 @@ Quick macOS / Linux launch after setup:
 bash start.sh
 ```
 
-Then open:
+The script opens your browser once the server is answering. If it does not appear, open this yourself:
 
 ```text
-http://localhost:8787
+http://127.0.0.1:8787
 ```
 
-Keep the server process running while using Folio OS.
+Keep the server process running while using Folio OS — closing the window stops it.
+
+A short setup guide appears on the very first run. It asks whether to use AI and which markets to follow, and you can skip any step. **Folio OS works without an AI key**: collection, search, charts, and rule-based reports all run locally.
+
+### Updating
+
+Releases unzip into a version-named folder, and the new folder starts empty. Copy `data/`, `research-inbox/`, `config/`, and `.env` across from your old folder, then delete the old one once you have confirmed the new one works.
+
+To skip that copy every time, use **Settings > “자료 위치”** (data location) to move your research data to your Documents folder. New versions find it there on their own. Moving copies your files and never deletes the originals.
 
 ---
 
@@ -147,7 +157,7 @@ Generate company analysis reports from official data and local research material
 
 Write the target however you think of it — a ticker, a company name, a Korean or Japanese spelling. The screen tells you which company it read before it generates anything, offers a short list when more than one company fits, and says it recognises none rather than guessing.
 
-**What 0.5.0 can analyse.** Official filings are read through the SEC. A European or Japanese company that also registers there — ASML, Shell, SAP, TotalEnergies, Toyota, Sony and others — can be analysed by its US ticker. A company listed only on its home exchange cannot yet: the screen names the market it is listed on and suggests a US ticker if one exists, instead of generating a report with almost nothing behind it. Korean companies use DART.
+**What 0.5.1 can analyse.** Official filings are read through the SEC. A European or Japanese company that also registers there — ASML, Shell, SAP, TotalEnergies, Toyota, Sony and others — can be analysed by its US ticker. A company listed only on its home exchange cannot yet: the screen names the market it is listed on and suggests a US ticker if one exists, instead of generating a report with almost nothing behind it. Korean companies use DART.
 
 ### Deep Research
 
@@ -180,6 +190,8 @@ None of these screens tell you what to buy or sell.
 ### Settings
 
 Configure appearance and motion, interest markets, AI Agent mode, LLM CLI/API settings, cached model choices, RSS/automation options, Obsidian, and Notion.
+
+**“자료 위치”** (data location) shows where your reports and collected material are stored, how much there is, and opens the folder. It can also move everything to your Documents folder so a new version finds it without you copying anything. Moving copies your files and never deletes the originals — check the new location works before removing the old one.
 
 **Interest markets** picks which of the four markets (US, Korea, Europe, Japan) Folio OS collects and shows — the default is US and Korea. A market you turn off stops being collected and disappears from the RSS list, briefing generation choices, the market calendar, and the market narrative. Global material such as oil and dollar news always stays visible. Turning a market back on starts collecting it immediately, but articles from the time it was off only come back as far as the feeds still publish them.
 
