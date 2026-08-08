@@ -51,14 +51,14 @@ jobs:
           python -m pip install --require-hashes --no-deps -r requirements-bootstrap.lock.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.committed.txt')"
           python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.committed.txt')"
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-08-08T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-08-08T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
           python scripts/normalize_lock_lf.py requirements.lock.py312.txt
           python scripts/normalize_lock_lf.py requirements-test.lock.py312.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.first.txt')"
           python -c "from shutil import copyfile; copyfile('requirements-test.lock.py312.txt', 'requirements-test.lock.py312.first.txt')"
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
-          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-07-16T00:00:00Z --exclude-newer-package cryptography=2026-08-01T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-08-08T00:00:00Z --output-file requirements.lock.py312.txt requirements.txt
+          python -m uv pip compile --universal --python-version 3.12 --resolution highest --generate-hashes --exclude-newer 2026-08-08T00:00:00Z --output-file requirements-test.lock.py312.txt requirements-test.txt
           python scripts/normalize_lock_lf.py requirements.lock.py312.txt
           python scripts/normalize_lock_lf.py requirements-test.lock.py312.txt
           python -c "from shutil import copyfile; copyfile('requirements.lock.py312.txt', 'requirements.lock.py312.second.txt')"

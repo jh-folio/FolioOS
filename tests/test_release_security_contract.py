@@ -62,7 +62,7 @@ def test_lock_drift_contract_is_universal_and_reproducible(tmp_path: Path) -> No
     assert b"\r\n" not in raw
     header = raw.splitlines()[:2]
     assert b"--universal --python-version 3.12 --resolution highest --generate-hashes" in header[1]
-    assert b"--exclude-newer 2026-07-16T00:00:00Z" in header[1]
+    assert b"--exclude-newer 2026-08-08T00:00:00Z" in header[1]
 
     first = tmp_path / "requirements.lock.py312.first.txt"
     second = tmp_path / "requirements.lock.py312.second.txt"
