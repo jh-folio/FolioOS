@@ -221,9 +221,8 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
       ref={shellRef}
       onKeyDown={onKeyDown}
     >
-      {/* 색면은 카드 뒤에서만 흐른다. 카드는 불투명해서 본문 대비가 색면에 묶이지 않는다. */}
-      <div className="welcome-fields" aria-hidden="true"><i /><i /><i /></div>
-
+      {/* 배경은 뒤에 떠 있는 앱을 블러 처리한 것이다(CSS `backdrop-filter`). 별도
+          레이어를 두지 않는다 — 앱이 비쳐야 "건너뛰면 바로 이거"가 눈에 보인다. */}
       <div className="welcome-card">
         <header className="welcome-head">
           <FolioWordmark />

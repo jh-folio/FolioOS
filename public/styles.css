@@ -15469,10 +15469,9 @@ select { min-height: 36px; padding: 0 12px; }
 /* ── 첫 실행 안내 ───────────────────────────────────────────────────────────
    도구 크롬 목소리다(§1). 면 대비로 구분하고, 역할 스케일과 모서리 4종을 쓴다.
 
-   **예외 하나 — 배경 색면**: 원칙 3의 "카드 배경 워시 금지"와 부딪히지만 카드 워시가
-   아니라 페이지 바탕이고, 카드가 불투명해서 본문 대비가 색면에 묶이지 않는다. 앱 안에서
-   한 번만 보는 화면이라 이 화면에만 허용한다(2026-08-08 사용자 결정). 다른 화면으로
-   옮기지 않는다.
+   배경은 **뒤에 떠 있는 앱을 블러 처리한 것**이다. 앱이 비치면 "건너뛰면 바로 이거"가
+   눈에 보인다. 앱의 전체 화면 모달(`.home-mode-chooser-backdrop`)과 같은 문법이며,
+   카드가 불투명해서 본문 대비는 뒤 화면과 무관하다.
 
    색은 전부 기존 토큰이다. 필요한 4단계(바탕 → 카드 → 그룹 → 눌린 면)가 라이트와
    다크에서 서로 다른 토큰 이름에 맞아떨어져서 이름만 바꿔 잡는다. */
@@ -15486,11 +15485,12 @@ select { min-height: 36px; padding: 0 12px; }
      이것이 패널 제목이 아니라 화면 전체의 유일한 제목이기 때문이다. */
   --wz-title: 27px;
 
-  --wz-ground: var(--folio-surface-muted);
   --wz-card: var(--folio-surface);
   --wz-group: var(--folio-surface-clean);
   --wz-deep: var(--surface-control);
-  --wz-field-a: 0.62;
+  /* 어두운 scrim은 두 테마에서 모두 통한다. 라이트 앱 위에는 얕게, 다크 앱
+     위에는 조금 더 깊게 깔아 뒤 화면이 형태로만 읽히게 한다. */
+  --wz-scrim: rgba(23, 34, 53, 0.48);
   --wz-lift: 0 2px 6px rgba(7, 17, 31, 0.05), 0 30px 70px -28px rgba(7, 17, 31, 0.4);
   --wz-glow: 0 6px 16px -4px rgba(24, 95, 165, 0.45);
 
@@ -15501,61 +15501,18 @@ select { min-height: 36px; padding: 0 12px; }
   place-items: center;
   padding: var(--sp-4);
   overflow-y: auto;
-  background: var(--wz-ground);
+  background: var(--wz-scrim);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
 }
 
 :root[data-theme="dark"] .welcome-shell {
-  --wz-ground: var(--folio-surface-dark);
   --wz-card: var(--folio-surface-clean);
   --wz-group: var(--surface-group);
   --wz-deep: var(--surface-control);
-  --wz-field-a: 0.5;
+  --wz-scrim: rgba(6, 8, 12, 0.62);
   --wz-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 34px 80px -30px rgba(0, 0, 0, 0.9);
   --wz-glow: 0 6px 18px -4px rgba(0, 0, 0, 0.6);
-}
-
-/* 색면 — 팔레트의 blue·gold·teal 셋. 카드가 불투명해서 대비에 영향을 주지 않는다. */
-.welcome-fields {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.welcome-fields i {
-  position: absolute;
-  display: block;
-  border-radius: var(--r-pill);
-  filter: blur(90px);
-  opacity: var(--wz-field-a);
-}
-
-.welcome-fields i:nth-child(1) {
-  inline-size: 46vw; block-size: 46vw; inset-inline-start: -8vw; inset-block-start: -10vw;
-  background: var(--folio-blue);
-}
-
-.welcome-fields i:nth-child(2) {
-  inline-size: 40vw; block-size: 40vw; inset-inline-end: -6vw; inset-block-start: 6vh;
-  background: var(--folio-gold);
-  opacity: calc(var(--wz-field-a) * 0.78);
-}
-
-.welcome-fields i:nth-child(3) {
-  inline-size: 44vw; block-size: 44vw; inset-inline-start: 26vw; inset-block-end: -16vw;
-  background: var(--folio-teal);
-  opacity: calc(var(--wz-field-a) * 0.64);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .welcome-fields i { animation: welcome-drift 26s ease-in-out infinite alternate; }
-  .welcome-fields i:nth-child(2) { animation-duration: 34s; animation-delay: -8s; }
-  .welcome-fields i:nth-child(3) { animation-duration: 30s; animation-delay: -16s; }
-}
-
-@keyframes welcome-drift {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(3vw, -4vh, 0) scale(1.1); }
 }
 
 .welcome-card {
@@ -15845,8 +15802,7 @@ select { min-height: 36px; padding: 0 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   .welcome-card, .welcome-body .welcome-eyebrow, .welcome-body h1, .welcome-body p,
-  .welcome-choices, .welcome-markets, .welcome-next, .welcome-field,
-  .welcome-fields i { animation: none; }
+  .welcome-choices, .welcome-markets, .welcome-next, .welcome-field { animation: none; }
 }
 
 /* ── 포트폴리오 평가·목표·백테스트 ──────────────────────────────────────────

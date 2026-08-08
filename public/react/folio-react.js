@@ -23049,22 +23049,14 @@ function gu({ onFinish: e }) {
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
 		e.shiftKey && (i === n || !O.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
 	}, j = lu.indexOf(n), M = du.find((e) => e.id === f);
-	return /* @__PURE__ */ (0, K.jsxs)("div", {
+	return /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "welcome-shell",
 		role: "dialog",
 		"aria-modal": "true",
 		"aria-labelledby": "welcomeTitle",
 		ref: O,
 		onKeyDown: A,
-		children: [/* @__PURE__ */ (0, K.jsxs)("div", {
-			className: "welcome-fields",
-			"aria-hidden": "true",
-			children: [
-				/* @__PURE__ */ (0, K.jsx)("i", {}),
-				/* @__PURE__ */ (0, K.jsx)("i", {}),
-				/* @__PURE__ */ (0, K.jsx)("i", {})
-			]
-		}), /* @__PURE__ */ (0, K.jsxs)("div", {
+		children: /* @__PURE__ */ (0, K.jsxs)("div", {
 			className: "welcome-card",
 			children: [
 				/* @__PURE__ */ (0, K.jsxs)("header", {
@@ -23320,7 +23312,7 @@ function gu({ onFinish: e }) {
 					})]
 				})
 			]
-		})]
+		})
 	});
 }
 //#endregion
