@@ -15,11 +15,35 @@ if (Test-Path $BundledPython) {
   $ErrorActionPreference = $eap
 }
 
+# app.py와 같은 기본값을 쓴다. 여기서만 8787을 박아두면 PORT를 바꿨을 때 안내가 어긋난다.
+$Port = if ($env:PORT) { $env:PORT } else { "8787" }
+# localhost가 아니라 127.0.0.1이다. Windows에서 localhost는 ::1을 먼저 시도하고 폴백까지
+# 기다려 요청마다 약 2초를 낸다(실측 2.02초 vs 0.01초). 서버는 IPv4만 연다.
+$Url = "http://127.0.0.1:$Port"
+
 Write-Host ""
 Write-Host "Folio OS starting..." -ForegroundColor Green
-Write-Host "Open this address in your browser: http://localhost:8787" -ForegroundColor Cyan
-Write-Host "Keep this window open while using the archive." -ForegroundColor Yellow
+Write-Host "Address: $Url" -ForegroundColor Cyan
+Write-Host "Closing this window stops Folio OS." -ForegroundColor Yellow
 Write-Host ""
+
+# 서버가 실제로 응답하기 시작하면 브라우저를 연다. 바로 열면 연결 거부 화면이 먼저 뜬다.
+# 백그라운드 작업이라 아래 서버 실행을 막지 않는다. 앱 안의 `서버 재시작`(종료 코드 3)으로
+# 다시 돌 때는 열지 않는다 — 이미 열려 있는 탭 옆에 새 탭이 계속 쌓인다.
+$Opener = Start-Job -ArgumentList $Url, $Port -ScriptBlock {
+  param($Url, $Port)
+  for ($i = 0; $i -lt 120; $i++) {
+    try {
+      $client = New-Object System.Net.Sockets.TcpClient
+      $client.Connect("127.0.0.1", [int]$Port)
+      $client.Close()
+      Start-Process $Url
+      return
+    } catch {
+      Start-Sleep -Milliseconds 500
+    }
+  }
+}
 
 # Exit code 3 = restart signal from the in-app restart button.
 # Loop until the server exits with any other code.
@@ -33,9 +57,10 @@ while ($shouldRestart) {
     }
   } catch {
     Write-Host ""
-    Write-Host "The archive could not start:" -ForegroundColor Red
+    Write-Host "Folio OS could not start:" -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
     Write-Host ""
+    # 여기서만 창을 붙잡는다. 오류 메시지가 창과 함께 사라지면 원인을 알 수 없다.
     Read-Host "Press Enter to close"
     $shouldRestart = $false
     continue
@@ -47,3 +72,5 @@ while ($shouldRestart) {
     Write-Host ""
   }
 }
+
+if ($Opener) { Remove-Job -Job $Opener -Force -ErrorAction SilentlyContinue }

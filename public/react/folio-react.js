@@ -18126,9 +18126,13 @@ function Zs({ positions: e, onChange: t }) {
 					children: "삭제"
 				}) })
 			] }, t)) })]
-		}), !e.length && /* @__PURE__ */ (0, p.jsx)("p", {
+		}), !e.length && /* @__PURE__ */ (0, p.jsxs)("p", {
 			className: "cockpit-empty",
-			children: "등록된 보유 종목이 없습니다. 직접 추가하거나 증권사 화면에서 가져오세요."
+			children: [
+				"등록된 보유 종목이 없습니다. ",
+				/* @__PURE__ */ (0, p.jsx)("strong", { children: "종목 추가" }),
+				"를 눌러 직접 입력하세요 — 이름으로 적어도 종목 코드로 바꿔 줍니다."
+			]
 		})]
 	});
 }

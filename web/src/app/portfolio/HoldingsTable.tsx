@@ -88,7 +88,10 @@ export function HoldingsTable({ positions, onChange }: { positions: PositionDraf
           ))}
         </tbody>
       </table>
-      {!positions.length && <p className="cockpit-empty">등록된 보유 종목이 없습니다. 직접 추가하거나 증권사 화면에서 가져오세요.</p>}
+      {/* `증권사 화면에서 가져오세요`라고 안내하던 자리다. 그 기능은 0.5.0에서 뺐는데
+          문구만 남아, 처음 쓰는 사람이 있지도 않은 버튼을 찾게 됐다. 빈 상태는 지금
+          할 수 있는 일만 가리켜야 한다. */}
+      {!positions.length && <p className="cockpit-empty">등록된 보유 종목이 없습니다. <strong>종목 추가</strong>를 눌러 직접 입력하세요 — 이름으로 적어도 종목 코드로 바꿔 줍니다.</p>}
     </div>
   );
 }
