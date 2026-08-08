@@ -313,7 +313,7 @@
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   /* === 0.5 축 B — 디자인 시스템 프리미티브 토큰 (Stage D1 / Step 1) ===
-     "토스 문법, Folio 밀도": 테두리 기반 구분에서 배경 대비·여백·타이포 대비 기반 구분으로 옮긴다.
+     "무테 문법, Folio 밀도": 테두리 기반 구분에서 배경 대비·여백·타이포 대비 기반 구분으로 옮긴다.
      이 블록은 정의만 한다. 아직 아무도 참조하지 않으므로 화면은 변하지 않는다.
      Step 2가 프리미티브(.btn/.surface/.chip/.segment)를 세우고 기존 클래스를 별칭으로 매핑한다.
 
@@ -366,7 +366,7 @@
   --touch-min: 44px;
   --touch-gap: 8px;
 
-  /* 세그먼트 알약 — 토스 패턴은 회색 트랙 + 흰 알약이다.
+  /* 세그먼트 알약 — 무테 문법의 패턴은 회색 트랙 + 흰 알약이다(iOS 세그먼트 관습).
      기존 --folio-segment-active(어두운 알약)와 방향이 달라 별도 토큰을 둔다.
      다크 대응쌍은 기존 다크 세그먼트가 검증한 밝은 회색(#666e82, 트랙 대비 3:1)을 재사용한다. */
   --segment-thumb: #ffffff;
@@ -14175,7 +14175,7 @@ main.page {
 
 /* ============================================================
    0.5 축 B — 프리미티브 (Stage D1 / Step 2)
-   "토스 문법, Folio 밀도": 무테 + 회색 fill 컨트롤 + 회색 트랙/흰 알약 세그먼트.
+   "무테 문법, Folio 밀도": 테두리 없는 회색 fill 컨트롤 + 회색 트랙/흰 알약 세그먼트.
    반드시 파일 말미에 둔다 — 앞쪽 레거시 규칙이 같은 특이성으로 이기는 사고가
    실재했다(.cockpit-change-feed li > div). 새 화면은 이 4종만 쓴다.
    ============================================================ */
@@ -14205,6 +14205,13 @@ main.page {
 .btn--text:hover:not(:disabled) { background: var(--folio-tint-weak); color: var(--folio-ink); }
 .btn--sm { min-height: 32px; padding: 0 13px; font-size: var(--fs-meta); }
 .btn--icon { width: 32px; min-height: 32px; padding: 0; border-radius: var(--r-pill); }
+/* danger(파괴 동작): 트리거는 조심 신호만 — 회색 fill에 버건디 글자.
+   진한 버건디 fill은 확인 단계의 최종 버튼(.btn--primary.btn--danger)에만 쓴다.
+   데이터가 사라지지 않는 동작(로그아웃·작업 취소)에는 쓰지 않는다. */
+.btn--danger { color: var(--folio-burgundy); }
+.btn--danger:hover:not(:disabled) { background: var(--folio-red-soft); }
+.btn--primary.btn--danger { background: var(--folio-burgundy); color: var(--folio-on-accent); }
+.btn--primary.btn--danger:hover:not(:disabled) { background: var(--folio-burgundy); color: var(--folio-on-accent); }
 .btn:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
 /* 선택된 필터 버튼. 레거시 `.filter-btn.active`는 마크업에만 있고 규칙이 없어
    Work Log 필터가 무엇이 선택됐는지 보여주지 못했다. 상태는 aria가 소유한다. */
@@ -14521,7 +14528,7 @@ main.page {
 }
 
 /* RSS route: 옛 규칙이 모든 액션 버튼을 어두운 primary(800)로 칠한다(0,1,1).
-   토스 규율로는 primary 하나만 어둡다. 같은 특이성으로 되받고,
+   무테 문법에서는 primary 하나만 어둡다. 같은 특이성으로 되받고,
    진짜 primary(.react-rss-primary-action)는 자기 !important 규칙이 지킨다. */
 .react-rss-hero-actions button, .react-rss-hero-actions a,
 .react-rss-filter-actions button, .react-rss-filter-actions a,
@@ -15460,27 +15467,111 @@ select { min-height: 36px; padding: 0 12px; }
 }
 
 /* ── 첫 실행 안내 ───────────────────────────────────────────────────────────
-   앱 위에 덮는 한 장짜리 카드다. 별도 라우트로 두지 않는 이유는, 뒤에 실제 앱이
-   떠 있어야 건너뛴 순간 바로 쓸 수 있기 때문이다. 모양은 전부 프리미티브
-   (.surface / .btn / .field)에서 가져오고 여기서는 배치만 갖는다. */
+   도구 크롬 목소리다(§1). 면 대비로 구분하고, 역할 스케일과 모서리 4종을 쓴다.
+
+   **예외 하나 — 배경 색면**: 원칙 3의 "카드 배경 워시 금지"와 부딪히지만 카드 워시가
+   아니라 페이지 바탕이고, 카드가 불투명해서 본문 대비가 색면에 묶이지 않는다. 앱 안에서
+   한 번만 보는 화면이라 이 화면에만 허용한다(2026-08-08 사용자 결정). 다른 화면으로
+   옮기지 않는다.
+
+   색은 전부 기존 토큰이다. 필요한 4단계(바탕 → 카드 → 그룹 → 눌린 면)가 라이트와
+   다크에서 서로 다른 토큰 이름에 맞아떨어져서 이름만 바꿔 잡는다. */
 .welcome-shell {
+  /* 튕겼다 자리를 잡는 곡선. 전역 --ease는 'ease'라 이 느낌이 안 난다.
+     이 화면에서만 쓰므로 :root를 건드리지 않고 여기 둔다. */
+  --wz-spring: linear(0, .0058 1.6%, .0224 3.3%, .0847 6.7%, .4676 17%, .6231 21.3%,
+    .7508 25.7%, .8474 30.2%, .9174 34.9%, .9646 39.9%, .9924 45.5%, 1.0055 51.6%,
+    1.0093 60.6%, 1.0016 76%, 1);
+  /* 화면별 고정값(§3 타이포). 크롬 역할 스케일의 최대치(--fs-title 20)보다 큰 이유는
+     이것이 패널 제목이 아니라 화면 전체의 유일한 제목이기 때문이다. */
+  --wz-title: 27px;
+
+  --wz-ground: var(--folio-surface-muted);
+  --wz-card: var(--folio-surface);
+  --wz-group: var(--folio-surface-clean);
+  --wz-deep: var(--surface-control);
+  --wz-field-a: 0.62;
+  --wz-lift: 0 2px 6px rgba(7, 17, 31, 0.05), 0 30px 70px -28px rgba(7, 17, 31, 0.4);
+  --wz-glow: 0 6px 16px -4px rgba(24, 95, 165, 0.45);
+
   position: fixed;
   inset: 0;
   z-index: 9000;
   display: grid;
   place-items: center;
   padding: var(--sp-4);
-  background: color-mix(in srgb, var(--folio-surface-dark) 62%, transparent);
   overflow-y: auto;
+  background: var(--wz-ground);
+}
+
+:root[data-theme="dark"] .welcome-shell {
+  --wz-ground: var(--folio-surface-dark);
+  --wz-card: var(--folio-surface-clean);
+  --wz-group: var(--surface-group);
+  --wz-deep: var(--surface-control);
+  --wz-field-a: 0.5;
+  --wz-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 34px 80px -30px rgba(0, 0, 0, 0.9);
+  --wz-glow: 0 6px 18px -4px rgba(0, 0, 0, 0.6);
+}
+
+/* 색면 — 팔레트의 blue·gold·teal 셋. 카드가 불투명해서 대비에 영향을 주지 않는다. */
+.welcome-fields {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.welcome-fields i {
+  position: absolute;
+  display: block;
+  border-radius: var(--r-pill);
+  filter: blur(90px);
+  opacity: var(--wz-field-a);
+}
+
+.welcome-fields i:nth-child(1) {
+  inline-size: 46vw; block-size: 46vw; inset-inline-start: -8vw; inset-block-start: -10vw;
+  background: var(--folio-blue);
+}
+
+.welcome-fields i:nth-child(2) {
+  inline-size: 40vw; block-size: 40vw; inset-inline-end: -6vw; inset-block-start: 6vh;
+  background: var(--folio-gold);
+  opacity: calc(var(--wz-field-a) * 0.78);
+}
+
+.welcome-fields i:nth-child(3) {
+  inline-size: 44vw; block-size: 44vw; inset-inline-start: 26vw; inset-block-end: -16vw;
+  background: var(--folio-teal);
+  opacity: calc(var(--wz-field-a) * 0.64);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .welcome-fields i { animation: welcome-drift 26s ease-in-out infinite alternate; }
+  .welcome-fields i:nth-child(2) { animation-duration: 34s; animation-delay: -8s; }
+  .welcome-fields i:nth-child(3) { animation-duration: 30s; animation-delay: -16s; }
+}
+
+@keyframes welcome-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(3vw, -4vh, 0) scale(1.1); }
 }
 
 .welcome-card {
-  width: min(100%, 620px);
-  max-height: calc(100dvh - var(--sp-8));
-  display: grid;
-  align-content: start;
-  gap: var(--sp-5);
+  position: relative;
+  inline-size: min(100%, 860px);
+  max-block-size: calc(100dvh - var(--sp-8));
   overflow-y: auto;
+  background: var(--wz-card);
+  border-radius: var(--r-panel);
+  box-shadow: var(--wz-lift);
+  animation: welcome-enter 0.62s var(--wz-spring) both;
+}
+
+@keyframes welcome-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.992); }
+  to { opacity: 1; transform: none; }
 }
 
 .welcome-head {
@@ -15489,106 +15580,273 @@ select { min-height: 36px; padding: 0 12px; }
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
+  padding: var(--sp-5) 38px var(--sp-3);
 }
 
-.welcome-steps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-2);
+.welcome-count {
   margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* 단계 표시는 읽기 전용이다. 누를 수 있어 보이면 안 되므로 알약이 아니라 점+글자로
-   둔다 — 세그먼트처럼 그리면 눌러서 건너뛸 수 있다고 읽힌다. */
-.welcome-step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  font-family: var(--font-mono);
   font-size: var(--fs-meta);
-  color: var(--muted);
+  color: var(--folio-ink-subtle);
+  font-variant-numeric: tabular-nums;
 }
 
-.welcome-step::before {
-  content: "";
-  width: 7px;
-  height: 7px;
+.welcome-count b { color: var(--ink); font-weight: var(--fw-medium); }
+
+/* 진행은 채워지는 막대. 4단계는 실제 순서라 선이 맞다.
+   3px 장식 슬라이버는 모서리 토큰 예외에 해당한다(§3). */
+.welcome-rule {
+  /* 채움 비율은 React가 인라인으로 덮는다. 기본값은 여기 둔다 —
+     var() fallback에 숨기면 기본값이 어디 있는지 코드에서 보이지 않는다. */
+  --welcome-fill: 25%;
+  position: relative;
+  block-size: 3px;
+  margin: 0 38px;
   border-radius: var(--r-pill);
-  background: var(--folio-border);
+  background: var(--wz-deep);
 }
 
-.welcome-step[data-state="current"] {
-  color: var(--ink);
-  font-weight: var(--fw-medium);
-}
-
-.welcome-step[data-state="current"]::before,
-.welcome-step[data-state="done"]::before {
-  background: var(--accent-strong);
+.welcome-rule::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  inline-size: var(--welcome-fill);
+  border-radius: var(--r-pill);
+  background: var(--folio-blue);
+  transition: inline-size 0.5s var(--wz-spring);
 }
 
 .welcome-body {
   display: grid;
-  gap: var(--sp-4);
+  gap: var(--sp-3);
+  align-content: start;
+  padding: var(--sp-6) 38px var(--sp-6);
+  min-block-size: 288px;
+}
+
+.welcome-body .welcome-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  color: var(--folio-blue);
+  animation: welcome-up 0.44s var(--wz-spring) both;
+}
+
+.welcome-body .welcome-eyebrow svg {
+  inline-size: 17px;
+  block-size: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .welcome-body h1 {
   margin: 0;
-  font-size: var(--fs-2xl);
-  font-weight: var(--weight-heading);
-  line-height: 1.25;
+  font-size: var(--wz-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.035em;
+  line-height: 1.38;
   color: var(--ink);
+  text-wrap: balance;
+  animation: welcome-up 0.44s 0.04s var(--wz-spring) both;
 }
 
 .welcome-body p {
   margin: 0;
-  color: var(--ink);
-  font-size: var(--fs-base);
-  line-height: 1.55;
+  max-inline-size: 64ch;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  color: var(--folio-ink-muted);
+  animation: welcome-up 0.44s 0.09s var(--wz-spring) both;
 }
 
-/* `.welcome-body p`(0,1,1)가 `.welcome-muted`(0,1,0)를 이기므로 같은 무게로 올린다.
-   그러지 않으면 보조 문장이 본문과 똑같이 그려져 위계가 사라진다. */
 .welcome-body .welcome-muted {
-  color: var(--muted);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-body-sm);
+  color: var(--folio-ink-subtle);
 }
 
-.welcome-body code {
-  font-family: var(--font-mono);
-  font-size: 0.95em;
-  overflow-wrap: anywhere;
+.welcome-body strong { font-weight: var(--fw-bold); color: var(--ink); }
+.welcome-body code { font-family: var(--font-mono); font-size: 0.9em; }
+
+@keyframes welcome-up {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
 }
+
+/* 선택지 — 감싸는 상자 없이 한 줄 알약. 선택은 액센트로 채운다. 채운 알약과
+   안 채운 알약이 5.65:1이라 체크 글리프를 더 얹지 않아도 구분된다(WCAG 1.4.11). */
+.welcome-choices,
+.welcome-markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  animation: welcome-up 0.44s 0.14s var(--wz-spring) both;
+}
+
+.welcome-choices button,
+.welcome-markets button {
+  min-block-size: var(--touch-min);
+  padding: 10px 18px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--wz-deep);
+  color: var(--folio-ink-muted);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+
+.welcome-markets button { font-variant-numeric: tabular-nums; }
+
+.welcome-choices button:hover,
+.welcome-markets button:hover { opacity: 0.78; }
+
+.welcome-choices button[aria-pressed="true"],
+.welcome-markets button[aria-pressed="true"] {
+  background: var(--folio-blue);
+  color: var(--folio-on-accent);
+  opacity: 1;
+}
+
+.welcome-field {
+  display: grid;
+  gap: var(--sp-2);
+  max-inline-size: 360px;
+  animation: welcome-up 0.44s 0.14s var(--wz-spring) both;
+}
+
+.welcome-field span { font-size: var(--fs-meta); color: var(--folio-ink-subtle); }
 
 .welcome-next {
   display: grid;
-  gap: var(--sp-2);
+  gap: 0;
   margin: 0;
-  padding-inline-start: 1.2em;
-  color: var(--ink);
-  font-size: var(--fs-base);
-  line-height: 1.55;
+  padding: var(--sp-2);
+  list-style: none;
+  counter-reset: welcome-step;
+  background: var(--wz-group);
+  border-radius: var(--r-group);
+  animation: welcome-up 0.44s 0.14s var(--wz-spring) both;
 }
 
+.welcome-next li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding: var(--sp-3);
+  font-size: var(--fs-body-sm);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  color: var(--folio-ink-muted);
+}
+
+.welcome-next li::before {
+  counter-increment: welcome-step;
+  content: counter(welcome-step, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-bold);
+  color: var(--folio-blue);
+  font-variant-numeric: tabular-nums;
+}
+
+.welcome-body .welcome-path {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-group);
+  background: var(--wz-deep);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--folio-ink-subtle);
+  overflow-wrap: anywhere;
+}
+
+.welcome-body .welcome-path b { color: var(--folio-ink-muted); font-weight: var(--fw-normal); }
+
+/* 하단은 한 줄이다. 전폭 CTA는 모바일 문법이라 860px 카드에서는 시선이 위아래로 꺾인다. */
 .welcome-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--sp-3);
+  padding: var(--sp-4) 38px var(--sp-5);
+  border-block-start: 1px solid var(--folio-border);
 }
 
-.welcome-actions-main {
+.welcome-skip {
+  min-block-size: var(--touch-min);
+  padding: 9px var(--sp-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--folio-ink-subtle);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.welcome-skip:hover { color: var(--folio-ink-muted); }
+
+.welcome-acts {
   display: flex;
   gap: var(--sp-2);
   margin-inline-start: auto;
 }
 
-@media (max-width: 560px) {
-  .welcome-card { padding: var(--sp-4); }
-  .welcome-actions-main { width: 100%; }
-  .welcome-actions-main .btn { flex: 1; }
+.welcome-btn {
+  min-block-size: var(--touch-min);
+  padding: 11px 22px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--wz-deep);
+  color: var(--folio-ink-muted);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+
+.welcome-btn:hover { opacity: 0.82; }
+
+.welcome-btn--go {
+  padding-inline: var(--sp-6);
+  background: var(--folio-blue);
+  color: var(--folio-on-accent);
+  box-shadow: var(--wz-glow);
+}
+
+.welcome-btn--go:hover { opacity: 0.92; }
+
+.welcome-shell :focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
+
+@media (max-width: 700px) {
+  .welcome-head, .welcome-body, .welcome-actions { padding-inline: var(--sp-5); }
+  .welcome-rule { margin-inline: var(--sp-5); }
+  .welcome-body { padding-block-start: var(--sp-5); min-block-size: 0; }
+  .welcome-body h1 { font-size: 24px; }
+  /* 손가락으로 누르는 화면에서는 전폭이 맞다. */
+  .welcome-acts { inline-size: 100%; }
+  .welcome-acts .welcome-btn { flex: 1; padding-block: var(--sp-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-card, .welcome-body .welcome-eyebrow, .welcome-body h1, .welcome-body p,
+  .welcome-choices, .welcome-markets, .welcome-next, .welcome-field,
+  .welcome-fields i { animation: none; }
 }
 
 /* ── 포트폴리오 평가·목표·백테스트 ──────────────────────────────────────────

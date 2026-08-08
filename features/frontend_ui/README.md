@@ -75,6 +75,7 @@ The Agent Dock is a persistent global layer for non-Home routes. It opens as a r
 - **채팅 도구 툴바**: 입력창 아래에 파일 첨부(`+`, 텍스트 파일은 4,000자까지 본문 포함·최대 3개·200KB 제한), 모델 버전 선택(현재 provider의 CLI `modelChoices`), 노력 단계(낮음/중간/높음/최대) 컨트롤이 있다. 첨부파일은 참고 입력(hypothesis)이지 evidence가 아니다.
 - **채팅 실연결**: 전송은 `POST /api/agent/chat`(job) → `/api/jobs/{id}` 폴링으로 실제 Agent CLI 응답을 받는다(어시스턴트 메시지는 `renderMarkdown()`으로 렌더). CLI가 없으면 규칙 기반 응답(`engine: "rules"`)으로 fallback. Task 의도 + 보고서 컨텍스트면 응답에 **수정 제안 카드**(요약 + diff 접기 + 승인/거절 버튼)가 붙고, `POST /api/agent/proposals/{id}` 승인 시에만 보고서가 바뀐다. 브리핑 리더가 열려 있으면 승인 직후 자동으로 다시 불러온다.
 - 본문(`.main-content`)은 데스크톱에서 가운데 정렬이 아니라 좌측 사이드바 바로 옆(`margin-left: 0`)에서 시작한다.
+- 도크 메시지 안 카드(수정 제안 등)의 계약 — 카드당 액션 수, 데이터 수, 실행/해석 경계, 스켈레톤 로딩 — 은 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §5 "대화 안 카드"를 따른다.
 
 ## Native Investment Notes
 
@@ -105,11 +106,10 @@ public/react/folio-react.js
 
 ## 보고서 hero / 색상
 
+색·표면 토큰과 의미색 배정(네이비 통일, warm neutral, Overlay 퍼플/Thesis 틸)은 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §3이 기준이다. 아래는 보고서 리더 화면 고유 사항만 남긴다.
+
 - `.report-hero`: 딥 네이비 배경 + `.report-kicker`(골드, 대문자). 브리핑/기업분석/테마분석 상단 공통.
-- Dark surface는 black을 쓰지 않고 `--folio-surface-dark` 딥 네이비로 통일한다. `--folio-surface-black`도 네이비 alias로 흡수한다.
-- 회색 계열 surface는 cool gray가 아니라 가독성을 해치지 않는 warm white/soft cream/taupe neutral 토큰(`--folio-surface-clean`, `--folio-surface-2`, `--folio-surface-muted`, `--folio-ink-muted`)을 사용한다.
 - 본문 `.markdown-brief`/표는 밝은 surface를 유지한다. Executive Summary dark 테이블은 후속(자동 판별 보류).
-- Personal Overlay는 purple 계열, Thesis Delta는 teal 계열로 Canonical 보고서와 시각적으로 분리한다.
 - 보고서 생성 상태(`.generation-status.report-status`)는 hero와 본문 사이에 끼우지 않고 본문 아래 보조 상태로 표시한다. 색상은 green/amber/blue를 저채도 톤으로 낮춰 보고서 본문보다 덜 튀게 한다.
 
 ## 상단바(hero) 구성
@@ -126,115 +126,23 @@ public/react/folio-react.js
 - 상태 그룹은 평소엔 텍스트만 보이고, 작업 진행 중(`.job-progress`가 보일 때)에만 `:has()`로 알약 배경이 떠 강조된다.
 - 작업 취소(`.agent-job-cancel`)는 `.icon-btn`의 `display:grid`가 기본 `[hidden]`을 덮어쓰지 않도록 `.agent-job-cancel[hidden]{display:none}`로 명시한다(작업 없을 때 ×가 상시 노출되던 버그 방지).
 
-## 프리미티브 계약 (0.5 Stage D)
+## 디자인 시스템
 
-**새 화면은 프리미티브 4종만 쓴다.** `public/styles.css` 말미의 `/* 프리미티브 */` 블록이 이들의 유일한 정의다. 화면 전용 CSS에서 버튼·칩·세그먼트·패널의 **모양을 다시 선언하지 않는다** — 배치만 갖는다.
+디자인 언어("두 목소리")·토큰·프리미티브·패턴·금지 목록·새 화면 체크리스트는 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) **하나가 기준**이다. 예전에 이 문서에 있던 프리미티브 계약(0.5 Stage D)·다크 모드 색 계약(0.3.x)·타이포/elevation 일반 계약은 전부 그쪽으로 옮겼다. 이 문서는 화면 구조와 화면별 고정값만 다룬다.
 
-| 프리미티브 | 무엇 | 변형 |
-|---|---|---|
-| `.btn` | 모든 버튼 | `--primary`(어두운 fill) / 기본(회색 fill) / `--text`(투명) × `--sm`(32px) / `--icon`(원형) |
-| `.surface` | 패널 면 | `--group`(패널 안 그룹) / `--inset`(가장 안쪽) |
-| `.chip` | 비대화형 상태 표시 | `data-tone="muted|burgundy|gold|blue|teal"` |
-| `.segment` | 상호배타 선택 | 항목 수 무관. 좁으면 가로 스크롤 |
-
-### `.btn--primary` vs 기본 vs `.btn--text`
-
-- **`--primary`**: 그 화면/패널에서 **하나**. 생성·저장·전송처럼 사용자가 여기 온 이유인 동작.
-- **기본(회색 fill)**: 나머지 실행 버튼 전부. 초기화·새로고침·내보내기.
-- **`--text`**: 취소·닫기처럼 되돌리는 동작, 또는 목록 안에서 반복돼 fill이 시끄러운 경우.
-- **테두리 버튼은 없다.** 0.5에서 전 화면에서 제거했다.
-
-선택 상태는 `aria-pressed="true"`가 소유한다. `.active` 클래스로 칠하지 않는다 — 레거시 `.filter-btn.active`는 마크업에만 있고 규칙이 없어 Work Log 필터가 무엇이 선택됐는지 보여주지 못했다.
-
-### 왼쪽 액센트는 3px 하나 (0.5.1)
-
-카드·패널에 의미를 표시하는 왼쪽 줄은 **3px 하나로 통일**한다. 0.5.1 이전에는 같은 성격의 표시가 4px 11곳, 3px 12곳, 2px 2곳으로 갈려 있어, 화면을 옮겨 다니면 강조 정도가 다른 것처럼 보였다. 25곳 전부 3px다.
-
-`border-left: 1px` 4곳은 액센트가 아니라 **패널 가장자리와 구분선**이다(Agent 도크, 대화 패널). 여기는 그대로 둔다.
-
-### 배경 워시 대신 줄 하나 (0.5.1)
-
-카드 전체에 옅은 색을 까는 그라데이션 대신 왼쪽 줄로 표시한다. 워치리스트 카드에서 걷어냈다.
-
-- 카드가 여러 장 늘어서면 배경이 **종목마다 다른 것처럼** 보인다.
-- 워시 위에 얹힌 본문 대비가 **카드 안에서도 좌우로 달라진다**.
-- 표시가 필요한 것은 "이건 워치리스트 항목" 하나뿐이라 줄 하나면 충분하다.
-
-포커스와 hover는 한 규칙으로 묶지 않는다. 카드가 위로 떠오르는 것은 마우스 되먹임이지 포커스 표시가 아니다. 링은 파일 말미의 `focus-visible` 블록이 소유하며 화면별 CSS에서 다시 선언하지 않는다.
-
-### 죽은 CSS는 지운다 (0.5.1)
-
-초기 공개 릴리즈에 포트폴리오 화면용 CSS 46개 클래스가 실려 왔는데 이를 참조하는 컴포넌트가 하나도 없었다 — React 전환 때 화면만 안 옮겨왔다. 0.5.1에서 화면을 다시 만들면서 규칙 83개(8.9KB)를 걷어냈다. 지울 때는 **셀렉터에 등장하는 모든 클래스가 죽었을 때만** 지운다. 접두사로 비교하면 `.portfolio-weight`(살아 있음)가 `.portfolio-weight-row`(죽음)에 걸려 산 것까지 지운다.
-
-### 폼 컨트롤도 같은 언어를 쓴다
-
-`input` / `select` / `textarea`는 버튼과 **같은 무테 회색 fill**이고 높이도 36px로 같다. D1이 버튼·칩·세그먼트·패널만 다루고 입력 컨트롤을 빼놓아서, 한 줄에 "무테 회색 버튼"과 "테두리 흰 입력칸"이 나란히 놓이고 높이도 32~36 vs 47~57로 어긋났다. 설정·검색·필터 박스가 투박해 보인 주된 이유가 이것이다.
-
-- 컨트롤에 `border`를 다시 주지 않는다. 상태는 배경(hover)과 `:focus-visible` 링이 표현한다.
-- 라벨이 붙은 select는 래퍼(`.gen-option`)가 면을 갖고 **안쪽 select는 면을 그리지 않는다**. 둘 다 그리면 상자 안 상자가 된다.
-- `textarea`만 여러 줄이라 높이 예외다.
-
-### `.surface` 3단계 중첩
-
-```text
-.surface           페이지 배경 위 최상위 패널   r18 + elev-1
-  .surface--group  패널 안 묶음 면              r14, 그림자 없음
-    .surface--inset 가장 안쪽(코드·인용·값)     r10, 그림자 없음
-```
-
-깊이가 내려갈수록 **가벼워진다**. 3단계보다 깊게 중첩하지 않는다 — 더 필요하면 정보 구조가 잘못된 것이다.
-
-같은 무게를 두 번 주면 액자가 이중으로 보인다. 브리핑 설정이 그랬다 — 바깥 `.input-panel`(r18+그림자) 안에 `.brief-gen-panel`이 또 r18+그림자였다. 안쪽은 그룹 면(r14, 그림자 없음)이 맞다.
-
-패널 제목을 fieldset처럼 테두리 위에 띄우지 않는다. 그 방식은 제목 배경으로 테두리를 뚫는 것이라, 테두리를 없애면 **배경 조각만 흰 사각형으로 남는다**(실제로 남아 있었다). 제목은 흐름 안의 라벨로 둔다.
-
-**기존 패널 클래스는 유지한다.** `.cockpit-panel`·`.input-panel`은 BEM 부모(`__head`, `__actions`)이고 참조가 많아 유틸리티로 개명하면 자식 규칙이 고아가 된다. 이들은 클래스를 유지하되 모양은 프리미티브 토큰에서 읽는다. 새 패널은 `.surface`를 직접 쓴다.
-
-### 훅 클래스 패턴
-
-의미색이나 화면별 배치가 필요하면 프리미티브 **뒤에 훅을 덧붙인다**. 프리미티브가 기하를, 훅이 색·배치를 갖는다.
-
-```tsx
-<span className="chip status-chip" />           {/* 기하=chip, 색=조상 규칙이 status-chip으로 */}
-<button className="btn report-action-btn" />     {/* 기하=btn, 풀폭·좌측정렬=레일 규칙 */}
-```
-
-훅을 지우면 안 되는 경우가 있다. Change Feed 카드 안에는 상태 칩과 판정 칩이 함께 있어, 훅 없이 `.chip`만 남기면 `.cockpit-change-feed li[data-status] .chip` 규칙이 **두 칩을 같은 색으로** 칠한다.
-
-### 토큰만 쓴다
-
-- 모서리: `--r-control`(10) / `--r-group`(14) / `--r-panel`(18) / `--r-pill`. px 직접 쓰지 않는다.
-- 굵기: `--fw-normal`(400) / `--fw-medium`(600) / `--fw-bold`(700).
-- 레거시 `--folio-radius`는 `--r-control`을 가리킨다. 이름은 남아 있지만 새 코드에서 쓰지 않는다.
-- **예외**: 캘린더 격자(`.cal-cell`)는 밀집 표라 hairline과 자체 모서리를 유지한다. 진행바·스트라이프 같은 1~3px 장식 슬라이버도 컴포넌트 모서리가 아니다.
-
-### 특이성 규칙
-
-화면 CSS에서 `min-height`를 다시 박지 않는다. `.react-rss-filter-actions .btn`(0,2,0)이 모바일 터치 규칙 `.btn`(0,1,0)을 이겨 44px 타깃이 무너진 사례가 있다. 데스크톱 전용 크기가 정말 필요하면 `@media (min-width: 769px)` 안에 둔다.
-
-컨테이너에서 자손 `button`을 통째로 칠하지 않는다. `.react-route-hero-actions button`이 세그먼트 알약까지 사각형으로 덮어썼다.
-
-### 새 화면 체크리스트
-
-1. 가장 가까운 기존 화면을 데스크톱·모바일로 열어 재사용할 패턴을 먼저 찾는다.
-2. 버튼·칩·세그먼트는 프리미티브로 시작한다. 새 클래스를 만들기 전에 훅으로 되는지 본다.
-3. 새 CSS에 `border-radius`/`font-weight` 숫자가 들어가면 멈추고 토큰을 쓴다.
-4. 375px에서 가로 스크롤이 없는지, 대화형 요소가 44×44인지 확인한다.
-5. Light/Dark 양쪽에서 본다.
-6. 키보드로 순회해 포커스 링이 항상 보이는지 본다.
+레퍼런스 사례(왜 그 규칙이 생겼는지의 실측 사고 기록)도 DESIGN_SYSTEM.md 각 절에 함께 있다.
 
 ## UI 규칙
 
-### 타이포와 elevation 계약
+### 화면별 타이포·레이아웃 값
 
-- 일반 UI 본문은 17px, 버튼·탭·선택 라벨은 15px을 기본으로 한다. 입력 패널 안내문은 확대 전 16px을 유지한다.
-- Canonical 보고서 본문은 18px이다. 보고서 제목은 30px, Markdown 섹션은 34/24/20px 계층을 사용한다. 모바일 보고서 제목은 `clamp()`로 26~30px 범위를 유지한다.
-- 제목은 `--weight-heading: 800`을 사용한다. IBM Plex Sans 영문은 로드된 700으로 매칭되고, 한글 SUIT는 800으로 렌더돼 혼용 제목의 광학 두께를 맞춘다.
+타이포 정본(크롬 역할 스케일 / 지면 읽기 스케일), 굵기, elevation 배정, reduced motion은 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §3이 기준이다. 아래는 화면별 고정값이다.
+
+- 입력 패널 안내문은 확대 전 16px을 유지한다.
 - RSS 뉴스 카드 제목은 22px/800이다. 품질 패널 제목과 대시보드 하단 카드·지표는 확대 전 20px 및 14/16/18/24/28/36px 계층을 유지한다.
 - 브리핑 차트 제목은 20px, 기간·라인/캔들 컨트롤은 15px, 가격은 최대 44.8px이다. 히트맵 종목 글자는 박스 크기에 비례하고, 섹터·산업 라벨은 종목 가독성을 해치지 않도록 6~8px 수준의 보조 라벨로 유지한다.
+- 첫 실행 안내 화면(`.welcome-*`)은 제목 27px(`--wz-title`)이다. 크롬 역할 스케일의 최대치(`--fs-title` 20)보다 큰 이유는 패널 제목이 아니라 화면의 유일한 제목이기 때문이다. 카드 폭은 최대 860px, 700px 이하에서 하단 버튼이 전폭으로 바뀐다. 배경 색면 예외는 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)의 "첫 실행 안내 화면의 예외"를 본다.
 - TradingView 위젯 카드는 고정 min-height를 사용해 외부 스크립트 로딩 전후 레이아웃 점프를 막는다. 대시보드 위젯 보드는 데스크톱 2열, 모바일 1열이다.
-- 입력·필터 패널과 좌우 레일만 `--elev-1/--elev-2`를 사용한다. `.markdown-brief`와 `.briefing-visual-card`에는 shadow나 hover lift를 적용하지 않는다.
-- `prefers-reduced-motion: reduce`에서는 animation과 transition을 제거한다.
 
 - 히어로 영역은 브랜드와 상태 표시 중심으로 둡니다.
 - 실행 버튼은 각 기능 탭 안에 둡니다.
@@ -340,25 +248,9 @@ public/react/folio-react.js
 - 사전에 없는 새 코드가 오면 코드 원문을 그대로 노출해 정보가 사라지지 않게 한다.
   새 taskType/errorCode를 추가하면 `workLogCopy.ts` 사전도 함께 채운다.
 
-## 다크 모드 색 계약 (0.3.x)
+## 다크 모드
 
-- 색은 전부 `:root`와 `:root[data-theme="dark"]`의 토큰으로만 쓴다. 스타일시트 본문에
-  밝은 색 리터럴(`#fff`, `rgba(255,255,255,…)`, `rgba(245,247,250,…)`)을 직접 쓰지 않는다.
-- 반투명 표면과 잉크 틴트는 두 테마에서 각각 정의한다:
-  `--folio-tint-weak`, `--folio-tint-strong`, `--folio-surface-translucent`,
-  `--folio-surface-float`, `--folio-surface-veil`, `--folio-toggle-track`.
-- accent 위에 올라가는 글자는 `--folio-on-accent`를 쓴다. accent는 다크에서 밝아지므로
-  글자색이 뒤집혀야 한다.
-- 다크 표면은 색이 아니라 어둠으로 위계를 만든다. 색상 222°에 채도 16~24%를 둔다
-  (배경 `#0d0f12`, 카드 `#1c202b`, 테두리 `#2e374c`). 완전 무채색은 화면이 죽고 원래의
-  38~54%는 남색으로 튀므로, 회색 기조를 유지하면서 네이비가 은은하게 읽히는 지점이다.
-  강조색은 의미를 지니므로 색상을 유지하고 채도만 10%p 낮춰 회색 위에서 튀지 않게 한다.
-- 세그먼트 토글의 선택 알약은 `--folio-segment-active` / `--folio-segment-active-ink`를 쓴다.
-  라이트는 밝은 트랙 위 어두운 알약, 다크는 어두운 트랙 위 밝은 알약이며 트랙 대비 3:1
-  (WCAG 1.4.11)을 넘겨야 한다.
-- `var(--token)`을 쓰려면 그 토큰이 반드시 어딘가에 정의돼 있어야 한다. 정의가 없으면
-  라이트 리터럴 fallback이 다크에도 고정되거나(대비 파괴), fallback이 없는 선언은 통째로
-  무효가 된다(포커스 링 소실). `web/tests/workLogCopySource.test.mjs`가 이를 검사한다.
+다크 대응쌍 규칙(토큰만 쓰기, 두 테마 쌍 정의, 표면 채도 222°, 세그먼트 대비 3:1, 토큰 정의 누락 검사)은 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) §3 "다크 대응쌍 규칙"으로 옮겼다. TradingView 위젯의 테마 재렌더링만 아래 별도 섹션에 남긴다.
 
 ## Pixel Office 보류 (0.3.0)
 

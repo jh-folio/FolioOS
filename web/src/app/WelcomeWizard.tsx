@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { getJson, postJson, putJson } from "../api";
 import { FolioWordmark } from "./FolioWordmark";
 import { useThemePreference, type ThemePreference } from "./themePreference";
@@ -12,6 +12,10 @@ import { useThemePreference, type ThemePreference } from "./themePreference";
  *
  *  판정은 서버가 한다(`/api/onboarding`). 안내 파일 유무만 보면 쓰던 사람이 새 버전으로
  *  올릴 때 처음 쓰는 사람 취급을 받는다 — 그 파일은 배포 zip에 없다.
+ *
+ *  디자인은 이 화면에만 쓰는 언어다(2026-08-08 사용자 결정). 색면이 뒤에서 흐르고
+ *  카드는 불투명하다 — 유리를 카드에 쓰면 안쪽 면과 깊이 체계가 겹쳐 둘 다 죽는다.
+ *  상세는 `features/frontend_ui/README.md`의 "첫 실행 안내 화면"을 본다.
  */
 
 type MarketScopeState = {
@@ -23,12 +27,7 @@ type WorkspaceLocation = { readonly path: string; readonly outsideAppFolder: boo
 
 type StepId = "welcome" | "engine" | "markets" | "done";
 
-const STEPS: ReadonlyArray<{ id: StepId; label: string }> = [
-  { id: "welcome", label: "환영" },
-  { id: "engine", label: "AI" },
-  { id: "markets", label: "관심 시장" },
-  { id: "done", label: "시작" },
-];
+const STEPS: ReadonlyArray<StepId> = ["welcome", "engine", "markets", "done"];
 
 const THEME_CHOICES: ReadonlyArray<{ id: ThemePreference; label: string }> = [
   { id: "light", label: "라이트" },
@@ -44,6 +43,39 @@ const PROVIDERS = [
 
 type ProviderId = (typeof PROVIDERS)[number]["id"];
 
+/** 서버는 한국어 이름을 주지만 화면은 다른 곳과 같은 코드를 쓴다(`EUROPE` → `EU`). */
+const MARKET_CODES: Record<string, string> = { US: "US", KR: "KR", EUROPE: "EU", JP: "JP" };
+
+const ICONS: Record<StepId, ReactNode> = {
+  welcome: <path d="M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" />,
+  engine: (
+    <>
+      <path d="M12 3.5v3M12 17.5v3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M3.5 12h3M17.5 12h3M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" />
+      <circle cx="12" cy="12" r="3.2" />
+    </>
+  ),
+  markets: (
+    <>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M3.4 12h17.2M12 3.4c2.5 2.6 3.8 5.5 3.8 8.6S14.5 18 12 20.6C9.5 18 8.2 15.1 8.2 12S9.5 6 12 3.4z" />
+    </>
+  ),
+  done: <path d="M5 12.6 9.6 17 19 7.6" />,
+};
+
+const EYEBROWS: Record<StepId, string> = {
+  welcome: "환영합니다",
+  engine: "선택 사항",
+  markets: "수집 범위",
+  done: "준비 완료",
+};
+
+function StepIcon({ step }: { step: StepId }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">{ICONS[step]}</svg>
+  );
+}
+
 export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   const theme = useThemePreference();
   const [step, setStep] = useState<StepId>("welcome");
@@ -57,7 +89,6 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   const [engine, setEngine] = useState<"none" | "api" | "cli">("none");
   const [provider, setProvider] = useState<ProviderId>("openai");
   const [apiKey, setApiKey] = useState("");
-  const [engineSaved, setEngineSaved] = useState(false);
 
   const [scope, setScope] = useState<MarketScopeState | null>(null);
   const [markets, setMarkets] = useState<string[]>([]);
@@ -66,20 +97,24 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   const [location, setLocation] = useState<WorkspaceLocation | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
         const payload = await getJson<MarketScopeState>("/api/market-scope");
+        if (cancelled) return;
         setScope(payload);
         setMarkets([...payload.selected]);
       } catch {
         /* 안내를 못 띄울 이유는 아니다. 이 단계는 건너뛸 수 있다. */
       }
       try {
-        setLocation(await getJson<WorkspaceLocation>("/api/workspace"));
+        const where = await getJson<WorkspaceLocation>("/api/workspace");
+        if (!cancelled) setLocation(where);
       } catch {
         /* 위와 같다. */
       }
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const finish = useCallback(async (skipped: boolean) => {
@@ -105,7 +140,6 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
           : {}),
       });
       setApiKey("");
-      setEngineSaved(true);
       // 성공 문구는 두지 않는다. 다음 단계로 넘어가는 것이 이미 확인이고, 문구를
       // 남기면 다음 단계 아래에 붙어 그 단계를 저장했다고 읽힌다.
       goto("markets");
@@ -141,10 +175,10 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
 
   // `aria-modal="true"`는 뒤 화면이 없는 셈 친다고 선언하는 것이다. Tab이 뒤로
   // 빠져나가면 스크린리더가 읽지 않는 곳에 포커스가 놓여 어디 있는지 알 수 없게 된다.
-  const cardRef = useRef<HTMLDivElement | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
 
   const focusables = () => Array.from(
-    cardRef.current?.querySelectorAll<HTMLElement>(
+    shellRef.current?.querySelectorAll<HTMLElement>(
       'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
     ) ?? [],
   );
@@ -152,7 +186,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   useEffect(() => {
     // 단계가 바뀌면 새 내용의 처음으로 포커스를 옮긴다. 그러지 않으면 이전 단계에서
     // 누른 버튼이 사라진 자리에 포커스가 남아 body로 떨어진다.
-    cardRef.current?.querySelector<HTMLElement>("h1")?.focus();
+    shellRef.current?.querySelector<HTMLElement>("h1")?.focus();
   }, [step]);
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -166,7 +200,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
     if (!items.length) return;
     const [first, last] = [items[0], items[items.length - 1]];
     const active = document.activeElement;
-    if (event.shiftKey && (active === first || !cardRef.current?.contains(active))) {
+    if (event.shiftKey && (active === first || !shellRef.current?.contains(active))) {
       event.preventDefault();
       last.focus();
     } else if (!event.shiftKey && active === last) {
@@ -175,7 +209,8 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
     }
   };
 
-  const index = STEPS.findIndex((item) => item.id === step);
+  const index = STEPS.indexOf(step);
+  const providerMeta = PROVIDERS.find((item) => item.id === provider);
 
   return (
     <div
@@ -183,40 +218,42 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="welcomeTitle"
-      ref={cardRef}
+      ref={shellRef}
       onKeyDown={onKeyDown}
     >
-      <div className="welcome-card surface">
+      {/* 색면은 카드 뒤에서만 흐른다. 카드는 불투명해서 본문 대비가 색면에 묶이지 않는다. */}
+      <div className="welcome-fields" aria-hidden="true"><i /><i /><i /></div>
+
+      <div className="welcome-card">
         <header className="welcome-head">
           <FolioWordmark />
-          <ol className="welcome-steps" aria-label="진행 단계">
-            {STEPS.map((item, position) => (
-              <li
-                key={item.id}
-                className="welcome-step"
-                aria-current={item.id === step ? "step" : undefined}
-                data-state={position < index ? "done" : position === index ? "current" : "todo"}
-              >
-                {item.label}
-              </li>
-            ))}
-          </ol>
+          <p className="welcome-count">단계 <b>{index + 1}</b> / {STEPS.length}</p>
         </header>
 
-        {step === "welcome" && (
-          <section className="welcome-body">
-            <h1 id="welcomeTitle" tabIndex={-1}>Folio OS를 시작합니다</h1>
-            <p>
-              뉴스·공시·리포트를 이 PC에 모아 읽고, 매일 브리핑과 기업 분석을 만드는 개인
-              리서치 작업실입니다. 자료와 보고서는 전부 이 컴퓨터에만 저장됩니다.
-            </p>
-            <p className="welcome-muted">
-              두 가지만 정하면 바로 쓸 수 있습니다 — AI를 쓸지, 어느 시장을 볼지. 둘 다
-              나중에 설정에서 바꿀 수 있습니다.
-            </p>
-            <div className="field">
-              <span id="welcomeThemeLabel">화면 테마</span>
-              <div className="settings-theme-options" role="group" aria-labelledby="welcomeThemeLabel">
+        <div
+          className="welcome-rule"
+          role="progressbar"
+          aria-label="진행 단계"
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuenow={index + 1}
+          style={{ ["--welcome-fill" as string]: `${((index + 1) / STEPS.length) * 100}%` }}
+        />
+
+        <section className="welcome-body">
+          <p className="welcome-eyebrow"><StepIcon step={step} />{EYEBROWS[step]}</p>
+
+          {step === "welcome" && (
+            <>
+              <h1 id="welcomeTitle" tabIndex={-1}>내 PC 안의 투자 리서치 작업실</h1>
+              <p>
+                뉴스·공시·리포트를 이 컴퓨터에 모아 읽고, 매일 브리핑과 기업 분석을 만듭니다.{" "}
+                <strong>자료와 보고서는 전부 이 컴퓨터에만 저장됩니다.</strong>
+              </p>
+              <p className="welcome-muted">
+                두 가지만 정하면 바로 쓸 수 있습니다. 둘 다 나중에 설정에서 바꿀 수 있습니다.
+              </p>
+              <div className="welcome-choices" role="group" aria-label="화면 테마">
                 {THEME_CHOICES.map((choice) => (
                   <button
                     type="button"
@@ -228,38 +265,26 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                   </button>
                 ))}
               </div>
-            </div>
-          </section>
-        )}
+            </>
+          )}
 
-        {step === "engine" && (
-          <section className="welcome-body">
-            <h1 id="welcomeTitle" tabIndex={-1}>AI를 쓰시겠어요?</h1>
-            <p>
-              브리핑·기업 분석·테마 분석 문장을 AI가 씁니다.{" "}
-              <strong>AI가 없어도 앱은 그대로 동작합니다</strong> — 자료 수집·검색·차트는
-              모두 규칙으로 만들고, 보고서도 규칙 기반으로 나옵니다. 문장이 더 거칠 뿐입니다.
-            </p>
-            <div className="field">
-              <span id="welcomeEngineLabel">생성 방식</span>
-              <div className="settings-theme-options" role="group" aria-labelledby="welcomeEngineLabel">
-                <button type="button" aria-pressed={engine === "none"} onClick={() => setEngine("none")}>
-                  AI 없이
-                </button>
-                <button type="button" aria-pressed={engine === "api"} onClick={() => setEngine("api")}>
-                  API 키
-                </button>
-                <button type="button" aria-pressed={engine === "cli"} onClick={() => setEngine("cli")}>
-                  Agent CLI
-                </button>
+          {step === "engine" && (
+            <>
+              <h1 id="welcomeTitle" tabIndex={-1}>AI를 쓰시겠어요?</h1>
+              <p>
+                브리핑·기업 분석·테마 분석의 문장을 AI가 씁니다.{" "}
+                <strong>AI가 없어도 앱은 그대로 동작합니다</strong> — 자료 수집·검색·차트는 모두
+                규칙으로 만들고, 보고서도 규칙 기반으로 나옵니다.
+              </p>
+              <div className="welcome-choices" role="group" aria-label="생성 방식">
+                <button type="button" aria-pressed={engine === "none"} onClick={() => setEngine("none")}>AI 없이</button>
+                <button type="button" aria-pressed={engine === "api"} onClick={() => setEngine("api")}>API 키</button>
+                <button type="button" aria-pressed={engine === "cli"} onClick={() => setEngine("cli")}>Agent CLI</button>
               </div>
-            </div>
 
-            {engine === "api" && (
-              <>
-                <div className="field">
-                  <span id="welcomeProviderLabel">제공사</span>
-                  <div className="settings-theme-options" role="group" aria-labelledby="welcomeProviderLabel">
+              {engine === "api" && (
+                <>
+                  <div className="welcome-choices" role="group" aria-label="제공사">
                     {PROVIDERS.map((item) => (
                       <button
                         type="button"
@@ -271,127 +296,121 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                       </button>
                     ))}
                   </div>
-                </div>
-                <label className="field">
-                  <span>API 키</span>
-                  <input
-                    type="password"
-                    value={apiKey}
-                    autoComplete="off"
-                    placeholder="나중에 설정에서 넣어도 됩니다"
-                    onChange={(event) => setApiKey(event.target.value)}
-                  />
-                </label>
+                  <label className="welcome-field">
+                    <span>API 키</span>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      autoComplete="off"
+                      placeholder="나중에 설정에서 넣어도 됩니다"
+                      onChange={(event) => setApiKey(event.target.value)}
+                    />
+                  </label>
+                  <p className="welcome-muted">
+                    키는 이 PC의 <code>.env</code> 파일에만 저장됩니다. 발급:{" "}
+                    <a href={providerMeta?.url} target="_blank" rel="noreferrer">{providerMeta?.label} 키 페이지</a>
+                  </p>
+                </>
+              )}
+
+              {engine === "cli" && (
                 <p className="welcome-muted">
-                  키는 이 PC의 <code>.env</code> 파일에만 저장됩니다. 발급:{" "}
-                  <a href={PROVIDERS.find((item) => item.id === provider)?.url} target="_blank" rel="noreferrer">
-                    {PROVIDERS.find((item) => item.id === provider)?.label} 키 페이지
-                  </a>
+                  이미 쓰고 있는 Codex·Claude·Antigravity CLI를 그대로 씁니다. 설정 탭의 AI Agent에서
+                  설치와 로그인을 마칠 수 있습니다. CLI는 한 번 실행에 수십 초가 걸립니다.
                 </p>
-              </>
-            )}
+              )}
+            </>
+          )}
 
-            {engine === "cli" && (
-              <p className="welcome-muted">
-                이미 쓰고 있는 Codex·Claude·Antigravity CLI를 그대로 씁니다. 설정 탭의 AI Agent에서
-                설치와 로그인을 마칠 수 있습니다. CLI는 한 번 실행에 수십 초가 걸립니다.
+          {step === "markets" && (
+            <>
+              <h1 id="welcomeTitle" tabIndex={-1}>어느 시장을 보시겠어요?</h1>
+              <p>
+                여기서 끈 시장은 자료 수집이 멈추고 화면 전체에서 숨습니다. 유가·달러 같은 글로벌
+                자료는 항상 보입니다.
               </p>
-            )}
-          </section>
-        )}
-
-        {step === "markets" && (
-          <section className="welcome-body">
-            <h1 id="welcomeTitle" tabIndex={-1}>어느 시장을 보시겠어요?</h1>
-            <p>
-              여기서 끈 시장은 자료 수집이 멈추고 화면 전체에서 숨습니다. 유가·달러 같은
-              글로벌 자료는 항상 보입니다. 나중에 설정에서 바꿀 수 있습니다.
-            </p>
-            {scope ? (
-              <div className="field">
-                <span id="welcomeMarketLabel">수집·표시할 시장</span>
-                <div className="settings-theme-options" role="group" aria-labelledby="welcomeMarketLabel">
-                  {scope.markets.map((market) => (
-                    <button
-                      type="button"
-                      key={market.id}
-                      aria-pressed={markets.includes(market.id)}
-                      onClick={() => toggleMarket(market.id)}
-                    >
-                      {market.label}
-                    </button>
-                  ))}
+              <p className="welcome-muted">
+                US 뉴욕·나스닥 · KR 코스피·코스닥 · EU 런던·프랑크푸르트 · JP 도쿄
+              </p>
+              {scope ? (
+                <div className="welcome-markets" role="group" aria-label="수집·표시할 시장">
+                  {scope.markets.map((market) => {
+                    const code = MARKET_CODES[market.id] ?? market.id;
+                    return (
+                      <button
+                        type="button"
+                        key={market.id}
+                        data-code={code}
+                        aria-label={`${code} ${market.label}`}
+                        aria-pressed={markets.includes(market.id)}
+                        onClick={() => toggleMarket(market.id)}
+                      >
+                        {code}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-            ) : (
-              <p className="welcome-muted">관심 시장 설정을 읽지 못했습니다. 설정 탭에서 정할 수 있습니다.</p>
-            )}
-            <p className="welcome-muted">
-              저장하면 고른 시장의 뉴스를 바로 모으기 시작합니다. 몇 분 걸리고, 그동안에도
-              다른 화면을 쓸 수 있습니다.
-            </p>
-          </section>
-        )}
-
-        {step === "done" && (
-          <section className="welcome-body">
-            <h1 id="welcomeTitle" tabIndex={-1}>준비됐습니다</h1>
-            {collecting && <p>뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다.</p>}
-            <ul className="welcome-next">
-              <li><strong>워치리스트</strong>에 관심 종목을 넣으면 그 종목 뉴스가 모입니다.</li>
-              <li><strong>브리핑</strong>에서 오늘의 시장 정리를 만듭니다. 자료가 쌓일수록 좋아집니다.</li>
-              <li><strong>기업 분석</strong>에 티커를 넣으면 SEC 공시와 숫자로 보고서를 만듭니다.</li>
-            </ul>
-            {location && (
+              ) : (
+                <p className="welcome-muted">관심 시장 설정을 읽지 못했습니다. 설정 탭에서 정할 수 있습니다.</p>
+              )}
               <p className="welcome-muted">
-                자료 저장 위치: <code>{location.path}</code>
-                {!location.outsideAppFolder && (
-                  <> — 새 버전은 새 폴더로 풀리니, 업데이트 전에 설정 &gt; 자료 위치에서 옮겨두면 편합니다.</>
-                )}
+                저장하면 고른 시장의 뉴스를 바로 모으기 시작합니다. 몇 분 걸리고, 그동안에도 다른
+                화면을 쓸 수 있습니다.
               </p>
-            )}
-          </section>
-        )}
+            </>
+          )}
 
-        {note && <p className="react-dashboard-warning" role="status">{note}</p>}
+          {step === "done" && (
+            <>
+              <h1 id="welcomeTitle" tabIndex={-1}>이제 시작할 수 있습니다</h1>
+              {collecting && <p>뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다.</p>}
+              <ol className="welcome-next">
+                <li><strong>워치리스트</strong>에 관심 종목을 넣으면 그 종목 뉴스가 모입니다.</li>
+                <li><strong>브리핑</strong>에서 오늘의 시장을 정리합니다. 자료가 쌓일수록 좋아집니다.</li>
+                <li><strong>기업 분석</strong>에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다.</li>
+              </ol>
+              {location && (
+                <>
+                  <p className="welcome-path"><b>자료 저장 위치</b> · {location.path}</p>
+                  {!location.outsideAppFolder && (
+                    <p className="welcome-muted">
+                      새 버전은 새 폴더로 풀립니다. 설정 &gt; 자료 위치에서 옮겨두면 업데이트할 때
+                      그대로 이어집니다.
+                    </p>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {note && <p className="react-dashboard-warning" role="status">{note}</p>}
+        </section>
 
         <footer className="welcome-actions">
-          <button
-            className="btn"
-            type="button"
-            onClick={() => void finish(step !== "done")}
-            disabled={!!busy}
-          >
+          <button className="welcome-skip" type="button" onClick={() => void finish(step !== "done")} disabled={!!busy}>
             {step === "done" ? "닫기" : "건너뛰기"}
           </button>
-          <div className="welcome-actions-main">
+          <div className="welcome-acts">
             {index > 0 && step !== "done" && (
-              <button
-                className="btn"
-                type="button"
-                onClick={() => goto(STEPS[index - 1].id)}
-                disabled={!!busy}
-              >
+              <button className="welcome-btn" type="button" onClick={() => goto(STEPS[index - 1])} disabled={!!busy}>
                 이전
               </button>
             )}
             {step === "welcome" && (
-              <button className="btn btn--primary" type="button" onClick={() => goto("engine")}>
-                다음
-              </button>
+              <button className="welcome-btn welcome-btn--go" type="button" onClick={() => goto("engine")}>다음</button>
             )}
             {step === "engine" && (
-              <button className="btn btn--primary" type="button" onClick={() => void saveEngine()} disabled={!!busy}>
-                {busy === "engine" ? "저장 중" : engineSaved ? "다음" : "저장하고 다음"}
+              <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void saveEngine()} disabled={!!busy}>
+                {busy === "engine" ? "저장 중" : "저장하고 다음"}
               </button>
             )}
             {step === "markets" && (
-              <button className="btn btn--primary" type="button" onClick={() => void saveMarkets()} disabled={!!busy}>
+              <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void saveMarkets()} disabled={!!busy}>
                 {busy === "markets" ? "저장 중" : "저장하고 시작"}
               </button>
             )}
             {step === "done" && (
-              <button className="btn btn--primary" type="button" onClick={() => void finish(false)} disabled={!!busy}>
+              <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void finish(false)} disabled={!!busy}>
                 시작하기
               </button>
             )}

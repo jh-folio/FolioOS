@@ -22906,22 +22906,10 @@ function cu() {
 //#endregion
 //#region src/app/WelcomeWizard.tsx
 var lu = [
-	{
-		id: "welcome",
-		label: "환영"
-	},
-	{
-		id: "engine",
-		label: "AI"
-	},
-	{
-		id: "markets",
-		label: "관심 시장"
-	},
-	{
-		id: "done",
-		label: "시작"
-	}
+	"welcome",
+	"engine",
+	"markets",
+	"done"
 ], uu = [
 	{
 		id: "light",
@@ -22951,30 +22939,65 @@ var lu = [
 		label: "Claude",
 		url: "https://console.anthropic.com/settings/keys"
 	}
-];
-function fu({ onFinish: e }) {
+], fu = {
+	US: "US",
+	KR: "KR",
+	EUROPE: "EU",
+	JP: "JP"
+}, pu = {
+	welcome: /* @__PURE__ */ (0, K.jsx)("path", { d: "M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" }),
+	engine: /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 3.5v3M12 17.5v3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M3.5 12h3M17.5 12h3M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" }), /* @__PURE__ */ (0, K.jsx)("circle", {
+		cx: "12",
+		cy: "12",
+		r: "3.2"
+	})] }),
+	markets: /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("circle", {
+		cx: "12",
+		cy: "12",
+		r: "8.6"
+	}), /* @__PURE__ */ (0, K.jsx)("path", { d: "M3.4 12h17.2M12 3.4c2.5 2.6 3.8 5.5 3.8 8.6S14.5 18 12 20.6C9.5 18 8.2 15.1 8.2 12S9.5 6 12 3.4z" })] }),
+	done: /* @__PURE__ */ (0, K.jsx)("path", { d: "M5 12.6 9.6 17 19 7.6" })
+}, mu = {
+	welcome: "환영합니다",
+	engine: "선택 사항",
+	markets: "수집 범위",
+	done: "준비 완료"
+};
+function hu({ step: e }) {
+	return /* @__PURE__ */ (0, K.jsx)("svg", {
+		viewBox: "0 0 24 24",
+		"aria-hidden": "true",
+		children: pu[e]
+	});
+}
+function gu({ onFinish: e }) {
 	let t = Tl(), [n, r] = (0, l.useState)("welcome"), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)((e) => {
 		s(""), r(e);
-	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)("openai"), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(!1), [v, y] = (0, l.useState)(null), [b, x] = (0, l.useState)([]), [S, C] = (0, l.useState)(!1), [w, T] = (0, l.useState)(null);
+	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)("openai"), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(null), [v, y] = (0, l.useState)([]), [b, x] = (0, l.useState)(!1), [S, C] = (0, l.useState)(null);
 	(0, l.useEffect)(() => {
-		(async () => {
+		let e = !1;
+		return (async () => {
 			try {
-				let e = await B("/api/market-scope");
-				y(e), x([...e.selected]);
+				let t = await B("/api/market-scope");
+				if (e) return;
+				_(t), y([...t.selected]);
 			} catch {}
 			try {
-				T(await B("/api/workspace"));
+				let t = await B("/api/workspace");
+				e || C(t);
 			} catch {}
-		})();
+		})(), () => {
+			e = !0;
+		};
 	}, []);
-	let E = (0, l.useCallback)(async (t) => {
+	let w = (0, l.useCallback)(async (t) => {
 		a("finish");
 		try {
 			await V("/api/onboarding/complete", { skipped: t });
 		} catch {} finally {
 			a(""), e();
 		}
-	}, [e]), D = async () => {
+	}, [e]), T = async () => {
 		a("engine"), s("");
 		try {
 			await V("/api/settings", {
@@ -22986,124 +23009,135 @@ function fu({ onFinish: e }) {
 					provider: f,
 					providers: { [f]: { apiKey: m.trim() } }
 				} } : {}
-			}), h(""), _(!0), c("markets");
+			}), h(""), c("markets");
 		} catch (e) {
 			s(e instanceof Error ? e.message : "저장하지 못했습니다.");
 		} finally {
 			a("");
 		}
-	}, O = async () => {
-		if (!v || !b.length) {
+	}, E = async () => {
+		if (!g || !v.length) {
 			c("done");
 			return;
 		}
 		a("markets"), s("");
 		try {
-			let e = await ee("/api/market-scope", { selected: b });
-			C(!!e.newlyEnabled?.length), c("done");
+			let e = await ee("/api/market-scope", { selected: v });
+			x(!!e.newlyEnabled?.length), c("done");
 		} catch (e) {
 			s(e instanceof Error ? e.message : "저장하지 못했습니다.");
 		} finally {
 			a("");
 		}
-	}, k = (e) => {
-		x((t) => {
+	}, D = (e) => {
+		y((t) => {
 			let n = t.includes(e) ? t.filter((t) => t !== e) : [...t, e];
 			return n.length ? n : t;
 		});
-	}, A = (0, l.useRef)(null), j = () => Array.from(A.current?.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])") ?? []);
+	}, O = (0, l.useRef)(null), k = () => Array.from(O.current?.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])") ?? []);
 	(0, l.useEffect)(() => {
-		A.current?.querySelector("h1")?.focus();
+		O.current?.querySelector("h1")?.focus();
 	}, [n]);
-	let M = (e) => {
+	let A = (e) => {
 		if (e.key === "Escape") {
-			e.preventDefault(), E(!0);
+			e.preventDefault(), w(!0);
 			return;
 		}
 		if (e.key !== "Tab") return;
-		let t = j();
+		let t = k();
 		if (!t.length) return;
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
-		e.shiftKey && (i === n || !A.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
-	}, N = lu.findIndex((e) => e.id === n);
-	return /* @__PURE__ */ (0, K.jsx)("div", {
+		e.shiftKey && (i === n || !O.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
+	}, j = lu.indexOf(n), M = du.find((e) => e.id === f);
+	return /* @__PURE__ */ (0, K.jsxs)("div", {
 		className: "welcome-shell",
 		role: "dialog",
 		"aria-modal": "true",
 		"aria-labelledby": "welcomeTitle",
-		ref: A,
-		onKeyDown: M,
-		children: /* @__PURE__ */ (0, K.jsxs)("div", {
-			className: "welcome-card surface",
+		ref: O,
+		onKeyDown: A,
+		children: [/* @__PURE__ */ (0, K.jsxs)("div", {
+			className: "welcome-fields",
+			"aria-hidden": "true",
+			children: [
+				/* @__PURE__ */ (0, K.jsx)("i", {}),
+				/* @__PURE__ */ (0, K.jsx)("i", {}),
+				/* @__PURE__ */ (0, K.jsx)("i", {})
+			]
+		}), /* @__PURE__ */ (0, K.jsxs)("div", {
+			className: "welcome-card",
 			children: [
 				/* @__PURE__ */ (0, K.jsxs)("header", {
 					className: "welcome-head",
-					children: [/* @__PURE__ */ (0, K.jsx)($t, {}), /* @__PURE__ */ (0, K.jsx)("ol", {
-						className: "welcome-steps",
-						"aria-label": "진행 단계",
-						children: lu.map((e, t) => /* @__PURE__ */ (0, K.jsx)("li", {
-							className: "welcome-step",
-							"aria-current": e.id === n ? "step" : void 0,
-							"data-state": t < N ? "done" : t === N ? "current" : "todo",
-							children: e.label
-						}, e.id))
+					children: [/* @__PURE__ */ (0, K.jsx)($t, {}), /* @__PURE__ */ (0, K.jsxs)("p", {
+						className: "welcome-count",
+						children: [
+							"단계 ",
+							/* @__PURE__ */ (0, K.jsx)("b", { children: j + 1 }),
+							" / ",
+							lu.length
+						]
 					})]
 				}),
-				n === "welcome" && /* @__PURE__ */ (0, K.jsxs)("section", {
+				/* @__PURE__ */ (0, K.jsx)("div", {
+					className: "welcome-rule",
+					role: "progressbar",
+					"aria-label": "진행 단계",
+					"aria-valuemin": 1,
+					"aria-valuemax": lu.length,
+					"aria-valuenow": j + 1,
+					style: { "--welcome-fill": `${(j + 1) / lu.length * 100}%` }
+				}),
+				/* @__PURE__ */ (0, K.jsxs)("section", {
 					className: "welcome-body",
 					children: [
-						/* @__PURE__ */ (0, K.jsx)("h1", {
-							id: "welcomeTitle",
-							tabIndex: -1,
-							children: "Folio OS를 시작합니다"
+						/* @__PURE__ */ (0, K.jsxs)("p", {
+							className: "welcome-eyebrow",
+							children: [/* @__PURE__ */ (0, K.jsx)(hu, { step: n }), mu[n]]
 						}),
-						/* @__PURE__ */ (0, K.jsx)("p", { children: "뉴스·공시·리포트를 이 PC에 모아 읽고, 매일 브리핑과 기업 분석을 만드는 개인 리서치 작업실입니다. 자료와 보고서는 전부 이 컴퓨터에만 저장됩니다." }),
-						/* @__PURE__ */ (0, K.jsx)("p", {
-							className: "welcome-muted",
-							children: "두 가지만 정하면 바로 쓸 수 있습니다 — AI를 쓸지, 어느 시장을 볼지. 둘 다 나중에 설정에서 바꿀 수 있습니다."
-						}),
-						/* @__PURE__ */ (0, K.jsxs)("div", {
-							className: "field",
-							children: [/* @__PURE__ */ (0, K.jsx)("span", {
-								id: "welcomeThemeLabel",
-								children: "화면 테마"
-							}), /* @__PURE__ */ (0, K.jsx)("div", {
-								className: "settings-theme-options",
+						n === "welcome" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+							/* @__PURE__ */ (0, K.jsx)("h1", {
+								id: "welcomeTitle",
+								tabIndex: -1,
+								children: "내 PC 안의 투자 리서치 작업실"
+							}),
+							/* @__PURE__ */ (0, K.jsxs)("p", { children: [
+								"뉴스·공시·리포트를 이 컴퓨터에 모아 읽고, 매일 브리핑과 기업 분석을 만듭니다.",
+								" ",
+								/* @__PURE__ */ (0, K.jsx)("strong", { children: "자료와 보고서는 전부 이 컴퓨터에만 저장됩니다." })
+							] }),
+							/* @__PURE__ */ (0, K.jsx)("p", {
+								className: "welcome-muted",
+								children: "두 가지만 정하면 바로 쓸 수 있습니다. 둘 다 나중에 설정에서 바꿀 수 있습니다."
+							}),
+							/* @__PURE__ */ (0, K.jsx)("div", {
+								className: "welcome-choices",
 								role: "group",
-								"aria-labelledby": "welcomeThemeLabel",
+								"aria-label": "화면 테마",
 								children: uu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 									type: "button",
 									"aria-pressed": t.preference === e.id,
 									onClick: () => t.setPreference(e.id),
 									children: e.label
 								}, e.id))
-							})]
-						})
-					]
-				}),
-				n === "engine" && /* @__PURE__ */ (0, K.jsxs)("section", {
-					className: "welcome-body",
-					children: [
-						/* @__PURE__ */ (0, K.jsx)("h1", {
-							id: "welcomeTitle",
-							tabIndex: -1,
-							children: "AI를 쓰시겠어요?"
-						}),
-						/* @__PURE__ */ (0, K.jsxs)("p", { children: [
-							"브리핑·기업 분석·테마 분석 문장을 AI가 씁니다.",
-							" ",
-							/* @__PURE__ */ (0, K.jsx)("strong", { children: "AI가 없어도 앱은 그대로 동작합니다" }),
-							" — 자료 수집·검색·차트는 모두 규칙으로 만들고, 보고서도 규칙 기반으로 나옵니다. 문장이 더 거칠 뿐입니다."
+							})
 						] }),
-						/* @__PURE__ */ (0, K.jsxs)("div", {
-							className: "field",
-							children: [/* @__PURE__ */ (0, K.jsx)("span", {
-								id: "welcomeEngineLabel",
-								children: "생성 방식"
-							}), /* @__PURE__ */ (0, K.jsxs)("div", {
-								className: "settings-theme-options",
+						n === "engine" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+							/* @__PURE__ */ (0, K.jsx)("h1", {
+								id: "welcomeTitle",
+								tabIndex: -1,
+								children: "AI를 쓰시겠어요?"
+							}),
+							/* @__PURE__ */ (0, K.jsxs)("p", { children: [
+								"브리핑·기업 분석·테마 분석의 문장을 AI가 씁니다.",
+								" ",
+								/* @__PURE__ */ (0, K.jsx)("strong", { children: "AI가 없어도 앱은 그대로 동작합니다" }),
+								" — 자료 수집·검색·차트는 모두 규칙으로 만들고, 보고서도 규칙 기반으로 나옵니다."
+							] }),
+							/* @__PURE__ */ (0, K.jsxs)("div", {
+								className: "welcome-choices",
 								role: "group",
-								"aria-labelledby": "welcomeEngineLabel",
+								"aria-label": "생성 방식",
 								children: [
 									/* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
@@ -23124,167 +23158,161 @@ function fu({ onFinish: e }) {
 										children: "Agent CLI"
 									})
 								]
-							})]
-						}),
-						u === "api" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
-							/* @__PURE__ */ (0, K.jsxs)("div", {
-								className: "field",
-								children: [/* @__PURE__ */ (0, K.jsx)("span", {
-									id: "welcomeProviderLabel",
-									children: "제공사"
-								}), /* @__PURE__ */ (0, K.jsx)("div", {
-									className: "settings-theme-options",
+							}),
+							u === "api" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+								/* @__PURE__ */ (0, K.jsx)("div", {
+									className: "welcome-choices",
 									role: "group",
-									"aria-labelledby": "welcomeProviderLabel",
+									"aria-label": "제공사",
 									children: du.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": f === e.id,
 										onClick: () => p(e.id),
 										children: e.label
 									}, e.id))
-								})]
-							}),
-							/* @__PURE__ */ (0, K.jsxs)("label", {
-								className: "field",
-								children: [/* @__PURE__ */ (0, K.jsx)("span", { children: "API 키" }), /* @__PURE__ */ (0, K.jsx)("input", {
-									type: "password",
-									value: m,
-									autoComplete: "off",
-									placeholder: "나중에 설정에서 넣어도 됩니다",
-									onChange: (e) => h(e.target.value)
-								})]
-							}),
-							/* @__PURE__ */ (0, K.jsxs)("p", {
+								}),
+								/* @__PURE__ */ (0, K.jsxs)("label", {
+									className: "welcome-field",
+									children: [/* @__PURE__ */ (0, K.jsx)("span", { children: "API 키" }), /* @__PURE__ */ (0, K.jsx)("input", {
+										type: "password",
+										value: m,
+										autoComplete: "off",
+										placeholder: "나중에 설정에서 넣어도 됩니다",
+										onChange: (e) => h(e.target.value)
+									})]
+								}),
+								/* @__PURE__ */ (0, K.jsxs)("p", {
+									className: "welcome-muted",
+									children: [
+										"키는 이 PC의 ",
+										/* @__PURE__ */ (0, K.jsx)("code", { children: ".env" }),
+										" 파일에만 저장됩니다. 발급:",
+										" ",
+										/* @__PURE__ */ (0, K.jsxs)("a", {
+											href: M?.url,
+											target: "_blank",
+											rel: "noreferrer",
+											children: [M?.label, " 키 페이지"]
+										})
+									]
+								})
+							] }),
+							u === "cli" && /* @__PURE__ */ (0, K.jsx)("p", {
 								className: "welcome-muted",
-								children: [
-									"키는 이 PC의 ",
-									/* @__PURE__ */ (0, K.jsx)("code", { children: ".env" }),
-									" 파일에만 저장됩니다. 발급:",
-									" ",
-									/* @__PURE__ */ (0, K.jsxs)("a", {
-										href: du.find((e) => e.id === f)?.url,
-										target: "_blank",
-										rel: "noreferrer",
-										children: [du.find((e) => e.id === f)?.label, " 키 페이지"]
-									})
-								]
+								children: "이미 쓰고 있는 Codex·Claude·Antigravity CLI를 그대로 씁니다. 설정 탭의 AI Agent에서 설치와 로그인을 마칠 수 있습니다. CLI는 한 번 실행에 수십 초가 걸립니다."
 							})
 						] }),
-						u === "cli" && /* @__PURE__ */ (0, K.jsx)("p", {
-							className: "welcome-muted",
-							children: "이미 쓰고 있는 Codex·Claude·Antigravity CLI를 그대로 씁니다. 설정 탭의 AI Agent에서 설치와 로그인을 마칠 수 있습니다. CLI는 한 번 실행에 수십 초가 걸립니다."
-						})
-					]
-				}),
-				n === "markets" && /* @__PURE__ */ (0, K.jsxs)("section", {
-					className: "welcome-body",
-					children: [
-						/* @__PURE__ */ (0, K.jsx)("h1", {
-							id: "welcomeTitle",
-							tabIndex: -1,
-							children: "어느 시장을 보시겠어요?"
-						}),
-						/* @__PURE__ */ (0, K.jsx)("p", { children: "여기서 끈 시장은 자료 수집이 멈추고 화면 전체에서 숨습니다. 유가·달러 같은 글로벌 자료는 항상 보입니다. 나중에 설정에서 바꿀 수 있습니다." }),
-						v ? /* @__PURE__ */ (0, K.jsxs)("div", {
-							className: "field",
-							children: [/* @__PURE__ */ (0, K.jsx)("span", {
-								id: "welcomeMarketLabel",
-								children: "수집·표시할 시장"
-							}), /* @__PURE__ */ (0, K.jsx)("div", {
-								className: "settings-theme-options",
+						n === "markets" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+							/* @__PURE__ */ (0, K.jsx)("h1", {
+								id: "welcomeTitle",
+								tabIndex: -1,
+								children: "어느 시장을 보시겠어요?"
+							}),
+							/* @__PURE__ */ (0, K.jsx)("p", { children: "여기서 끈 시장은 자료 수집이 멈추고 화면 전체에서 숨습니다. 유가·달러 같은 글로벌 자료는 항상 보입니다." }),
+							/* @__PURE__ */ (0, K.jsx)("p", {
+								className: "welcome-muted",
+								children: "US 뉴욕·나스닥 · KR 코스피·코스닥 · EU 런던·프랑크푸르트 · JP 도쿄"
+							}),
+							g ? /* @__PURE__ */ (0, K.jsx)("div", {
+								className: "welcome-markets",
 								role: "group",
-								"aria-labelledby": "welcomeMarketLabel",
-								children: v.markets.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
-									type: "button",
-									"aria-pressed": b.includes(e.id),
-									onClick: () => k(e.id),
-									children: e.label
-								}, e.id))
-							})]
-						}) : /* @__PURE__ */ (0, K.jsx)("p", {
-							className: "welcome-muted",
-							children: "관심 시장 설정을 읽지 못했습니다. 설정 탭에서 정할 수 있습니다."
-						}),
-						/* @__PURE__ */ (0, K.jsx)("p", {
-							className: "welcome-muted",
-							children: "저장하면 고른 시장의 뉴스를 바로 모으기 시작합니다. 몇 분 걸리고, 그동안에도 다른 화면을 쓸 수 있습니다."
+								"aria-label": "수집·표시할 시장",
+								children: g.markets.map((e) => {
+									let t = fu[e.id] ?? e.id;
+									return /* @__PURE__ */ (0, K.jsx)("button", {
+										type: "button",
+										"data-code": t,
+										"aria-label": `${t} ${e.label}`,
+										"aria-pressed": v.includes(e.id),
+										onClick: () => D(e.id),
+										children: t
+									}, e.id);
+								})
+							}) : /* @__PURE__ */ (0, K.jsx)("p", {
+								className: "welcome-muted",
+								children: "관심 시장 설정을 읽지 못했습니다. 설정 탭에서 정할 수 있습니다."
+							}),
+							/* @__PURE__ */ (0, K.jsx)("p", {
+								className: "welcome-muted",
+								children: "저장하면 고른 시장의 뉴스를 바로 모으기 시작합니다. 몇 분 걸리고, 그동안에도 다른 화면을 쓸 수 있습니다."
+							})
+						] }),
+						n === "done" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+							/* @__PURE__ */ (0, K.jsx)("h1", {
+								id: "welcomeTitle",
+								tabIndex: -1,
+								children: "이제 시작할 수 있습니다"
+							}),
+							b && /* @__PURE__ */ (0, K.jsx)("p", { children: "뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다." }),
+							/* @__PURE__ */ (0, K.jsxs)("ol", {
+								className: "welcome-next",
+								children: [
+									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "워치리스트" }), "에 관심 종목을 넣으면 그 종목 뉴스가 모입니다."] }),
+									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "브리핑" }), "에서 오늘의 시장을 정리합니다. 자료가 쌓일수록 좋아집니다."] }),
+									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "기업 분석" }), "에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다."] })
+								]
+							}),
+							S && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsxs)("p", {
+								className: "welcome-path",
+								children: [
+									/* @__PURE__ */ (0, K.jsx)("b", { children: "자료 저장 위치" }),
+									" · ",
+									S.path
+								]
+							}), !S.outsideAppFolder && /* @__PURE__ */ (0, K.jsx)("p", {
+								className: "welcome-muted",
+								children: "새 버전은 새 폴더로 풀립니다. 설정 > 자료 위치에서 옮겨두면 업데이트할 때 그대로 이어집니다."
+							})] })
+						] }),
+						o && /* @__PURE__ */ (0, K.jsx)("p", {
+							className: "react-dashboard-warning",
+							role: "status",
+							children: o
 						})
 					]
-				}),
-				n === "done" && /* @__PURE__ */ (0, K.jsxs)("section", {
-					className: "welcome-body",
-					children: [
-						/* @__PURE__ */ (0, K.jsx)("h1", {
-							id: "welcomeTitle",
-							tabIndex: -1,
-							children: "준비됐습니다"
-						}),
-						S && /* @__PURE__ */ (0, K.jsx)("p", { children: "뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다." }),
-						/* @__PURE__ */ (0, K.jsxs)("ul", {
-							className: "welcome-next",
-							children: [
-								/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "워치리스트" }), "에 관심 종목을 넣으면 그 종목 뉴스가 모입니다."] }),
-								/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "브리핑" }), "에서 오늘의 시장 정리를 만듭니다. 자료가 쌓일수록 좋아집니다."] }),
-								/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "기업 분석" }), "에 티커를 넣으면 SEC 공시와 숫자로 보고서를 만듭니다."] })
-							]
-						}),
-						w && /* @__PURE__ */ (0, K.jsxs)("p", {
-							className: "welcome-muted",
-							children: [
-								"자료 저장 위치: ",
-								/* @__PURE__ */ (0, K.jsx)("code", { children: w.path }),
-								!w.outsideAppFolder && /* @__PURE__ */ (0, K.jsx)(K.Fragment, { children: " — 새 버전은 새 폴더로 풀리니, 업데이트 전에 설정 > 자료 위치에서 옮겨두면 편합니다." })
-							]
-						})
-					]
-				}),
-				o && /* @__PURE__ */ (0, K.jsx)("p", {
-					className: "react-dashboard-warning",
-					role: "status",
-					children: o
 				}),
 				/* @__PURE__ */ (0, K.jsxs)("footer", {
 					className: "welcome-actions",
 					children: [/* @__PURE__ */ (0, K.jsx)("button", {
-						className: "btn",
+						className: "welcome-skip",
 						type: "button",
-						onClick: () => void E(n !== "done"),
+						onClick: () => void w(n !== "done"),
 						disabled: !!i,
 						children: n === "done" ? "닫기" : "건너뛰기"
 					}), /* @__PURE__ */ (0, K.jsxs)("div", {
-						className: "welcome-actions-main",
+						className: "welcome-acts",
 						children: [
-							N > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "btn",
+							j > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
+								className: "welcome-btn",
 								type: "button",
-								onClick: () => c(lu[N - 1].id),
+								onClick: () => c(lu[j - 1]),
 								disabled: !!i,
 								children: "이전"
 							}),
 							n === "welcome" && /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "btn btn--primary",
+								className: "welcome-btn welcome-btn--go",
 								type: "button",
 								onClick: () => c("engine"),
 								children: "다음"
 							}),
 							n === "engine" && /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "btn btn--primary",
+								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void D(),
+								onClick: () => void T(),
 								disabled: !!i,
-								children: i === "engine" ? "저장 중" : g ? "다음" : "저장하고 다음"
+								children: i === "engine" ? "저장 중" : "저장하고 다음"
 							}),
 							n === "markets" && /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "btn btn--primary",
+								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void O(),
+								onClick: () => void E(),
 								disabled: !!i,
 								children: i === "markets" ? "저장 중" : "저장하고 시작"
 							}),
 							n === "done" && /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "btn btn--primary",
+								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void E(!1),
+								onClick: () => void w(!1),
 								disabled: !!i,
 								children: "시작하기"
 							})
@@ -23292,12 +23320,12 @@ function fu({ onFinish: e }) {
 					})]
 				})
 			]
-		})
+		})]
 	});
 }
 //#endregion
 //#region src/app/App.tsx
-function pu() {
+function _u() {
 	let [e, t] = (0, l.useState)(!1);
 	return (0, l.useEffect)(() => {
 		let e = !1;
@@ -23312,23 +23340,23 @@ function pu() {
 	}, []), (0, l.useEffect)(() => {
 		let e = () => t(!0);
 		return window.addEventListener("folio:show-welcome", e), () => window.removeEventListener("folio:show-welcome", e);
-	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(cu, {}), e && /* @__PURE__ */ (0, K.jsx)(fu, { onFinish: () => t(!1) })] });
+	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(cu, {}), e && /* @__PURE__ */ (0, K.jsx)(gu, { onFinish: () => t(!1) })] });
 }
 //#endregion
 //#region src/main.tsx
-var mu = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(js, {}) };
-function hu() {
+var vu = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(js, {}) };
+function yu() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = mu[e.dataset.reactIsland || ""];
+		let t = vu[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: t() })));
 	});
 }
-function gu() {
+function bu() {
 	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(pu, {}) })), !0) : !1;
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(_u, {}) })), !0) : !1;
 }
-function _u() {
-	gu(), hu();
+function xu() {
+	bu(), yu();
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", _u) : _u();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", xu) : xu();
 //#endregion
