@@ -251,12 +251,13 @@ from features.investment_review.service import (
     generate_review as generate_investment_review,
 )
 from features.investment_review.context_routes import create_investment_context_router
+from features.common.workspace import config_dir, data_dir, research_inbox_dir
 
 ROOT = Path(__file__).resolve().parent
 APP_VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
-DATA_DIR = ROOT / "data"
-CONFIG_DIR = ROOT / "config"
-INBOX_DIR = ROOT / "research-inbox"
+DATA_DIR = data_dir()
+CONFIG_DIR = config_dir()
+INBOX_DIR = research_inbox_dir()
 RSS_INBOX_DIR = INBOX_DIR / "rss"
 PUBLIC_DIR = ROOT / "public"
 BRIEFINGS_DIR = DATA_DIR / "briefings"

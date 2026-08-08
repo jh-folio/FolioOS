@@ -16,9 +16,10 @@ from features.daily_briefing.builder import build_briefing
 from features.llm_settings.client import default_generation_mode
 from features.market_memory.digest import run_rss_market_memory_update
 from features.market_calendar.service import refresh_calendar
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 SETTINGS_PATH = DATA_DIR / "automation-settings.json"
 RUNS_PATH = DATA_DIR / "automation-runs.json"
 _LOOP_STARTED = False

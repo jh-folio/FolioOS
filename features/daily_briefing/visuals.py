@@ -42,10 +42,11 @@ from features.daily_briefing.schema import (
     visual_sidecar_file_name,
     visual_sidecar_gzip_file_name,
 )
+from features.common.workspace import data_dir
 
 
 ROOT = Path(__file__).resolve().parents[2]
-MARKET_CACHE_DIR = ROOT / "data" / "market-cache"
+MARKET_CACHE_DIR = data_dir() / "market-cache"
 # 시장 메타는 레지스트리에서 파생한다. `currency`는 단일 통화 시장의 기본값일 뿐이고,
 # 유럽처럼 통화가 둘인 시장은 시리즈별 통화가 권위다(`_price_snapshot` 참고).
 MARKET_META = {
@@ -687,7 +688,7 @@ def load_visual_sidecar(date, base_dir=None, market_scope=None):
         dt.date.fromisoformat(date_text)
     except ValueError:
         return None
-    root = Path(base_dir) if base_dir is not None else ROOT / "data" / "briefings"
+    root = Path(base_dir) if base_dir is not None else data_dir() / "briefings"
     scope = str(market_scope or "").strip().lower()
     file_names = []
     if scope in SINGLE_MARKET_SCOPES:
@@ -990,7 +991,7 @@ def load_current_visuals(
     date_text = str(date or "").strip()
     if not DATE_PATTERN.fullmatch(date_text):
         return None
-    root = Path(base_dir) if base_dir is not None else ROOT / "data" / "briefings"
+    root = Path(base_dir) if base_dir is not None else data_dir() / "briefings"
     market_scope = str(market or "").strip().lower()
     report = _load_visual_report(root, date_text, market_scope)
     if not isinstance(report, dict):

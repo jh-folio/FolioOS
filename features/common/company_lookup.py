@@ -11,9 +11,10 @@ from features.common.markets import MarketCode, normalize_market_code
 from features.common.utils import normalize, read_json, write_json
 from features.llm_settings.client import sec_user_agent
 from features.company_analysis.dart_client import dart_api_key, resolve_dart_company
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 SEC_CACHE_DIR = DATA_DIR / "sec-cache"
 SEC_TICKER_CACHE_PATH = SEC_CACHE_DIR / "company_tickers.json"
 

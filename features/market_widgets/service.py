@@ -10,10 +10,11 @@ from pathlib import Path
 import re
 
 from features.common.utils import read_json, write_json
+from features.common.workspace import data_dir
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 SETTINGS_PATH = DATA_DIR / "market-widget-settings.json"
 
 ALLOWED_TYPES = {

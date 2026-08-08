@@ -19,9 +19,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from features.investment_review.schema import normalize_review
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 REVIEW_DIR = DATA_DIR / "investment-review"
 MEMORY_DB = DATA_DIR / "market-memory.sqlite3"
 

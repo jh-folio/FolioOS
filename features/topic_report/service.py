@@ -46,9 +46,10 @@ from features.topic_report.templates import compose_prompt
 from features.topic_report.topic_config import PRESET_TOPICS, get_topic_config
 from features.topic_report.report_rules import build_rule_report
 from features.common.generation_engine import engine_detail, engine_label
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 REPORTS_DIR = DATA_DIR / "topic-reports"
 MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
 FEATURES_DIR = ROOT / "features"

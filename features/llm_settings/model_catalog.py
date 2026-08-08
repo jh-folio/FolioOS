@@ -14,9 +14,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-CACHE_PATH = ROOT / "data" / "llm-model-cache.json"
+CACHE_PATH = data_dir() / "llm-model-cache.json"
 
 API_MODEL_FALLBACKS = {
     "openai": [

@@ -52,9 +52,10 @@ from features.common.markets import market_keys_for_scope, normalize_saved_marke
 from features.common.utils import read_json
 from features.market_memory.attempt_store import AttemptStore
 from features.market_memory.market_state_ref import MarketStateRefQuery
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 PROPOSALS_DIR = DATA_DIR / "agent-proposals"
 BRIEFINGS_DIR = DATA_DIR / "briefings"
 ANALYSIS_DIR = DATA_DIR / "company-analysis"

@@ -36,10 +36,11 @@ from features.common.shared_jobs_store import (
     LegacyJobCollisionError,
     SharedJobStore,
 )
+from features.common.workspace import data_dir
 
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 JOBS_PATH = DATA_DIR / "jobs.json"
 JOB_EXECUTOR = ThreadPoolExecutor(max_workers=2)
 JOB_LOCK = threading.RLock()

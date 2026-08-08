@@ -51,6 +51,7 @@ from features.common.quality_generation.preflight_enrichment import build_prefli
 from features.common.quality_generation.quality_targets import render_quality_target_context
 from features.common.quality_generation.telemetry import normalize_token_usage
 from features.market_memory.snapshot import render_market_memory_context
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FEATURES_DIR = ROOT / "features"
@@ -120,8 +121,8 @@ def _scope_output_instruction(market_scope):
         f"{titles}을(를) 각각 완결형으로 작성하세요. 시장을 합치거나 별도의 시장 연결 요약 "
         "섹션을 추가하지 말고, 연결 근거는 각 시장 본문 안에서만 짧게 설명하세요."
     )
-BRIEFINGS_DIR = ROOT / "data" / "briefings"
-MARKET_MEMORY_DB_PATH = ROOT / "data" / "market-memory.sqlite3"
+BRIEFINGS_DIR = data_dir() / "briefings"
+MARKET_MEMORY_DB_PATH = data_dir() / "market-memory.sqlite3"
 
 NEWS_INBOX_PREFIXES = ("research-inbox/articles/", "research-inbox/rss/")
 

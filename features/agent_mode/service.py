@@ -133,9 +133,10 @@ from features.thesis_tracking.service import get_thesis
 from features.common.research_quality.evaluator import evaluate_artifact
 from features.common.research_schema.service import load_artifact
 from features.investment_review.service import REVIEW_DIR, build_review
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 BRIEFINGS_DIR = DATA_DIR / "briefings"
 MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
 

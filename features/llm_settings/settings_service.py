@@ -22,11 +22,12 @@ from features.llm_settings.client import (
 from features.notion_export.service import public_notion_settings
 from features.llm_settings.provider_status import PROVIDER_INFO
 from features.llm_settings.model_catalog import API_MODEL_FALLBACKS, choices_from_catalog, discover_api_models, normalize_model_id
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FEATURES_DIR = ROOT / "features"
 MARKET_MEMORY_PROMPT_PATH = FEATURES_DIR / "market_memory" / "prompt.md"
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 
 API_MODEL_CHOICES = API_MODEL_FALLBACKS
 

@@ -20,10 +20,11 @@ from features.daily_briefing.schema import (
     market_selection_scope,
     normalize_market_scope,
 )
+from features.common.workspace import data_dir
 
 
 ROOT = Path(__file__).resolve().parents[2]
-BRIEFINGS_DIR = ROOT / "data" / "briefings"
+BRIEFINGS_DIR = data_dir() / "briefings"
 # 사이드카(`.visuals.json`, `.link.json`)를 보고서로 읽지 않도록 시장 접미사를 고정한다.
 _MARKET_ALTERNATION = "|".join(SINGLE_MARKET_SCOPES)
 REPORT_FILE_RE = re.compile(rf"^\d{{4}}-\d{{2}}-\d{{2}}(?:\.(?:{_MARKET_ALTERNATION}))?\.json$")

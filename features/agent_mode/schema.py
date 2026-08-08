@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from features.common.utils import now_iso
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 CONTEXT_DIR = DATA_DIR / "agent-context"
 
 TASK_TYPES = {

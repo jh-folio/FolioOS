@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 from typing import Final
+from features.common.workspace import config_dir
 
 
 DEFAULT_CONFIG_NAMES: Final = frozenset(
@@ -22,7 +23,7 @@ DEFAULT_CONFIG_NAMES: Final = frozenset(
 )
 _ROOT: Final = Path(__file__).resolve().parents[2]
 _DEFAULTS_CONFIG_DIR = _ROOT / "defaults" / "config"
-_LOCAL_CONFIG_DIR = _ROOT / "config"
+_LOCAL_CONFIG_DIR = config_dir()
 _CONFIG_LOCKS: Final = {name: Lock() for name in DEFAULT_CONFIG_NAMES}
 
 

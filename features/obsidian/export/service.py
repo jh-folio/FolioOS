@@ -11,9 +11,10 @@ from features.common.utils import read_json, write_json
 from features.common.taxonomy import normalize_tag
 from features.daily_briefing.schema import MARKET_TAGS, briefing_export_units
 from features.obsidian.export.formatter import build_frontmatter, inject_wikilinks, preserve_user_notes, charts_to_markdown, strip_duplicate_h1
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 SETTINGS_PATH = DATA_DIR / "obsidian-settings.json"
 MARKET_MEMORY_DB = DATA_DIR / "market-memory.sqlite3"
 BRIEFINGS_DIR = DATA_DIR / "briefings"

@@ -7,9 +7,10 @@ from pathlib import Path
 from features.common.research_schema.service import load_artifact
 from features.common.utils import kst_date
 from features.common.research_quality.evaluator import evaluate_artifact, evaluate_report
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 
 
 def _find_json_path(folder: Path, artifact_id: str) -> Path | None:

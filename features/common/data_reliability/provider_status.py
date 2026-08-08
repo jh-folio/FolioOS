@@ -4,9 +4,10 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 STATUS_PATH = DATA_DIR / "provider-status.json"
 
 STATUS_CHOICES = {"ok", "degraded", "failed", "unknown"}

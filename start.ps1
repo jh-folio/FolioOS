@@ -30,9 +30,12 @@ Write-Host ""
 # 서버가 실제로 응답하기 시작하면 브라우저를 연다. 바로 열면 연결 거부 화면이 먼저 뜬다.
 # 백그라운드 작업이라 아래 서버 실행을 막지 않는다. 앱 안의 `서버 재시작`(종료 코드 3)으로
 # 다시 돌 때는 열지 않는다 — 이미 열려 있는 탭 옆에 새 탭이 계속 쌓인다.
+# 넉넉히 기다린다. 시작 시간은 인덱스 크기에 좌우된다 — 실측으로 12,730개 문서
+# 701MB 인덱스를 따뜻한 디스크에서 6.9초에 읽지만, 콜드 캐시나 느린 디스크에서는
+# 훨씬 오래 걸린다. 기다리는 비용은 없고, 못 뜨면 이 작업만 조용히 끝난다.
 $Opener = Start-Job -ArgumentList $Url, $Port -ScriptBlock {
   param($Url, $Port)
-  for ($i = 0; $i -lt 120; $i++) {
+  for ($i = 0; $i -lt 1200; $i++) {
     try {
       $client = New-Object System.Net.Sockets.TcpClient
       $client.Connect("127.0.0.1", [int]$Port)

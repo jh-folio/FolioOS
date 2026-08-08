@@ -47,9 +47,10 @@ from features.common.quality_generation.telemetry import normalize_token_usage
 from features.common.web_search_scope import load_source_scope, render_scope_instruction
 from features.market_memory.snapshot import render_market_memory_context
 from features.common.generation_engine import engine_detail, engine_label
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 FEATURES_DIR = ROOT / "features"
 ANALYSIS_REPORTS_DIR = DATA_DIR / "company-analysis"
 SEC_CACHE_DIR = DATA_DIR / "sec-cache"

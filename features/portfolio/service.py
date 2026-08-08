@@ -16,9 +16,10 @@ from features.common.instruments.registry import exchange_suffix, infer_market, 
 from features.common.markets import MarketCode
 from features.common.utils import now_iso, kst_date, read_json, write_json
 from features.portfolio.schema import expected_revision as parse_expected_revision, portfolio_document
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 PORTFOLIO_PATH = DATA_DIR / "portfolio.json"
 PORTFOLIO_PRESETS_PATH = DATA_DIR / "portfolio-presets.json"
 PORTFOLIO_PRICE_CACHE_DIR = DATA_DIR / "portfolio-price-cache"

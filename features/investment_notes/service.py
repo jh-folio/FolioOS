@@ -17,9 +17,10 @@ from features.investment_notes.checkpoints import (
     checkpoint_projection,
     normalize_checkpoint_fields,
 )
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 NOTES_DIR = DATA_DIR / "investment-notes"
 MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
 

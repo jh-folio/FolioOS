@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 
 from features.common.atomic_replace import write_bytes_atomic
+from features.common.workspace import data_dir
 
 MARKETS = ("US", "KR", "EUROPE", "JP")
 DEFAULT_SELECTED = ("US", "KR")
@@ -26,7 +27,7 @@ DEFAULT_SELECTED = ("US", "KR")
 ALWAYS_VISIBLE = ("GLOBAL", "UNKNOWN")
 
 _ROOT = Path(__file__).resolve().parents[2]
-SCOPE_PATH = _ROOT / "data" / "market-scope.json"
+SCOPE_PATH = data_dir() / "market-scope.json"
 
 MARKET_LABELS = {"US": "미국", "KR": "한국", "EUROPE": "유럽", "JP": "일본"}
 

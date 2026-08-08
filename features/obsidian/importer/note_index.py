@@ -10,9 +10,10 @@ import hashlib
 import json
 import sqlite3
 from pathlib import Path
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_DB = ROOT / "data" / "market-memory.sqlite3"
+DEFAULT_DB = data_dir() / "market-memory.sqlite3"
 
 
 def connect(db_path=None) -> sqlite3.Connection:

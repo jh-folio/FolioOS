@@ -13,9 +13,10 @@ from features.common.research_schema.checkpoints import (
 from features.common.research_schema.data_gaps import data_gaps_from_messages
 from features.common.research_schema.evidence import evidence_items_from_list
 from features.common.research_schema.source_ledger import source_ledger_from_items
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[3]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 
 
 def _read_json(path: Path):

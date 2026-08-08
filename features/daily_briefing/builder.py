@@ -81,10 +81,11 @@ from features.daily_briefing.visuals import (
 )
 from features.llm_settings.client import selected_llm_config
 from features.market_memory.memory import build_memory_from_briefing, list_briefing_memories, upsert_memory
+from features.common.workspace import data_dir
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 BRIEFINGS_DIR = DATA_DIR / "briefings"
 MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
 BRIEFING_PROMPT_PATH = ROOT / "features" / "daily_briefing" / "prompt.md"

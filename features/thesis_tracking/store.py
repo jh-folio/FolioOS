@@ -17,9 +17,10 @@ from features.common.research_schema.checkpoints import checkpoints_from_thesis_
 from features.common.research_schema.evidence import evidence_items_from_list
 from features.common.research_schema.source_ledger import source_ledger_from_items
 from features.common.sqlite_receipts import ensure_receipt_table
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_DB = ROOT / "data" / "market-memory.sqlite3"
+DEFAULT_DB = data_dir() / "market-memory.sqlite3"
 
 
 def connect(db_path=None) -> sqlite3.Connection:

@@ -28,9 +28,10 @@ from features.common.quality_generation.telemetry import normalize_token_usage
 from features.obsidian.importer import parser as P
 from features.obsidian.importer.service import list_hypotheses, scan_vault
 from features.personal_overlay import schema as S
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 BRIEFINGS_DIR = DATA_DIR / "briefings"
 ANALYSIS_REPORTS_DIR = DATA_DIR / "company-analysis"
 PROMPT_PATH = Path(__file__).resolve().parent / "prompt.md"

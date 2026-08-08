@@ -6,9 +6,10 @@ import re
 
 from features.common.utils import kst_date, now_iso
 from features.market_memory.memory import upsert_memory
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-MARKET_MEMORY_DB_PATH = ROOT / "data" / "market-memory.sqlite3"
+MARKET_MEMORY_DB_PATH = data_dir() / "market-memory.sqlite3"
 
 AXES = {
     "ai_semiconductor_supply_chain": {

@@ -16,6 +16,7 @@ from features.agent_mode.briefing_contract import briefing_contract_violations
 from features.common.jobs import cancel_job, get_job, submit_job
 from features.common.shared_jobs_schema import TaskType
 from features.llm_settings.client import load_dotenv
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TIMEOUT_SECONDS = 1800
@@ -196,7 +197,7 @@ def agent_preflight(adapter: str = "") -> dict:
             "detail": str(detail or "")[:500],
         })
 
-    data_dir = ROOT / "data"
+    workspace_data = data_dir()
     add(
         "workspace",
         "Workspace",
@@ -207,9 +208,9 @@ def agent_preflight(adapter: str = "") -> dict:
     add(
         "data_dir",
         "Data Directory",
-        data_dir.exists() or os.access(str(ROOT), os.W_OK),
-        "data 폴더를 사용할 수 있습니다." if data_dir.exists() else "첫 실행 시 data 폴더를 생성할 수 있습니다.",
-        detail=str(data_dir),
+        workspace_data.exists() or os.access(str(ROOT), os.W_OK),
+        "data 폴더를 사용할 수 있습니다." if workspace_data.exists() else "첫 실행 시 data 폴더를 생성할 수 있습니다.",
+        detail=str(workspace_data),
     )
 
     selected_id = requested or str(status.get("selectedAdapter") or "")

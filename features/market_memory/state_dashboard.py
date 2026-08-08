@@ -6,9 +6,10 @@ from pathlib import Path
 from features.market_memory.market_state_ref import MarketStateRefQuery, resolve_market_state_ref
 from features.market_memory.memory import connect, init_db, list_states
 from features.market_memory.snapshot import MARKET_VIEW_KEYS, current_market_state_snapshot, scrub_inline_refs
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-MARKET_MEMORY_DB_PATH = ROOT / "data" / "market-memory.sqlite3"
+MARKET_MEMORY_DB_PATH = data_dir() / "market-memory.sqlite3"
 
 MOMENTUM_LABELS = {
     "strengthening": "강화",

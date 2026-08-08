@@ -18,9 +18,10 @@ from features.common.company_lookup import (
 from features.common.dataframe_ops import top_records
 from features.common.instruments.registry import exchange_suffix
 from features.investment_notes.checkpoints import project_checkpoint_notes
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 NOTES_DIR = DATA_DIR / "notes"
 # 카드 건수를 세기 위해 훑는 검색 결과 상한. 미리보기 개수(limit_per_item)와 분리해야
 # 모든 카드가 미리보기 개수로 고정되지 않는다.

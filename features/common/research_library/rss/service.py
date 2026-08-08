@@ -20,9 +20,10 @@ from features.common.research_library.indexing.service import (
     rss_item_is_market_relevant,
     build_index,
 )
+from features.common.workspace import data_dir, research_inbox_dir
 
 ROOT = Path(__file__).resolve().parents[4]
-RSS_INBOX_DIR = ROOT / "research-inbox" / "rss"
+RSS_INBOX_DIR = research_inbox_dir() / "rss"
 RSS_ARCHIVE_MODULE = "features.common.research_library.rss.rss_archive"
 
 RSS_DATETIME_FORMATS = (
@@ -667,7 +668,7 @@ def rss_save_full_text_enabled():
 
     automation 모듈은 이 모듈을 import하므로 순환을 피해 설정 파일을 직접 읽는다.
     """
-    settings = read_json(ROOT / "data" / "automation-settings.json", {})
+    settings = read_json(data_dir() / "automation-settings.json", {})
     rss_cfg = settings.get("rss") if isinstance(settings, dict) else {}
     if not isinstance(rss_cfg, dict):
         rss_cfg = {}

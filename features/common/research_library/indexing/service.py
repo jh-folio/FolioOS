@@ -34,10 +34,11 @@ from features.common.research_library.indexing.research_index import (
     write_manifest,
 )
 from features.common.research_library.rss.feed_config import feed_metadata_for_query
+from features.common.workspace import data_dir, research_inbox_dir
 
 ROOT = Path(__file__).resolve().parents[4]
-DATA_DIR = ROOT / "data"
-INBOX_DIR = ROOT / "research-inbox"
+DATA_DIR = data_dir()
+INBOX_DIR = research_inbox_dir()
 PDF_CACHE_DIR = DATA_DIR / "pdf-cache"
 RESEARCH_DB_PATH = DATA_DIR / "research-index.sqlite3"
 

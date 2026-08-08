@@ -38,9 +38,10 @@ from features.llm_settings.client import (
     selected_llm_config,
 )
 from features.common.quality_generation.telemetry import normalize_token_usage
+from features.common.workspace import data_dir
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data"
+DATA_DIR = data_dir()
 FEATURES_DIR = ROOT / "features"
 MARKET_MEMORY_DB_PATH = DATA_DIR / "market-memory.sqlite3"
 MARKET_MEMORY_PROMPT_PATH = FEATURES_DIR / "market_memory" / "prompt.md"

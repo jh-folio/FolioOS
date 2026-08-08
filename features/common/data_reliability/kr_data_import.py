@@ -10,9 +10,10 @@ import csv
 from pathlib import Path
 
 from features.common.research_schema.data_gaps import normalize_data_gap
+from features.common.workspace import research_inbox_dir
 
 ROOT = Path(__file__).resolve().parents[3]
-MARKET_DATA_DIR = ROOT / "research-inbox" / "market-data"
+MARKET_DATA_DIR = research_inbox_dir() / "market-data"
 
 EXPECTED_FILES = {
     "krx_foreign_flows.csv": "KRX 외국인/기관 수급",
