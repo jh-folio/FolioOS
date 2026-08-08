@@ -19,6 +19,8 @@ __pycache__/
 *.py[cod]
 data/
 /config/
+# 자료를 앱 폴더 밖으로 옮겼을 때 그 위치를 적어두는 표지. 설치마다 다르다.
+/workspace.json
 
 # Checksum-verified tools downloaded by scripts/install_gitleaks.py. Never commit binaries.
 .tools/

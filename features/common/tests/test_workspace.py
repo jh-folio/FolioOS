@@ -20,7 +20,9 @@ def app(tmp_path, monkeypatch):
     (root / "data" / "briefings").mkdir()
     monkeypatch.setattr(workspace, "APP_ROOT", root)
     monkeypatch.delenv("FOLIO_HOME", raising=False)
-    monkeypatch.setattr(workspace.Path, "home", staticmethod(lambda: tmp_path / "home"))
+    # 실제 문서 폴더는 Windows에서 레지스트리로 결정된다(OneDrive 리디렉션). 테스트는
+    # 그 조회를 건너뛰고 임시 폴더를 문서 폴더로 삼는다.
+    monkeypatch.setattr(workspace, "documents_root", lambda: tmp_path / "home" / "Documents")
     # 판정은 프로세스당 1회 캐시된다. 테스트마다 환경을 바꾸므로 앞뒤로 비운다.
     workspace.reset_cache()
     yield root

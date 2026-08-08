@@ -6,6 +6,8 @@
 
 | 파일 | 역할 |
 | --- | --- |
+| `workspace.py` | 사용자 자료(`data`/`research-inbox`/`config`)가 어디 있는지 결정하는 단일 출처 |
+| `workspace_service.py` | 자료 위치 payload와 옮기기(복사·검증·표지) |
 | `taxonomy.py` | 태그 canonical 어휘 단일 정의 |
 | `markets.py` | `US | KR | EUROPE | JP | GLOBAL | UNKNOWN` 시장·브리핑 scope 단일 계약 |
 | `instruments/` | 거래소·suffix·공식 식별자를 보존하는 cross-market instrument identity 계약 |
@@ -22,6 +24,30 @@
 | `research_quality/` | 저장 산출물의 source grounding, hallucination risk, personal bias risk 평가 |
 | `quality_generation/` | 생성 전 품질 목표, preflight, 약한 섹션 1회 보강, telemetry |
 | `data_reliability/` | 공식자료 우선순위, provider 상태, 한국 수동 데이터 보강 경로 |
+
+## workspace.py / workspace_service.py
+
+사용자 자료가 어디 있는지 한 곳에서 정합니다. `ROOT / "data"`를 새로 쓰지 말고 `data_dir()`, `research_inbox_dir()`, `config_dir()`를 부릅니다.
+
+배포 zip은 `FolioOS-v0.5.0/`처럼 **버전이 박힌 폴더**로 풀리고 `data/`는 빈 채로 나옵니다. 그래서 새 버전을 받으면 새 폴더에 빈 워크스페이스가 생기고 이전 자료는 옛 폴더에 남습니다(실측 22,715개·914MB). 코드와 자료가 한 폴더에 섞여 있는 것이 원인입니다.
+
+찾는 순서:
+
+1. `FOLIO_HOME` 환경변수 — 화면에 노출하지 않는 탈출구. 이 값이 있으면 설정 화면의 옮기기를 막습니다(표지를 써도 다음 시작에서 환경변수가 이기므로, 옮겼다고 말하면 거짓말이 됩니다).
+2. 앱 폴더의 `workspace.json` 표지 — 옮기기가 성공했을 때만 생깁니다. 배포 zip에는 없습니다.
+3. 앱 폴더 `data/`에 **파일이 있으면** 앱 폴더.
+4. `~/Documents/FolioOS`에 자료가 있으면 거기.
+5. 아니면 앱 폴더 — 기본값.
+
+**기본값은 앱 폴더입니다.** 옮기는 것은 선택이며 아무것도 새로 만들지 않습니다.
+
+- 폴더 존재가 아니라 **파일 유무**로 판정합니다. 배포 zip이 빈 폴더를 만들어 두기 때문에, 존재만 보면 갓 푼 설치도 "쓰던 워크스페이스"로 오인합니다.
+- 표지(2번)가 필요한 이유는 옮기기가 **원본을 지우지 않기** 때문입니다. 표지가 없으면 3번이 걸려 방금 옮긴 곳이 아니라 옛 자료를 계속 씁니다.
+- 판정은 프로세스당 1회 캐시합니다. 모듈 상수 수십 곳이 import 시점에 읽으므로, 캐시가 없으면 매번 디렉터리를 훑고 import 도중 `data/`가 생기면 앞뒤 모듈이 서로 다른 워크스페이스를 가리킵니다. 옮긴 뒤에는 재시작이 필요하며 화면이 그렇게 안내합니다.
+- 문서 폴더는 Windows에서 레지스트리(`User Shell Folders\Personal`)로 읽습니다. OneDrive로 리디렉션되면 `~/Documents`가 실제 문서 폴더가 아닙니다. 목적지가 OneDrive 아래면 막지 않고 경고만 합니다(700MB 인덱스가 저장마다 업로드되고 두 PC에서 충돌 사본이 생깁니다).
+- 옮기기는 복사 → 파일별 크기 검증 → 표지 순입니다. 검증에 실패하면 표지를 쓰지 않아 앱이 계속 원본을 씁니다. 목적지에 이미 자료가 있으면 `merge` 없이 진행하지 않습니다 — 합치기라서 목적지에만 있던 파일이 남고, 앱 폴더로 되돌릴 때 예전에 지운 보고서가 되살아납니다.
+- 목적지는 `documents`/`app` 둘뿐입니다. 임의 경로를 받지 않습니다.
+- API: `GET /api/workspace`, `POST /api/workspace/move`, `POST /api/workspace/reveal`.
 
 ## market_calendar.py / exchange_holidays.py
 

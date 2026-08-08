@@ -270,6 +270,18 @@ features/company_analysis/financial_quality_prompt.md
 
 ## 10. 주요 기능 경계 (구현 디테일)
 
+### 자료 위치 (Workspace)
+
+- 사용자 자료(`data`/`research-inbox`/`config`)의 위치는 `features/common/workspace.py` 하나가 정한다. **`ROOT / "data"`를 새로 쓰지 않는다** — `data_dir()`, `research_inbox_dir()`, `config_dir()`를 부른다.
+- **이유**: 배포 zip은 `FolioOS-v0.5.0/`처럼 버전이 박힌 폴더로 풀리고 `data/`는 빈 채로 나온다. 새 버전을 받으면 새 폴더에 빈 워크스페이스가 생기고 이전 자료는 옛 폴더에 남는다(실측 22,715개·914MB). 코드와 자료가 한 폴더에 섞여 있는 것이 원인이다.
+- 찾는 순서: `FOLIO_HOME` → 앱 폴더 `workspace.json` 표지 → 앱 폴더 `data/`에 파일 있음 → `~/Documents/FolioOS`에 자료 있음 → 앱 폴더.
+- **기본값은 앱 폴더다.** 옮기는 것은 선택이고 아무것도 새로 만들지 않는다(2026-08-08 사용자 결정 — 홈 폴더에 앱이 폴더를 만드는 것을 싫어하는 사용자가 있다).
+- 폴더 존재가 아니라 **파일 유무**로 판정한다. 배포 zip이 빈 폴더를 만들어 두므로 존재만 보면 갓 푼 설치도 쓰던 워크스페이스로 오인한다.
+- 표지가 필요한 이유는 옮기기가 **원본을 지우지 않기** 때문이다. 표지가 없으면 앱 폴더 규칙이 먼저 걸려 방금 옮긴 곳이 아니라 옛 자료를 계속 쓴다. 표지는 배포 zip에 없으므로 새 버전 폴더에서는 문서 폴더 규칙이 자료를 다시 찾는다.
+- 판정은 프로세스당 1회 캐시한다. 모듈 상수 수십 곳이 import 시점에 읽는다. 옮긴 뒤에는 재시작이 필요하며 화면이 그렇게 안내한다.
+- 옮기기(`features/common/workspace_service.py`)는 복사 → 파일별 크기 검증 → 표지 순이다. 검증 실패 시 표지를 쓰지 않아 앱이 계속 원본을 쓴다. 목적지에 자료가 있으면 `merge` 없이 진행하지 않고, 목적지는 `documents`/`app` 둘뿐이다(임의 경로 금지). `FOLIO_HOME`이 설정돼 있으면 옮기기를 막는다 — 표지를 써도 다음 시작에서 환경변수가 이기므로 옮겼다고 말하면 거짓말이 된다.
+- 문서 폴더는 Windows 레지스트리(`User Shell Folders\Personal`)로 읽는다. OneDrive 리디렉션 시 `~/Documents`가 실제 문서 폴더가 아니다. 목적지가 OneDrive 아래면 막지 않고 경고만 한다.
+
 ### 파일 저장 (원자적 교체)
 
 - durable write는 전부 `features/common/atomic_replace.py`를 거친다. `os.replace()`를 직접 부르지 않는다.

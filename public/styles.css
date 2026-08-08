@@ -7624,6 +7624,30 @@ button:disabled {
   justify-content: flex-start;
 }
 
+/* 자료 위치 — 경로는 사용자가 탐색기 주소창에 옮겨 적는 값이라 고정폭으로 두고,
+   길어도 줄바꿈으로 흘려 가로 스크롤을 만들지 않는다.
+   `.field`는 라벨을 대문자 자간 넓힘으로 그리고 안쪽 입력이 그걸 되돌린다. 본문도
+   같이 되돌려야 한다 — 경로가 `D:\PROJECT\PERSONAL`처럼 나오면 옮겨 적을 수 없다. */
+.workspace-path,
+.settings-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: var(--fw-normal);
+  overflow-wrap: anywhere;
+}
+
+.workspace-path {
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+.settings-hint {
+  color: var(--muted);
+}
+
 .cli-provider-list {
   display: grid;
   border-top: 1px solid var(--folio-border);

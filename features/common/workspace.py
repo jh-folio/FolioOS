@@ -13,18 +13,25 @@
 찾는 순서:
 
 1. `FOLIO_HOME` 환경변수 — 직접 정하고 싶은 사람용. 화면에 노출하지 않는다.
-2. 앱 폴더 `data/`에 파일이 있으면 앱 폴더 — 지금 쓰는 설치를 그대로 둔다.
-3. `~/Documents/FolioOS`가 있으면 거기 — **옮긴 사용자가 새 버전을 풀었을 때
-   자료를 자동으로 다시 찾는 지점이다.** 이 규칙이 없으면 옮겨도 업데이트 때
+2. 앱 폴더의 `workspace.json` 표지 — 옮기기가 성공했을 때만 쓰인다.
+3. 앱 폴더 `data/`에 파일이 있으면 앱 폴더 — 지금 쓰는 설치를 그대로 둔다.
+4. `~/Documents/FolioOS`에 자료가 있으면 거기 — **옮긴 사용자가 새 버전을 풀었을
+   때 자료를 자동으로 다시 찾는 지점이다.** 이 규칙이 없으면 옮겨도 업데이트 때
    빈 워크스페이스를 보게 되어 옮긴 의미가 없다.
-4. 아니면 앱 폴더 — 기본값. 아무것도 새로 만들지 않는다.
+5. 아니면 앱 폴더 — 기본값. 아무것도 새로 만들지 않는다.
 
-2번이 3번보다 먼저인 이유: 옮기기는 원본을 지우지 않으므로 옛 앱 폴더에는 자료가
-남아 있다. 그 폴더를 직접 실행하면 그 폴더의 자료를 쓰는 것이 맞다.
+2번(표지)이 필요한 이유: 옮기기는 **원본을 지우지 않는다**. 그래서 옮긴 직후에도
+앱 폴더 `data/`에는 자료가 그대로 있고, 표지가 없으면 3번이 걸려 방금 옮긴 곳이
+아니라 옛 자료를 계속 쓰게 된다. 옮기기가 아무 일도 하지 않는 것처럼 보인다.
+
+3번이 4번보다 먼저인 이유: 표지 없는 옛 앱 폴더를 직접 실행했다면 그 폴더의 자료를
+쓰는 것이 맞다. 표지는 배포 zip에 없으므로 새 버전 폴더에는 처음부터 없고, 그
+경우 빈 `data/`를 지나 4번이 문서 폴더를 찾는다.
 """
 from __future__ import annotations
 
 import functools
+import json
 import os
 from pathlib import Path
 
@@ -32,6 +39,7 @@ APP_ROOT = Path(__file__).resolve().parents[2]
 
 WORKSPACE_DIR_NAMES = ("data", "research-inbox", "config")
 DOCUMENTS_FOLDER_NAME = "FolioOS"
+MARKER_NAME = "workspace.json"
 
 
 def app_root() -> Path:
@@ -39,9 +47,53 @@ def app_root() -> Path:
     return APP_ROOT
 
 
+def marker_path() -> Path:
+    """옮긴 위치를 적어두는 표지. 배포 zip에는 없다."""
+    return APP_ROOT / MARKER_NAME
+
+
+def documents_root() -> Path:
+    """이 PC의 실제 문서 폴더.
+
+    Windows에서 문서 폴더는 OneDrive로 리디렉션될 수 있고, 그때 `~/Documents`는
+    존재하지 않거나 동기화되지 않는 다른 폴더다. 레지스트리가 진짜 위치를 안다.
+    """
+    if os.name == "nt":
+        try:
+            import winreg
+
+            key = r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as handle:
+                raw, _ = winreg.QueryValueEx(handle, "Personal")
+            resolved = os.path.expandvars(str(raw or "").strip())
+            if resolved:
+                return Path(resolved)
+        except OSError:
+            pass
+    return Path.home() / "Documents"
+
+
 def documents_workspace() -> Path:
     """옮기기를 선택했을 때의 목적지."""
-    return Path.home() / "Documents" / DOCUMENTS_FOLDER_NAME
+    return documents_root() / DOCUMENTS_FOLDER_NAME
+
+
+def _marker_target() -> Path | None:
+    """표지가 가리키는 폴더. 없거나 못 읽거나 사라졌으면 None."""
+    try:
+        raw = marker_path().read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        target = str(json.loads(raw).get("workspace") or "").strip()
+    except (ValueError, AttributeError):
+        return None
+    if not target:
+        return None
+    candidate = Path(target).expanduser()
+    # 사용자가 옮긴 폴더를 지웠을 수 있다. 그때는 표지를 무시하고 계속 찾는다 —
+    # 없는 경로를 들고 시작하면 저장이 전부 실패한다.
+    return candidate if candidate.is_dir() else None
 
 
 def _has_content(directory: Path) -> bool:
@@ -68,6 +120,10 @@ def workspace_root() -> Path:
     configured = str(os.environ.get("FOLIO_HOME", "") or "").strip()
     if configured:
         return Path(configured).expanduser()
+
+    marked = _marker_target()
+    if marked is not None:
+        return marked
 
     if _has_content(APP_ROOT / "data"):
         return APP_ROOT

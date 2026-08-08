@@ -282,6 +282,166 @@ function MarketScopePanel() {
   );
 }
 
+type WorkspaceState = {
+  readonly path: string;
+  readonly appFolder: string;
+  readonly outsideAppFolder: boolean;
+  readonly fileCount: number;
+  readonly totalBytes: number;
+  readonly documentsPath: string;
+  readonly documentsAvailable: boolean;
+  readonly documentsIsOneDrive: boolean;
+  readonly envPinned: boolean;
+  readonly canMoveToDocuments: boolean;
+  readonly canMoveToAppFolder: boolean;
+};
+
+function humanBytes(size: number): string {
+  const units = ["B", "KB", "MB", "GB"];
+  let value = Math.max(0, size);
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return unit === 0 ? `${Math.round(value)} B` : `${value.toFixed(1)} ${units[unit]}`;
+}
+
+/** 자료 위치 — 새 버전을 받았을 때 자료가 따라오게 하는 설정.
+ *
+ *  배포 zip은 버전이 박힌 폴더로 풀리고 `data/`는 빈 채로 나온다. 그래서 새 버전을
+ *  받으면 이전 자료는 옛 폴더에 남는다. 자료를 앱 폴더 밖으로 옮겨두면 새 버전이
+ *  그 폴더를 다시 찾는다. **옮겨도 원본은 지우지 않는다.**
+ */
+function WorkspacePanel() {
+  const [state, setState] = useState<WorkspaceState | null>(null);
+  const [busy, setBusy] = useState("");
+  const [note, setNote] = useState("");
+  const [confirming, setConfirming] = useState<"documents" | "app" | "">("");
+
+  const load = useCallback(async () => {
+    try {
+      setState(await getJson<WorkspaceState>("/api/workspace"));
+    } catch {
+      setNote("자료 위치를 읽지 못했습니다.");
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  if (!state) return null;
+
+  const move = async (destination: "documents" | "app", merge: boolean) => {
+    setBusy(destination);
+    setNote("");
+    try {
+      const result = await postJson<{ path: string; previousPath: string; fileCount: number }>(
+        "/api/workspace/move",
+        { destination, merge },
+      );
+      setConfirming("");
+      await load();
+      setNote(
+        `자료 ${result.fileCount}개를 ${result.path}(으)로 복사했습니다. ` +
+        `서버를 재시작해야 새 위치를 사용합니다. 원본은 ${result.previousPath}에 그대로 있으니 ` +
+        "새 위치에서 자료가 잘 보이는지 확인한 뒤 지우세요.",
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "옮기지 못했습니다.";
+      if (message.includes("이미 자료")) setConfirming(destination);
+      setNote(message);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const reveal = async () => {
+    setBusy("reveal");
+    try {
+      await postJson("/api/workspace/reveal", {});
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : "폴더를 열지 못했습니다.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  return (
+    <section className="settings-panel input-panel" data-qa="workspace-panel">
+      <div className="input-panel-header">
+        <div>
+          <h3>자료 위치</h3>
+          <p>
+            보고서·수집 자료·설정이 저장되는 폴더입니다. 새 버전은 버전 이름이 붙은 새 폴더로
+            풀리기 때문에, 자료가 앱 폴더 안에 있으면 업데이트할 때 직접 옮겨야 합니다.
+          </p>
+        </div>
+      </div>
+
+      <div className="field">
+        <span id="workspacePathLabel">지금 쓰는 폴더</span>
+        <p className="workspace-path" aria-labelledby="workspacePathLabel">{state.path}</p>
+        <p className="settings-hint">
+          자료 {state.fileCount.toLocaleString()}개 · {humanBytes(state.totalBytes)}
+          {state.outsideAppFolder
+            ? " · 앱 폴더 밖에 있어 새 버전을 받아도 그대로 이어집니다."
+            : " · 앱 폴더 안에 있습니다."}
+        </p>
+      </div>
+
+      {state.envPinned && (
+        <p className="settings-hint">
+          FOLIO_HOME 환경변수가 이 위치를 정하고 있습니다. 여기서 옮기려면 환경변수를 먼저 지우세요.
+        </p>
+      )}
+
+      {state.documentsIsOneDrive && state.canMoveToDocuments && (
+        <p className="react-dashboard-warning" role="status">
+          문서 폴더가 OneDrive와 동기화됩니다. 자료에는 700MB가 넘는 검색 인덱스가 있어 저장할
+          때마다 업로드가 돌고, 두 PC에서 함께 쓰면 충돌 사본이 생길 수 있습니다.
+        </p>
+      )}
+
+      <div className="settings-actions">
+        <button className="btn" type="button" onClick={() => void reveal()} disabled={!!busy}>
+          {busy === "reveal" ? "여는 중" : "폴더 열기"}
+        </button>
+        {state.canMoveToDocuments && state.documentsAvailable && (
+          <button
+            className="btn btn--primary"
+            type="button"
+            onClick={() => void move("documents", confirming === "documents")}
+            disabled={!!busy}
+          >
+            {busy === "documents"
+              ? "복사 중"
+              : confirming === "documents"
+                ? "그래도 합치기"
+                : "문서 폴더로 옮기기"}
+          </button>
+        )}
+        {state.canMoveToAppFolder && (
+          <button
+            className="btn"
+            type="button"
+            onClick={() => void move("app", confirming === "app")}
+            disabled={!!busy}
+          >
+            {busy === "app" ? "복사 중" : confirming === "app" ? "그래도 합치기" : "앱 폴더로 되돌리기"}
+          </button>
+        )}
+      </div>
+
+      {state.canMoveToDocuments && state.documentsAvailable && (
+        <p className="settings-hint">
+          옮길 위치: {state.documentsPath} · 복사만 하고 원본은 지우지 않습니다.
+        </p>
+      )}
+      {note && <p className="react-dashboard-warning" role="status">{note}</p>}
+    </section>
+  );
+}
+
 export function SettingsRoute() {
   const theme = useThemePreference();
   const uiPreferences = useUiPreferences();
@@ -763,6 +923,8 @@ export function SettingsRoute() {
           </section>
 
           <MarketScopePanel />
+
+          <WorkspacePanel />
 
           <section className="settings-panel input-panel">
             <div className="input-panel-header"><h3>자동화</h3><p>수집, 중기 시장 정리, 브리핑 생성을 각각 독립 루틴으로 관리합니다.</p></div>

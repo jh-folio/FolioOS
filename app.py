@@ -1331,6 +1331,36 @@ def api_put_market_scope(body: dict = Body(default={})):
     return payload
 
 
+@fastapi_app.get("/api/workspace")
+def api_get_workspace():
+    from features.common.workspace_service import workspace_payload
+
+    return workspace_payload()
+
+
+@fastapi_app.post("/api/workspace/move")
+def api_move_workspace(body: dict = Body(default={})):
+    from features.common.workspace_service import WorkspaceMoveError, move_workspace
+
+    try:
+        return move_workspace(
+            str((body or {}).get("destination") or ""),
+            merge=bool((body or {}).get("merge")),
+        )
+    except WorkspaceMoveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@fastapi_app.post("/api/workspace/reveal")
+def api_reveal_workspace():
+    from features.common.workspace_service import WorkspaceMoveError, reveal_workspace
+
+    try:
+        return reveal_workspace()
+    except WorkspaceMoveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @fastapi_app.get("/api/memory")
 def api_list_memory(request: Request):
     qs = query_lists(request)
