@@ -4,13 +4,13 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.5.1 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance. It covers four markets: the US, Korea, Europe, and Japan.
+Folio OS 0.5.0 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance. It covers four markets: the US, Korea, Europe, and Japan.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.5.1
+## What You Can Do In 0.5.0
 
 - Chat with the Folio OS AI Agent from the Home screen. Conversations are saved on your computer, so you can close the app, come back, and pick up where you left off — the Agent reads the earlier context.
 - Follow four markets: the US, Korea, Europe, and Japan. Briefings, market state, the RSS feed, the calendar, and the charts all use the same four.
@@ -35,9 +35,9 @@ Your files and generated reports stay local by default. LLM/API integrations are
 - Choose Light, Dark, or System appearance across the workspace.
 - Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
 
-Not included in the 0.5.1 user surface:
+Not included in the 0.5.0 user surface:
 
-- Company analysis for companies listed only in Europe or Japan. 0.5.1 reads official filings through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
+- Company analysis for companies listed only in Europe or Japan. 0.5.0 reads official filings through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
 - Installer/tray-app polish.
 
 Fast-origin news is an early lead, not verified evidence. It is promoted from RSS items Folio OS already collected — no extra network call, credential, or provider setting. Folio OS does not scrape pages or bypass paywalls.
@@ -147,7 +147,7 @@ Generate company analysis reports from official data and local research material
 
 Write the target however you think of it — a ticker, a company name, a Korean or Japanese spelling. The screen tells you which company it read before it generates anything, offers a short list when more than one company fits, and says it recognises none rather than guessing.
 
-**What 0.5.1 can analyse.** Official filings are read through the SEC. A European or Japanese company that also registers there — ASML, Shell, SAP, TotalEnergies, Toyota, Sony and others — can be analysed by its US ticker. A company listed only on its home exchange cannot yet: the screen names the market it is listed on and suggests a US ticker if one exists, instead of generating a report with almost nothing behind it. Korean companies use DART.
+**What 0.5.0 can analyse.** Official filings are read through the SEC. A European or Japanese company that also registers there — ASML, Shell, SAP, TotalEnergies, Toyota, Sony and others — can be analysed by its US ticker. A company listed only on its home exchange cannot yet: the screen names the market it is listed on and suggests a US ticker if one exists, instead of generating a report with almost nothing behind it. Korean companies use DART.
 
 ### Deep Research
 
