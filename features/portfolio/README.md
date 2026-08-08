@@ -24,12 +24,17 @@ Plotly 차트는 포트폴리오 뷰 또는 하위 탭이 활성화된 뒤 `publ
 
 ## 화면 구조
 
-포트폴리오 탭은 두 개의 하위 탭으로 나뉜다.
+포트폴리오 탭은 세 개의 하위 탭으로 나뉜다.
 
 ```text
-현재 포트폴리오
-프리셋 · 백테스트
+보유·평가     보유 종목 입력 + 평가 요약 + 구성/집중도/살펴볼 점
+목표 비중     목표 프리셋 저장·삭제 + 선택한 목표와의 차이
+백테스트      목표 비중으로 과거 성과 계산·저장
 ```
+
+빈도가 다르기 때문에 나눈다. 보유·평가는 열 때마다 보고, 목표는 가끔 정하고, 백테스트는 드물게 돌린다. 한 화면에 세로로 쌓으면 매번 보는 것이 거의 안 쓰는 것에 밀린다.
+
+저장하면 `revision`이 오르고, 그 값을 하위 컴포넌트에 내려보내 시세·비중·목표 차이를 다시 받는다.
 
 ### 현재 포트폴리오
 
@@ -75,7 +80,7 @@ data/portfolio-fx-cache.json
 GET    /api/portfolio
 POST   /api/portfolio
 GET    /api/portfolio/summary
-GET    /api/portfolio/analytics
+GET    /api/portfolio/analytics          # ?presetId= 를 주면 그 목표와의 차이를 함께 계산
 GET    /api/portfolio/resolve?ticker=...
 
 GET    /api/portfolio/presets
@@ -164,6 +169,14 @@ hypothesis metadata일 뿐 자동 리밸런싱·매수/매도/보유 권고가 �
 - **리뷰 표는 없애지 못한다.** 저장 전 확인이 안전 계약이다. 다만 별도 표를 만들지 말고 읽은 행을 Portfolio 편집표에 얹고(화면 상단 배너로 알림) 기존 `Portfolio 저장` 버튼이 커밋하게 하면, 다이얼로그·crop·모드 라디오·preflight가 모두 사라져 남는 UI가 오히려 줄어든다.
 - 기존 제안(proposal) 배관은 쓸 수 없다. markdown 보고서 전용이라 diff·섹션 검증·base revision이 전제이고 `ReportKind`도 셋뿐이다. 포트폴리오는 JSON 포지션이라 짧은 별도 경로가 필요하다.
 
-## 아직 미뤄 둔 것 — 화면 재연결 (0.5.X)
+## 화면 재연결 (0.5.1 완료)
 
-백엔드 API는 16개가 등록돼 있는데 화면이 쓰는 것은 2개다(`/api/portfolio` 읽기·쓰기). `/summary`·`/analytics`·`/resolve`·`/suggest`, `/presets` 4개, `/backtests` 6개가 끊겨 있다. `portfolio-backtest-form`·`backtest-metrics`·`backtest-compare-table`·`portfolio-donut-grid`·`portfolio-analysis-grid` 같은 CSS가 남아 있는데 이를 참조하는 컴포넌트는 0개다 — React 전환 때 화면만 안 옮겨왔다. **새로 만드는 게 아니라 다시 붙이는 작업**이며 사용자 결정으로 0.5.X에서 진행한다(2026-08-07).
+React 전환 때 화면만 안 옮겨와서 백엔드 API 16개 중 화면이 쓰는 것이 2개(`/api/portfolio` 읽기·쓰기)뿐이었다. 0.5.1에서 `/summary`·`/analytics`·`/presets`·`/backtests`를 다시 붙였다. `/resolve`와 `/suggest`는 `HoldingsTable`이 이미 쓰는 공용 해석기로 대체돼 있어 그대로 둔다.
+
+붙이면서 드러난 두 가지를 함께 고쳤다. 둘 다 **화면이 없어서 아무도 못 밟고 있던 버그**다.
+
+- `POST /presets/from-current`는 `targetWeight`가 이미 있는 포지션만 담았다. 그 값을 넣을 칸이 화면에 없어서 결과가 **항상 빈 프리셋**이었다(실측: 보유 3종목 → `positions: []`). 지금 평가액 비중을 그대로 목표로 삼는다.
+- `analytics.targetWeights`는 포지션의 `targetWeight`만 봤고 프리셋과 서로 몰랐다. 프리셋을 아무리 만들어도 `hasTargets`가 False라 **목표와의 차이 표가 한 번도 뜨지 않았다**. `GET /analytics?presetId=`로 어느 목표와 비교할지 받는다. 프리셋에만 있고 아직 안 산 종목도 한 줄로 낸다 — 조정에서 가장 중요한 정보다.
+
+남은 CSS 정리: 초기 공개 릴리즈에 실려 온 `.portfolio-donut-grid`·`.portfolio-analysis-grid` 등 46개 클래스는 D1 프리미티브 이전 디자인(테두리 있는 카드)이라 되살리지 않았다. 0.5.1 디자인 정리에서 걷어낸다.
+

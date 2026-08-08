@@ -795,7 +795,36 @@ def _portfolio_target_analysis(rows, total_value):
     }
 
 
-def portfolio_analytics():
+def _apply_preset_targets(rows, preset_id):
+    """저장한 목표 프리셋의 비중을 각 포지션의 목표로 얹는다.
+
+    프리셋과 포지션의 `targetWeight`는 서로 모르는 두 개념이었다. 프리셋을 아무리
+    만들어도 `hasTargets`가 False라 목표와의 차이 표가 **한 번도 뜨지 않았고**,
+    포지션 목표를 넣을 칸은 화면에 없다. 사용자에게 목표란 저장해 둔 프리셋이므로,
+    어느 프리셋과 비교할지 골라 받는다.
+
+    프리셋에만 있고 지금 안 들고 있는 종목도 한 줄로 낸다 — "목표에는 있는데 아직
+    안 샀다"가 조정에서 가장 중요한 정보다.
+    """
+    preset = get_portfolio_preset(str(preset_id or "")) or {}
+    weights = {}
+    for row in preset.get("positions", []):
+        ticker = str(row.get("ticker") or "").strip().upper()
+        if ticker:
+            weights[ticker] = _float_value(row.get("weight"), 0.0)
+    if not weights:
+        return rows, preset
+
+    merged = []
+    for row in rows:
+        ticker = str(row.get("ticker") or "").strip().upper()
+        merged.append({**row, "targetWeight": weights.pop(ticker, 0.0)})
+    for ticker, weight in weights.items():
+        merged.append({"ticker": ticker, "name": ticker, "weight": 0.0, "marketValueUsd": 0.0, "targetWeight": weight})
+    return merged, preset
+
+
+def portfolio_analytics(preset_id: str = ""):
     base = portfolio_summary()
     rows = base.get("positions", [])
     valid = [row for row in rows if _float_value(row.get("marketValueUsd"), 0.0) > 0]
@@ -811,7 +840,10 @@ def portfolio_analytics():
     market_weights = _portfolio_group(valid, "market")
     currency_weights = _portfolio_group(valid, "quoteCurrency")
     asset_weights = _portfolio_group(valid, "assetClass")
-    target_analysis = _portfolio_target_analysis(ranked, total_value)
+    target_rows, target_preset = _apply_preset_targets(ranked, preset_id)
+    target_analysis = _portfolio_target_analysis(target_rows, total_value)
+    target_analysis["presetId"] = str(target_preset.get("id") or "")
+    target_analysis["presetName"] = str(target_preset.get("name") or "")
     comments = []
     if not valid:
         comments.append({"level": "info", "title": "평가 가능한 포지션 없음", "body": "티커, 수량, 평균단가를 입력하고 저장/평가를 누르면 현재 포트폴리오 분석이 생성됩니다."})
@@ -955,11 +987,25 @@ def get_portfolio_preset(preset_id):
 
 
 def preset_from_current_portfolio(name="현재 포트폴리오 목표 비중"):
-    portfolio = get_portfolio()
+    """지금 보유 비중을 그대로 목표 프리셋으로 만든다.
+
+    예전에는 `targetWeight`가 이미 있는 포지션만 담았다. 그 값은 화면 어디에서도
+    넣을 수 없어서(보유 표에 칸이 없다) 결과가 **항상 빈 프리셋**이었다 — 실측으로
+    보유 3종목에서 positions=[]가 나왔다. 게다가 목표가 이미 있다면 그것을 다시
+    베끼는 일에는 쓸모가 없다.
+
+    "현재 포트폴리오에서"가 뜻할 수 있는 것은 하나다. 지금 평가액 비중을 목표로 삼는
+    것이다. 비중은 `portfolio_summary()`가 환율까지 반영해 계산해 둔 값을 쓴다.
+    """
+    snapshot = portfolio_summary()
     positions = []
-    for row in portfolio.get("positions", []):
-        target = row.get("targetWeight")
-        if target is None:
+    for row in snapshot.get("positions", []):
+        weight = row.get("targetWeight")
+        if weight is None:
+            weight = row.get("weight")
+        # 시세를 못 받은 종목은 비중을 계산할 수 없다. 0으로 넣으면 목표에서 빠진
+        # 것처럼 보이므로 아예 담지 않고, 담긴 것들끼리 정규화된다.
+        if not weight:
             continue
         positions.append({
             "ticker": row.get("ticker"),
@@ -969,7 +1015,7 @@ def preset_from_current_portfolio(name="현재 포트폴리오 목표 비중"):
             "currency": row.get("currency"),
             "assetClass": row.get("assetClass"),
             "sector": row.get("sector"),
-            "weight": target,
+            "weight": weight,
             "resolved": row.get("resolved") or {},
         })
     return save_portfolio_preset({"name": name, "baseCurrency": "USD", "positions": positions})

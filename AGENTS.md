@@ -217,7 +217,7 @@ features/company_analysis/financial_quality_prompt.md
 | 기업 분석 | `company_analysis` | SEC 숫자+10-K 기반 분석 | Canonical |
 | 테마분석 (Topic Report v2) | `topic_report` | 투자 질문 해결기: Planner→Evidence Pack→유형별 템플릿→Quality Gate→Personal Overlay | Canonical + Personal Overlay |
 | Smart Collections | `smart_collections` | Deep Research 안의 결정적 저장 필터·상태·snapshot 변화/recovery | metadata |
-| 포트폴리오 | `portfolio` | 보유 종목 직접 입력·revision 저장. 0.4에서 공개 화면 복귀. 0.5.0에서 스크린샷 가져오기를 뺐고(도크로 재설계 예정) 목표·백테스트 화면은 API만 남아 0.5.X 재연결 대상 | — |
+| 포트폴리오 | `portfolio` | 보유 종목 직접 입력·revision 저장, 평가 요약·구성 분석·목표 비중·백테스트. 0.5.1에서 하위 탭 3개로 재연결. 스크린샷 가져오기는 0.5.0에서 뺐고 도크로 재설계 예정 | — |
 | 시장 내러티브 메모리 / Regime 추적 v2 | `market_memory` | 중기 내러티브 상태·taxonomy·momentum/confidence·thesis 연결 | source-grounded |
 | 워치리스트 | `watchlist_notes` | 워치리스트·상세 모달(기업 정보/차트/수집 뉴스) | — |
 | Native Investment Notes | `investment_notes` | Obsidian 없이 운용되는 Folio 로컬 투자 노트와 `native_note_index` | hypothesis 입력 |
@@ -449,6 +449,10 @@ features/company_analysis/financial_quality_prompt.md
 - 백테스트 실행 결과는 자동 저장하지 않는다. 사용자가 결과 카드의 저장 버튼을 눌렀을 때만 저장한다.
 - 거래 내역 기반 원가 계산, 배당 현금흐름, 자동 리밸런싱 제안은 아직 범위 밖이다.
 - 저장은 additive `revision`을 가지며 `expectedRevision` 불일치 시 409와 최신본을 반환한다. 동시 수정은 사용자가 최신본과 다시 합친다.
+- **화면은 하위 탭 셋이다**(0.5.1): 보유·평가 / 목표 비중 / 백테스트. 빈도가 다르기 때문이다 — 세로로 쌓으면 매번 보는 것이 거의 안 쓰는 것에 밀린다. 저장 후 `revision`을 내려보내 시세·비중·목표 차이를 다시 받는다.
+- **목표는 프리셋이다.** `analytics.targetWeights`는 원래 포지션의 `targetWeight`만 봤고 프리셋과 서로 몰랐다. 그 값을 넣을 칸이 화면에 없어 `hasTargets`가 언제나 False였고 **목표와의 차이 표가 한 번도 뜨지 않았다**. `GET /analytics?presetId=`로 비교할 목표를 받는다. 프리셋에만 있고 아직 안 산 종목도 한 줄로 낸다.
+- `POST /presets/from-current`는 **지금 평가액 비중**을 목표로 삼는다. 예전에는 이미 설정된 `targetWeight`만 담아 실측으로 보유 3종목에서도 빈 프리셋이 나왔다.
+- 초기 공개 릴리즈에 실려 온 `.portfolio-donut-grid` 등 CSS 46개는 D1 프리미티브 이전 디자인(테두리 카드)이라 되살리지 않는다.
 - **스크린샷 가져오기는 0.5.0 화면에 없다.** 시간 대비 인식이 만족스럽지 않았고 첫 설정에 한 번 쓰는 도구였다(2026-08-07 사용자 결정). 버튼·다이얼로그·`/import-image/*` route를 걷어냈고 보유 종목은 직접 입력한다.
 - 다시 만들 때는 **Agent 도크 하나로 통일한다** — 사용자가 도크에 사진을 붙이고 포지션 입력을 요청할 때만 인식한다. 도크가 설정의 CLI/API 모드를 따르므로 엔진 선택을 따로 두지 않고, 로컬 Tesseract는 도크에 자리가 없어 함께 사라진다. **막힌 지점**: 도크 API 모드는 지금 이미지를 못 읽는다(`chat.py::_run_with_images`가 CLI 전용). 리뷰 표는 없애지 못한다 — 저장 전 확인이 안전 계약이라, 읽은 행을 Portfolio 편집표에 얹고 기존 저장 버튼이 커밋하게 한다. 기존 proposal 배관은 markdown 보고서 전용이라 쓸 수 없다.
 - `features/portfolio/import_image.py`·`agent_import.py`·`vision_import.py`·`import_schema.py`는 호출자가 없어도 **죽은 코드가 아니라 0.5.X용으로 남긴 것이다.** 지우기 전에 `roadmap/release/0.5_PLAN.md`를 본다.

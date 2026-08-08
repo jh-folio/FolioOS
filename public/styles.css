@@ -16015,3 +16015,266 @@ select { min-height: 36px; padding: 0 12px; }
   .welcome-actions-main { width: 100%; }
   .welcome-actions-main .btn { flex: 1; }
 }
+
+/* ── 포트폴리오 평가·목표·백테스트 ──────────────────────────────────────────
+   백엔드는 처음부터 있었고 화면만 없었다. 모양은 프리미티브(.surface/.btn/.segment)와
+   기존 .cockpit-panel에서 가져오고 여기서는 배치와 숫자 표현만 갖는다. */
+.portfolio-tabs {
+  margin: 18px 0 14px;
+}
+
+.portfolio-block {
+  display: grid;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+
+.portfolio-block__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.portfolio-block h3 {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+}
+
+.portfolio-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-3);
+}
+
+.portfolio-metric {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-group);
+  background: var(--surface-group);
+}
+
+.portfolio-metric span {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.portfolio-metric strong {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-metric small {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 손익 색은 한 곳에서만 정한다. 표·카드·막대가 서로 다른 초록을 쓰면 같은 값이
+   자리마다 달라 보인다. 0은 어느 쪽도 아니라 색을 주지 않는다. */
+[data-sign="up"], [data-sign="up"] strong, [data-sign="up"] small { color: var(--color-positive); }
+[data-sign="down"], [data-sign="down"] strong, [data-sign="down"] small { color: var(--color-negative); }
+
+.portfolio-weights {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-weight__head,
+.portfolio-weight__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.portfolio-weight__label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}
+
+.portfolio-weight__value {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-weight__track {
+  block-size: 6px;
+  margin: 5px 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--surface-control);
+  overflow: hidden;
+}
+
+.portfolio-weight__fill {
+  display: block;
+  block-size: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent-strong);
+}
+
+.portfolio-weight__foot {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-mini-table th,
+.portfolio-mini-table td {
+  padding: 7px 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.portfolio-mini-table thead th {
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  border-bottom: 1px solid var(--folio-border);
+}
+
+.portfolio-mini-table th[scope="row"],
+.portfolio-mini-table thead th:first-child {
+  text-align: left;
+  font-weight: var(--fw-medium);
+  color: var(--ink);
+}
+
+.portfolio-mini-table tbody tr + tr th,
+.portfolio-mini-table tbody tr + tr td {
+  border-top: 1px solid var(--folio-border);
+}
+
+/* 표는 좁은 화면에서 자기 안에서만 스크롤한다. 페이지가 가로로 밀리면 안 된다. */
+.portfolio-table-scroll {
+  overflow-x: auto;
+}
+
+.portfolio-comments {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-comment {
+  display: grid;
+  gap: 4px;
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.portfolio-comment strong {
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+
+.portfolio-comment p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* 경고는 왼쪽 액센트 3px 하나로만 구분한다(D2 규칙). 배경을 칠하지 않는다 —
+   경고가 다섯 개면 화면 절반이 노란 상자가 된다. */
+.portfolio-comment[data-level="warn"] {
+  border-inline-start: 3px solid var(--folio-warning);
+}
+
+.portfolio-note {
+  margin: 0;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.portfolio-empty {
+  margin: var(--sp-4) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.portfolio-inline-form,
+.portfolio-backtest-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-3);
+}
+
+.portfolio-inline-form .field { flex: 1 1 220px; }
+.portfolio-backtest-fields .field { flex: 0 1 190px; }
+
+.portfolio-preset-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portfolio-preset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.portfolio-preset strong {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+
+.portfolio-preset small {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.portfolio-sparkline {
+  inline-size: 100%;
+  block-size: 160px;
+  overflow: visible;
+}
+
+.portfolio-sparkline__line {
+  fill: none;
+  stroke: var(--accent-strong);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.portfolio-sparkline__benchmark {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (max-width: 720px) {
+  .portfolio-backtest-fields .field { flex: 1 1 100%; }
+}

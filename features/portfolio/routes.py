@@ -53,8 +53,8 @@ def create_portfolio_router(data_dir: Path) -> APIRouter:
         return search_portfolio_tickers(q, limit)
 
     @router.get("/analytics")
-    def analytics():
-        return portfolio_analytics()
+    def analytics(presetId: str = ""):  # noqa: N803 - 쿼리 파라미터는 화면과 같은 표기를 쓴다
+        return portfolio_analytics(presetId)
 
     @router.get("/presets")
     def presets():
