@@ -215,6 +215,14 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
     from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES
 
     assert set(DEFAULT_CONFIG_NAMES) == {path.name for path in (package_dir / "defaults" / "config").iterdir()}
+    # 셸 스크립트가 CRLF면 shebang이 `#!/bin/bash` + CR이 되어 macOS·Linux에서
+    # `bad interpreter: /bin/bash^M`으로 실행 자체가 실패한다. 0.5.0 패키지의
+    # start.sh가 실제로 CRLF 27줄이었다 — Windows 작업 트리에서 그대로 복사됐다.
+    for script in package_dir.rglob("*.sh"):
+        raw = script.read_bytes()
+        assert b"\r\n" not in raw, f"{script.name} must ship with LF endings"
+        assert raw.startswith(b"#!"), f"{script.name} lost its shebang"
+
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
     assert build["version"] == "0.5.0"
     assert len(build["commit"]) == 40

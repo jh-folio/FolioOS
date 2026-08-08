@@ -109,7 +109,7 @@ def copy_tree(src: Path, dst: Path, *, dry_run: bool, copied: list[str]) -> None
         target = dst / rel
         if not dry_run:
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(item, target)
+            _copy_runtime_file(item, target)
         copied.append(_relative(item))
 
 
@@ -199,6 +199,23 @@ def _require_clean_release_inputs(manifest: dict) -> str:
     return _git_head()
 
 
+# 셸 스크립트는 반드시 LF로 담는다. Windows 작업 트리에서 CRLF로 체크아웃된 파일을
+# 그대로 복사하면 shebang이 `#!/bin/bash` + CR이 되어 macOS·Linux에서 실행 자체가
+# 실패한다(`bad interpreter: /bin/bash^M`). 실측: 0.5.0 패키지의 start.sh가 CRLF
+# 27줄이었다 — 그 플랫폼 사용자는 런처가 아예 돌지 않았을 수 있다.
+# `.gitattributes`에도 규칙을 넣었지만, 릴리즈가 개발자의 git 설정에 의존하면 안 되므로
+# 패키저에서 한 번 더 고정한다.
+LF_ONLY_SUFFIXES = {".sh"}
+
+
+def _copy_runtime_file(src: Path, target: Path) -> None:
+    if src.suffix in LF_ONLY_SUFFIXES:
+        target.write_bytes(src.read_bytes().replace(b"\r\n", b"\n"))
+        shutil.copystat(src, target)
+        return
+    shutil.copy2(src, target)
+
+
 def _copy_manifest_entries(manifest: dict, package_dir: Path, *, dry_run: bool, copied: list[str]) -> None:
     for rel in manifest["runtimeFiles"]:
         src = ROOT / rel
@@ -207,7 +224,7 @@ def _copy_manifest_entries(manifest: dict, package_dir: Path, *, dry_run: bool, 
         if not dry_run:
             target = package_dir / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, target)
+            _copy_runtime_file(src, target)
         copied.append(rel)
 
     for rel in manifest["runtimeDirectories"]:
