@@ -15883,3 +15883,135 @@ select { min-height: 36px; padding: 0 12px; }
   color: var(--folio-ink-subtle);
   font-size: var(--fs-meta);
 }
+
+/* ── 첫 실행 안내 ───────────────────────────────────────────────────────────
+   앱 위에 덮는 한 장짜리 카드다. 별도 라우트로 두지 않는 이유는, 뒤에 실제 앱이
+   떠 있어야 건너뛴 순간 바로 쓸 수 있기 때문이다. 모양은 전부 프리미티브
+   (.surface / .btn / .field)에서 가져오고 여기서는 배치만 갖는다. */
+.welcome-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  padding: var(--sp-4);
+  background: color-mix(in srgb, var(--folio-surface-dark) 62%, transparent);
+  overflow-y: auto;
+}
+
+.welcome-card {
+  width: min(100%, 620px);
+  max-height: calc(100dvh - var(--sp-8));
+  display: grid;
+  align-content: start;
+  gap: var(--sp-5);
+  overflow-y: auto;
+}
+
+.welcome-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.welcome-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 단계 표시는 읽기 전용이다. 누를 수 있어 보이면 안 되므로 알약이 아니라 점+글자로
+   둔다 — 세그먼트처럼 그리면 눌러서 건너뛸 수 있다고 읽힌다. */
+.welcome-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-meta);
+  color: var(--muted);
+}
+
+.welcome-step::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--folio-border);
+}
+
+.welcome-step[data-state="current"] {
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+}
+
+.welcome-step[data-state="current"]::before,
+.welcome-step[data-state="done"]::before {
+  background: var(--accent-strong);
+}
+
+.welcome-body {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.welcome-body h1 {
+  margin: 0;
+  font-size: var(--fs-2xl);
+  font-weight: var(--weight-heading);
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.welcome-body p {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+
+/* `.welcome-body p`(0,1,1)가 `.welcome-muted`(0,1,0)를 이기므로 같은 무게로 올린다.
+   그러지 않으면 보조 문장이 본문과 똑같이 그려져 위계가 사라진다. */
+.welcome-body .welcome-muted {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.welcome-body code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+}
+
+.welcome-next {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding-inline-start: 1.2em;
+  color: var(--ink);
+  font-size: var(--fs-base);
+  line-height: 1.55;
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.welcome-actions-main {
+  display: flex;
+  gap: var(--sp-2);
+  margin-inline-start: auto;
+}
+
+@media (max-width: 560px) {
+  .welcome-card { padding: var(--sp-4); }
+  .welcome-actions-main { width: 100%; }
+  .welcome-actions-main .btn { flex: 1; }
+}

@@ -25,6 +25,7 @@
 | `personal_overlay/` | 보고서 공통 | Canonical 보고서를 사용자 hypothesis 노트와 대조한 개인 해석 레이어 |
 | `thesis_tracking/` | 기업/대시보드 공통 | 기업 thesis 등록, 최신 근거 대비 Delta 생성, Obsidian export |
 | `agent_mode/` | 보고서 생성 공통 | Codex/Claude Code 같은 외부 AI 에이전트용 context pack 생성과 writeback |
+| `onboarding/` | 첫 실행 안내 | 첫 실행 판정(사용자 자료 유무), 4단계 위저드, 완료·건너뛰기 기록 |
 | `frontend_ui/` | 웹 UI | 탭 구조, 렌더링, 모바일 대응, Markdown/Plotly 주의점 |
 | `pixel_office/` | Pixel Office Home | 기존 리서치·보고서·Agent 상태를 redacted 7-object 계약으로 요약하는 read-only Home 기반 |
 | `common/` | 공통 기반 | 자료 레이어, 품질/근거성, 시장 데이터, 공통 스키마, 유틸 |

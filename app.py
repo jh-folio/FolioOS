@@ -1331,6 +1331,20 @@ def api_put_market_scope(body: dict = Body(default={})):
     return payload
 
 
+@fastapi_app.get("/api/onboarding")
+def api_get_onboarding():
+    from features.onboarding.service import onboarding_status
+
+    return onboarding_status()
+
+
+@fastapi_app.post("/api/onboarding/complete")
+def api_complete_onboarding(body: dict = Body(default={})):
+    from features.onboarding.service import complete_onboarding
+
+    return complete_onboarding(skipped=bool((body or {}).get("skipped")))
+
+
 @fastapi_app.get("/api/workspace")
 def api_get_workspace():
     from features.common.workspace_service import workspace_payload

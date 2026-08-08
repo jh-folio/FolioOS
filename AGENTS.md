@@ -237,6 +237,7 @@ features/company_analysis/financial_quality_prompt.md
 | 시장 캘린더 | `market_calendar` | 경제지표·중앙은행·휴장일·실적·공시·배당 6종 일정 수집·정규화와 confirmed/estimated badge | — |
 | Research Cockpit 대시보드 | `dashboard` | 변화 피드·시장 캘린더·네이티브 차트. 0.5에서 Legacy 모드 삭제 | — |
 | Pixel Office (보류) | `pixel_office` | 리서치 상태를 하나의 픽셀 오피스 장면으로 보여준다. 0.3.0에서는 배선을 전부 끊고 릴리즈 패키지에서도 제외한다. 소스(백엔드 service·PixiJS 씬·13개 오브젝트 레이어)는 재개용으로 저장소에만 남는다. | 보류 |
+| 첫 실행 안내 | `onboarding` | 첫 실행 판정과 4단계 안내 위저드(환영·AI·관심 시장·시작). 어느 단계에서든 건너뛸 수 있다 | — |
 | 프론트엔드 UI | `frontend_ui` | React SPA(`web/`)가 기본 프론트엔드. `public/app.js`는 bridge-only, `public/index.html`은 최소 entrypoint | — |
 
 0.4 기본 사용자 화면에서의 노출 상태:
@@ -269,6 +270,18 @@ features/company_analysis/financial_quality_prompt.md
 ---
 
 ## 10. 주요 기능 경계 (구현 디테일)
+
+### 첫 실행 안내 (Onboarding)
+
+- 로직은 `features/onboarding/`, 화면은 `web/src/app/WelcomeWizard.tsx`다. 기록은 `data/onboarding-state.json`.
+- **첫 실행은 "안내 파일이 없다"가 아니다.** 그 파일은 배포 zip에 없으므로 그렇게 잡으면 쓰던 사용자가 새 버전으로 올릴 때마다 처음 쓰는 사람 취급을 받는다. `firstRun = 안내 기록 없음 AND 사용자 자료 없음`이며, 사용자 자료는 portfolio/watchlist/market-scope/briefings/company-analysis/topic-reports/notes/agent-threads/research-inbox 하위로 판정한다.
+- 서버가 스스로 만드는 파일은 판정에 넣지 않는다. 실측으로 빈 워크스페이스에서 서버를 처음 켜면 파일 10개(설정 기본값·빈 DB·SEC 캐시)가 생기지만 사용자 자료는 없다.
+- **건너뛰어도 기록한다.** 다음 실행에 또 띄우면 건너뛰기가 아니다. 상태 파일이 깨져 있으면 완료로 보지 않는다(앱이 안 켜지는 것보다 낫다).
+- 위저드는 라우트가 아니라 앱 위에 덮는 카드다. 뒤에 실제 앱이 떠 있어야 건너뛴 순간 바로 쓸 수 있다.
+- AI 단계는 "AI가 없어도 앱은 그대로 동작합니다"를 먼저 말한다. 키를 넣어야 쓸 수 있는 도구로 보이면 안 된다.
+- 성공 문구를 남기지 않는다. 단계가 넘어가는 것이 이미 확인이고, 남기면 다음 단계 아래에 붙어 그 단계를 저장했다고 읽힌다.
+- `aria-modal="true"`를 선언하므로 포커스를 가둔다(Tab 순환, 단계 전환 시 제목으로 이동, Escape는 건너뛰기).
+- 판정을 못 읽으면 안내를 띄우지 않는다. 쓰던 사람에게 뜨는 쪽이 더 나쁘다.
 
 ### 자료 위치 (Workspace)
 
