@@ -1,3 +1,5 @@
+import type { JSX } from "react";
+
 type MarkdownRendererProps = {
   markdown?: string;
 };

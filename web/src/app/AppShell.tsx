@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+// React 19가 전역 JSX 네임스페이스를 없애 React.JSX로 옮겼다.
+import type { JSX } from "react";
 import { AgentHome } from "./AgentHome";
 import { BriefingRoute } from "./BriefingRoute";
 import { CommandPalette } from "./CommandPalette";

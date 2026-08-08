@@ -1,3 +1,5 @@
+import type { JSX } from "react";
+
 declare global {
   interface ImportMeta {
     readonly env: {
