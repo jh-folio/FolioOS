@@ -20993,6 +20993,12 @@ function Ll() {
 					/* @__PURE__ */ (0, K.jsx)("button", {
 						className: "btn",
 						type: "button",
+						onClick: () => window.dispatchEvent(new CustomEvent("folio:show-welcome")),
+						children: "첫 실행 안내 다시 보기"
+					}),
+					/* @__PURE__ */ (0, K.jsx)("button", {
+						className: "btn",
+						type: "button",
 						onClick: () => void d(),
 						disabled: !!n,
 						children: n === "reveal" ? "여는 중" : "폴더 열기"
@@ -23303,6 +23309,9 @@ function pu() {
 		})(), () => {
 			e = !0;
 		};
+	}, []), (0, l.useEffect)(() => {
+		let e = () => t(!0);
+		return window.addEventListener("folio:show-welcome", e), () => window.removeEventListener("folio:show-welcome", e);
 	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(cu, {}), e && /* @__PURE__ */ (0, K.jsx)(fu, { onFinish: () => t(!1) })] });
 }
 //#endregion

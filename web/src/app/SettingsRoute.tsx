@@ -403,6 +403,13 @@ function WorkspacePanel() {
       )}
 
       <div className="settings-actions">
+        <button
+          className="btn"
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("folio:show-welcome"))}
+        >
+          첫 실행 안내 다시 보기
+        </button>
         <button className="btn" type="button" onClick={() => void reveal()} disabled={!!busy}>
           {busy === "reveal" ? "여는 중" : "폴더 열기"}
         </button>

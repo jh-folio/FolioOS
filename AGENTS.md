@@ -282,6 +282,7 @@ features/company_analysis/financial_quality_prompt.md
 - 성공 문구를 남기지 않는다. 단계가 넘어가는 것이 이미 확인이고, 남기면 다음 단계 아래에 붙어 그 단계를 저장했다고 읽힌다.
 - `aria-modal="true"`를 선언하므로 포커스를 가둔다(Tab 순환, 단계 전환 시 제목으로 이동, Escape는 건너뛰기).
 - 판정을 못 읽으면 안내를 띄우지 않는다. 쓰던 사람에게 뜨는 쪽이 더 나쁘다.
+- 다시 보기는 설정 > 자료 위치의 버튼이며 `folio:show-welcome` 이벤트로 화면만 연다. 서버 판정을 지우는 방식은 쓰지 않는다 — 자료가 있는 사람은 지워도 `firstRun`이 false라 안내가 뜨지 않는다.
 
 ### 자료 위치 (Workspace)
 

@@ -27,6 +27,15 @@ export function App() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    // 설정에서 다시 보기. 서버의 첫 실행 판정을 건드리지 않는다 — 이미 자료가 있는
+    // 사람은 어차피 `firstRun`이 false라 상태를 지워도 안내가 뜨지 않고, 지웠다는
+    // 사실만 남는다.
+    const open = () => setWelcome(true);
+    window.addEventListener("folio:show-welcome", open);
+    return () => window.removeEventListener("folio:show-welcome", open);
+  }, []);
+
   return (
     <>
       <AppShell />
