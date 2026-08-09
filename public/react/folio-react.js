@@ -22709,36 +22709,17 @@ function au() {
 	});
 }
 //#endregion
-//#region src/app/statusStore.ts
-var ou = {
-	statusText: "",
-	docCount: "",
-	activeJobId: null
-};
-function su() {
-	return ou;
-}
-function cu() {
-	let [e, t] = (0, l.useState)(() => su());
-	return (0, l.useEffect)(() => {
-		let e = () => t(su());
-		e();
-		let n = window.setInterval(e, 1e3);
-		return () => window.clearInterval(n);
-	}, []), e;
-}
-//#endregion
 //#region src/app/AppShell.tsx
-var lu = [
+var ou = [
 	"light",
 	"dark",
 	"system"
-], uu = {
+], su = {
 	light: "라이트",
 	dark: "다크",
 	system: "시스템"
 };
-function du({ preference: e }) {
+function cu({ preference: e }) {
 	return e === "light" ? /* @__PURE__ */ (0, K.jsxs)("svg", {
 		viewBox: "0 0 16 16",
 		fill: "none",
@@ -22785,8 +22766,8 @@ function du({ preference: e }) {
 		})]
 	});
 }
-function fu() {
-	let e = Cl(), [t, n] = (0, l.useState)(!1), r = (0, l.useRef)(null), i = (0, l.useRef)(null), a = (0, l.useRef)([]), o = e.preference === "system" ? `시스템 (${uu[e.resolved]})` : uu[e.preference];
+function lu() {
+	let e = Cl(), [t, n] = (0, l.useState)(!1), r = (0, l.useRef)(null), i = (0, l.useRef)(null), a = (0, l.useRef)([]), o = e.preference === "system" ? `시스템 (${su[e.resolved]})` : su[e.preference];
 	(0, l.useEffect)(() => {
 		if (!t) return;
 		let e = (e) => {
@@ -22799,11 +22780,11 @@ function fu() {
 		};
 	}, [t]), (0, l.useEffect)(() => {
 		if (!t) return;
-		let n = Math.max(0, lu.indexOf(e.preference));
+		let n = Math.max(0, ou.indexOf(e.preference));
 		a.current[n]?.focus();
 	}, [t, e.preference]);
 	let s = (e, t) => {
-		let n = (e + t + lu.length) % lu.length;
+		let n = (e + t + ou.length) % ou.length;
 		a.current[n]?.focus();
 	};
 	return /* @__PURE__ */ (0, K.jsxs)("div", {
@@ -22816,14 +22797,15 @@ function fu() {
 			"aria-haspopup": "menu",
 			"aria-expanded": t,
 			"aria-label": `화면 테마: ${o}`,
-			"data-tooltip": `테마: ${o}`,
+			"data-tooltip": t ? "" : `테마: ${o}`,
+			"data-tooltip-pos": "bottom",
 			onClick: () => n((e) => !e),
-			children: /* @__PURE__ */ (0, K.jsx)(du, { preference: e.preference })
+			children: /* @__PURE__ */ (0, K.jsx)(cu, { preference: e.preference })
 		}), t && /* @__PURE__ */ (0, K.jsx)("div", {
 			className: "theme-menu-list",
 			role: "menu",
 			"aria-label": "화면 테마",
-			children: lu.map((t, r) => /* @__PURE__ */ (0, K.jsxs)("button", {
+			children: ou.map((t, r) => /* @__PURE__ */ (0, K.jsxs)("button", {
 				type: "button",
 				role: "menuitemradio",
 				"aria-checked": e.preference === t,
@@ -22836,12 +22818,12 @@ function fu() {
 				onKeyDown: (e) => {
 					e.key === "ArrowDown" && (e.preventDefault(), s(r, 1)), e.key === "ArrowUp" && (e.preventDefault(), s(r, -1));
 				},
-				children: [/* @__PURE__ */ (0, K.jsx)(du, { preference: t }), uu[t]]
+				children: [/* @__PURE__ */ (0, K.jsx)(cu, { preference: t }), su[t]]
 			}, t))
 		})]
 	});
 }
-var pu = [
+var uu = [
 	{
 		id: "home",
 		title: "홈",
@@ -22871,7 +22853,7 @@ var pu = [
 		title: "시스템",
 		routes: ["settings"]
 	}
-], mu = {
+], du = {
 	home: /* @__PURE__ */ (0, K.jsxs)("svg", {
 		className: "react-left-nav-svg",
 		viewBox: "0 0 24 24",
@@ -23003,25 +22985,25 @@ var pu = [
 		"aria-hidden": "true",
 		children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" }), /* @__PURE__ */ (0, K.jsx)("path", { d: "M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.22 3.43l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.34.4.7.6 1a1.7 1.7 0 0 0 1.1.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.1.4c-.17.14-.31.28-.41.2Z" })]
 	})
-}, hu = "(max-width: 1024px)";
-function gu() {
-	return typeof window < "u" && window.matchMedia(hu).matches;
+}, fu = "(max-width: 1024px)";
+function pu() {
+	return typeof window < "u" && window.matchMedia(fu).matches;
 }
-function _u() {
+function mu() {
 	let e = window.location.hash || Oi(vl());
 	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Oi("home")) : e;
 }
-function vu() {
-	let [e, t] = (0, l.useState)(() => _u());
+function hu() {
+	let [e, t] = (0, l.useState)(() => mu());
 	return (0, l.useEffect)(() => {
-		let e = () => t(_u());
+		let e = () => t(mu());
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), {
 		hash: e,
 		routeId: Di(e)
 	};
 }
-async function yu(e) {
+async function gu(e) {
 	await new Promise((e) => window.setTimeout(e, 1500));
 	let t = Date.now() + 6e4;
 	for (; Date.now() < t;) {
@@ -23035,88 +23017,88 @@ async function yu(e) {
 	}
 	e("재시작 확인 실패 · 수동 새로고침 필요");
 }
-function bu() {
-	let { hash: e, routeId: t } = vu(), n = ki(t), r = vl(yl().preferences), i = cu(), [a, o] = (0, l.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, l.useRef)(!1), [c, u] = (0, l.useState)(() => {
+function _u() {
+	let { hash: e, routeId: t } = hu(), n = ki(t), r = vl(yl().preferences), [i, a] = (0, l.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), o = (0, l.useRef)(!1), [s, c] = (0, l.useState)(() => {
 		let e = localStorage.getItem("folio.react.agentClosed"), t = e === null || e !== "1";
-		return t && gu() ? (s.current = !0, !1) : t;
-	}), [d, f] = (0, l.useState)(() => /* @__PURE__ */ new Set([t])), [p, m] = (0, l.useState)(() => ({ [t]: _u() })), [h, g] = (0, l.useState)(""), [_, v] = (0, l.useState)(!1), y = (0, l.useRef)(null), b = (0, l.useRef)(t), x = (0, l.useRef)(!1), S = (0, l.useRef)({}), C = n.id !== "home", w = C && c ? " is-agent-open" : " is-agent-closed";
+		return t && pu() ? (o.current = !0, !1) : t;
+	}), [u, d] = (0, l.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, l.useState)(() => ({ [t]: mu() })), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(!1), v = (0, l.useRef)(null), y = (0, l.useRef)(t), b = (0, l.useRef)(!1), x = (0, l.useRef)({}), S = n.id !== "home", C = S && s ? " is-agent-open" : " is-agent-closed";
 	(0, l.useEffect)(() => {
 		tt(n.id, {
 			surface: `react_${n.id}`,
 			viewId: n.id
 		});
 	}, [n.id]), (0, l.useEffect)(() => {
-		localStorage.setItem("folio.react.navCollapsed", a ? "1" : "0");
-	}, [a]), (0, l.useEffect)(() => {
-		if (s.current) {
-			s.current = !1;
+		localStorage.setItem("folio.react.navCollapsed", i ? "1" : "0");
+	}, [i]), (0, l.useEffect)(() => {
+		if (o.current) {
+			o.current = !1;
 			return;
 		}
-		localStorage.setItem("folio.react.agentClosed", c ? "0" : "1");
-	}, [c]), (0, l.useEffect)(() => {
-		let e = window.matchMedia(hu), t = (e) => {
-			e.matches && u((e) => e && (s.current = !0, !1));
+		localStorage.setItem("folio.react.agentClosed", s ? "0" : "1");
+	}, [s]), (0, l.useEffect)(() => {
+		let e = window.matchMedia(fu), t = (e) => {
+			e.matches && c((e) => e && (o.current = !0, !1));
 		};
 		return e.addEventListener("change", t), () => e.removeEventListener("change", t);
 	}, []), (0, l.useEffect)(() => {
-		f((e) => {
+		d((e) => {
 			if (e.has(t)) return e;
 			let n = new Set(e);
 			return n.add(t), n;
 		});
 	}, [t]), (0, l.useEffect)(() => {
-		m((n) => n[t] === e ? n : {
+		p((n) => n[t] === e ? n : {
 			...n,
 			[t]: e
 		});
 	}, [e, t]), (0, l.useEffect)(() => {
-		if (!x.current) {
-			x.current = !0, b.current = t;
+		if (!b.current) {
+			b.current = !0, y.current = t;
 			return;
 		}
-		let e = y.current, n = b.current;
-		e && (S.current[n] = e.scrollTop, window.requestAnimationFrame(() => {
-			e.scrollTop = S.current[t] || 0, e.focus({ preventScroll: !0 });
-		})), b.current = t;
+		let e = v.current, n = y.current;
+		e && (x.current[n] = e.scrollTop, window.requestAnimationFrame(() => {
+			e.scrollTop = x.current[t] || 0, e.focus({ preventScroll: !0 });
+		})), y.current = t;
 	}, [t]), (0, l.useEffect)(() => {
 		let e = window.FolioBridge ?? {}, t = e.openAgentDock;
 		return window.FolioBridge = {
 			...e,
 			openAgentDock(e = {}) {
-				u(!0), window.dispatchEvent(new CustomEvent("folio:react-agent-request", { detail: e }));
+				c(!0), window.dispatchEvent(new CustomEvent("folio:react-agent-request", { detail: e }));
 			}
 		}, () => {
 			window.FolioBridge && (window.FolioBridge.openAgentDock = t);
 		};
 	}, []);
-	async function T() {
-		if (!_) {
-			v(!0), g("재시작 요청 중");
+	async function w() {
+		if (!g) {
+			_(!0), h("재시작 요청 중");
 			try {
 				await fetch("/api/server/restart", {
 					method: "POST",
 					body: "{}"
 				});
 			} catch {}
-			g("서버 재시작 중"), await yu(g), v(!1);
+			h("서버 재시작 중"), await gu(h), _(!1);
 		}
 	}
-	function E(e) {
-		let t = p[e] || Oi(e);
+	function T(e) {
+		let t = f[e] || Oi(e);
 		window.location.hash !== t && (window.location.hash = t);
 	}
-	function D(e) {
+	function E(e) {
 		let t = ki(e);
 		return t.id === "home" ? /* @__PURE__ */ (0, K.jsx)(ln, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, K.jsx)(po, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, K.jsx)(wi, {}) : t.id === "rss" ? /* @__PURE__ */ (0, K.jsx)(al, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, K.jsx)(Ys, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, K.jsx)(Ia, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, K.jsx)(us, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, K.jsx)(au, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, K.jsx)(dc, {}) : t.id === "settings" ? /* @__PURE__ */ (0, K.jsx)(Kl, {}) : null;
 	}
 	return /* @__PURE__ */ (0, K.jsxs)("div", {
-		className: `react-shell${a ? " is-nav-collapsed" : ""}${w}${C ? "" : " is-agent-suppressed"}`,
+		className: `react-shell${i ? " is-nav-collapsed" : ""}${C}${S ? "" : " is-agent-suppressed"}`,
 		children: [
 			/* @__PURE__ */ (0, K.jsx)("a", {
 				className: "react-skip-link",
 				href: "#folio-main-content",
 				onClick: (e) => {
-					e.preventDefault(), window.requestAnimationFrame(() => y.current?.focus({ preventScroll: !0 }));
+					e.preventDefault(), window.requestAnimationFrame(() => v.current?.focus({ preventScroll: !0 }));
 				},
 				children: "본문으로 건너뛰기"
 			}),
@@ -23126,7 +23108,7 @@ function bu() {
 					type: "button",
 					className: "react-shell-brand",
 					onClick: () => {
-						E(r);
+						T(r);
 					},
 					"aria-label": "홈으로 이동",
 					children: [/* @__PURE__ */ (0, K.jsx)(Qt, {}), /* @__PURE__ */ (0, K.jsx)("small", { children: "Investment Workspace" })]
@@ -23134,15 +23116,14 @@ function bu() {
 					className: "react-shell-status",
 					"aria-live": "polite",
 					children: [
-						/* @__PURE__ */ (0, K.jsx)("span", { children: h || i.statusText || "준비됨" }),
-						i.activeJobId && /* @__PURE__ */ (0, K.jsx)("span", { children: i.activeJobId }),
-						/* @__PURE__ */ (0, K.jsx)(fu, {}),
+						/* @__PURE__ */ (0, K.jsx)("span", { children: m }),
+						/* @__PURE__ */ (0, K.jsx)(lu, {}),
 						/* @__PURE__ */ (0, K.jsx)("button", {
 							className: "btn btn--sm",
 							type: "button",
-							onClick: T,
-							disabled: _,
-							children: _ ? "재시작 중" : "재시작"
+							onClick: w,
+							disabled: g,
+							children: g ? "재시작 중" : "재시작"
 						})
 					]
 				})]
@@ -23153,9 +23134,9 @@ function bu() {
 				children: [/* @__PURE__ */ (0, K.jsx)("button", {
 					className: "react-shell-nav-toggle",
 					type: "button",
-					"aria-label": a ? "좌측 사이드바 펼치기" : "좌측 사이드바 접기",
-					"aria-expanded": !a,
-					onClick: () => o((e) => !e),
+					"aria-label": i ? "좌측 사이드바 펼치기" : "좌측 사이드바 접기",
+					"aria-expanded": !i,
+					onClick: () => a((e) => !e),
 					children: /* @__PURE__ */ (0, K.jsx)("svg", {
 						viewBox: "0 0 16 16",
 						fill: "none",
@@ -23168,7 +23149,7 @@ function bu() {
 					children: [/* @__PURE__ */ (0, K.jsx)("div", {
 						className: "react-left-nav-title",
 						children: "Navigate"
-					}), pu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
+					}), uu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
 						className: "react-left-nav-group",
 						"data-nav-group": e.id,
 						children: [/* @__PURE__ */ (0, K.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, K.jsx)("div", {
@@ -23187,12 +23168,12 @@ function bu() {
 										className: "react-left-nav-item",
 										"aria-current": a.id === n.id ? "page" : void 0,
 										onClick: () => {
-											E(a.id);
+											T(a.id);
 										},
 										children: [/* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-left-nav-icon",
 											"aria-hidden": "true",
-											children: mu[a.id]
+											children: du[a.id]
 										}), /* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-left-nav-label",
 											children: a.label
@@ -23210,21 +23191,21 @@ function bu() {
 				children: /* @__PURE__ */ (0, K.jsx)("section", {
 					className: "react-route-host",
 					"data-route": n.id,
-					ref: y,
+					ref: v,
 					tabIndex: -1,
-					children: Y.filter((e) => d.has(e.id)).map((e) => /* @__PURE__ */ (0, K.jsx)("div", {
+					children: Y.filter((e) => u.has(e.id)).map((e) => /* @__PURE__ */ (0, K.jsx)("div", {
 						className: "react-route-pane",
 						"data-route-pane": e.id,
 						hidden: e.id !== n.id,
-						children: D(e.id)
+						children: E(e.id)
 					}, e.id))
 				})
 			}),
-			C && /* @__PURE__ */ (0, K.jsx)(Kc, {
+			S && /* @__PURE__ */ (0, K.jsx)(Kc, {
 				surface: `react_${n.id}`,
-				open: c,
-				onOpen: () => u(!0),
-				onClose: () => u(!1)
+				open: s,
+				onOpen: () => c(!0),
+				onClose: () => c(!1)
 			}),
 			/* @__PURE__ */ (0, K.jsx)(Pi, {})
 		]
@@ -23232,12 +23213,12 @@ function bu() {
 }
 //#endregion
 //#region src/app/WelcomeWizard.tsx
-var xu = [
+var vu = [
 	"welcome",
 	"engine",
 	"markets",
 	"done"
-], Su = [
+], yu = [
 	{
 		id: "light",
 		label: "라이트"
@@ -23250,7 +23231,7 @@ var xu = [
 		id: "system",
 		label: "시스템"
 	}
-], Cu = [
+], bu = [
 	{
 		id: "openai",
 		label: "OpenAI",
@@ -23266,12 +23247,12 @@ var xu = [
 		label: "Claude",
 		url: "https://console.anthropic.com/settings/keys"
 	}
-], wu = {
+], xu = {
 	US: "US",
 	KR: "KR",
 	EUROPE: "EU",
 	JP: "JP"
-}, Tu = {
+}, Su = {
 	welcome: /* @__PURE__ */ (0, K.jsx)("path", { d: "M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" }),
 	engine: /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 3.5v3M12 17.5v3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M3.5 12h3M17.5 12h3M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" }), /* @__PURE__ */ (0, K.jsx)("circle", {
 		cx: "12",
@@ -23284,20 +23265,20 @@ var xu = [
 		r: "8.6"
 	}), /* @__PURE__ */ (0, K.jsx)("path", { d: "M3.4 12h17.2M12 3.4c2.5 2.6 3.8 5.5 3.8 8.6S14.5 18 12 20.6C9.5 18 8.2 15.1 8.2 12S9.5 6 12 3.4z" })] }),
 	done: /* @__PURE__ */ (0, K.jsx)("path", { d: "M5 12.6 9.6 17 19 7.6" })
-}, Eu = {
+}, Cu = {
 	welcome: "환영합니다",
 	engine: "선택 사항",
 	markets: "수집 범위",
 	done: "준비 완료"
 };
-function Du({ step: e }) {
+function wu({ step: e }) {
 	return /* @__PURE__ */ (0, K.jsx)("svg", {
 		viewBox: "0 0 24 24",
 		"aria-hidden": "true",
-		children: Tu[e]
+		children: Su[e]
 	});
 }
-function Ou({ onFinish: e }) {
+function Tu({ onFinish: e }) {
 	let t = Cl(), [n, r] = (0, l.useState)("welcome"), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)((e) => {
 		s(""), r(e);
 	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)("openai"), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(null), [v, y] = (0, l.useState)([]), [b, x] = (0, l.useState)(!1), [S, C] = (0, l.useState)(null);
@@ -23375,7 +23356,7 @@ function Ou({ onFinish: e }) {
 		if (!t.length) return;
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
 		e.shiftKey && (i === n || !O.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
-	}, j = xu.indexOf(n), M = Cu.find((e) => e.id === f);
+	}, j = vu.indexOf(n), M = bu.find((e) => e.id === f);
 	return /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "welcome-shell",
 		role: "dialog",
@@ -23394,7 +23375,7 @@ function Ou({ onFinish: e }) {
 							"단계 ",
 							/* @__PURE__ */ (0, K.jsx)("b", { children: j + 1 }),
 							" / ",
-							xu.length
+							vu.length
 						]
 					})]
 				}),
@@ -23403,16 +23384,16 @@ function Ou({ onFinish: e }) {
 					role: "progressbar",
 					"aria-label": "진행 단계",
 					"aria-valuemin": 1,
-					"aria-valuemax": xu.length,
+					"aria-valuemax": vu.length,
 					"aria-valuenow": j + 1,
-					style: { "--welcome-fill": `${(j + 1) / xu.length * 100}%` }
+					style: { "--welcome-fill": `${(j + 1) / vu.length * 100}%` }
 				}),
 				/* @__PURE__ */ (0, K.jsxs)("section", {
 					className: "welcome-body",
 					children: [
 						/* @__PURE__ */ (0, K.jsxs)("p", {
 							className: "welcome-eyebrow",
-							children: [/* @__PURE__ */ (0, K.jsx)(Du, { step: n }), Eu[n]]
+							children: [/* @__PURE__ */ (0, K.jsx)(wu, { step: n }), Cu[n]]
 						}),
 						n === "welcome" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
 							/* @__PURE__ */ (0, K.jsx)("h1", {
@@ -23433,7 +23414,7 @@ function Ou({ onFinish: e }) {
 								className: "welcome-choices",
 								role: "group",
 								"aria-label": "화면 테마",
-								children: Su.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+								children: yu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 									type: "button",
 									"aria-pressed": t.preference === e.id,
 									onClick: () => t.setPreference(e.id),
@@ -23483,7 +23464,7 @@ function Ou({ onFinish: e }) {
 									className: "welcome-choices",
 									role: "group",
 									"aria-label": "제공사",
-									children: Cu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+									children: bu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": f === e.id,
 										onClick: () => p(e.id),
@@ -23537,7 +23518,7 @@ function Ou({ onFinish: e }) {
 								role: "group",
 								"aria-label": "수집·표시할 시장",
 								children: g.markets.map((e) => {
-									let t = wu[e.id] ?? e.id;
+									let t = xu[e.id] ?? e.id;
 									return /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"data-code": t,
@@ -23604,7 +23585,7 @@ function Ou({ onFinish: e }) {
 							j > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn",
 								type: "button",
-								onClick: () => c(xu[j - 1]),
+								onClick: () => c(vu[j - 1]),
 								disabled: !!i,
 								children: "이전"
 							}),
@@ -23644,7 +23625,7 @@ function Ou({ onFinish: e }) {
 }
 //#endregion
 //#region src/app/App.tsx
-function ku() {
+function Eu() {
 	let [e, t] = (0, l.useState)(!1);
 	return (0, l.useEffect)(() => {
 		let e = !1;
@@ -23659,23 +23640,23 @@ function ku() {
 	}, []), (0, l.useEffect)(() => {
 		let e = () => t(!0);
 		return window.addEventListener("folio:show-welcome", e), () => window.removeEventListener("folio:show-welcome", e);
-	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(bu, {}), e && /* @__PURE__ */ (0, K.jsx)(Ou, { onFinish: () => t(!1) })] });
+	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(_u, {}), e && /* @__PURE__ */ (0, K.jsx)(Tu, { onFinish: () => t(!1) })] });
 }
 //#endregion
 //#region src/main.tsx
-var Au = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
-function ju() {
+var Du = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
+function Ou() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = Au[e.dataset.reactIsland || ""];
+		let t = Du[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: t() })));
 	});
 }
-function Mu() {
+function ku() {
 	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(ku, {}) })), !0) : !1;
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(Eu, {}) })), !0) : !1;
 }
-function Nu() {
-	Mu(), ju();
+function Au() {
+	ku(), Ou();
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Nu) : Nu();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Au) : Au();
 //#endregion

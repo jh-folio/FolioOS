@@ -15,7 +15,6 @@ import { SettingsRoute } from "./SettingsRoute";
 import { WatchlistRoute } from "./WatchlistRoute";
 import { preferredHomeRoute, useUiPreferences } from "./homePreference";
 import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } from "./routes";
-import { useShellStatus } from "./statusStore";
 import { activateReactAgentContextScope } from "./agentContext";
 import { FolioWordmark } from "./FolioWordmark";
 import { useThemePreference, type ThemePreference } from "./themePreference";
@@ -120,7 +119,9 @@ function ThemeToggle() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`화면 테마: ${current}`}
-        data-tooltip={`테마: ${current}`}
+        // 툴팁은 기본이 위쪽인데 상단바에서는 화면 밖으로 나가 잘린다.
+        data-tooltip={open ? "" : `테마: ${current}`}
+        data-tooltip-pos="bottom"
         onClick={() => setOpen((value) => !value)}
       >
         <ThemeIcon preference={theme.preference} />
@@ -298,7 +299,6 @@ export function AppShell() {
   const active = routeById(routeId);
   const uiPreferences = useUiPreferences();
   const preferredHome = preferredHomeRoute(uiPreferences.preferences);
-  const status = useShellStatus();
   const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem("folio.react.navCollapsed") === "1");
   // 좁은 화면에서 도크는 본문 대부분을 덮으므로, 저장된 열림 선호보다 뷰포트를 우선한다.
   const agentViewportForcedRef = useRef(false);
@@ -465,8 +465,10 @@ export function AppShell() {
           <small>Investment Workspace</small>
         </button>
         <div className="react-shell-status" aria-live="polite">
-          <span>{restartStatus || status.statusText || "준비됨"}</span>
-          {status.activeJobId && <span>{status.activeJobId}</span>}
+          {/* 재시작 진행만 남긴다. 예전에는 작업 상태와 job id도 여기 실렸지만
+              그 저장소는 상수를 돌려주고 있어서 "준비됨" 말고는 나올 수 없었고,
+              그 상수를 1초마다 다시 읽고 있었다. 비면 `span:empty`가 자리를 접는다. */}
+          <span>{restartStatus}</span>
           <ThemeToggle />
           <button className="btn btn--sm" type="button" onClick={restartServer} disabled={restarting}>
             {restarting ? "재시작 중" : "재시작"}
