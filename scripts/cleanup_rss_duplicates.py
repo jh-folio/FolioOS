@@ -7,13 +7,17 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RSS_DIR = ROOT / "research-inbox" / "rss"
-PLAN_PATH = ROOT / "data" / "rss-duplicate-cleanup-plan.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from features.common.research_library.indexing.service import parse_rssarchive_markdown
 from features.common.research_library.rss.policy import normalize_url
+from features.common.workspace import data_dir, research_inbox_dir
+
+# 앱 폴더가 아니라 자료 폴더 기준이다. 이 스크립트는 RSS 파일을 지우므로 자료를 옮긴
+# 설치에서 앱 폴더를 보면 지워야 할 것을 못 보거나 엉뚱한 폴더를 대상으로 삼는다.
+RSS_DIR = research_inbox_dir() / "rss"
+PLAN_PATH = data_dir() / "rss-duplicate-cleanup-plan.json"
 
 STATUS_RANK = {
     "full_text": 5,

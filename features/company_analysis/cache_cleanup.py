@@ -7,9 +7,13 @@ financials/, disclosures/ are subject to TTL enforcement.
 from __future__ import annotations
 
 import datetime as dt
-from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent.parent / "data"
+from features.common.workspace import data_dir
+
+# 앱 폴더가 아니라 자료 폴더를 본다. 앱 폴더 기준이면 자료를 옮긴 설치에서 없는 폴더를
+# 보고 "0건 / 0MB"를 돌려주며, 사용자에게는 정리할 것이 없는 것처럼 보이는 동안 진짜
+# 캐시는 계속 자란다.
+DATA_DIR = data_dir()
 SEC_CACHE_DIR = DATA_DIR / "sec-cache"
 DART_CACHE_DIR = DATA_DIR / "dart-cache"
 

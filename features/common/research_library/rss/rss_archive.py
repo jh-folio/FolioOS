@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from features.common.config_bootstrap import resolve_config
+from features.common.workspace import data_dir, research_inbox_dir
 from features.common.research_library.rss.article import collect_article_body
 from features.common.research_library.rss.collectors import (
     collect_official_items,
@@ -187,9 +188,10 @@ def main():
     configure_output_encoding()
     args = _parse_args()
 
-    project_root = find_project_root()
-    archive_dir = Path(args.archive_dir) if args.archive_dir else project_root / "research-inbox" / "rss"
-    evidence_db = project_root / "data" / "research-index.sqlite3"
+    # 앱 폴더가 아니라 자료 폴더 기준이다. `find_project_root()`는 마커(.git/AGENTS.md)로
+    # 코드 폴더를 찾으므로 자료를 옮긴 설치에서는 CLI 수집만 옛 폴더에 쌓였다.
+    archive_dir = Path(args.archive_dir) if args.archive_dir else research_inbox_dir() / "rss"
+    evidence_db = data_dir() / "research-index.sqlite3"
     rss_config = resolve_cli_config(args.rss_config, "rss_feeds.yaml")
     evidence_config = resolve_cli_config(args.evidence_config, "evidence_sources.yaml")
     selected_collectors = {x.strip().lower() for x in str(args.collectors or "rss").split(",") if x.strip()}

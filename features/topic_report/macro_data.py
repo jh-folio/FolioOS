@@ -9,6 +9,7 @@ import urllib.request
 from pathlib import Path
 
 from features.common.data_reliability.macro_fetch import fetch_macro_data_cached
+from features.common.workspace import data_dir
 
 FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 BOK_BASE = "https://ecos.bok.or.kr/api/StatisticSearch"
@@ -247,7 +248,7 @@ def fetch_macro_data(
     fred_key: str,
     bok_key: str,
 ) -> dict:
-    cache_root = Path(__file__).resolve().parents[2] / "data" / "provider-cache" / "macro"
+    cache_root = data_dir() / "provider-cache" / "macro"
     return fetch_macro_data_cached(
         cache_root=cache_root,
         fred_series=fred_series,

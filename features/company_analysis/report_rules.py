@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 
+from features.common.workspace import data_dir
 from features.company_analysis import financial_engine
 from features.company_analysis.style import analysis_style_label, normalize_analysis_style
 
@@ -226,7 +227,7 @@ def _write_json(path: Path, data) -> None:
 
 
 def _market_cache_dir() -> Path:
-    return Path(__file__).resolve().parents[2] / "data" / "company-analysis" / "market-cache"
+    return data_dir() / "company-analysis" / "market-cache"
 
 
 # 캐시에 담는 항목이 늘면 올린다. 옛 파일은 신선해도 다시 받는다.
