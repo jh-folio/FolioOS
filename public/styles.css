@@ -702,10 +702,19 @@ body:has(#folioReactRoot .react-shell) main.page {
   color: var(--folio-ink-soft, #213047);
   box-shadow: var(--elev-1, 0 4px 12px rgba(7, 17, 31, 0.045));
   line-height: 0;
+  /* 레일 폭과 같은 곡선으로 움직인다. 접힘/펼침에서 `right` 값만 달라진다. */
+  transition: right var(--dur, 0.2s) var(--ease, ease);
 }
 
+/* 접으면 레일 한가운데로 온다. 펼쳤을 때는 오른쪽 끝(`right: 12px`)이 제자리지만,
+   레일이 76px로 줄면 그 규칙이 버튼을 중앙에서 9px 밀어내 아이콘 열과 어긋난다.
+   실측: 레일 중앙 54px, 아이콘 중앙 53px, 버튼 중앙 63px.
+
+   `left: 50%`로도 가운데에 오지만 클래스가 뒤집히는 순간 버튼이 251 → 148로 한 번 튄다.
+   `right` 하나만 바꾸면 레일 폭 애니메이션과 같은 속성으로 이어져 튀지 않는다 —
+   폭 W에서 `right: 50% - 16px`이면 버튼 중앙이 정확히 W/2다(버튼 폭 32의 절반). */
 .react-shell.is-nav-collapsed .react-shell-nav-toggle {
-  transform: none;
+  right: calc(50% - 16px);
 }
 
 .react-shell-nav-toggle svg {
