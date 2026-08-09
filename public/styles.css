@@ -529,13 +529,17 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
   gap: 8px;
 }
 
+/* 타입을 직접 선언한다. 물려받게 두면 같은 컨트롤이 문맥마다 달라진다 — 설정 패널의
+   `.field` 안에서는 12px, 예약 행에서는 라우트 루트를 그대로 받아 17px이었다.
+   버튼이므로 `.btn`과 같은 크기·굵기를 쓴다. */
 .settings-theme-options button {
   min-height: 44px;
   border: 1px solid var(--folio-border);
   border-radius: var(--r-control);
   background: var(--folio-surface-clean);
   color: var(--folio-ink-soft);
-  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
 }
 
 /* 선택은 `.btn[aria-pressed="true"]`와 같은 언어를 쓴다 — 네이비 fill에 반전 잉크.
@@ -7088,8 +7092,21 @@ button:disabled {
 .input-panel .generation-option select { min-width: 112px; }
 .generation-option select:disabled { color: var(--folio-ink-muted); cursor: not-allowed; }
 
+/* 이 클래스는 오랫동안 `justify-content`만 갖고 flex는 `.filter-actions`가 준다고
+   전제했다. 관심 시장·자료 위치 패널은 이것만 쓰기 때문에 block으로 떨어졌고,
+   그러면 인라인 힌트가 저장 버튼을 옆으로 밀었다(실측 74px). 스스로 행이 된다. */
 .settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   justify-content: flex-start;
+}
+
+/* 저장 버튼이 기준점이다. 힌트가 앞에 오면 나타날 때마다 버튼이 뛰어서, 누르려던
+   자리에 버튼이 없다. DOM 순서는 그대로 두고(읽는 순서 유지) 그림만 뒤로 보낸다. */
+.settings-actions > .settings-dirty-hint {
+  order: 1;
 }
 
 /* 자료 위치 — 경로는 사용자가 탐색기 주소창에 옮겨 적는 값이라 고정폭으로 두고,
