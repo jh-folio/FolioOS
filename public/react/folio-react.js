@@ -22830,18 +22830,18 @@ var uu = [
 		routes: ["home", "dashboard"]
 	},
 	{
-		id: "portfolio",
-		title: "투자",
-		routes: ["watchlist", "portfolio"]
-	},
-	{
 		id: "news",
 		title: "뉴스",
 		routes: [
 			"briefing",
-			"rss",
-			"market-memory"
+			"market-memory",
+			"rss"
 		]
+	},
+	{
+		id: "portfolio",
+		title: "투자",
+		routes: ["watchlist", "portfolio"]
 	},
 	{
 		id: "research",
@@ -22850,7 +22850,7 @@ var uu = [
 	},
 	{
 		id: "system",
-		title: "시스템",
+		title: "",
 		routes: ["settings"]
 	}
 ], du = {
@@ -23152,16 +23152,13 @@ function _u() {
 					}), uu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
 						className: "react-left-nav-group",
 						"data-nav-group": e.id,
-						children: [/* @__PURE__ */ (0, K.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, K.jsx)("div", {
+						children: [e.title && /* @__PURE__ */ (0, K.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, K.jsx)("div", {
 							className: "react-left-nav-items",
 							children: e.routes.map((t) => {
 								let i = e.title === "Home" ? r : t, a = Ti.find((e) => e.id === i);
-								return a ? /* @__PURE__ */ (0, K.jsxs)("span", {
+								return a ? /* @__PURE__ */ (0, K.jsx)("span", {
 									className: "react-left-nav-entry",
-									children: [e.id === "home" && a.id === "dashboard" && /* @__PURE__ */ (0, K.jsx)("span", {
-										className: "react-left-nav-separator",
-										"aria-hidden": "true"
-									}), /* @__PURE__ */ (0, K.jsxs)("button", {
+									children: /* @__PURE__ */ (0, K.jsxs)("button", {
 										type: "button",
 										"data-tooltip": a.label,
 										"data-qa": a.id === "deep-research" ? "nav-deep-research" : void 0,
@@ -23178,7 +23175,7 @@ function _u() {
 											className: "react-left-nav-label",
 											children: a.label
 										})]
-									})]
+									})
 								}, a.id) : null;
 							})
 						})]

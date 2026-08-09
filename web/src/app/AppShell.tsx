@@ -155,12 +155,15 @@ function ThemeToggle() {
   );
 }
 
+// 아침에 앱을 여는 순서를 따른다 — 무엇이 달라졌나(홈·대시보드)를 보고, 읽고(뉴스),
+// 그게 내 것에 무슨 의미인지 보고(투자), 필요하면 파고든다(리서치).
+// 설정은 제목 없이 맨 아래다. 항목 하나를 위해 제목 한 줄을 쓰지 않는다.
 const NAV_GROUPS: Array<{ id: string; title: string; routes: RouteId[] }> = [
   { id: "home", title: "홈", routes: ["home", "dashboard"] },
+  { id: "news", title: "뉴스", routes: ["briefing", "market-memory", "rss"] },
   { id: "portfolio", title: "투자", routes: ["watchlist", "portfolio"] },
-  { id: "news", title: "뉴스", routes: ["briefing", "rss", "market-memory"] },
   { id: "research", title: "리서치", routes: ["analysis", "deep-research"] },
-  { id: "system", title: "시스템", routes: ["settings"] },
+  { id: "system", title: "", routes: ["settings"] },
 ];
 
 const ROUTE_ICONS: Record<RouteId, JSX.Element> = {
@@ -492,7 +495,7 @@ export function AppShell() {
           <div className="react-left-nav-title">Navigate</div>
           {NAV_GROUPS.map((group) => (
             <section className="react-left-nav-group" data-nav-group={group.id} key={group.id}>
-              <h3>{group.title}</h3>
+              {group.title && <h3>{group.title}</h3>}
               <div className="react-left-nav-items">
                 {group.routes.map((routeIdValue) => {
                   const resolvedRouteId = group.title === "Home" ? preferredHome : routeIdValue;
@@ -500,7 +503,6 @@ export function AppShell() {
                   if (!route) return null;
                   return (
                     <span className="react-left-nav-entry" key={route.id}>
-                      {group.id === "home" && route.id === "dashboard" && <span className="react-left-nav-separator" aria-hidden="true" />}
                       <button
                         type="button"
                         data-tooltip={route.label}

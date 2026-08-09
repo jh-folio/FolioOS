@@ -595,7 +595,10 @@ body:has(#folioReactRoot .react-shell) main.page {
 
 .react-shell {
   --react-nav-width: 280px;
-  --react-nav-collapsed-width: 76px;
+  /* 접힌 rail은 아이콘이 펼쳤을 때와 같은 x에 서도록 여백·아이콘 열을 그대로 갖는다.
+     16(margin) + 14(padding) + 48(항목) + 14(padding) = 92. 예전 76px은 여백을
+     줄이고 항목을 가운데 정렬해서, 접을 때마다 아이콘이 9px 왼쪽으로 튀었다. */
+  --react-nav-collapsed-width: 92px;
   --react-agent-width: 384px;
   height: 100vh;
   display: grid;
@@ -771,13 +774,6 @@ body:has(#folioReactRoot .react-shell) main.page {
 .react-left-nav-entry {
   display: grid;
   gap: 3px;
-}
-
-.react-left-nav-separator {
-  display: block;
-  height: 1px;
-  margin: 7px 8px;
-  background: var(--folio-border, #dce3eb);
 }
 
 .react-left-nav-item {
@@ -967,11 +963,9 @@ body:has(#folioReactRoot .react-shell) main.page {
   overflow: auto;
 }
 
+/* 여백은 펼쳤을 때와 같은 값이다. 다르면 아이콘 x가 그만큼 어긋난다. */
 .react-shell.is-nav-collapsed .react-shell-nav {
-  margin-left: 12px;
-  padding-left: 8px;
-  padding-right: 8px;
-  justify-items: center;
+  justify-items: start;
 }
 
 .react-shell.is-nav-collapsed .react-left-nav-title,
@@ -983,32 +977,38 @@ body:has(#folioReactRoot .react-shell) main.page {
 .react-shell.is-nav-collapsed .react-left-nav-group,
 .react-shell.is-nav-collapsed .react-left-nav-items {
   width: 100%;
-  justify-items: center;
+  justify-items: start;
 }
 
 .react-shell.is-nav-collapsed .react-left-nav-group h3 {
-  width: 38px;
+  width: 48px;
   height: 18px;
   overflow: hidden;
   color: transparent;
   font-size: 0;
 }
 
-.react-shell.is-nav-collapsed .react-left-nav-group:not(:first-child) h3::after {
+/* 접힌 상태의 그룹 구분선. 제목이 아니라 그룹이 갖는다 — 설정 그룹은 제목이 없고
+   (항목 하나에 제목 한 줄을 쓰지 않는다) 제목에 걸어두면 그 그룹만 구분선을 잃는다. */
+/* `:first-child`가 아니라 `:first-of-type`이다. 그룹 앞에 `.react-left-nav-title`
+   div가 있어서 첫 그룹도 `:not(:first-child)`에 걸렸고, 맨 위에 선이 하나 떠 있었다. */
+.react-shell.is-nav-collapsed .react-left-nav-group:not(:first-of-type)::before {
   content: "";
   display: block;
   width: 20px;
   height: 1px;
-  margin: 9px auto 0;
+  /* 아이콘 열 가운데(왼쪽 여백 8 + 아이콘 32의 절반)에 맞춘다. */
+  margin: 0 0 9px 14px;
   background: color-mix(in srgb, var(--folio-ink) 16%, transparent);
 }
 
+/* 아이콘 열과 좌측 여백을 펼쳤을 때 그대로 둔다. `1fr` + 가운데 정렬로 바꾸면
+   항목 폭이 달라지는 만큼 아이콘이 움직인다. 라벨만 사라지고 아이콘은 제자리다. */
 .react-shell.is-nav-collapsed .react-left-nav-item {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  width: 42px;
+  grid-template-columns: 32px;
+  width: 48px;
   height: 38px;
-  padding: 0;
+  padding: 5px 8px;
   border-radius: var(--r-control);
 }
 
@@ -3278,8 +3278,7 @@ body:has(#folioReactRoot .react-shell) main.page {
     display: contents;
   }
 
-  .react-left-nav-group h3,
-  .react-left-nav-separator {
+  .react-left-nav-group h3 {
     display: none;
   }
 
@@ -13771,7 +13770,6 @@ main.page {
   }
 
   .react-left-nav-group h3,
-  .react-left-nav-separator,
   .react-left-nav-label {
     display: none;
   }
