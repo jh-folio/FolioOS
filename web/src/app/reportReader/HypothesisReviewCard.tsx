@@ -171,6 +171,9 @@ export function HypothesisReviewCard({
               Agent에게 설명 요청
             </button>
           </div>
+          {!nextCheckpoint && (
+            <p className="hypothesis-review-empty">확인할 체크포인트가 없습니다.</p>
+          )}
           {!agentAvailable && (
             <p className="hypothesis-review-empty">Agent를 사용할 수 없습니다. 규칙 기반 상태는 계속 확인할 수 있습니다.</p>
           )}

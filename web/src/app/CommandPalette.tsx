@@ -240,7 +240,7 @@ export function CommandPalette() {
         <div className="command-list" role="listbox" aria-label="명령 목록">
           {filtered.length ? filtered.map((item, index) => (
             <button
-              className={`command-item${index === activeIndex ? " active" : ""}`}
+              className="command-item"
               type="button"
               data-qa={item.qa}
               role="option"

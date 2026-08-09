@@ -284,7 +284,7 @@ export function WatchlistRoute() {
               </div>
               <div className="watchlist-detail-actions">
                 <ConsultationEntry item={detailItem} />
-                <button className="icon-btn" type="button" aria-label="닫기" data-tooltip="닫기" data-tooltip-pos="left" onClick={() => setWatchlistHash()}>×</button>
+                <button className="btn btn--icon" type="button" aria-label="닫기" data-tooltip="닫기" data-tooltip-pos="left" onClick={() => setWatchlistHash()}>×</button>
               </div>
             </div>
             {error && <p className="react-dashboard-error">{error}</p>}
@@ -405,7 +405,7 @@ export function WatchlistRoute() {
             >
               <span className="watchlist-card-accent" aria-hidden="true" />
               <button
-                className="watchlist-card-delete"
+                className="btn btn--icon watchlist-card-delete"
                 type="button"
                 aria-label={`${item} 워치리스트에서 삭제`}
                 data-tooltip="삭제"

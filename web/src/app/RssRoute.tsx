@@ -336,7 +336,7 @@ export function RssRoute() {
               <strong>INDEXED</strong>
               {indexedCount === null ? "…" : `${indexedCount}개 문서`}
             </span>
-            <button type="button" onClick={importRss} disabled={importing}>
+            <button className="btn btn--primary" type="button" onClick={importRss} disabled={importing}>
               {importing ? "수집 중" : "RSS 수집/가져오기"}
             </button>
           </div>
@@ -440,7 +440,7 @@ export function RssRoute() {
                 {description && <p>{description}</p>}
               </div>
               <div className="react-rss-card-actions">
-                {item.url && <a href={item.url} target="_blank" rel="noopener noreferrer">기사 열기</a>}
+                {item.url && <a className="btn" href={item.url} target="_blank" rel="noopener noreferrer">기사 열기</a>}
               </div>
             </article>
           );
@@ -454,17 +454,18 @@ export function RssRoute() {
 
       {totalPages > 1 && (
         <nav className="react-rss-pagination" aria-label="RSS pagination">
-          <button type="button" disabled={currentPage === 1 || loading} onClick={() => loadItems(currentPage - 1, filters)}>
+          <button className="btn" type="button" disabled={currentPage === 1 || loading} onClick={() => loadItems(currentPage - 1, filters)}>
             이전
           </button>
           {pageStart > 1 && (
             <>
-              <button type="button" onClick={() => loadItems(1, filters)}>1</button>
+              <button className="btn" type="button" onClick={() => loadItems(1, filters)}>1</button>
               {pageStart > 2 && <span>...</span>}
             </>
           )}
           {Array.from({ length: pageEnd - pageStart + 1 }, (_, index) => pageStart + index).map((pageNumber) => (
             <button
+              className="btn"
               type="button"
               key={pageNumber}
               aria-current={pageNumber === currentPage ? "page" : undefined}
@@ -477,10 +478,10 @@ export function RssRoute() {
           {pageEnd < totalPages && (
             <>
               {pageEnd < totalPages - 1 && <span>...</span>}
-              <button type="button" onClick={() => loadItems(totalPages, filters)}>{totalPages}</button>
+              <button className="btn" type="button" onClick={() => loadItems(totalPages, filters)}>{totalPages}</button>
             </>
           )}
-          <button type="button" disabled={currentPage === totalPages || loading} onClick={() => loadItems(currentPage + 1, filters)}>
+          <button className="btn" type="button" disabled={currentPage === totalPages || loading} onClick={() => loadItems(currentPage + 1, filters)}>
             다음
           </button>
         </nav>

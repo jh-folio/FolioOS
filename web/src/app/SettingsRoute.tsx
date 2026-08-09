@@ -99,6 +99,13 @@ function providerOrDefault(value?: string): ProviderId {
   return API_PROVIDERS.includes(value as ProviderId) ? (value as ProviderId) : "openai";
 }
 
+/** loadAll이 저장된 모델을 선택지 목록에 맞춰 정규화하는 것과 같은 규칙.
+ *  dirty 판정 기준선도 같은 규칙으로 계산해야 "불러오자마자 dirty"가 되지 않는다. */
+function normalizedChoice(model: string | undefined, choices: ModelChoice[] | undefined): string {
+  const list = choices || [];
+  return list.some((choice) => choice.value === model) ? String(model || "") : list[0]?.value || "";
+}
+
 function statusText(hasValue: boolean | undefined, masked: string | undefined, emptyText: string, label: string) {
   return hasValue ? `${label} 저장됨: ${masked || "저장됨"}` : emptyText;
 }
@@ -228,6 +235,10 @@ function MarketScopePanel() {
   const dirty = JSON.stringify(draft) !== JSON.stringify([...scope.selected]);
 
   const save = async () => {
+    if (!dirty) {
+      setNote("변경 사항이 없습니다.");
+      return;
+    }
     setBusy(true);
     setNote("");
     try {
@@ -273,7 +284,8 @@ function MarketScopePanel() {
         </div>
       </div>
       <div className="settings-actions">
-        <button className="btn btn--primary" type="button" onClick={() => void save()} disabled={busy || !dirty}>
+        {dirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
+        <button className={dirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={() => void save()} disabled={busy}>
           {busy ? "저장 중" : "저장"}
         </button>
       </div>
@@ -457,6 +469,8 @@ export function SettingsRoute() {
   const [settings, setSettings] = useState<SettingsPayload | null>(null);
   const [agentSettings, setAgentSettings] = useState<AgentSettings | null>(null);
   const [automation, setAutomation] = useState<AutomationSettings>({});
+  // 자동화 폼은 서버 응답을 그대로 편집하므로, dirty 판정용 기준선을 따로 든다.
+  const [automationSaved, setAutomationSaved] = useState<AutomationSettings>({});
   const [obsidian, setObsidian] = useState<ObsidianSettings>({});
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [provider, setProvider] = useState<ProviderId>("openai");
@@ -481,6 +495,27 @@ export function SettingsRoute() {
   const agentAdapters = agentSettings?.adapters || [];
   const selectedAgent = agentAdapters.find((adapter) => adapter.id === agentProvider) || agentAdapters[0];
   const selectedAgentChoices = selectedAgent?.modelChoices || [];
+
+  // dirty→primary (2026-08-08 확정): 변경이 생긴 패널의 저장 버튼만 진해지고,
+  // 진한 버튼이 곧 "저장 안 된 변경"의 신호다. disabled로 잠그지 않는다.
+  const baselineAgentProvider = ["codex", "claude", "antigravity"].includes(agentSettings?.provider || "")
+    ? String(agentSettings?.provider)
+    : String(agentSettings?.selectedAdapter || agentAdapters[0]?.id || "codex");
+  const baselineAdapter = agentAdapters.find((adapter) => adapter.id === baselineAgentProvider) || agentAdapters[0];
+  const agentDirty =
+    agentEnabled !== (settings?.agent?.enabled !== false) ||
+    agentMode !== (settings?.agent?.mode === "api" ? "api" : "cli") ||
+    agentProvider !== baselineAgentProvider ||
+    agentModel !== normalizedChoice(baselineAdapter?.model, baselineAdapter?.modelChoices) ||
+    provider !== providerOrDefault(settings?.llm?.provider) ||
+    providerModel !== normalizedChoice(selectedProvider.model, selectedProvider.modelChoices) ||
+    providerApiKey.trim() !== "";
+  const apiDirty = Boolean(apiDraft.fred.trim() || apiDraft.bok.trim() || apiDraft.dart.trim());
+  const notionDirty =
+    Boolean(notionDraft.token.trim()) || notionDraft.dbId.trim() !== String(settings?.notion?.dbId || "").trim();
+  const obsidianDirty = vaultPath.trim() !== String(obsidian.vaultPath || "").trim();
+  const automationDirty =
+    JSON.stringify(buildAutomationPayload(automation)) !== JSON.stringify(buildAutomationPayload(automationSaved));
 
   const loadAll = useCallback(async (refreshAgent = false) => {
     setError("");
@@ -517,6 +552,7 @@ export function SettingsRoute() {
       window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: agentPayload }));
 
       setAutomation(buildAutomationPayload(automationPayload));
+      setAutomationSaved(buildAutomationPayload(automationPayload));
       setObsidian(obsidianPayload);
       setVaultPath(obsidianPayload.vaultPath || "");
       setReactAgentContextScope("settings", { surface: "settings", viewId: "settings", reportKind: "", reportId: "" });
@@ -586,6 +622,10 @@ export function SettingsRoute() {
   }, [agentProvider, agentAdapters]);
 
   async function saveAiAgentSettings() {
+    if (!agentDirty) {
+      setStatus("변경 사항이 없습니다.");
+      return;
+    }
     setBusy("agent");
     setStatus("AI Agent 설정을 저장하는 중입니다.");
     try {
@@ -623,6 +663,14 @@ export function SettingsRoute() {
   }
 
   async function testProvider(providerId: ProviderId) {
+    // 키 없이 눌러도 버튼은 눌리게 두고, 빠진 것을 그 자리에서 말한다(§4 disabled 금지).
+    if (!providers[providerId]?.hasApiKey) {
+      setLlmStatus((current) => ({
+        ...current,
+        [providerId]: { status: "missing_key", available: false, message: "API 키를 먼저 입력하세요" },
+      }));
+      return;
+    }
     setLlmStatus((current) => ({ ...current, [providerId]: { checking: true } }));
     try {
       const result = await postJson<LlmTestResult>(`/api/settings/llm/test/${encodeURIComponent(providerId)}`, {});
@@ -636,6 +684,10 @@ export function SettingsRoute() {
   }
 
   async function saveApiSettings() {
+    if (!apiDirty) {
+      setStatus("변경 사항이 없습니다.");
+      return;
+    }
     setBusy("api");
     setStatus("외부 데이터 API 설정을 저장하는 중입니다.");
     try {
@@ -659,6 +711,10 @@ export function SettingsRoute() {
   }
 
   async function saveNotionSettings() {
+    if (!notionDirty) {
+      setStatus("변경 사항이 없습니다.");
+      return;
+    }
     setBusy("notion");
     setStatus("Notion 설정을 저장하는 중입니다.");
     try {
@@ -676,6 +732,10 @@ export function SettingsRoute() {
   }
 
   async function saveObsidianSettings() {
+    if (!obsidianDirty) {
+      setStatus("변경 사항이 없습니다.");
+      return;
+    }
     setBusy("obsidian");
     setStatus("Obsidian 경로를 저장하는 중입니다.");
     try {
@@ -691,11 +751,16 @@ export function SettingsRoute() {
   }
 
   async function saveAutomationSettings() {
+    if (!automationDirty) {
+      setStatus("변경 사항이 없습니다.");
+      return;
+    }
     setBusy("automation");
     setStatus("자동화 설정을 저장하는 중입니다.");
     try {
       const payload = await postJson<AutomationSettings>("/api/automation/settings", buildAutomationPayload(automation));
       setAutomation(buildAutomationPayload(payload));
+      setAutomationSaved(buildAutomationPayload(payload));
       setStatus("자동화 설정을 저장했습니다.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "자동화 설정 저장에 실패했습니다.");
@@ -749,11 +814,14 @@ export function SettingsRoute() {
                 <span>실행 방식</span>
                 <div className="settings-agent-mode-row">
                   <ToggleSwitch ariaLabel="AI Agent 사용" checked={agentEnabled} onChange={setAgentEnabled} compact />
-                  <div className="settings-segmented" aria-label="AI Agent 실행 방식" data-mode={agentMode}>
+                  <div className="segment" role="group" aria-label="AI Agent 실행 방식">
                     <button aria-pressed={agentMode === "cli"} type="button" onClick={() => setAgentMode("cli")}>LLM CLI</button>
                     <button aria-pressed={agentMode === "api"} type="button" onClick={() => setAgentMode("api")}>LLM API</button>
                   </div>
                 </div>
+                {!agentEnabled && (
+                  <p className="settings-hint">AI Agent가 꺼져 있어요. 켜면 아래 설정을 쓸 수 있습니다.</p>
+                )}
               </div>
             </div>
 
@@ -829,7 +897,7 @@ export function SettingsRoute() {
                         <div className="cli-provider-meta">{detail}</div>
                       </div>
                       <div className="cli-provider-actions">
-                        <button className="btn" type="button" disabled={!row.hasApiKey || Boolean(llmStatus[providerId]?.checking)} onClick={() => testProvider(providerId)}>연결 확인</button>
+                        <button className="btn" type="button" disabled={Boolean(llmStatus[providerId]?.checking)} onClick={() => testProvider(providerId)}>연결 확인</button>
                         {row.setupUrl && <a className="btn" href={row.setupUrl} target="_blank" rel="noreferrer">API Key 발급</a>}
                       </div>
                     </div>
@@ -840,7 +908,8 @@ export function SettingsRoute() {
 
             </fieldset>
             <div className="filter-actions settings-actions">
-              <button className="btn btn--primary" type="button" onClick={saveAiAgentSettings} disabled={busy === "agent"}>AI Agent 설정 저장</button>
+              {agentDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
+              <button className={agentDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveAiAgentSettings} disabled={busy === "agent"}>AI Agent 설정 저장</button>
               <button className="btn" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>모델/상태 새로고침</button>
             </div>
           </section>
@@ -859,7 +928,10 @@ export function SettingsRoute() {
               <label className="field"><span>DART API Key</span><input value={apiDraft.dart} onChange={(event) => setApiDraft({ ...apiDraft, dart: event.currentTarget.value })} type="password" autoComplete="off" placeholder={settings?.dart?.hasApiKey ? `${settings.dart.apiKeyMasked} 저장됨` : "OpenDART API 키"} /></label>
               <div className="field"><span>DART 상태</span><p className="section-subtitle">{statusText(settings?.dart?.hasApiKey, settings?.dart?.apiKeyMasked, "국내 기업 분석용 DART API 키가 없습니다.", "DART API 키")}</p></div>
             </div>
-            <div className="filter-actions settings-actions"><button className="btn btn--primary" type="button" onClick={saveApiSettings} disabled={busy === "api"}>API 설정 저장</button></div>
+            <div className="filter-actions settings-actions">
+              {apiDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
+              <button className={apiDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveApiSettings} disabled={busy === "api"}>API 설정 저장</button>
+            </div>
           </section>
 
           <section className="settings-panel input-panel">
@@ -872,7 +944,10 @@ export function SettingsRoute() {
               <label className="field"><span>데이터베이스 ID</span><input value={notionDraft.dbId} onChange={(event) => setNotionDraft({ ...notionDraft, dbId: event.currentTarget.value })} placeholder="32자리 Database ID" /></label>
               <div className="field"><span>DB 상태</span><p className="section-subtitle">{settings?.notion?.hasDb ? `DB 저장됨: ${settings.notion.dbIdMasked}` : "Notion 데이터베이스 ID가 없습니다."}</p></div>
             </div>
-            <div className="filter-actions settings-actions"><button className="btn btn--primary" type="button" onClick={saveNotionSettings} disabled={busy === "notion"}>Notion 설정 저장</button></div>
+            <div className="filter-actions settings-actions">
+              {notionDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
+              <button className={notionDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveNotionSettings} disabled={busy === "notion"}>Notion 설정 저장</button>
+            </div>
           </section>
 
           <section className="settings-panel input-panel">
@@ -881,7 +956,10 @@ export function SettingsRoute() {
               <label className="field"><span>Vault 폴더 경로</span><input value={vaultPath} onChange={(event) => setVaultPath(event.currentTarget.value)} type="text" placeholder="C:\Users\username\Documents\MyVault" /></label>
               <div className="field"><span>경로 상태</span><p className="section-subtitle">{obsidian.vaultPath ? `설정됨: ${obsidian.vaultPath}` : "Vault 경로가 설정되지 않았습니다."}</p></div>
             </div>
-            <div className="filter-actions settings-actions"><button className="btn btn--primary" type="button" onClick={saveObsidianSettings} disabled={busy === "obsidian"}>Obsidian 설정 저장</button></div>
+            <div className="filter-actions settings-actions">
+              {obsidianDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
+              <button className={obsidianDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveObsidianSettings} disabled={busy === "obsidian"}>Obsidian 설정 저장</button>
+            </div>
           </section>
         </div>
       ) : (
@@ -980,7 +1058,8 @@ export function SettingsRoute() {
               </section>
             </div>
             <div className="filter-actions settings-actions">
-              <button className="btn btn--primary" type="button" onClick={saveAutomationSettings} disabled={busy === "automation"}>자동화 저장</button>
+              {automationDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
+              <button className={automationDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveAutomationSettings} disabled={busy === "automation"}>자동화 저장</button>
             </div>
           </section>
           <section className="settings-panel input-panel">
@@ -1017,7 +1096,7 @@ export function SettingsRoute() {
               <p className="section-subtitle">상태 확인을 누르면 캐시 사용량을 확인합니다.</p>
             )}
             <div className="filter-actions settings-actions">
-              <button className="btn btn--primary" type="button" onClick={cleanupCache} disabled={busy === "cache-cleanup"}>
+              <button className="btn" type="button" onClick={cleanupCache} disabled={busy === "cache-cleanup"}>
                 {busy === "cache-cleanup" ? "정리 중" : "오래된 캐시 정리"}
               </button>
             </div>

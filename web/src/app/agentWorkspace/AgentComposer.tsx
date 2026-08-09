@@ -35,7 +35,7 @@ export function AgentComposer({ workspace }: { workspace: AgentWorkspaceControll
           <div className="agent-home-toolbar-left">
             <button
               type="button"
-              className="agent-home-icon-btn"
+              className="btn btn--icon agent-home-icon-btn"
               onClick={() => fileInputRef.current?.click()}
               aria-label="파일 첨부"
               data-tooltip="파일 첨부"
@@ -69,7 +69,7 @@ export function AgentComposer({ workspace }: { workspace: AgentWorkspaceControll
               </>
             )}
             <button
-              className="agent-home-send"
+              className="btn btn--icon btn--primary agent-home-send"
               type="submit"
               disabled={workspace.busy || !workspace.input.trim()}
               aria-label="전송"
@@ -92,6 +92,7 @@ export function AgentComposer({ workspace }: { workspace: AgentWorkspaceControll
               {!item.imageData && !item.content ? <em className="agent-attachment-note">본문 미포함</em> : null}
               <button
                 type="button"
+                className="btn btn--icon"
                 aria-label={`${item.name} 첨부 제거`}
                 onClick={() => workspace.setAttachments((current) => current.filter((candidate) => candidate.name !== item.name))}
               >

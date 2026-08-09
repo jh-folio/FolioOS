@@ -117,7 +117,7 @@ export function ReportReaderShell({
         <section ref={readerRef} className="report-reader-dialog report-reader-main" aria-labelledby={titleId} tabIndex={-1}>
           <div className="report-reader-head">
             {onClose && (
-              <button className="icon-btn" type="button" onClick={onClose} aria-label="리더 닫기" data-qa="dr-report-close" data-tooltip="닫기" data-tooltip-pos="left">
+              <button className="btn btn--icon icon-btn" type="button" onClick={onClose} aria-label="리더 닫기" data-qa="dr-report-close" data-tooltip="닫기" data-tooltip-pos="left">
                 ×
               </button>
             )}
@@ -159,7 +159,7 @@ export function ReportReaderShell({
               <div className="report-note-inner">
                 <button
                   ref={noteCloseRef}
-                  className="report-note-mobile-close"
+                  className="btn btn--icon report-note-mobile-close"
                   type="button"
                   aria-label="투자 노트 닫기"
                   data-qa="reader-note-close"

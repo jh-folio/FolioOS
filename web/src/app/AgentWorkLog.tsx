@@ -192,7 +192,7 @@ export function AgentWorkLog({ surface, pageSize = 20, defaultFilter = "all", re
       <div className="work-log-toolbar">
         {showFilters ? (
           <div className="work-log-filters" data-qa="work-log-filter" aria-label="작업 범주">
-            {(["all", "companion", "task"] as const).map((value) => <button key={value} type="button" className={`btn${filter === value ? " active" : ""}`} data-qa={`work-log-filter-${value}`} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{value === "all" ? "전체" : value === "companion" ? "대화" : "작업"}</button>)}
+            {(["all", "companion", "task"] as const).map((value) => <button key={value} type="button" className="btn" data-qa={`work-log-filter-${value}`} aria-pressed={filter === value} onClick={() => changeFilter(value)}>{value === "all" ? "전체" : value === "companion" ? "대화" : "작업"}</button>)}
           </div>
         ) : <span />}
         <button className="btn btn--icon" type="button" data-qa="work-log-refresh" disabled={loading} onClick={() => void load()} aria-label="작업 기록 새로고침" data-tooltip="새로고침">

@@ -419,7 +419,7 @@ export function FolioNotePanel({
               <div className="report-note-quote-bar">
                 <span className="report-note-quote-label">인용</span>
                 <p>{quoteDraft}</p>
-                <button type="button" onClick={() => setQuoteDraft("")} aria-label="인용 지우기">×</button>
+                <button className="btn btn--icon btn--sm" type="button" onClick={() => setQuoteDraft("")} aria-label="인용 지우기">×</button>
               </div>
             )}
             <textarea
@@ -432,7 +432,7 @@ export function FolioNotePanel({
             />
             <div className="report-note-composer-actions">
               <button
-                className="report-note-secondary-action"
+                className="btn report-note-secondary-action"
                 type="button"
                 onClick={saveThoughtOnly}
                 disabled={agentBusy || !composeUserMessage()}
@@ -440,7 +440,7 @@ export function FolioNotePanel({
                 생각만 기록
               </button>
               <button
-                className="report-note-primary-action"
+                className="btn btn--primary report-note-primary-action"
                 type="button"
                 onClick={sendToAgent}
                 disabled={agentBusy || !composeUserMessage()}

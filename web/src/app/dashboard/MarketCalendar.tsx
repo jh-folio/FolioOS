@@ -243,9 +243,9 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             <button type="button" aria-pressed={view === "week"} onClick={() => { setView("week"); persist({ calendarView: "week" }); }}>주간</button>
             <button type="button" aria-pressed={view === "month"} onClick={() => { setView("month"); persist({ calendarView: "month" }); }}>월간</button>
           </div></div>
-          <button className="btn" type="button" aria-label={view === "week" ? "이전 주" : "이전 달"} onClick={() => move(-1)}>◀</button>
+          <button className="btn btn--icon" type="button" aria-label={view === "week" ? "이전 주" : "이전 달"} onClick={() => move(-1)}>◀</button>
           <button className="btn" type="button" onClick={() => { const now = new Date(); setAnchor(now); setSelectedDay(dateKey(now)); }}>오늘</button>
-          <button className="btn" type="button" aria-label={view === "week" ? "다음 주" : "다음 달"} onClick={() => move(1)}>▶</button>
+          <button className="btn btn--icon" type="button" aria-label={view === "week" ? "다음 주" : "다음 달"} onClick={() => move(1)}>▶</button>
           <button className="btn btn--primary" type="button" onClick={refresh} disabled={busy}>{busy ? "수집 중" : "일정 수집"}</button>
         </div>
       </div>
@@ -324,6 +324,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             const outside = day.getMonth() !== anchor.getMonth();
             return (
               <button key={key} type="button"
+                aria-pressed={key === selectedDay}
                 className={`cal-cell${key === todayKey ? " cal-cell--today" : ""}${outside ? " cal-cell--dim" : ""}${key === selectedDay ? " cal-cell--active" : ""}`}
                 onClick={() => setSelectedDay(key)}>
                 <header>{day.getDate()}{rows.length ? <b>{rows.length}건</b> : null}{key === todayKey ? <i>오늘</i> : null}</header>

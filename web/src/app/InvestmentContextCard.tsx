@@ -135,7 +135,7 @@ export function InvestmentContextCardView({
           <h2>{copy.title}</h2>
           <span>{copy.description}</span>
         </div>
-        {dismissible && onDismiss ? <button type="button" className="investment-context-dismiss" aria-label="개인 맥락 카드 닫기" onClick={onDismiss}>×</button> : null}
+        {dismissible && onDismiss ? <button type="button" className="btn btn--icon investment-context-dismiss" aria-label="개인 맥락 카드 닫기" onClick={onDismiss}>×</button> : null}
       </div>
 
       <div className="investment-context-summary" aria-label="개인 맥락 요약">
@@ -162,6 +162,7 @@ export function InvestmentContextCardView({
                 <button
                   type="button"
                   disabled={Boolean(explainingTicker)}
+                  title={explainingTicker && explainingTicker !== context.ticker ? "다른 종목 설명이 끝나면 누를 수 있어요" : undefined}
                   onClick={() => onExplain(context)}
                 >
                   {explainingTicker === context.ticker ? "설명 중…" : "Agent로 위험 설명"}

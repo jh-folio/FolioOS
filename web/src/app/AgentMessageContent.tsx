@@ -122,7 +122,10 @@ export function AgentRunCard({ state = "pending", title, meta }: AgentRunCardPro
     <div className={`agent-run-card ${state}`}>
       <span className="agent-run-icon" aria-hidden="true" />
       <div>
-        <strong>{title}</strong>
+        <strong>
+          {title}
+          {state === "pending" && <span className="agent-run-eta">보통 40~60초</span>}
+        </strong>
         {meta && <span>{meta}</span>}
       </div>
     </div>

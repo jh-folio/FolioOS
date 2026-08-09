@@ -318,7 +318,7 @@ export function SmartCollectionsPanel({
           {total > collections.length && <p className="topicrpt-collection-disclosure">처음 {collections.length}개를 표시합니다. 전체 {total}개 중 나머지는 API 페이지에서 확인할 수 있습니다.</p>}
           {selectedCollection && (
             <div className="topicrpt-collections-actions topicrpt-selection-actions">
-              <button className="btn btn--primary" type="button" data-qa="collection-open-workspace" disabled={busy || disabled} onClick={() => onOpenDetail(selectedCollection.id)}>상세 워크스페이스</button>
+              <button className="btn" type="button" data-qa="collection-open-workspace" disabled={busy || disabled} onClick={() => onOpenDetail(selectedCollection.id)}>상세 워크스페이스</button>
               <button className="btn" type="button" data-qa="collection-edit" disabled={busy || disabled} onClick={beginEdit}>선택 규칙 편집</button>
               <button className="btn" type="button" data-qa="collection-delete" disabled={busy || disabled} onClick={() => void deleteCollection()}>삭제</button>
               <button className="btn" type="button" data-qa="collection-clear-selection" onClick={() => { previewController.current?.abort(); setPreview(null); onSelectedRef(null); }}>선택 해제</button>

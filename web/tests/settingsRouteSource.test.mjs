@@ -31,7 +31,7 @@ test("Settings route preserves legacy settings visual class contracts", async ()
   assert.match(source, /fieldset className="settings-agent-controls"/);
   assert.match(source, /disabled=\{!agentEnabled\}/);
   assert.match(source, /<\/fieldset>\s*<div className="filter-actions settings-actions">/);
-  assert.match(source, /settings-segmented/);
+  assert.match(source, /className="segment"/);
   assert.match(source, /filter-actions settings-actions/);
   assert.match(source, /automation-routines/);
   assert.match(source, /automation-card/);

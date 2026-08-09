@@ -732,7 +732,7 @@ export function CompanyAnalysisRoute() {
                     </button>
                     <button
                       type="button"
-                      className="report-feed-card-delete"
+                      className="btn btn--icon report-feed-card-delete"
                       disabled={deleting}
                       onClick={() => deleteReport(report)}
                       aria-label={`${reportLabel(report)} 삭제`}

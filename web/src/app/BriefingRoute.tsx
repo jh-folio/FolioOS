@@ -762,7 +762,7 @@ export function BriefingRoute() {
                   </button>
                   <button
                     type="button"
-                    className="briefing-archive-card-delete"
+                    className="btn btn--icon briefing-archive-card-delete"
                     disabled={deleting}
                     onClick={() => deleteBriefing(view.date, view.scope)}
                     aria-label={`${view.date} 브리핑 삭제`}
