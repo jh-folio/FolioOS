@@ -143,7 +143,7 @@ def test_package_defaults_to_version_file() -> None:
     result = run_package("--dry-run")
 
     assert result.returncode == 0, result.stderr
-    assert "FolioOS-v0.5.1" in result.stdout
+    assert "FolioOS-v0.5.2" in result.stdout
 
 
 def test_package_dry_run_requires_a_safe_version() -> None:
@@ -236,7 +236,7 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
         )
 
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
-    assert build["version"] == "0.5.1"
+    assert build["version"] == "0.5.2"
     assert len(build["commit"]) == 40
     assert package_zip.is_file()
     with zipfile.ZipFile(package_zip) as archive:
@@ -345,7 +345,16 @@ def test_real_zip_extracts_verifies_and_boots_on_first_run(tmp_path: Path) -> No
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
     environment = os.environ.copy()
-    environment.update(PORT=str(port), FOLIO_HOST="127.0.0.1", FOLIO_WORKSPACE_IDENTITY="release-test")
+    # 워크스페이스를 푼 폴더로 못박는다. 갓 푼 패키지는 `data/`가 비어 있어 판정이
+    # 문서 폴더까지 내려가는데, 개발자 PC에 `~/Documents/FolioOS`가 있으면 테스트
+    # 서버가 그쪽을 쓰고 `config/`도 거기에 만든다 — 이 단언이 기계 상태에 좌우된다.
+    # 실제로 옮기기가 실패하며 남긴 부분 복사본 때문에 빨개졌다.
+    environment.update(
+        PORT=str(port),
+        FOLIO_HOST="127.0.0.1",
+        FOLIO_WORKSPACE_IDENTITY="release-test",
+        FOLIO_HOME=str(package),
+    )
     server = subprocess.Popen(
         [sys.executable, "app.py"],
         cwd=package,
@@ -365,7 +374,7 @@ def test_real_zip_extracts_verifies_and_boots_on_first_run(tmp_path: Path) -> No
             except OSError:
                 time.sleep(0.2)
         assert health is not None, server.stderr.read() if server.poll() is not None and server.stderr else ""
-        assert health["version"] == "0.5.1"
+        assert health["version"] == "0.5.2"
         assert health["commit"] == expected_commit
         assert (package / "config").is_dir()
     finally:

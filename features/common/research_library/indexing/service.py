@@ -3,7 +3,9 @@ import datetime as dt
 import hashlib
 import json
 import re
+import sqlite3
 import threading
+import time
 from pathlib import Path
 
 from features.common.utils import (
@@ -490,6 +492,8 @@ def build_index(incremental=True, progress=None):
             index["sqlite"] = sync_index(RESEARCH_DB_PATH, index)
         except Exception:
             index["sqlite"] = {"error": "sqlite_index_failed"}
+        # 우리가 방금 문서를 바꿨다. 서명 확인(5초)을 기다리지 않고 바로 버린다.
+        invalidate_index_cache()
         try:
             write_manifest(RESEARCH_DB_PATH, file_manifest)
         except Exception:
@@ -557,7 +561,31 @@ def list_indexed_documents(company: str = "", limit: int = 50, offset: int = 0):
         conn.close()
 
 
-def load_index():
+# 인덱스 캐시. 호출자가 14곳이고 한 번 읽는 데 문서 13,030건 기준 1.6초(디스크가 식어
+# 있으면 6.2초)가 든다. 캐시가 없던 시절 앱을 켜고 첫 탭이 13.9초 걸렸다(대시보드
+# 이야기 비중 = load_index + 네 시장 계산).
+#
+# 유효성 판정에 DB를 읽지 않는다. 두 가지를 시도해 보고 둘 다 버렸다 —
+# 파일 mtime은 같은 파일 안의 `rss_feed_items` 캐시가 피드를 열 때마다 바꾸고,
+# `documents`의 `MAX(updated_at)`은 실측에서 26초 만에 움직였다(색인이 바뀌지 않아도
+# 갱신된다). 둘 다 쓰면 캐시가 거의 매번 버려진다.
+#
+# 대신 `documents`에 쓰는 곳이 `build_index()` 하나뿐이라는 사실을 쓴다. 그 경로가
+# 끝나면서 `invalidate_index_cache()`를 부른다. RSS 수집 subprocess는 `evidence_items`만
+# 쓰고 문서는 건드리지 않는다. TTL은 그래도 혹시 모를 외부 변경을 위한 안전망이다.
+_INDEX_CACHE_LOCK = threading.Lock()
+_INDEX_CACHE = None            # (loaded_at, index)
+INDEX_CACHE_TTL_SECONDS = 300.0
+
+
+def invalidate_index_cache() -> None:
+    """인덱스를 우리가 갱신했을 때 부른다."""
+    global _INDEX_CACHE
+    with _INDEX_CACHE_LOCK:
+        _INDEX_CACHE = None
+
+
+def _read_index_from_store():
     # Try SQLite first; fall back to legacy JSON during first migration run
     if RESEARCH_DB_PATH.exists():
         docs = load_documents_from_db(RESEARCH_DB_PATH)
@@ -576,3 +604,40 @@ def load_index():
     if idx and idx.get("documents"):
         return idx
     return build_index()
+
+
+def load_index():
+    global _INDEX_CACHE
+    with _INDEX_CACHE_LOCK:
+        cached = _INDEX_CACHE
+    if cached is not None and (time.monotonic() - cached[0]) < INDEX_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    index = _read_index_from_store()
+    with _INDEX_CACHE_LOCK:
+        _INDEX_CACHE = (time.monotonic(), index)
+    return index
+
+
+def warm_index_cache() -> None:
+    """서버가 뜬 직후 백그라운드에서 한 번 읽어 둔다.
+
+    첫 사용자가 6초를 기다리는 대신 시작 직후 조용히 치른다. 실패해도 무시한다 —
+    예열은 편의이고, 진짜로 필요할 때 `load_index()`가 다시 읽는다.
+    """
+
+    def _worker() -> None:
+        try:
+            load_index()
+        except Exception:  # noqa: BLE001 - 예열 실패가 서버 시작을 막지 않는다
+            return
+        # 인덱스를 읽어 온 김에 대시보드가 쓰는 집계도 채운다. 기본 탭이라 첫 사용자가
+        # 가장 먼저 여는 화면이고, 인덱스만 데워도 여기서 5.7초가 남는다.
+        try:
+            from features.dashboard.story_share import warm_story_share_cache
+
+            warm_story_share_cache()
+        except Exception:  # noqa: BLE001
+            pass
+
+    threading.Thread(target=_worker, name="folio-index-warm", daemon=True).start()

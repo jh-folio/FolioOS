@@ -64,6 +64,7 @@ from features.common.research_library.indexing.service import (
     build_index,
     list_indexed_documents,
     load_index,
+    warm_index_cache,
 )
 from features.common.research_library.rss.service import (
     import_rssarchive,
@@ -348,6 +349,9 @@ async def lifespan(_app: FastAPI):
     # 거래소가 붙은 SEC 목록을 한 번 받아 둔다. 없으면 dual-listed 유럽·일본 기업이
     # 상장 라인과 원주 OTC 라인으로 갈려 전부 "애매"로 떨어진다.
     schedule_sec_exchange_cache()
+    # 인덱스를 미리 읽어 둔다. 첫 사용자가 6초를 기다리는 대신 시작 직후 조용히 치른다 —
+    # 대시보드 이야기 비중이 앱을 켜고 처음 열 때 13.9초 걸리던 것이 이 때문이었다.
+    warm_index_cache()
     schedule_startup_regime_refresh(MARKET_MEMORY_DB_PATH)
     schedule_automation_loop()
     start_signal_runtime(DATA_DIR, CONFIG_DIR / "evidence_sources.yaml")

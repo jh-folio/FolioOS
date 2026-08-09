@@ -210,3 +210,16 @@ def invalidate_story_share_cache() -> None:
     with _cache_lock:
         _cache.clear()
         _cache_generation += 1
+
+
+def warm_story_share_cache() -> None:
+    """대시보드가 기본 탭이라 시작 직후 미리 계산해 둔다.
+
+    인덱스를 예열해도 여기 남는 비용이 있다 — 뉴스 12,000건을 시장별로 묶는 계산이
+    5.7초다. 앱을 켜고 처음 대시보드를 여는 사람이 그걸 기다리는 대신, 시작하자마자
+    조용히 치른다. 한 번 계산하면 네 시장이 모두 캐시된다.
+    """
+    try:
+        story_share_payload(None, "US")
+    except Exception:  # noqa: BLE001 - 예열 실패가 서버 시작을 막지 않는다
+        pass
