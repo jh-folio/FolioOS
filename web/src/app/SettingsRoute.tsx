@@ -252,8 +252,22 @@ type RetentionPreview = {
   reclaimableBytes?: number;
 };
 
-function megabytes(bytes: number) {
+export function megabytes(bytes: number) {
   return `${Math.max(bytes / 1e6, 0).toFixed(bytes >= 1e8 ? 0 : 1)}MB`;
+}
+
+// 서버의 RECLAIM_THRESHOLD_BYTES와 짝이다. 이만큼 아래면 12~29초를 기다릴 값을 못 한다.
+const RECLAIM_THRESHOLD_BYTES = 50e6;
+
+/** `지금 정리` 버튼 옆 설명.
+ *
+ *  VACUUM은 도는 동안 검색을 멈춘다. 돌려받는 양을 먼저 말해야 누를지 정할 수 있다.
+ *  임베딩을 blob으로 바꾸고 나면 지울 자료가 없어도 수백 MB가 빈 페이지로 남는다.
+ */
+export function reclaimHint(reclaimableBytes: number | undefined) {
+  return (reclaimableBytes || 0) >= RECLAIM_THRESHOLD_BYTES
+    ? `검색 색인에서 약 ${megabytes(reclaimableBytes!)}를 돌려받습니다. 그동안 검색이 잠시 멈춥니다.`
+    : "정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다.";
 }
 
 /** 지우기 전에 무엇이 지워지는지 말한다.
@@ -1348,11 +1362,7 @@ export function SettingsRoute() {
                   >
                     {busy === "retention" ? "정리하는 중…" : "지금 정리"}
                   </button>
-                  <span className="settings-hint">
-                    {(retentionPreview?.reclaimableBytes || 0) >= 50e6
-                      ? `검색 색인에서 약 ${megabytes(retentionPreview!.reclaimableBytes!)}를 돌려받습니다. 그동안 검색이 잠시 멈춥니다.`
-                      : "정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다."}
-                  </span>
+                  <span className="settings-hint">{reclaimHint(retentionPreview?.reclaimableBytes)}</span>
                 </div>
                 <LastRun run={lastRunByKind.rss} />
               </section>
