@@ -1314,13 +1314,19 @@ def api_import_rssarchive():
 @fastapi_app.get("/api/rss/retention")
 def api_rss_retention(days: str = ""):
     """`days`를 주면 그 기간으로 세어 본다 — 저장하기 전에 무엇이 지워지는지 보여준다."""
-    from features.common.research_library.rss.retention import RETENTION_CHOICES, preview
+    from features.common.research_library.rss.retention import (
+        RETENTION_CHOICES,
+        preview,
+        reclaimable_bytes,
+    )
     from features.common.research_library.rss.service import rss_retention_days
 
     chosen = days.strip()
     return {
         "choices": list(RETENTION_CHOICES),
         "saved": rss_retention_days(),
+        # 지울 자료가 없어도 돌려받을 공간은 있을 수 있다. 버튼이 무엇을 할지 말해야 한다.
+        "reclaimableBytes": reclaimable_bytes(),
         **preview(chosen if chosen else rss_retention_days()),
     }
 

@@ -691,5 +691,16 @@ def warm_index_cache() -> None:
             warm_story_share_cache()
         except Exception:  # noqa: BLE001
             pass
+        # 판올림한 DB의 옛 JSON 임베딩을 blob으로 바꾼다. 예열이 끝난 뒤에 시작해
+        # 첫 화면과 디스크를 다투지 않는다. batch마다 잠깐씩만 잠그며, 중간에 서버가
+        # 꺼져도 다음 시작이 남은 것을 이어서 한다.
+        try:
+            from features.common.research_library.indexing.research_index import migrate_embeddings
+
+            # 캐시는 문서를 들고 있고 임베딩은 검색이 그때그때 DB에서 읽는다.
+            # 바꾼다고 캐시가 낡지 않으므로 6초짜리 재로딩을 부르지 않는다.
+            migrate_embeddings(RESEARCH_DB_PATH)
+        except Exception:  # noqa: BLE001
+            pass
 
     threading.Thread(target=_worker, name="folio-index-warm", daemon=True).start()

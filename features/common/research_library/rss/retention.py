@@ -158,6 +158,32 @@ def prune_orphan_evidence(db_path: Path | None = None, rss_dir: Path | None = No
         conn.close()
 
 
+def reclaimable_bytes(db_path: Path | None = None) -> int:
+    """VACUUM으로 돌려받을 수 있는 크기. 지운 행이 비운 페이지다.
+
+    파일 크기는 행을 지운다고 줄지 않는다. 빈 페이지는 다음 수집이 재사용하므로 파일이
+    더 자라지 않게는 하지만, 사용자가 보는 것은 디스크 용량이다. 얼마나 돌려받는지
+    미리 말할 수 있어야 29초를 기다릴지 정할 수 있다.
+    """
+    from features.common.workspace import data_dir
+
+    path = Path(db_path or (data_dir() / "research-index.sqlite3"))
+    if not path.exists():
+        return 0
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)
+    except sqlite3.Error:
+        return 0
+    try:
+        free = conn.execute("PRAGMA freelist_count").fetchone()[0] or 0
+        page = conn.execute("PRAGMA page_size").fetchone()[0] or 0
+        return int(free) * int(page)
+    except sqlite3.Error:
+        return 0
+    finally:
+        conn.close()
+
+
 def reclaim_index_space(db_path: Path | None = None) -> dict:
     """VACUUM. 행을 지워도 SQLite 파일은 저절로 줄지 않는다.
 

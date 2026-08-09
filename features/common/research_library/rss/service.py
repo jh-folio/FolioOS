@@ -21,6 +21,7 @@ from features.common.research_library.rss.retention import (
     delete_expired as delete_expired_rss,
     prune_orphan_evidence,
     reclaim_index_space,
+    reclaimable_bytes,
 )
 from features.common.research_library.indexing.service import (
     RESEARCH_DB_PATH,
@@ -46,6 +47,8 @@ RSS_DATETIME_FORMATS = (
 RSS_FILENAME_TS_FORMAT = "%Y-%m-%d %H-%M-%S"
 RSS_DISPLAY_TS_FORMAT = "%Y-%m-%d %H:%M:%S"
 MAX_RSS_LIMIT = 200
+# VACUUM은 실측 728MB 기준 12~29초 동안 DB를 잠근다. 이만큼은 돌려받아야 값을 한다.
+RECLAIM_THRESHOLD_BYTES = 50_000_000
 RSS_CACHE_TABLE = "rss_feed_items"
 RSS_CACHE_REFRESH_TTL_SECONDS = int(os.environ.get("RSS_CACHE_REFRESH_TTL_SECONDS", "30") or 30)
 _RSS_CACHE_LAST_REFRESH = 0.0
@@ -870,10 +873,17 @@ def run_retention_now(progress=None):
             progress("보관 기간이 지난 RSS 자료를 확인하는 중입니다.", progress=5)
         removed = delete_expired_rss(days)
         if not removed.get("deleted"):
-            # 지울 것이 없는데 재색인을 돌리면 아무 일도 아닌 데 몇 분을 쓴다.
+            # 지울 것이 없어도 돌려받을 공간은 있을 수 있다 — 임베딩을 blob으로 바꾸면
+            # 실측 728MB에서 348MB가 빈 페이지로 남는다. 재색인은 건너뛰고 회수만 한다.
+            spare = reclaimable_bytes()
+            if spare < RECLAIM_THRESHOLD_BYTES:
+                if progress:
+                    progress("보관 기간이 지난 자료가 없고 돌려받을 공간도 없습니다.", progress=100)
+                return {"retention": removed, "skipped": True}
             if progress:
-                progress("보관 기간이 지난 자료가 없습니다.", progress=100)
-            return {"retention": removed, "skipped": True}
+                progress(f"지울 자료는 없지만 검색 색인에서 {spare // 1_000_000}MB를 돌려받습니다.", progress=40)
+            removed["reclaimed"] = reclaim_index_space()
+            return {"retention": removed, "skipped": False}
         if progress:
             progress(f"{removed['deleted']}개를 지웠습니다. 피드 캐시와 색인을 다시 만듭니다.", progress=20)
         cache = refresh_rss_feed_cache(progress=progress, force=True)

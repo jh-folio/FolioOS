@@ -129,6 +129,7 @@ RSS는 하루 300건씩 들어오고 한 건이 파일로 끝나지 않습니다
 
 ```text
 data/research-index.sqlite3   # documents, file_manifest, chunks, chunks_fts, rss_feed_items
+#   chunks.embedding: float32 + zlib blob (JSON 텍스트 대비 14.85배 작고 디코드 9배 빠름)
 data/index.json               # generatedAt/count/incremental/sqlite 등 상태 요약
 data/pdf-cache/               # PDF 본문 추출 캐시
 ```
@@ -144,6 +145,17 @@ data/pdf-cache/               # PDF 본문 추출 캐시
 5. 기업/범위 필터는 결과에 post-filter 적용
 
 쿼리 없이 회사/범위 필터만 있을 때는 인메모리 문서 목록을 필터링합니다.
+
+### 임베딩 저장 형식
+
+`chunks.embedding`은 float32 + zlib blob입니다. JSON 텍스트로 저장하면 값 하나가 `-0.05922199384805114,` 같은 20여 글자가 되어, 실측으로 청크 42,471개의 임베딩이 342MB를 차지했습니다(검색 DB 728MB의 절반 가까이). 같은 표본에서 이 형식은 **14.85배 작고 디코드가 9배 빠릅니다**(후보 120개 기준 13.0ms → 1.4ms). 실제 DB에서 변환 + VACUUM 후 **728MB → 380MB**였습니다.
+
+float32로 줄이면 성분 오차가 최대 1.4e-08입니다. 코사인 값은 RRF에서 **순위로만** 쓰이므로 이 오차로는 순서가 바뀌지 않습니다 — 실제 질의 8개(한국어 포함)로 변환 전후 상위 20위가 완전히 같음을 확인했습니다.
+
+- 판올림한 DB는 시작 직후 배경에서 변환합니다(`migrate_embeddings()`). batch 500개가 곧 한 트랜잭션이라 그동안 검색이 멈추지 않고, 중간에 꺼져도 다음 시작이 이어서 합니다(`typeof(embedding)='text'`로 고름).
+- `parse_embedding()`은 blob과 옛 JSON을 모두 읽습니다. 변환이 도는 동안에도 검색이 그대로 동작해야 합니다.
+- 칸 이름은 `embedding_json` → `embedding`으로 바뀝니다. SQLite 3.25+의 `RENAME COLUMN`은 메타데이터만 바꿔 728MB DB에서도 즉시 끝납니다.
+- 변환해도 파일은 줄지 않습니다(빈 페이지로 남음). 설정의 `지금 정리`가 `PRAGMA freelist_count`로 회수량을 재서 50MB 이상일 때 VACUUM합니다.
 
 ## 태깅
 

@@ -22199,7 +22199,7 @@ function Zl() {
 													children: re === "retention" ? "정리하는 중…" : "지금 정리"
 												}), /* @__PURE__ */ (0, G.jsx)("span", {
 													className: "settings-hint",
-													children: "정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다."
+													children: (h?.reclaimableBytes || 0) >= 5e7 ? `검색 색인에서 약 ${Hl(h.reclaimableBytes)}를 돌려받습니다. 그동안 검색이 잠시 멈춥니다.` : "정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다."
 												})]
 											}),
 											/* @__PURE__ */ (0, G.jsx)(Kl, { run: be.rss })

@@ -380,6 +380,8 @@ features/company_analysis/financial_quality_prompt.md
 - normalized URL 기준 dedupe를 사용한다. `summary_only`/`needs_manual_save`/`legacy_rss`/`fetch_failed`는 기본적으로 반복 재수집하지 않는다(`--retry-failed`/`--retry-summary-only`로만).
 - 공식자료(SEC/OpenDART/FRED/BOK)는 `source_type=official_filing|macro_data|official_release`, `reliability_tier=1`로 구분한다. 현재 adapter는 fake data 없는 stub이며 브리핑 직접 근거로 쓰지 않는다.
 - 외부 검색 API 기반 추가 수집은 사용하지 않는다. RSS 수집 버튼(`/api/rssarchive/import`)은 RSS collector만 실행한다.
+- **임베딩은 `chunks.embedding`에 float32 + zlib blob으로 담는다.** JSON 텍스트는 값 하나가 20여 글자라 청크 42,471개가 342MB였다(실측). 이 형식은 14.85배 작고 디코드가 9배 빠르며, 변환+VACUUM 후 DB가 728MB → 380MB가 됐다. float32 오차는 최대 1.4e-08이고 코사인은 RRF에서 순위로만 쓰여 한국어 포함 8개 질의의 상위 20위가 완전히 같았다.
+- 판올림한 DB는 시작 직후 배경에서 batch 500개씩 변환한다(`migrate_embeddings()`). 전부를 한 트랜잭션으로 밀면 그동안 검색이 멈춘다. `parse_embedding()`이 blob과 옛 JSON을 모두 읽으므로 변환 중에도 검색이 동작한다. 변환해도 파일은 줄지 않으며 회수는 `지금 정리`가 한다.
 - **보관 기간이 곧 검색 DB 크기다.** 인덱스된 문서는 100%가 RSS이고, 한 건이 파일 3.5KB로 끝나지 않는다 — 문서 하나와 청크 3~4개가 따라붙어 실측 2.5개월치 22,609건에 `research-index.sqlite3`가 728MB였다(그중 342MB가 `chunks.embedding_json`). 설정은 `automation-settings.json`의 `rss.retentionDays`(기본 90일)이고 로직은 `features/common/research_library/rss/retention.py`다.
 - 정리는 **파일만 지운다.** 나머지 행은 이미 있는 경로가 걷어낸다 — `refresh_rss_feed_cache()`가 `rss_feed_items`를, `build_index(incremental=True)`가 `documents`/`chunks`/FTS/`file_manifest`를 정리한다. 같은 일을 하는 삭제 SQL을 따로 쓰면 인덱서가 바뀔 때마다 조용히 어긋난다. 어느 쪽도 손대지 않는 `evidence_items`만 재색인 뒤에 정리한다.
 - 날짜는 파일명 접두로 읽고, 날짜를 못 읽는 파일과 `.state.json`은 건드리지 않는다. 기간은 `RETENTION_CHOICES` 값만 받는다 — 임의의 숫자로 자료가 지워지지 않는다.

@@ -247,7 +247,10 @@ const RETENTION_CHOICES: Array<{ value: string; label: string }> = [
   { value: "0", label: "계속 보관" },
 ];
 
-type RetentionPreview = { days: number; cutoff: string; files: number; fileBytes: number; estimatedIndexBytes: number };
+type RetentionPreview = {
+  days: number; cutoff: string; files: number; fileBytes: number; estimatedIndexBytes: number;
+  reclaimableBytes?: number;
+};
 
 function megabytes(bytes: number) {
   return `${Math.max(bytes / 1e6, 0).toFixed(bytes >= 1e8 ? 0 : 1)}MB`;
@@ -1345,7 +1348,11 @@ export function SettingsRoute() {
                   >
                     {busy === "retention" ? "정리하는 중…" : "지금 정리"}
                   </button>
-                  <span className="settings-hint">정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다.</span>
+                  <span className="settings-hint">
+                    {(retentionPreview?.reclaimableBytes || 0) >= 50e6
+                      ? `검색 색인에서 약 ${megabytes(retentionPreview!.reclaimableBytes!)}를 돌려받습니다. 그동안 검색이 잠시 멈춥니다.`
+                      : "정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다."}
+                  </span>
                 </div>
                 <LastRun run={lastRunByKind.rss} />
               </section>
