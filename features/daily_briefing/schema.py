@@ -476,13 +476,25 @@ def briefing_market_metadata(report, market_scope, section=None):
 
 def enrich_briefing_sections(
     sections, *, report_date, report_scope, briefing_type, generated_at, report_summary="",
+    market_windows=None,
 ):
+    """시장별 섹션에 제목·세션일·세션모드를 붙인다.
+
+    `market_windows`가 곧 세션 판정의 근거다. 넘기지 않으면 `briefing_market_metadata`가
+    창을 못 봐서 세션일이 발행일로 떨어지고, KR은 `krSessionPhase`가 없다는 이유로
+    세션 모드까지 버린다(위 421행 가드). 그래서 08:00에 만든 브리핑이 아직 열지도 않은
+    그날 장을 "마감"이라 하고, 장중 생성은 "장중"이 아예 나오지 않았다.
+
+    창은 호출부가 이미 들고 있다 — 문서 선별(`select_briefing_docs`)이 돌려준 그 값이며,
+    생성 시각(`as_of`) 기준으로 phase가 매겨져 있다.
+    """
     report = {
         "date": report_date,
         "marketScope": report_scope,
         "briefingType": briefing_type,
         "generatedAt": generated_at,
         "summary": report_summary,
+        "marketWindows": market_windows or {},
     }
     enriched = {}
     for scope, raw in deepcopy(sections or {}).items():

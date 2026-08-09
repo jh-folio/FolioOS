@@ -406,6 +406,7 @@ features/company_analysis/financial_quality_prompt.md
 - 유럽·일본 휴장일 표는 `features/common/exchange_holidays.py` 하나이며 세션 판정과 시장 캘린더가 함께 읽는다. 유럽은 거래소별로 판정하고(런던만 쉬는 날이 연 십여 일) 표가 없는 연도는 `coverage_expired`로 보고한다. 평일을 개장으로 추측하지 않는다.
 - 대표 지수는 `features/common/markets.py`의 `MARKET_REGISTRY.representative_indices`가 단일 출처다. 통화·시간대는 시리즈마다 붙는다. 유럽은 GBP와 EUR이 한 차트에 섞이므로 스냅샷 통화를 하나로 stamp하지 않는다(`currencies` 목록, 섞이면 `currency: MIXED`).
 - 히트맵 상자 크기는 `weightBasis`와 함께 저장한다. 유럽은 EUR 환산 시가총액(`market_cap_eur`)이며 환율 없이 GBP와 EUR을 더하지 않는다.
+- **세션 창(`marketWindows`)을 `enrich_briefing_sections()`에 반드시 넘긴다.** 창이 없으면 세션일이 발행일로 떨어지고, KR은 `krSessionPhase`가 없다는 이유로 세션 모드까지 버린다 — 08:00에 만든 브리핑이 아직 열지도 않은 그날 장을 `마감`이라 하고, 장중 생성은 `장중`이 아예 나오지 않으며, 미국장은 항상 D-1이라 전부 하루씩 틀린다. 창은 `select_briefing_docs()`가 돌려준 값이며 생성 시각(`as_of`) 기준으로 phase가 매겨져 있다. 규칙 생성(`builder.py`)과 Agent 생성(`agent_mode/service.py`) 두 경로가 모두 넘겨야 같은 시각에 같은 제목이 저장된다.
 - 시장별 독자용 제목은 세션일과 상태를 함께 쓴다(`US ... D-1 마감`, `Korea ... D 장중|마감`). 발행일은 별도 `publicationDate`/`KST 발행` 메타데이터로 표시하고 저장 키·기본 정렬 기준으로 유지한다. Agent/API/규칙 생성과 아카이브가 같은 계약을 사용해야 한다.
 - **화면의 날짜 선택은 발행일이 아니라 그 시장의 세션 기준일이다.** 한 브리핑 안에서 미국장은 발행일 D의 D-1 정규장을, 한국장은 D 장을 다루므로 변환은 시장마다 다르다: 미국장·종합은 `세션일 다음 거래일`, 한국장은 `세션일 그대로`. 변환은 `publication_date_for_session()` 하나가 담당하고 `POST /api/briefings`에서 한 번만 적용한다. 저장 키·아카이브 정렬·기존 보고서는 계속 발행일 기준이라 호환이 깨지지 않는다.
 - 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. `pykrx` 기반 KRX 수치를 우선하고 실패하면 yfinance/기사 기반 fallback을 사용하되, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.

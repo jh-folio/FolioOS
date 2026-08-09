@@ -532,6 +532,7 @@ def build_briefing(
         briefing_type=briefing_type,
         generated_at=generated_at,
         report_summary=report_summary,
+        market_windows=market_windows,
     )
     briefing = {
         "date": date,

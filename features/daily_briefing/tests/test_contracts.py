@@ -2,6 +2,7 @@
 
 import datetime as dt
 import json
+import pytest
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -508,3 +509,64 @@ def _run_all():
 
 if __name__ == "__main__":
     sys.exit(0 if _run_all() else 1)
+
+
+# 생성 시각(KST 08:00 / 11:15 / 22:00)과 그때 나와야 하는 제목. 창은 생성 시각 기준으로
+# phase가 매겨지므로, 같은 날짜라도 언제 만들었느냐에 따라 답이 달라져야 한다.
+SESSION_TITLE_CASES = [
+    ("개장 전", "2026-08-06", "2026-08-05T23:00:00Z", "2026.08.05 마감", "2026.08.05 마감"),
+    ("장중", "2026-08-06", "2026-08-06T02:15:00Z", "2026.08.06 장중", "2026.08.05 마감"),
+    ("마감 후", "2026-08-06", "2026-08-06T13:00:00Z", "2026.08.06 마감", "2026.08.05 마감"),
+    ("지난 날짜 재생성", "2026-08-04", "2026-08-05T13:05:00Z", "2026.08.04 마감", "2026.08.03 마감"),
+    ("월요일 개장 전", "2026-08-10", "2026-08-09T23:00:00Z", "2026.08.07 마감", "2026.08.07 마감"),
+]
+
+
+@pytest.mark.parametrize("label, date, generated_at, kr_title, us_title", SESSION_TITLE_CASES)
+def test_saved_titles_follow_the_session_windows(label, date, generated_at, kr_title, us_title):
+    """저장되는 제목은 생성 시각이 만든 세션 창을 따라야 한다.
+
+    창을 넘기지 않으면 `briefing_market_metadata`가 세션일을 발행일로 떨어뜨리고, KR은
+    `krSessionPhase`가 없다는 이유로 세션 모드까지 버린다. 그래서 08:00에 만든 브리핑이
+    아직 열지도 않은 그날 장을 "마감"이라 했고, 장중 생성은 "장중"이 아예 나오지 않았다.
+    미국장은 항상 D-1이라 발행일 폴백이 전부 하루씩 틀렸다.
+    """
+    from features.common.market_calendar import briefing_market_windows
+
+    windows = briefing_market_windows(date, as_of=generated_at)
+    enriched = enrich_briefing_sections(
+        {"kr": {"markdown": "# KR"}, "us": {"markdown": "# US"}},
+        report_date=date, report_scope="both", briefing_type="default",
+        generated_at=generated_at, market_windows=windows,
+    )
+
+    assert enriched["kr"]["title"] == f"Korea Market Briefing — {kr_title}", label
+    assert enriched["us"]["title"] == f"US Market Briefing — {us_title}", label
+
+
+def test_both_generation_paths_hand_over_the_windows():
+    """계산이 맞아도 넘기지 않으면 저장되는 제목이 그 값을 못 받는다.
+
+    Agent 경로가 0.4.8 이후 창을 넘기지 않고 있었고, 그래서 규칙 생성과 Agent 생성이
+    같은 시각에 서로 다른 제목을 저장했다.
+    """
+    import inspect
+
+    from features.agent_mode import service as agent_service
+    from features.daily_briefing import builder
+
+    def enrich_call(source):
+        """호출 하나만 잘라낸다. 안쪽 호출이 있으므로 괄호를 맞춰 센다."""
+        start = source.index("enrich_briefing_sections(")
+        depth = 0
+        for offset in range(start, len(source)):
+            if source[offset] == "(":
+                depth += 1
+            elif source[offset] == ")":
+                depth -= 1
+                if depth == 0:
+                    return source[start:offset + 1]
+        raise AssertionError("호출이 닫히지 않았다")
+
+    for source in (inspect.getsource(builder.build_briefing), inspect.getsource(agent_service.write_briefing_from_markdown)):
+        assert "market_windows=" in enrich_call(source), "창을 넘기지 않으면 세션 판정이 버려진다"

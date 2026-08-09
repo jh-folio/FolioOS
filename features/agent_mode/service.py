@@ -490,6 +490,7 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
         briefing_type=draft.get("briefingType", "default"),
         generated_at=draft.get("generatedAt", ""),
         report_summary=draft.get("summary", ""),
+        market_windows=draft.get("marketWindows"),
     )
     briefing = {
         **draft,
