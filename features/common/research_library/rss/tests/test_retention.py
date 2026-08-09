@@ -137,3 +137,21 @@ def test_nothing_to_delete_means_no_reindex():
     source = inspect.getsource(service.run_retention_now)
     assert '"skipped": True' in source
     assert source.index('if not removed.get("deleted")') < source.index("build_index")
+
+
+def test_upgrading_never_deletes_what_you_already_have():
+    """보관 기간이 없던 설정에 기본 90일을 먹이면, 반년치를 모아 둔 사람이 새 버전을
+    받는 것만으로 다음 수집에서 석 달치를 잃는다. 지우겠다고 말한 적이 없는데 지워진다.
+
+    줄이는 것은 화면에서 고르게 하고, 고를 때 몇 건이 지워지는지 먼저 보여준다.
+    """
+    from features.automation.schema import normalize_settings
+
+    upgraded = normalize_settings({"rss": {"enabled": True, "saveFullText": True}})
+    fresh = normalize_settings(None)
+
+    assert upgraded["rss"]["retentionDays"] == 0, "쓰던 설정은 계속 보관"
+    assert fresh["rss"]["retentionDays"] == retention.DEFAULT_RETENTION_DAYS, "새 설치는 처음부터 묶는다"
+    # 한 번 고르면 그 값이 그대로 남는다.
+    assert normalize_settings({"rss": {"retentionDays": 30}})["rss"]["retentionDays"] == 30
+    assert normalize_settings({"rss": {"retentionDays": 0}})["rss"]["retentionDays"] == 0

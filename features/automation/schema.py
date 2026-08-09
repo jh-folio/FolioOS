@@ -185,6 +185,22 @@ def _choice(value, choices: set[str], default: str) -> str:
     return text if text in choices else default
 
 
+def _retention_for(raw: dict, rss: dict, default: int) -> int:
+    """보관 기간. **판올림한 사람에게는 적용하지 않는다.**
+
+    이 항목이 없는 설정 파일은 보관 기간이 생기기 전에 만들어진 것이다. 거기에 기본
+    90일을 먹이면, 반년치를 모아 둔 사람이 새 버전을 받는 것만으로 다음 수집에서 석 달치를
+    잃는다 — 지우겠다고 말한 적이 없는데 지워진다(§6 절대 규칙 2).
+
+    그래서 쓰던 설정에는 `계속 보관`을 주고, 줄이는 것은 화면에서 고르게 한다. 고를 때
+    몇 건이 지워지는지 먼저 보여주므로 그때는 알고 하는 선택이다. 설정 파일이 아예 없는
+    새 설치만 기본 90일로 시작해 아카이브가 처음부터 묶인다.
+    """
+    if "retentionDays" in rss:
+        return normalize_retention_days(rss["retentionDays"])
+    return default if not raw else 0
+
+
 def normalize_settings(raw: dict | None) -> dict:
     raw = raw or {}
     defaults = default_settings()
@@ -196,7 +212,7 @@ def normalize_settings(raw: dict | None) -> dict:
             "enabled": _bool(rss.get("enabled", defaults["rss"]["enabled"])),
             "intervalMinutes": _int(rss.get("intervalMinutes"), defaults["rss"]["intervalMinutes"], 15),
             "saveFullText": _bool(rss.get("saveFullText", defaults["rss"]["saveFullText"])),
-            "retentionDays": normalize_retention_days(rss.get("retentionDays", defaults["rss"]["retentionDays"])),
+            "retentionDays": _retention_for(raw, rss, defaults["rss"]["retentionDays"]),
         },
         "marketMemory": {
             "enabled": _bool(memory.get("enabled", defaults["marketMemory"]["enabled"])),

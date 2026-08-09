@@ -384,6 +384,7 @@ features/company_analysis/financial_quality_prompt.md
 - 판올림한 DB는 시작 직후 배경에서 batch 500개씩 변환한다(`migrate_embeddings()`). 전부를 한 트랜잭션으로 밀면 그동안 검색이 멈춘다. `parse_embedding()`이 blob과 옛 JSON을 모두 읽으므로 변환 중에도 검색이 동작한다. 변환해도 파일은 줄지 않으며 회수는 `지금 정리`가 한다.
 - **보관 기간이 곧 검색 DB 크기다.** 인덱스된 문서는 100%가 RSS이고, 한 건이 파일 3.5KB로 끝나지 않는다 — 문서 하나와 청크 3~4개가 따라붙어 실측 2.5개월치 22,609건에 `research-index.sqlite3`가 728MB였다(그중 342MB가 `chunks.embedding_json`). 설정은 `automation-settings.json`의 `rss.retentionDays`(기본 90일)이고 로직은 `features/common/research_library/rss/retention.py`다.
 - 정리는 **파일만 지운다.** 나머지 행은 이미 있는 경로가 걷어낸다 — `refresh_rss_feed_cache()`가 `rss_feed_items`를, `build_index(incremental=True)`가 `documents`/`chunks`/FTS/`file_manifest`를 정리한다. 같은 일을 하는 삭제 SQL을 따로 쓰면 인덱서가 바뀔 때마다 조용히 어긋난다. 어느 쪽도 손대지 않는 `evidence_items`만 재색인 뒤에 정리한다.
+- **기본값은 설치 상태에 따라 다르다.** 새 설치는 90일, 이 기능 이전에 만들어진 설정 파일이 있으면 `계속 보관`(0)이다(`schema.py::_retention_for`). 쓰던 설정에 90일을 먹이면 반년치를 모아 둔 사람이 판올림만으로 석 달치를 잃는다 — 지우겠다고 말한 적이 없는데 지워진다(§6 절대 규칙 2). 줄이는 것은 화면에서 고르고, 그때는 몇 건이 지워지는지 먼저 보여준다.
 - 날짜는 파일명 접두로 읽고, 날짜를 못 읽는 파일과 `.state.json`은 건드리지 않는다. 기간은 `RETENTION_CHOICES` 값만 받는다 — 임의의 숫자로 자료가 지워지지 않는다.
 - **VACUUM은 `지금 정리` 버튼에서만** 한다(`run_retention_now()`). 실측 728MB 기준 29초 동안 DB를 통째로 잠그므로 매시간 도는 수집에 물릴 수 없다. 자동 수집은 지운 자리를 SQLite가 재사용하게 두어 크기를 묶어 두고, 파일을 실제로 줄이는 일은 사용자가 부를 때 한다.
 - RSS API: `app.py::rss_feed_payload()`, `rss_merge_payload()`. import 경로는 `service.py::import_rssarchive()`.
