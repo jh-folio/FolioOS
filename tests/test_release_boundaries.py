@@ -18,7 +18,12 @@ ROOT = Path(__file__).resolve().parents[1]
 # 2026-08-07 검토하고 옮김: 일본·유럽 구성종목에 `englishName`을 채우고(각 225·199건,
 # yfinance longName) 한글 별칭 파일 `foreign_company_aliases.json`을 새로 넣었다.
 # 자국 표기만 있으면 "Toyota"로 찾을 때 도쿄 상장이 후보에 아예 없었기 때문이다.
-BASE_COMMIT = "91b1472575cd31f9db4a37da41e005ef58110015"
+# 2026-08-09 검토하고 옮김: `rss_feeds.yaml`에서 `country`를 걷어내고 `language`를 53개
+# 피드 전부로 넓혔다(예전에는 유럽·일본만 선언할 수 있었다). 일본 피드는 NHK·Asahi만
+# 남기고 Diamond Online·Toyo Keizai·Kyodo News를 뺐다 — 앞의 둘은 사이트 전체 피드라
+# 라이프·커리어 기사가 대부분이고, `kyodo.co.jp/feed/`는 뉴스 와이어가 아니라
+# 共同通信PRワイヤー였다. 대신 日経 헤드라인을 받는 Google News 검색을 넣었다.
+BASE_COMMIT = "1fc20596f5c7e8fc5e5ed3f2f546e3dadfc87a09"
 sys.path.insert(0, str(ROOT))
 from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 
