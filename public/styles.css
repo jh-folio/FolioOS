@@ -370,6 +370,8 @@
      기존 --folio-segment-active(어두운 알약)와 방향이 달라 별도 토큰을 둔다.
      다크 대응쌍은 기존 다크 세그먼트가 검증한 밝은 회색(#666e82, 트랙 대비 3:1)을 재사용한다. */
   --segment-thumb: #ffffff;
+  /* 알약(24px)용. --elev-1은 패널용이라 blur 12로 퍼져 이 크기에서 안 보인다. */
+  --segment-thumb-shadow: 0 1px 3px rgba(7, 17, 31, 0.16), 0 0 0 0.5px rgba(7, 17, 31, 0.06);
   --segment-thumb-ink: var(--folio-ink);
 
   /* 시장 색 (0.5_PLAN §3.16) — 하드코딩 금지 계약을 위한 슬롯.
@@ -456,6 +458,7 @@
   --surface-control: #1f2430;
   --surface-control-hover: #262c3a;
   --segment-thumb: #666e82;          /* 다크 세그먼트가 검증한 값 — 트랙 대비 3:1 */
+  --segment-thumb-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
   --segment-thumb-ink: #ffffff;
 }
 
@@ -15221,7 +15224,7 @@ main.page {
 .segment button[aria-pressed="true"] {
   background: var(--segment-thumb);
   color: var(--segment-thumb-ink);
-  box-shadow: var(--elev-1);
+  box-shadow: var(--segment-thumb-shadow);
 }
 .segment button:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: -2px; }
 
