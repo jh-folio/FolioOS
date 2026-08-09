@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from features.common.research_library.rss.retention import (
+    DEFAULT_RETENTION_DAYS,
+    RETENTION_CHOICES,
+    normalize_days as normalize_retention_days,
+)
+
 # 자동화 기본값은 네 시장(`all`)이다. 저장된 `both` 설정은 그대로 두 시장으로 남긴다.
 VALID_MARKET_SCOPES = {"us", "kr", "europe", "jp", "all", "both"}
 VALID_BRIEFING_TYPES = {"default", "market_focused", "concise"}
@@ -70,7 +76,12 @@ MAX_ATTEMPTS_PER_DAY = 3
 
 def default_settings() -> dict:
     return {
-        "rss": {"enabled": False, "intervalMinutes": 60, "saveFullText": True},
+        "rss": {
+            "enabled": False,
+            "intervalMinutes": 60,
+            "saveFullText": True,
+            "retentionDays": DEFAULT_RETENTION_DAYS,
+        },
         "marketMemory": {"enabled": False, "intervalMinutes": 1440, "runAfterRss": True},
         "briefingSchedules": [],
         "missedRuns": {"catchUpHours": DEFAULT_CATCH_UP_HOURS},
@@ -185,6 +196,7 @@ def normalize_settings(raw: dict | None) -> dict:
             "enabled": _bool(rss.get("enabled", defaults["rss"]["enabled"])),
             "intervalMinutes": _int(rss.get("intervalMinutes"), defaults["rss"]["intervalMinutes"], 15),
             "saveFullText": _bool(rss.get("saveFullText", defaults["rss"]["saveFullText"])),
+            "retentionDays": normalize_retention_days(rss.get("retentionDays", defaults["rss"]["retentionDays"])),
         },
         "marketMemory": {
             "enabled": _bool(memory.get("enabled", defaults["marketMemory"]["enabled"])),

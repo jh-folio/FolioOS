@@ -292,6 +292,7 @@ features/company_analysis/financial_quality_prompt.md
 - **기본값은 앱 폴더다.** 옮기는 것은 선택이고 아무것도 새로 만들지 않는다(2026-08-08 사용자 결정 — 홈 폴더에 앱이 폴더를 만드는 것을 싫어하는 사용자가 있다).
 - 폴더 존재가 아니라 **파일 유무**로 판정한다. 배포 zip이 빈 폴더를 만들어 두므로 존재만 보면 갓 푼 설치도 쓰던 워크스페이스로 오인한다.
 - 표지가 필요한 이유는 옮기기가 **원본을 지우지 않기** 때문이다. 표지가 없으면 앱 폴더 규칙이 먼저 걸려 방금 옮긴 곳이 아니라 옛 자료를 계속 쓴다. 표지는 배포 zip에 없으므로 새 버전 폴더에서는 문서 폴더 규칙이 자료를 다시 찾는다.
+- **경로를 앱 폴더 기준으로 만들지 않는다.** `documents.path`는 자료 폴더 기준 상대 경로이며 `indexing/service.py::workspace_relative()`가 만든다. 앱 폴더(`ROOT`) 기준으로 두면 자료를 문서 폴더로 옮긴 순간 `path.relative_to(ROOT)`가 `ValueError`를 던져 인덱싱 전체가 멈춘다 — 옮기기가 성공해도 앱을 못 쓴다. 기본값에서는 자료 폴더가 곧 앱 폴더라 저장되는 문자열이 같아 기존 색인은 그대로 읽힌다.
 - 판정은 프로세스당 1회 캐시한다. 모듈 상수 수십 곳이 import 시점에 읽는다. 옮긴 뒤에는 재시작이 필요하며 화면이 그렇게 안내한다.
 - 옮기기(`features/common/workspace_service.py`)는 복사 → 파일별 크기 검증 → 표지 순이다. 검증 실패 시 표지를 쓰지 않아 앱이 계속 원본을 쓴다. 목적지에 자료가 있으면 `merge` 없이 진행하지 않고, 목적지는 `documents`/`app` 둘뿐이다(임의 경로 금지). `FOLIO_HOME`이 설정돼 있으면 옮기기를 막는다 — 표지를 써도 다음 시작에서 환경변수가 이기므로 옮겼다고 말하면 거짓말이 된다.
 - 문서 폴더는 Windows 레지스트리(`User Shell Folders\Personal`)로 읽는다. OneDrive 리디렉션 시 `~/Documents`가 실제 문서 폴더가 아니다. 목적지가 OneDrive 아래면 막지 않고 경고만 한다.
@@ -379,6 +380,10 @@ features/company_analysis/financial_quality_prompt.md
 - normalized URL 기준 dedupe를 사용한다. `summary_only`/`needs_manual_save`/`legacy_rss`/`fetch_failed`는 기본적으로 반복 재수집하지 않는다(`--retry-failed`/`--retry-summary-only`로만).
 - 공식자료(SEC/OpenDART/FRED/BOK)는 `source_type=official_filing|macro_data|official_release`, `reliability_tier=1`로 구분한다. 현재 adapter는 fake data 없는 stub이며 브리핑 직접 근거로 쓰지 않는다.
 - 외부 검색 API 기반 추가 수집은 사용하지 않는다. RSS 수집 버튼(`/api/rssarchive/import`)은 RSS collector만 실행한다.
+- **보관 기간이 곧 검색 DB 크기다.** 인덱스된 문서는 100%가 RSS이고, 한 건이 파일 3.5KB로 끝나지 않는다 — 문서 하나와 청크 3~4개가 따라붙어 실측 2.5개월치 22,609건에 `research-index.sqlite3`가 728MB였다(그중 342MB가 `chunks.embedding_json`). 설정은 `automation-settings.json`의 `rss.retentionDays`(기본 90일)이고 로직은 `features/common/research_library/rss/retention.py`다.
+- 정리는 **파일만 지운다.** 나머지 행은 이미 있는 경로가 걷어낸다 — `refresh_rss_feed_cache()`가 `rss_feed_items`를, `build_index(incremental=True)`가 `documents`/`chunks`/FTS/`file_manifest`를 정리한다. 같은 일을 하는 삭제 SQL을 따로 쓰면 인덱서가 바뀔 때마다 조용히 어긋난다. 어느 쪽도 손대지 않는 `evidence_items`만 재색인 뒤에 정리한다.
+- 날짜는 파일명 접두로 읽고, 날짜를 못 읽는 파일과 `.state.json`은 건드리지 않는다. 기간은 `RETENTION_CHOICES` 값만 받는다 — 임의의 숫자로 자료가 지워지지 않는다.
+- **VACUUM은 `지금 정리` 버튼에서만** 한다(`run_retention_now()`). 실측 728MB 기준 29초 동안 DB를 통째로 잠그므로 매시간 도는 수집에 물릴 수 없다. 자동 수집은 지운 자리를 SQLite가 재사용하게 두어 크기를 묶어 두고, 파일을 실제로 줄이는 일은 사용자가 부를 때 한다.
 - RSS API: `app.py::rss_feed_payload()`, `rss_merge_payload()`. import 경로는 `service.py::import_rssarchive()`.
 - 출처 필터 드롭다운은 **현재 `config/rss_feeds.yaml`에서 수집 중인 매체만** 노출한다(`_selectable_sources()`). 피드를 지웠거나 aggregating 피드가 원 발행처로 재태그해서 더는 새 항목이 들어오지 않는 매체는 고를 수 있어도 결과가 늘지 않아 사용자를 오도한다. 과거 수집분은 목록에 그대로 보이며 필터 대상에서만 빠진다. 설정을 읽지 못하면 전부 노출하는 기존 동작으로 되돌아간다.
 - 화면: RSS 피드 탭. 한 페이지 20개 표시. 시간, 소스, 시장 필터를 제공한다.

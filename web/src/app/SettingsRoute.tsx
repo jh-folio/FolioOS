@@ -67,7 +67,7 @@ type BriefingSchedule = {
 };
 
 type AutomationSettings = {
-  rss?: { enabled?: boolean; intervalMinutes?: number | string; saveFullText?: boolean };
+  rss?: { enabled?: boolean; intervalMinutes?: number | string; saveFullText?: boolean; retentionDays?: number | string };
   marketMemory?: { enabled?: boolean; intervalMinutes?: number | string; runAfterRss?: boolean };
   briefingSchedules?: BriefingSchedule[];
   missedRuns?: { catchUpHours?: number | string };
@@ -179,6 +179,7 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
       enabled: Boolean(form.rss?.enabled),
       intervalMinutes: form.rss?.intervalMinutes || 60,
       saveFullText: form.rss?.saveFullText !== false,
+      retentionDays: form.rss?.retentionDays ?? DEFAULT_RETENTION_DAYS,
     },
     marketMemory: {
       enabled: Boolean(form.marketMemory?.enabled),
@@ -234,6 +235,40 @@ const CATCH_UP_CHOICES: Array<{ value: string; label: string }> = [
   { value: "6", label: "6시간 안이면" },
   { value: "24", label: "그날 안이면 언제든" },
 ];
+
+// 서버의 RETENTION_CHOICES와 짝이다. 여기 없는 값을 보내면 서버가 기본값으로 되돌린다.
+const DEFAULT_RETENTION_DAYS = 90;
+const RETENTION_CHOICES: Array<{ value: string; label: string }> = [
+  { value: "30", label: "30일" },
+  { value: "60", label: "60일" },
+  { value: "90", label: "90일" },
+  { value: "180", label: "180일" },
+  { value: "365", label: "1년" },
+  { value: "0", label: "계속 보관" },
+];
+
+type RetentionPreview = { days: number; cutoff: string; files: number; fileBytes: number; estimatedIndexBytes: number };
+
+function megabytes(bytes: number) {
+  return `${Math.max(bytes / 1e6, 0).toFixed(bytes >= 1e8 ? 0 : 1)}MB`;
+}
+
+/** 지우기 전에 무엇이 지워지는지 말한다.
+ *
+ *  보관 기간은 되돌릴 수 없는 설정이라, 고른 값이 지금 몇 건을 없애는지 보이지 않으면
+ *  고를 수 없다. 서버가 세는 값이고 화면은 그대로 옮긴다.
+ */
+function RetentionNote({ preview, days }: { preview: RetentionPreview | null; days: number }) {
+  if (days <= 0) return <p className="settings-hint">모든 자료를 계속 보관합니다. 수집이 쌓이는 만큼 검색 색인이 커집니다.</p>;
+  if (!preview || preview.days !== days) return <p className="settings-hint">정리 대상을 확인하는 중입니다.</p>;
+  if (!preview.files) return <p className="settings-hint">지금은 {preview.cutoff}보다 오래된 자료가 없어 지워지는 것이 없습니다.</p>;
+  return (
+    <p className="settings-hint">
+      {preview.cutoff}보다 오래된 <strong>{preview.files.toLocaleString()}건</strong>이 지워집니다
+      {" "}(자료 {megabytes(preview.fileBytes)}, 검색 색인 약 {megabytes(preview.estimatedIndexBytes)}).
+    </p>
+  );
+}
 
 function runOutcome(run: AutomationRun | undefined) {
   if (!run) return { tone: "", text: "아직 실행된 적 없습니다" };
@@ -679,6 +714,7 @@ export function SettingsRoute() {
   // 자동화 폼은 서버 응답을 그대로 편집하므로, dirty 판정용 기준선을 따로 든다.
   const [automationSaved, setAutomationSaved] = useState<AutomationSettings>({});
   const [automationRuns, setAutomationRuns] = useState<AutomationRun[]>([]);
+  const [retentionPreview, setRetentionPreview] = useState<RetentionPreview | null>(null);
   // 예약 제안은 관심 시장에서 켠 것만 넣는다. 못 읽으면 네 시장을 다 보여주고,
   // 실행할 때 서버가 어차피 교집합을 낸다.
   const [watchedMarkets, setWatchedMarkets] = useState<string[]>(MARKET_CODES.map((m) => m.id));
@@ -829,6 +865,33 @@ export function SettingsRoute() {
         : "정리할 오래된 캐시가 없습니다. 보관 기간이 지난 파일만 지웁니다.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "캐시 정리에 실패했습니다.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  // 고른 기간이 지금 몇 건을 없애는지 서버에 물어본다. 저장한 값이 아니라 **고른 값**을
+  // 물어야 한다 — 저장 후에야 알 수 있다면 되돌릴 수 없는 설정을 눈감고 고르는 셈이다.
+  const retentionDays = Number(automation.rss?.retentionDays ?? DEFAULT_RETENTION_DAYS);
+  useEffect(() => {
+    if (retentionDays <= 0) return undefined;
+    let alive = true;
+    // 실패해도 화면이 뜨는 편이 낫다. 미리보기가 없으면 안내 문장만 빠진다.
+    getJson<RetentionPreview>(`/api/rss/retention?days=${retentionDays}`)
+      .then((payload) => { if (alive) setRetentionPreview(payload); })
+      .catch(() => { if (alive) setRetentionPreview(null); });
+    return () => { alive = false; };
+  }, [retentionDays]);
+
+  async function runRetentionNow() {
+    setBusy("retention");
+    setError("");
+    try {
+      // 백그라운드 작업이라 여기서는 접수만 확인한다. 진행률은 상단 작업 표시가 맡는다.
+      await postJson("/api/rss/retention/run", {});
+      setStatus("정리 작업을 시작했습니다. 진행 상황은 상단 작업 표시에서 확인합니다.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "정리를 시작하지 못했습니다.");
     } finally {
       setBusy("");
     }
@@ -1263,6 +1326,27 @@ export function SettingsRoute() {
                 </div>
                 <label className="field"><span>수집 간격</span><select value={String(automation.rss?.intervalMinutes || 60)} onChange={(event) => setAutomation({ ...automation, rss: { ...automation.rss, intervalMinutes: event.currentTarget.value } })}><option value="15">15분마다</option><option value="30">30분마다</option><option value="60">1시간마다</option><option value="180">3시간마다</option></select></label>
                 <div className="automation-inline-switch"><span>기사 전문 저장 (무료 공개 본문만, 로컬 보관용)</span><ToggleSwitch ariaLabel="기사 전문 저장" checked={automation.rss?.saveFullText !== false} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, saveFullText: checked } })} compact /></div>
+                <label className="field">
+                  <span>보관 기간</span>
+                  <select
+                    value={String(retentionDays)}
+                    onChange={(event) => setAutomation({ ...automation, rss: { ...automation.rss, retentionDays: Number(event.currentTarget.value) } })}
+                  >
+                    {RETENTION_CHOICES.map((choice) => <option key={choice.value} value={choice.value}>{choice.label}</option>)}
+                  </select>
+                </label>
+                <RetentionNote preview={retentionPreview} days={retentionDays} />
+                <div className="automation-card-actions">
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={busy === "retention"}
+                    onClick={runRetentionNow}
+                  >
+                    {busy === "retention" ? "정리하는 중…" : "지금 정리"}
+                  </button>
+                  <span className="settings-hint">정리 후 검색 색인을 다시 만들고 파일 크기를 줄입니다. 몇 분 걸릴 수 있습니다.</span>
+                </div>
                 <LastRun run={lastRunByKind.rss} />
               </section>
 

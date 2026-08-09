@@ -1311,6 +1311,27 @@ def api_import_rssarchive():
     )
 
 
+@fastapi_app.get("/api/rss/retention")
+def api_rss_retention(days: str = ""):
+    """`days`를 주면 그 기간으로 세어 본다 — 저장하기 전에 무엇이 지워지는지 보여준다."""
+    from features.common.research_library.rss.retention import RETENTION_CHOICES, preview
+    from features.common.research_library.rss.service import rss_retention_days
+
+    chosen = days.strip()
+    return {
+        "choices": list(RETENTION_CHOICES),
+        "saved": rss_retention_days(),
+        **preview(chosen if chosen else rss_retention_days()),
+    }
+
+
+@fastapi_app.post("/api/rss/retention/run")
+def api_run_rss_retention():
+    from features.common.research_library.rss.service import run_retention_now
+
+    return submit_job("rss", "오래된 RSS 자료 정리", run_retention_now)
+
+
 @fastapi_app.get("/api/market-scope")
 def api_get_market_scope():
     from features.common.market_scope import MARKET_LABELS, MARKETS, load_market_scope

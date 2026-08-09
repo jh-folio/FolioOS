@@ -36,7 +36,7 @@ from features.common.research_library.indexing.research_index import (
     write_manifest,
 )
 from features.common.research_library.rss.feed_config import feed_metadata_for_query
-from features.common.workspace import data_dir, research_inbox_dir
+from features.common.workspace import data_dir, research_inbox_dir, workspace_root
 
 ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = data_dir()
@@ -318,15 +318,34 @@ def document_content_hash(content):
     return hashlib.sha256(str(content or "").encode("utf-8", errors="replace")).hexdigest()
 
 
+def workspace_relative(path):
+    """자료 폴더 기준 상대 경로. `documents.path`에 저장되는 값이다.
+
+    앱 폴더(`ROOT`) 기준이면 자료를 문서 폴더로 옮긴 순간 색인이 `ValueError`로 죽는다 —
+    `INBOX_DIR`은 `FOLIO_HOME`을 따라가는데 여기만 앱 폴더를 봤다. 기본값에서는 자료
+    폴더가 곧 앱 폴더라 저장되는 문자열이 같으므로, 이미 만들어진 색인은 그대로 읽힌다.
+    """
+    root = workspace_root()
+    try:
+        return path.relative_to(root)
+    except ValueError:
+        # 자료 폴더 밖의 파일. 옛 동작(앱 폴더 기준)으로 한 번 더 시도하고, 그것도
+        # 아니면 절대 경로를 쓴다. 어느 쪽이든 예외로 색인 전체를 멈추지 않는다.
+        try:
+            return path.relative_to(ROOT)
+        except ValueError:
+            return path
+
+
 def should_index_file(path):
-    rel = path.relative_to(ROOT).as_posix().lower()
+    rel = workspace_relative(path).as_posix().lower()
     if rel == "research-inbox/rss/.state.json":
         return False
     return True
 
 
 def build_document(path):
-    rel = path.relative_to(ROOT).as_posix()
+    rel = workspace_relative(path).as_posix()
     ext = path.suffix.lower()
     stat = path.stat()
     signature = file_signature(path)
@@ -435,7 +454,7 @@ def build_index(incremental=True, progress=None):
             if progress and (scanned == 1 or scanned % 50 == 0 or scanned == total_files):
                 pct = 5 + int((scanned / max(total_files, 1)) * 65)
                 progress(f"인덱싱 중: {scanned}/{total_files} 파일 확인", progress=min(pct, 70))
-            rel = path.relative_to(ROOT).as_posix()
+            rel = workspace_relative(path).as_posix()
             seen_paths.add(rel)
             if not path.is_file():
                 continue

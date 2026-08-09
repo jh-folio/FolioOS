@@ -130,3 +130,30 @@ def test_warming_never_breaks_startup(monkeypatch):
     svc.warm_index_cache()  # 예외가 새어 나오면 안 된다
     time.sleep(0.3)
     svc.invalidate_index_cache()
+
+
+def test_paths_hang_off_the_workspace_not_the_app_folder(tmp_path, monkeypatch):
+    """자료를 문서 폴더로 옮기면 색인이 `ValueError`로 죽고 있었다.
+
+    `INBOX_DIR`은 `FOLIO_HOME`을 따라가는데 상대 경로만 앱 폴더를 봤다. 자료 폴더가
+    앱 폴더 밖이면 `path.relative_to(ROOT)`가 예외를 던져 인덱싱 전체가 멈춘다 —
+    옮기기가 성공해도 앱을 못 쓴다는 뜻이다.
+    """
+    moved = tmp_path / "Documents" / "FolioOS"
+    article = moved / "research-inbox" / "rss" / "2026-08-09 09-00-00 - BBC - x.md"
+    article.parent.mkdir(parents=True)
+    article.write_text("body", encoding="utf-8")
+    monkeypatch.setattr(svc, "workspace_root", lambda: moved)
+
+    assert svc.workspace_relative(article).as_posix() == "research-inbox/rss/2026-08-09 09-00-00 - BBC - x.md"
+    assert svc.should_index_file(article) is True
+
+
+def test_the_collector_state_file_is_still_skipped_after_a_move(tmp_path, monkeypatch):
+    moved = tmp_path / "FolioOS"
+    state = moved / "research-inbox" / "rss" / ".state.json"
+    state.parent.mkdir(parents=True)
+    state.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(svc, "workspace_root", lambda: moved)
+
+    assert svc.should_index_file(state) is False

@@ -17,6 +17,11 @@ from features.common.research_library.rss.feed_config import (
     feed_metadata_for_query,
 )
 from features.common.research_library.rss.normalizer import markets_with_feed_fallback
+from features.common.research_library.rss.retention import (
+    delete_expired as delete_expired_rss,
+    prune_orphan_evidence,
+    reclaim_index_space,
+)
 from features.common.research_library.indexing.service import (
     RESEARCH_DB_PATH,
     canonical_news_source,
@@ -744,6 +749,17 @@ def rss_save_full_text_enabled():
     return bool(rss_cfg.get("saveFullText", True))
 
 
+def rss_retention_days():
+    """보관 기간 (설정 탭 자동화 > RSS 수집). saveFullText와 같은 이유로 파일을 직접 읽는다."""
+    from features.common.research_library.rss.retention import normalize_days
+
+    settings = read_json(data_dir() / "automation-settings.json", {})
+    rss_cfg = settings.get("rss") if isinstance(settings, dict) else {}
+    if not isinstance(rss_cfg, dict):
+        rss_cfg = {}
+    return normalize_days(rss_cfg.get("retentionDays"))
+
+
 def _import_rssarchive_locked(run_collection=True, progress=None, extra_args=None):
     output = []
     before = len(list(RSS_INBOX_DIR.glob("*.md")))
@@ -777,12 +793,27 @@ def _import_rssarchive_locked(run_collection=True, progress=None, extra_args=Non
     added = collector_created if collector_created is not None else max(after - before, 0)
     output.append(f"RSS collection finished. Added {added}, total {after}.")
     output.append(f"RSS folder: {RSS_INBOX_DIR}")
+    # 보관 기간이 지난 파일은 여기서 지운다. 바로 뒤의 캐시 갱신과 재색인이 남은 행을
+    # 걷어내므로 정리 비용이 따로 들지 않는다 — 정리 전용 재색인을 한 번 더 돌리면
+    # 수집 때마다 같은 일을 두 번 하게 된다.
+    retention = delete_expired_rss(rss_retention_days())
+    if retention.get("deleted"):
+        after -= retention["deleted"]
+        output.append(
+            f"Retention removed {retention['deleted']} files older than {retention['days']} days."
+        )
+        if progress:
+            progress(f"보관 기간({retention['days']}일)이 지난 {retention['deleted']}개를 정리했습니다.", progress=58)
     if progress:
         progress(f"RSS 수집 완료: 신규 {added}개, 총 {after}개. 피드 캐시를 갱신합니다.", progress=62)
     cache = refresh_rss_feed_cache(progress=progress, force=True)
     if progress:
         progress(f"RSS 피드 캐시 갱신 완료: 변경 {cache.get('updated', 0)}개, 삭제 {cache.get('deleted', 0)}개. 인덱스를 갱신합니다.", progress=68)
     index = build_index(incremental=True, progress=progress)
+    if retention.get("deleted"):
+        # 인덱서도 피드 캐시도 evidence 표는 건드리지 않는다. 재색인 뒤에 정리해야
+        # 파일이 사라진 행만 정확히 남는다.
+        retention["evidencePruned"] = prune_orphan_evidence()
     try:
         from features.dashboard.story_share import invalidate_story_share_cache
 
@@ -794,6 +825,7 @@ def _import_rssarchive_locked(run_collection=True, progress=None, extra_args=Non
         "added": added,
         "total": after,
         "cache": cache,
+        "retention": retention,
         "index": {"count": index.get("count", 0), "generatedAt": index.get("generatedAt", ""), "incremental": index.get("incremental", {})},
     }
 
@@ -822,3 +854,43 @@ def import_rssarchive(run_collection=True, progress=None):
     # 한 번에 하나만 실행해 dedupe state와 실행별 신규 개수를 안정적으로 유지한다.
     with _RSS_IMPORT_LOCK:
         return _import_rssarchive_locked(run_collection=run_collection, progress=progress, extra_args=None)
+
+
+def run_retention_now(progress=None):
+    """설정 화면의 `지금 정리`. 수집 없이 정리만 하고 파일 크기까지 줄인다.
+
+    VACUUM은 **여기서만** 한다. 실측 728MB 기준 29초 동안 DB를 통째로 잠그므로,
+    매시간 도는 수집이 파일 하나를 지웠다고 매번 물릴 수 없다. 자동 수집은 지운
+    자리를 SQLite가 재사용하게 두어 크기를 묶어 두고, 실제로 파일을 줄이는 일은
+    사용자가 부를 때 한다.
+    """
+    with _RSS_IMPORT_LOCK:
+        days = rss_retention_days()
+        if progress:
+            progress("보관 기간이 지난 RSS 자료를 확인하는 중입니다.", progress=5)
+        removed = delete_expired_rss(days)
+        if not removed.get("deleted"):
+            # 지울 것이 없는데 재색인을 돌리면 아무 일도 아닌 데 몇 분을 쓴다.
+            if progress:
+                progress("보관 기간이 지난 자료가 없습니다.", progress=100)
+            return {"retention": removed, "skipped": True}
+        if progress:
+            progress(f"{removed['deleted']}개를 지웠습니다. 피드 캐시와 색인을 다시 만듭니다.", progress=20)
+        cache = refresh_rss_feed_cache(progress=progress, force=True)
+        index = build_index(incremental=True, progress=progress)
+        removed["evidencePruned"] = prune_orphan_evidence()
+        if progress:
+            progress("검색 색인 파일 크기를 줄이는 중입니다. 1분 정도 걸릴 수 있습니다.", progress=88)
+        removed["reclaimed"] = reclaim_index_space()
+        try:
+            from features.dashboard.story_share import invalidate_story_share_cache
+
+            invalidate_story_share_cache()
+        except Exception:
+            pass
+        return {
+            "retention": removed,
+            "skipped": False,
+            "cache": cache,
+            "index": {"count": index.get("count", 0), "generatedAt": index.get("generatedAt", "")},
+        }

@@ -110,6 +110,19 @@ python -m features.common.research_library.rss.rss_archive --collectors rss --sa
 RSS 피드 화면은 Markdown 파일 전체를 매번 읽지 않고 `data/research-index.sqlite3`의 `rss_feed_items` 캐시에서 `LIMIT/OFFSET`으로 읽습니다. 캐시는 파일 크기와 `mtime_ns` 기준으로 증분 갱신하며 기본 TTL은 `RSS_CACHE_REFRESH_TTL_SECONDS=30`초입니다.
 각 RSS 항목은 `markets` 태그를 함께 저장합니다. 값은 `US`, `KR`, `GLOBAL`, `UNKNOWN`이며, `US,KR,GLOBAL`처럼 복수 태그가 가능합니다. RSS 목록과 병합 다운로드는 `market=US|KR|GLOBAL|UNKNOWN` 필터를 지원합니다.
 
+## 보관 기간 (Retention)
+
+설정 탭 > 자동화 > RSS 수집에서 보관 기간을 고릅니다(30/60/90/180일/1년/계속 보관, 기본 90일). 기간이 지난 `research-inbox/rss/*.md`는 다음 수집 때 함께 지워집니다.
+
+RSS는 하루 300건씩 들어오고 한 건이 파일로 끝나지 않습니다. 색인 문서 하나와 청크 3~4개가 따라붙고 그 임베딩이 자리를 대부분 차지합니다 — 실측으로 2.5개월치 22,609건에 `research-index.sqlite3`가 728MB였고 그중 342MB가 `chunks.embedding_json`이었습니다. 인덱스된 문서는 100%가 RSS이므로 보관 기간이 곧 검색 DB 크기입니다.
+
+`retention.py`는 **파일만 지웁니다.** 나머지 행은 이미 있는 경로가 걷어냅니다 — `refresh_rss_feed_cache()`가 `rss_feed_items`를, `build_index(incremental=True)`가 `documents`/`chunks`/FTS/`file_manifest`를 정리합니다. 같은 일을 하는 삭제 SQL을 따로 쓰면 인덱서가 바뀔 때마다 조용히 어긋납니다. 어느 쪽도 손대지 않는 `evidence_items`만 재색인 뒤에 정리합니다.
+
+- 날짜는 파일명 접두(`2026-05-28 15-44-47 - ...`)로 읽습니다. 날짜를 못 읽는 파일과 `.state.json`은 건드리지 않습니다.
+- 보관 기간은 `RETENTION_CHOICES`의 값만 받습니다. 임의의 숫자로 자료가 지워지지 않습니다.
+- `GET /api/rss/retention?days=`는 저장 전에 몇 건이 지워지는지 세어 화면에 보여줍니다. 되돌릴 수 없는 설정이라 고르기 전에 비용을 먼저 말합니다.
+- **VACUUM은 `지금 정리` 버튼에서만** 합니다. 실측 728MB 기준 29초 동안 DB를 통째로 잠그므로, 매시간 도는 수집이 파일 하나를 지웠다고 매번 물릴 수 없습니다. 자동 수집은 지운 자리를 SQLite가 재사용하게 두어 크기를 묶어 두고, 파일을 실제로 줄이는 일은 사용자가 부를 때 합니다.
+
 ## 인덱싱과 검색
 
 핵심 산출물:
@@ -149,6 +162,8 @@ data/pdf-cache/               # PDF 본문 추출 캐시
 POST /api/index
 GET  /api/index/documents
 POST /api/rssarchive/import
+GET  /api/rss/retention?days=90
+POST /api/rss/retention/run
 GET  /api/rss/items
 GET  /api/rss/merge
 GET  /api/signals
@@ -171,7 +186,8 @@ GET  /api/search?query=NVDA&limit=30
 - `rss/collectors.py`: official collector adapter
 - `rss/writer.py`: YAML front matter Markdown 아카이브 IO, legacy 업그레이드, `.state.json`
 - `rss/store.py`: `research-index.sqlite3::evidence_items` 저장
-- `rss/service.py`: RSS import/feed/merge/cache payload
+- `rss/retention.py`: 보관 기간 판정·기간 지난 파일 삭제·orphan evidence 정리·VACUUM
+- `rss/service.py`: RSS import/feed/merge/cache payload, `run_retention_now()`
 - `signals/`: approved provider adapter, metadata-only 저장/조회, health와 retention
 - `indexing/service.py`: `build_index()`, `load_index()`, `build_document()`, `market_relevance()`
 - `indexing/research_index.py`: SQLite schema, FTS, manifest, `hybrid_search()`
