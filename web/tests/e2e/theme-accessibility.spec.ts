@@ -90,11 +90,32 @@ test.describe("public workspace quality gate", () => {
   test("theme selection persists and updates the resolved document theme", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes("mobile"), "Settings interaction is covered once on desktop.");
     await openRoute(page, "settings");
-    await page.getByRole("button", { name: "다크" }).click();
+    // `exact`가 없으면 상단바 전환 버튼의 접근성 이름("…누르면 다크")까지 걸린다.
+    await page.getByRole("button", { name: "다크", exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expect(page.getByRole("button", { name: "다크" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "다크", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
+  test("the top bar toggle cycles the theme and agrees with the settings panel", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes("mobile"), "Settings interaction is covered once on desktop.");
+    // 테마는 하루에도 여러 번 바꾸는 설정인데 설정 화면을 열어야만 닿았다. 상단바 버튼은
+    // 같은 저장소를 쓰므로 두 화면이 갈라지면 안 된다.
+    await openRoute(page, "settings");
+    await page.getByRole("button", { name: "라이트", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+    const toggle = page.getByRole("button", { name: /^화면 테마:/ });
+    await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.getByRole("button", { name: "다크", exact: true })).toHaveAttribute("aria-pressed", "true");
+
+    // 라이트 → 다크 → 시스템 → 라이트로 한 바퀴 돈다.
+    await toggle.click();
+    await expect(page.getByRole("button", { name: "시스템", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await toggle.click();
+    await expect(page.getByRole("button", { name: "라이트", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("keyboard users can skip directly to the active route", async ({ page }, testInfo) => {

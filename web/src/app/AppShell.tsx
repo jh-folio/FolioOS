@@ -18,6 +18,74 @@ import { NAV_ROUTES, parseHashRoute, routeById, ROUTES, toHash, type RouteId } f
 import { useShellStatus } from "./statusStore";
 import { activateReactAgentContextScope } from "./agentContext";
 import { FolioWordmark } from "./FolioWordmark";
+import { useThemePreference, type ThemePreference } from "./themePreference";
+
+/** 상단바 테마 전환 — 라이트 → 다크 → 시스템 순서로 한 칸씩 돈다.
+ *
+ *  설정에 있는 세 버튼과 같은 값을 쓴다(`window.FolioTheme`가 한 저장소를 갖는다).
+ *  여기 둔 이유는 테마가 하루에도 여러 번 바뀌는 설정인데 지금은 설정 화면을 열고
+ *  두 번 더 눌러야 닿기 때문이다. 아이콘 하나로 두되, 무엇이 켜져 있고 누르면
+ *  무엇이 되는지는 접근성 이름이 말한다 — 아이콘만으로는 시스템 모드를 구분할 수 없다.
+ */
+const THEME_CYCLE: ThemePreference[] = ["light", "dark", "system"];
+const THEME_LABELS: Record<ThemePreference, string> = {
+  light: "라이트",
+  dark: "다크",
+  system: "시스템",
+};
+
+function ThemeIcon({ preference }: { preference: ThemePreference }) {
+  if (preference === "light") {
+    return (
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="3.1" stroke="currentColor" strokeWidth="1.4" />
+        <path
+          d="M8 1.4v1.6M8 13v1.6M14.6 8H13M3 8H1.4M12.66 3.34l-1.13 1.13M4.47 11.53l-1.13 1.13M12.66 12.66l-1.13-1.13M4.47 4.47 3.34 3.34"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  if (preference === "dark") {
+    return (
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path
+          d="M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8Z"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <rect x="1.8" y="2.6" width="12.4" height="8.6" rx="1.4" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5.6 13.9h4.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ThemeToggle() {
+  const theme = useThemePreference();
+  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme.preference) + 1) % THEME_CYCLE.length];
+  const current = theme.preference === "system"
+    ? `시스템 (${THEME_LABELS[theme.resolved]})`
+    : THEME_LABELS[theme.preference];
+  return (
+    <button
+      className="btn btn--icon"
+      type="button"
+      onClick={() => theme.setPreference(next)}
+      aria-label={`화면 테마: ${current}. 누르면 ${THEME_LABELS[next]}`}
+      data-tooltip={`테마: ${current}`}
+    >
+      <ThemeIcon preference={theme.preference} />
+    </button>
+  );
+}
 
 const NAV_GROUPS: Array<{ id: string; title: string; routes: RouteId[] }> = [
   { id: "home", title: "홈", routes: ["home", "dashboard"] },
@@ -335,6 +403,7 @@ export function AppShell() {
           <button className="btn btn--sm" type="button" onClick={restartServer} disabled={restarting}>
             {restarting ? "재시작 중" : "재시작"}
           </button>
+          <ThemeToggle />
         </div>
       </header>
 

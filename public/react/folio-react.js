@@ -20833,7 +20833,7 @@ var Q = 5, $ = [
 		id: "jp",
 		label: "JP"
 	}
-], Fl = [{
+], Fl = Object.fromEntries($.flatMap((e) => [[e.id, e.label], [e.id.toUpperCase(), e.label]])), Il = [{
 	label: "아침",
 	time: "08:00",
 	markets: ["us", "europe"],
@@ -20844,10 +20844,10 @@ var Q = 5, $ = [
 	markets: ["kr", "jp"],
 	hint: "오늘 국내장"
 }];
-function Il() {
+function Ll() {
 	return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
-var Ll = [
+var Rl = [
 	{
 		value: "0",
 		label: "정시에만"
@@ -20869,7 +20869,7 @@ var Ll = [
 		label: "그날 안이면 언제든"
 	}
 ];
-function Rl(e) {
+function zl(e) {
 	if (!e) return {
 		tone: "",
 		text: "아직 실행된 적 없습니다"
@@ -20892,7 +20892,7 @@ function Rl(e) {
 		text: `${n} 완료`
 	};
 }
-function zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
+function Bl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 	let i = (t, n) => r(e.map((e) => e.id === t ? {
 		...e,
 		...n
@@ -20901,7 +20901,7 @@ function zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 		n.length && i(e.id, { markets: n });
 	}, o = (t, n) => {
 		e.length >= Q || r([...e, {
-			id: Il(),
+			id: Ll(),
 			enabled: !0,
 			time: n,
 			markets: t,
@@ -20909,7 +20909,7 @@ function zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 			qualityMode: "diagnose_only",
 			runPrerequisites: !0
 		}]);
-	}, s = Fl.map((e) => ({
+	}, s = Il.map((e) => ({
 		...e,
 		markets: e.markets.filter((e) => t.includes(e))
 	})).filter((e) => e.markets.length);
@@ -20934,7 +20934,7 @@ function zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 									"aria-label": "브리핑 유형",
 									value: o.briefingType,
 									onChange: (e) => i(o.id, { briefingType: e.currentTarget.value }),
-									children: Object.entries(Vl).map(([e, t]) => /* @__PURE__ */ (0, K.jsx)("option", {
+									children: Object.entries(Hl).map(([e, t]) => /* @__PURE__ */ (0, K.jsx)("option", {
 										value: e,
 										children: t
 									}, e))
@@ -20972,7 +20972,7 @@ function zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 								"은(는) 빼고 생성합니다."
 							]
 						}),
-						/* @__PURE__ */ (0, K.jsx)(Bl, { run: n[o.id] })
+						/* @__PURE__ */ (0, K.jsx)(Vl, { run: n[o.id] })
 					]
 				}, o.id);
 			}),
@@ -21015,19 +21015,19 @@ function zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 		]
 	});
 }
-function Bl({ run: e }) {
-	let { tone: t, text: n } = Rl(e);
+function Vl({ run: e }) {
+	let { tone: t, text: n } = zl(e);
 	return /* @__PURE__ */ (0, K.jsxs)("p", {
 		className: `automation-last-run ${t}`.trim(),
 		children: [/* @__PURE__ */ (0, K.jsx)("span", { children: "마지막 실행" }), n]
 	});
 }
-var Vl = {
+var Hl = {
 	default: "기본",
 	market_focused: "시황 중심",
 	concise: "요약"
 };
-function Hl() {
+function Ul() {
 	let [e, t] = (0, l.useState)(null), [n, r] = (0, l.useState)([]), [i, a] = (0, l.useState)(!1), [o, s] = (0, l.useState)("");
 	if ((0, l.useEffect)(() => {
 		let e = !1;
@@ -21087,7 +21087,8 @@ function Hl() {
 						"aria-pressed": n.includes(e.id),
 						disabled: i,
 						onClick: () => c(e.id),
-						children: e.label
+						"aria-label": e.label,
+						children: Fl[e.id] || e.label
 					}, e.id))
 				})]
 			}),
@@ -21112,7 +21113,7 @@ function Hl() {
 		]
 	});
 }
-function Ul(e) {
+function Wl(e) {
 	let t = [
 		"B",
 		"KB",
@@ -21122,7 +21123,7 @@ function Ul(e) {
 	for (; n >= 1024 && r < t.length - 1;) n /= 1024, r += 1;
 	return r === 0 ? `${Math.round(n)} B` : `${n.toFixed(1)} ${t[r]}`;
 }
-function Wl() {
+function Gl() {
 	let [e, t] = (0, l.useState)(null), [n, r] = (0, l.useState)(""), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)(async () => {
 		try {
 			t(await B("/api/workspace"));
@@ -21183,7 +21184,7 @@ function Wl() {
 							"자료 ",
 							e.fileCount.toLocaleString(),
 							"개 · ",
-							Ul(e.totalBytes),
+							Wl(e.totalBytes),
 							e.outsideAppFolder ? " · 앱 폴더 밖에 있어 새 버전을 받아도 그대로 이어집니다." : " · 앱 폴더 안에 있습니다."
 						]
 					})
@@ -21246,7 +21247,7 @@ function Wl() {
 		]
 	});
 }
-function Gl() {
+function Kl() {
 	let e = Cl(), t = yl(), [n, r] = (0, l.useState)("admin"), [i, a] = (0, l.useState)(null), [o, s] = (0, l.useState)(null), [c, u] = (0, l.useState)({}), [d, f] = (0, l.useState)({}), [p, m] = (0, l.useState)([]), [h, g] = (0, l.useState)($.map((e) => e.id)), [_, v] = (0, l.useState)({}), [y, b] = (0, l.useState)(null), [x, S] = (0, l.useState)("openai"), [C, w] = (0, l.useState)(""), [T, E] = (0, l.useState)(""), [D, O] = (0, l.useState)(!0), [k, A] = (0, l.useState)("cli"), [j, M] = (0, l.useState)("codex"), [N, P] = (0, l.useState)(""), [F, I] = (0, l.useState)({
 		fred: "",
 		bok: "",
@@ -22006,8 +22007,8 @@ function Gl() {
 							})
 						]
 					}),
-					/* @__PURE__ */ (0, K.jsx)(Hl, {}),
-					/* @__PURE__ */ (0, K.jsx)(Wl, {}),
+					/* @__PURE__ */ (0, K.jsx)(Ul, {}),
+					/* @__PURE__ */ (0, K.jsx)(Gl, {}),
 					/* @__PURE__ */ (0, K.jsxs)("section", {
 						className: "settings-panel input-panel",
 						children: [
@@ -22086,7 +22087,7 @@ function Gl() {
 													compact: !0
 												})]
 											}),
-											/* @__PURE__ */ (0, K.jsx)(Bl, { run: _e.rss })
+											/* @__PURE__ */ (0, K.jsx)(Vl, { run: _e.rss })
 										]
 									}),
 									/* @__PURE__ */ (0, K.jsxs)("section", {
@@ -22157,7 +22158,7 @@ function Gl() {
 													compact: !0
 												})]
 											}),
-											/* @__PURE__ */ (0, K.jsx)(Bl, { run: _e.marketMemory })
+											/* @__PURE__ */ (0, K.jsx)(Vl, { run: _e.marketMemory })
 										]
 									}),
 									/* @__PURE__ */ (0, K.jsxs)("section", {
@@ -22171,7 +22172,7 @@ function Gl() {
 													/* @__PURE__ */ (0, K.jsx)("p", { children: "예약한 시각에 그 시장의 일일 브리핑을 만듭니다. 마감 시각이 시장마다 달라 여러 개를 둘 수 있습니다." })
 												] })
 											}),
-											/* @__PURE__ */ (0, K.jsx)(zl, {
+											/* @__PURE__ */ (0, K.jsx)(Bl, {
 												schedules: c.briefingSchedules || [],
 												watched: h,
 												runsById: ve,
@@ -22188,7 +22189,7 @@ function Gl() {
 														...c,
 														missedRuns: { catchUpHours: e.currentTarget.value }
 													}),
-													children: Ll.map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
+													children: Rl.map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
 														value: e.value,
 														children: e.label
 													}, e.value))
@@ -22281,7 +22282,7 @@ function Gl() {
 }
 //#endregion
 //#region src/app/watchlist/ConsultationEntry.tsx
-function Kl({ item: e }) {
+function ql({ item: e }) {
 	return /* @__PURE__ */ (0, K.jsx)("button", {
 		type: "button",
 		className: "btn btn--primary",
@@ -22299,23 +22300,23 @@ function Kl({ item: e }) {
 }
 //#endregion
 //#region src/app/WatchlistRoute.tsx
-function ql(e) {
+function Jl(e) {
 	let t = /* @__PURE__ */ new Set();
 	return e.map((e) => String(e || "").trim()).filter(Boolean).filter((e) => {
 		let n = e.toLowerCase();
 		return !t.has(n) && (t.add(n), !0);
 	});
 }
-function Jl(e) {
+function Yl(e) {
 	return e.ticker || e.item || "";
 }
-function Yl(e) {
-	return e.companyName || e.name || e.item || Jl(e);
+function Xl(e) {
+	return e.companyName || e.name || e.item || Yl(e);
 }
-function Xl(e, t = "") {
+function Zl(e, t = "") {
 	return e?.company?.name || e?.item || t || "상세 보기";
 }
-function Zl(e) {
+function Ql(e) {
 	if (!e) return "상세 정보를 불러오는 중입니다.";
 	let t = e.company || {};
 	return [
@@ -22325,27 +22326,27 @@ function Zl(e) {
 		e.newsCount ? `${e.newsCount}개 뉴스` : ""
 	].filter(Boolean).join(" · ") || "확인된 심볼 정보가 없습니다.";
 }
-function Ql(e = []) {
+function $l(e = []) {
 	return [...e].sort((e, t) => String(t.date || "").localeCompare(String(e.date || "")));
 }
-function $l(e) {
+function eu(e) {
 	return e.title || e.url || e.path || "자료";
 }
-function eu(e) {
+function tu(e) {
 	return [e.source, e.date].filter(Boolean).join(" · ");
 }
-function tu(e) {
+function nu(e) {
 	window.location.hash = e ? `#/watchlist/${encodeURIComponent(e)}` : "#/watchlist";
 }
-function nu() {
+function ru() {
 	let e = window.location.hash.match(/^#\/?watchlist\/(.+)$/);
 	return e ? decodeURIComponent(e[1]) : "";
 }
-function ru() {
+function iu() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "watchlist";
 }
-function iu() {
-	let { resolved: e } = Cl(), [t, n] = (0, l.useState)([]), [r, i] = (0, l.useState)([]), [a, o] = (0, l.useState)(""), [s, c] = (0, l.useState)(() => nu()), [u, d] = (0, l.useState)(null), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)(!1), [g, _] = (0, l.useState)(!1), [v, y] = (0, l.useState)(""), [b, x] = (0, l.useState)(""), S = (0, l.useRef)(null), C = (0, l.useCallback)(async (e) => {
+function au() {
+	let { resolved: e } = Cl(), [t, n] = (0, l.useState)([]), [r, i] = (0, l.useState)([]), [a, o] = (0, l.useState)(""), [s, c] = (0, l.useState)(() => ru()), [u, d] = (0, l.useState)(null), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)(!1), [g, _] = (0, l.useState)(!1), [v, y] = (0, l.useState)(""), [b, x] = (0, l.useState)(""), S = (0, l.useRef)(null), C = (0, l.useCallback)(async (e) => {
 		if (!e.length) {
 			i([]);
 			return;
@@ -22355,7 +22356,7 @@ function iu() {
 	}, []), w = (0, l.useCallback)(async () => {
 		p(!0), y("");
 		try {
-			let e = await B("/api/watchlist"), t = ql(Array.isArray(e) ? e : []);
+			let e = await B("/api/watchlist"), t = Jl(Array.isArray(e) ? e : []);
 			n(t), await C(t), Qe("watchlist", {
 				surface: "watchlist",
 				viewId: "watchlist",
@@ -22372,7 +22373,7 @@ function iu() {
 		w();
 	}, [w]), (0, l.useEffect)(() => {
 		let e = () => {
-			ru() && c(nu());
+			iu() && c(ru());
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), (0, l.useEffect)(() => {
@@ -22417,7 +22418,7 @@ function iu() {
 	async function T(e, t) {
 		_(!0), y("");
 		try {
-			let r = await V("/api/watchlist", { items: e }), i = ql(Array.isArray(r) ? r : []);
+			let r = await V("/api/watchlist", { items: e }), i = Jl(Array.isArray(r) ? r : []);
 			n(i), await C(i), t && x(t);
 		} catch (e) {
 			y(e instanceof Error ? e.message : "워치리스트 저장에 실패했습니다.");
@@ -22444,9 +22445,9 @@ function iu() {
 		o(""), n.length !== t.length && await T(n, "워치리스트에 추가했습니다.");
 	}
 	async function N(e) {
-		await T(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), s === e && tu();
+		await T(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), s === e && nu();
 	}
-	let P = (0, l.useMemo)(() => Ql(u?.news || []), [u]), F = Xl(u, s);
+	let P = (0, l.useMemo)(() => $l(u?.news || []), [u]), F = Zl(u, s);
 	return s ? /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "react-watchlist-route",
 		"data-watchlist-route": !0,
@@ -22459,7 +22460,7 @@ function iu() {
 					/* @__PURE__ */ (0, K.jsx)("button", {
 						type: "button",
 						className: "reader-crumb-link",
-						onClick: () => tu(),
+						onClick: () => nu(),
 						children: "워치리스트"
 					}),
 					/* @__PURE__ */ (0, K.jsx)("span", {
@@ -22490,17 +22491,17 @@ function iu() {
 							}),
 							/* @__PURE__ */ (0, K.jsx)("p", {
 								className: "section-subtitle",
-								children: Zl(u)
+								children: Ql(u)
 							})
 						] }), /* @__PURE__ */ (0, K.jsxs)("div", {
 							className: "watchlist-detail-actions",
-							children: [/* @__PURE__ */ (0, K.jsx)(Kl, { item: s }), /* @__PURE__ */ (0, K.jsx)("button", {
+							children: [/* @__PURE__ */ (0, K.jsx)(ql, { item: s }), /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "btn btn--icon",
 								type: "button",
 								"aria-label": "닫기",
 								"data-tooltip": "닫기",
 								"data-tooltip-pos": "left",
-								onClick: () => tu(),
+								onClick: () => nu(),
 								children: "×"
 							})]
 						})]
@@ -22529,17 +22530,17 @@ function iu() {
 								children: [
 									/* @__PURE__ */ (0, K.jsx)("div", {
 										className: "meta",
-										children: eu(e)
+										children: tu(e)
 									}),
 									/* @__PURE__ */ (0, K.jsx)("h4", { children: e.url ? /* @__PURE__ */ (0, K.jsx)("a", {
 										href: e.url,
 										target: "_blank",
 										rel: "noopener noreferrer",
-										children: $l(e)
-									}) : /* @__PURE__ */ (0, K.jsx)("span", { children: $l(e) }) }),
+										children: eu(e)
+									}) : /* @__PURE__ */ (0, K.jsx)("span", { children: eu(e) }) }),
 									e.snippet && /* @__PURE__ */ (0, K.jsx)("p", { children: e.snippet })
 								]
-							}, `${$l(e)}-${t}`))
+							}, `${eu(e)}-${t}`))
 						}) : /* @__PURE__ */ (0, K.jsx)("p", {
 							className: "section-subtitle",
 							children: "수집된 관련 뉴스가 없습니다."
@@ -22639,16 +22640,16 @@ function iu() {
 			/* @__PURE__ */ (0, K.jsx)("div", {
 				className: "watchlist-grid",
 				children: r.length ? r.map((e) => {
-					let t = e.item || Yl(e);
+					let t = e.item || Xl(e);
 					return /* @__PURE__ */ (0, K.jsxs)("article", {
 						className: "watchlist-card",
 						"data-watchlist-detail-item": t,
 						tabIndex: 0,
 						role: "button",
 						"aria-label": `${t} 상세 보기`,
-						onClick: () => tu(t),
+						onClick: () => nu(t),
 						onKeyDown: (e) => {
-							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), tu(t));
+							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), nu(t));
 						},
 						children: [
 							/* @__PURE__ */ (0, K.jsx)("span", {
@@ -22681,8 +22682,8 @@ function iu() {
 								className: "watchlist-card-top",
 								children: [/* @__PURE__ */ (0, K.jsx)("strong", {
 									className: "watchlist-ticker",
-									children: Jl(e)
-								}), /* @__PURE__ */ (0, K.jsx)("h3", { children: Yl(e) })]
+									children: Yl(e)
+								}), /* @__PURE__ */ (0, K.jsx)("h3", { children: Xl(e) })]
 							}),
 							/* @__PURE__ */ (0, K.jsxs)("div", {
 								className: "watchlist-card-meta",
@@ -22709,18 +22710,18 @@ function iu() {
 }
 //#endregion
 //#region src/app/statusStore.ts
-var au = {
+var ou = {
 	statusText: "",
 	docCount: "",
 	activeJobId: null
 };
-function ou() {
-	return au;
-}
 function su() {
-	let [e, t] = (0, l.useState)(() => ou());
+	return ou;
+}
+function cu() {
+	let [e, t] = (0, l.useState)(() => su());
 	return (0, l.useEffect)(() => {
-		let e = () => t(ou());
+		let e = () => t(su());
 		e();
 		let n = window.setInterval(e, 1e3);
 		return () => window.clearInterval(n);
@@ -22728,7 +22729,74 @@ function su() {
 }
 //#endregion
 //#region src/app/AppShell.tsx
-var cu = [
+var lu = [
+	"light",
+	"dark",
+	"system"
+], uu = {
+	light: "라이트",
+	dark: "다크",
+	system: "시스템"
+};
+function du({ preference: e }) {
+	return e === "light" ? /* @__PURE__ */ (0, K.jsxs)("svg", {
+		viewBox: "0 0 16 16",
+		fill: "none",
+		"aria-hidden": "true",
+		children: [/* @__PURE__ */ (0, K.jsx)("circle", {
+			cx: "8",
+			cy: "8",
+			r: "3.1",
+			stroke: "currentColor",
+			strokeWidth: "1.4"
+		}), /* @__PURE__ */ (0, K.jsx)("path", {
+			d: "M8 1.4v1.6M8 13v1.6M14.6 8H13M3 8H1.4M12.66 3.34l-1.13 1.13M4.47 11.53l-1.13 1.13M12.66 12.66l-1.13-1.13M4.47 4.47 3.34 3.34",
+			stroke: "currentColor",
+			strokeWidth: "1.4",
+			strokeLinecap: "round"
+		})]
+	}) : e === "dark" ? /* @__PURE__ */ (0, K.jsx)("svg", {
+		viewBox: "0 0 16 16",
+		fill: "none",
+		"aria-hidden": "true",
+		children: /* @__PURE__ */ (0, K.jsx)("path", {
+			d: "M13.2 9.6A5.6 5.6 0 0 1 6.4 2.8a5.6 5.6 0 1 0 6.8 6.8Z",
+			stroke: "currentColor",
+			strokeWidth: "1.4",
+			strokeLinejoin: "round"
+		})
+	}) : /* @__PURE__ */ (0, K.jsxs)("svg", {
+		viewBox: "0 0 16 16",
+		fill: "none",
+		"aria-hidden": "true",
+		children: [/* @__PURE__ */ (0, K.jsx)("rect", {
+			x: "1.8",
+			y: "2.6",
+			width: "12.4",
+			height: "8.6",
+			rx: "1.4",
+			stroke: "currentColor",
+			strokeWidth: "1.4"
+		}), /* @__PURE__ */ (0, K.jsx)("path", {
+			d: "M5.6 13.9h4.8",
+			stroke: "currentColor",
+			strokeWidth: "1.4",
+			strokeLinecap: "round"
+		})]
+	});
+}
+function fu() {
+	let e = Cl(), t = lu[(lu.indexOf(e.preference) + 1) % lu.length], n = e.preference === "system" ? `시스템 (${uu[e.resolved]})` : uu[e.preference];
+	return /* @__PURE__ */ (0, K.jsx)("button", {
+		className: "btn btn--icon",
+		type: "button",
+		onClick: () => e.setPreference(t),
+		"aria-label": `화면 테마: ${n}. 누르면 ${uu[t]}`,
+		"data-tooltip": `테마: ${n}`,
+		children: /* @__PURE__ */ (0, K.jsx)(du, { preference: e.preference })
+	});
+}
+var pu = [
 	{
 		id: "home",
 		title: "홈",
@@ -22758,7 +22826,7 @@ var cu = [
 		title: "시스템",
 		routes: ["settings"]
 	}
-], lu = {
+], mu = {
 	home: /* @__PURE__ */ (0, K.jsxs)("svg", {
 		className: "react-left-nav-svg",
 		viewBox: "0 0 24 24",
@@ -22890,25 +22958,25 @@ var cu = [
 		"aria-hidden": "true",
 		children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" }), /* @__PURE__ */ (0, K.jsx)("path", { d: "M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.22 3.43l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.34.4.7.6 1a1.7 1.7 0 0 0 1.1.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.1.4c-.17.14-.31.28-.41.2Z" })]
 	})
-}, uu = "(max-width: 1024px)";
-function du() {
-	return typeof window < "u" && window.matchMedia(uu).matches;
+}, hu = "(max-width: 1024px)";
+function gu() {
+	return typeof window < "u" && window.matchMedia(hu).matches;
 }
-function fu() {
+function _u() {
 	let e = window.location.hash || Oi(vl());
 	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Oi("home")) : e;
 }
-function pu() {
-	let [e, t] = (0, l.useState)(() => fu());
+function vu() {
+	let [e, t] = (0, l.useState)(() => _u());
 	return (0, l.useEffect)(() => {
-		let e = () => t(fu());
+		let e = () => t(_u());
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), {
 		hash: e,
 		routeId: Di(e)
 	};
 }
-async function mu(e) {
+async function yu(e) {
 	await new Promise((e) => window.setTimeout(e, 1500));
 	let t = Date.now() + 6e4;
 	for (; Date.now() < t;) {
@@ -22922,11 +22990,11 @@ async function mu(e) {
 	}
 	e("재시작 확인 실패 · 수동 새로고침 필요");
 }
-function hu() {
-	let { hash: e, routeId: t } = pu(), n = ki(t), r = vl(yl().preferences), i = su(), [a, o] = (0, l.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, l.useRef)(!1), [c, u] = (0, l.useState)(() => {
+function bu() {
+	let { hash: e, routeId: t } = vu(), n = ki(t), r = vl(yl().preferences), i = cu(), [a, o] = (0, l.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), s = (0, l.useRef)(!1), [c, u] = (0, l.useState)(() => {
 		let e = localStorage.getItem("folio.react.agentClosed"), t = e === null || e !== "1";
-		return t && du() ? (s.current = !0, !1) : t;
-	}), [d, f] = (0, l.useState)(() => /* @__PURE__ */ new Set([t])), [p, m] = (0, l.useState)(() => ({ [t]: fu() })), [h, g] = (0, l.useState)(""), [_, v] = (0, l.useState)(!1), y = (0, l.useRef)(null), b = (0, l.useRef)(t), x = (0, l.useRef)(!1), S = (0, l.useRef)({}), C = n.id !== "home", w = C && c ? " is-agent-open" : " is-agent-closed";
+		return t && gu() ? (s.current = !0, !1) : t;
+	}), [d, f] = (0, l.useState)(() => /* @__PURE__ */ new Set([t])), [p, m] = (0, l.useState)(() => ({ [t]: _u() })), [h, g] = (0, l.useState)(""), [_, v] = (0, l.useState)(!1), y = (0, l.useRef)(null), b = (0, l.useRef)(t), x = (0, l.useRef)(!1), S = (0, l.useRef)({}), C = n.id !== "home", w = C && c ? " is-agent-open" : " is-agent-closed";
 	(0, l.useEffect)(() => {
 		tt(n.id, {
 			surface: `react_${n.id}`,
@@ -22941,7 +23009,7 @@ function hu() {
 		}
 		localStorage.setItem("folio.react.agentClosed", c ? "0" : "1");
 	}, [c]), (0, l.useEffect)(() => {
-		let e = window.matchMedia(uu), t = (e) => {
+		let e = window.matchMedia(hu), t = (e) => {
 			e.matches && u((e) => e && (s.current = !0, !1));
 		};
 		return e.addEventListener("change", t), () => e.removeEventListener("change", t);
@@ -22985,7 +23053,7 @@ function hu() {
 					body: "{}"
 				});
 			} catch {}
-			g("서버 재시작 중"), await mu(g), v(!1);
+			g("서버 재시작 중"), await yu(g), v(!1);
 		}
 	}
 	function E(e) {
@@ -22994,7 +23062,7 @@ function hu() {
 	}
 	function D(e) {
 		let t = ki(e);
-		return t.id === "home" ? /* @__PURE__ */ (0, K.jsx)(ln, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, K.jsx)(po, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, K.jsx)(wi, {}) : t.id === "rss" ? /* @__PURE__ */ (0, K.jsx)(al, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, K.jsx)(Ys, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, K.jsx)(Ia, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, K.jsx)(us, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, K.jsx)(iu, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, K.jsx)(dc, {}) : t.id === "settings" ? /* @__PURE__ */ (0, K.jsx)(Gl, {}) : null;
+		return t.id === "home" ? /* @__PURE__ */ (0, K.jsx)(ln, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, K.jsx)(po, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, K.jsx)(wi, {}) : t.id === "rss" ? /* @__PURE__ */ (0, K.jsx)(al, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, K.jsx)(Ys, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, K.jsx)(Ia, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, K.jsx)(us, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, K.jsx)(au, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, K.jsx)(dc, {}) : t.id === "settings" ? /* @__PURE__ */ (0, K.jsx)(Kl, {}) : null;
 	}
 	return /* @__PURE__ */ (0, K.jsxs)("div", {
 		className: `react-shell${a ? " is-nav-collapsed" : ""}${w}${C ? "" : " is-agent-suppressed"}`,
@@ -23029,7 +23097,8 @@ function hu() {
 							onClick: T,
 							disabled: _,
 							children: _ ? "재시작 중" : "재시작"
-						})
+						}),
+						/* @__PURE__ */ (0, K.jsx)(fu, {})
 					]
 				})]
 			}),
@@ -23054,7 +23123,7 @@ function hu() {
 					children: [/* @__PURE__ */ (0, K.jsx)("div", {
 						className: "react-left-nav-title",
 						children: "Navigate"
-					}), cu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
+					}), pu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
 						className: "react-left-nav-group",
 						"data-nav-group": e.id,
 						children: [/* @__PURE__ */ (0, K.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, K.jsx)("div", {
@@ -23078,7 +23147,7 @@ function hu() {
 										children: [/* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-left-nav-icon",
 											"aria-hidden": "true",
-											children: lu[a.id]
+											children: mu[a.id]
 										}), /* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-left-nav-label",
 											children: a.label
@@ -23118,12 +23187,12 @@ function hu() {
 }
 //#endregion
 //#region src/app/WelcomeWizard.tsx
-var gu = [
+var xu = [
 	"welcome",
 	"engine",
 	"markets",
 	"done"
-], _u = [
+], Su = [
 	{
 		id: "light",
 		label: "라이트"
@@ -23136,7 +23205,7 @@ var gu = [
 		id: "system",
 		label: "시스템"
 	}
-], vu = [
+], Cu = [
 	{
 		id: "openai",
 		label: "OpenAI",
@@ -23152,12 +23221,12 @@ var gu = [
 		label: "Claude",
 		url: "https://console.anthropic.com/settings/keys"
 	}
-], yu = {
+], wu = {
 	US: "US",
 	KR: "KR",
 	EUROPE: "EU",
 	JP: "JP"
-}, bu = {
+}, Tu = {
 	welcome: /* @__PURE__ */ (0, K.jsx)("path", { d: "M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" }),
 	engine: /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 3.5v3M12 17.5v3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M3.5 12h3M17.5 12h3M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" }), /* @__PURE__ */ (0, K.jsx)("circle", {
 		cx: "12",
@@ -23170,20 +23239,20 @@ var gu = [
 		r: "8.6"
 	}), /* @__PURE__ */ (0, K.jsx)("path", { d: "M3.4 12h17.2M12 3.4c2.5 2.6 3.8 5.5 3.8 8.6S14.5 18 12 20.6C9.5 18 8.2 15.1 8.2 12S9.5 6 12 3.4z" })] }),
 	done: /* @__PURE__ */ (0, K.jsx)("path", { d: "M5 12.6 9.6 17 19 7.6" })
-}, xu = {
+}, Eu = {
 	welcome: "환영합니다",
 	engine: "선택 사항",
 	markets: "수집 범위",
 	done: "준비 완료"
 };
-function Su({ step: e }) {
+function Du({ step: e }) {
 	return /* @__PURE__ */ (0, K.jsx)("svg", {
 		viewBox: "0 0 24 24",
 		"aria-hidden": "true",
-		children: bu[e]
+		children: Tu[e]
 	});
 }
-function Cu({ onFinish: e }) {
+function Ou({ onFinish: e }) {
 	let t = Cl(), [n, r] = (0, l.useState)("welcome"), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)((e) => {
 		s(""), r(e);
 	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)("openai"), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(null), [v, y] = (0, l.useState)([]), [b, x] = (0, l.useState)(!1), [S, C] = (0, l.useState)(null);
@@ -23261,7 +23330,7 @@ function Cu({ onFinish: e }) {
 		if (!t.length) return;
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
 		e.shiftKey && (i === n || !O.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
-	}, j = gu.indexOf(n), M = vu.find((e) => e.id === f);
+	}, j = xu.indexOf(n), M = Cu.find((e) => e.id === f);
 	return /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "welcome-shell",
 		role: "dialog",
@@ -23280,7 +23349,7 @@ function Cu({ onFinish: e }) {
 							"단계 ",
 							/* @__PURE__ */ (0, K.jsx)("b", { children: j + 1 }),
 							" / ",
-							gu.length
+							xu.length
 						]
 					})]
 				}),
@@ -23289,16 +23358,16 @@ function Cu({ onFinish: e }) {
 					role: "progressbar",
 					"aria-label": "진행 단계",
 					"aria-valuemin": 1,
-					"aria-valuemax": gu.length,
+					"aria-valuemax": xu.length,
 					"aria-valuenow": j + 1,
-					style: { "--welcome-fill": `${(j + 1) / gu.length * 100}%` }
+					style: { "--welcome-fill": `${(j + 1) / xu.length * 100}%` }
 				}),
 				/* @__PURE__ */ (0, K.jsxs)("section", {
 					className: "welcome-body",
 					children: [
 						/* @__PURE__ */ (0, K.jsxs)("p", {
 							className: "welcome-eyebrow",
-							children: [/* @__PURE__ */ (0, K.jsx)(Su, { step: n }), xu[n]]
+							children: [/* @__PURE__ */ (0, K.jsx)(Du, { step: n }), Eu[n]]
 						}),
 						n === "welcome" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
 							/* @__PURE__ */ (0, K.jsx)("h1", {
@@ -23319,7 +23388,7 @@ function Cu({ onFinish: e }) {
 								className: "welcome-choices",
 								role: "group",
 								"aria-label": "화면 테마",
-								children: _u.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+								children: Su.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 									type: "button",
 									"aria-pressed": t.preference === e.id,
 									onClick: () => t.setPreference(e.id),
@@ -23369,7 +23438,7 @@ function Cu({ onFinish: e }) {
 									className: "welcome-choices",
 									role: "group",
 									"aria-label": "제공사",
-									children: vu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+									children: Cu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": f === e.id,
 										onClick: () => p(e.id),
@@ -23423,7 +23492,7 @@ function Cu({ onFinish: e }) {
 								role: "group",
 								"aria-label": "수집·표시할 시장",
 								children: g.markets.map((e) => {
-									let t = yu[e.id] ?? e.id;
+									let t = wu[e.id] ?? e.id;
 									return /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"data-code": t,
@@ -23490,7 +23559,7 @@ function Cu({ onFinish: e }) {
 							j > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn",
 								type: "button",
-								onClick: () => c(gu[j - 1]),
+								onClick: () => c(xu[j - 1]),
 								disabled: !!i,
 								children: "이전"
 							}),
@@ -23530,7 +23599,7 @@ function Cu({ onFinish: e }) {
 }
 //#endregion
 //#region src/app/App.tsx
-function wu() {
+function ku() {
 	let [e, t] = (0, l.useState)(!1);
 	return (0, l.useEffect)(() => {
 		let e = !1;
@@ -23545,23 +23614,23 @@ function wu() {
 	}, []), (0, l.useEffect)(() => {
 		let e = () => t(!0);
 		return window.addEventListener("folio:show-welcome", e), () => window.removeEventListener("folio:show-welcome", e);
-	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(hu, {}), e && /* @__PURE__ */ (0, K.jsx)(Cu, { onFinish: () => t(!1) })] });
+	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(bu, {}), e && /* @__PURE__ */ (0, K.jsx)(Ou, { onFinish: () => t(!1) })] });
 }
 //#endregion
 //#region src/main.tsx
-var Tu = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
-function Eu() {
+var Au = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
+function ju() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = Tu[e.dataset.reactIsland || ""];
+		let t = Au[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: t() })));
 	});
 }
-function Du() {
+function Mu() {
 	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(wu, {}) })), !0) : !1;
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(ku, {}) })), !0) : !1;
 }
-function Ou() {
-	Du(), Eu();
+function Nu() {
+	Mu(), ju();
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Ou) : Ou();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Nu) : Nu();
 //#endregion

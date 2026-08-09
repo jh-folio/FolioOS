@@ -207,6 +207,12 @@ const MARKET_CODES: Array<{ id: string; label: string }> = [
   { id: "jp", label: "JP" },
 ];
 
+// 시장 계약은 소문자(`us`)인데 `/api/market-scope`는 대문자(`US`)로 돌려준다.
+// 둘 다 같은 코드를 찾도록 양쪽 키를 만든다.
+const MARKET_CODE_BY_ID: Record<string, string> = Object.fromEntries(
+  MARKET_CODES.flatMap((market) => [[market.id, market.label], [market.id.toUpperCase(), market.label]]),
+);
+
 // 마감 시각이 전부 다르다 — 유럽 01:30 · 미국 05~06 · 일본 15:00 · 한국 15:30 (KST).
 // 사용자가 그걸 알아야 하는 화면은 만들지 않는다. 관심 시장에서 켠 것만 넣어 제안한다.
 const SCHEDULE_PROPOSALS: Array<{ label: string; time: string; markets: string[]; hint: string }> = [
@@ -474,8 +480,12 @@ function MarketScopePanel() {
               aria-pressed={draft.includes(market.id)}
               disabled={busy}
               onClick={() => toggle(market.id)}
+              // 버튼에는 짧은 코드를 쓰고 전체 이름은 접근성 이름으로 남긴다. 서버는 계속
+              // 한국어 라벨을 주고 화면이 코드로 바꾼다 — 첫 실행 안내와 예약 화면이
+              // 이미 같은 방식이라, 라벨을 서버에서 바꾸면 산문(작업 이름)까지 끌려간다.
+              aria-label={market.label}
             >
-              {market.label}
+              {MARKET_CODE_BY_ID[market.id] || market.label}
             </button>
           ))}
         </div>

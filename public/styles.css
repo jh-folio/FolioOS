@@ -863,6 +863,15 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 .react-shell-status .btn:hover { background: #ffffff; }
 
+/* 아이콘은 크기를 직접 갖는다. 버튼이 44px로 늘어나 있어서 두면 SVG가 그만큼
+   늘어나고, viewBox 16 기준의 획이 2.75배로 부풀어 다른 아이콘과 다르게 보인다.
+   좌측 내비 아이콘(19px)과 같은 무게로 맞춘다. */
+.react-shell-status .btn--icon svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
 .react-shell-status span:empty {
   display: none;
 }
