@@ -22786,14 +22786,59 @@ function du({ preference: e }) {
 	});
 }
 function fu() {
-	let e = Cl(), t = lu[(lu.indexOf(e.preference) + 1) % lu.length], n = e.preference === "system" ? `시스템 (${uu[e.resolved]})` : uu[e.preference];
-	return /* @__PURE__ */ (0, K.jsx)("button", {
-		className: "btn btn--icon",
-		type: "button",
-		onClick: () => e.setPreference(t),
-		"aria-label": `화면 테마: ${n}. 누르면 ${uu[t]}`,
-		"data-tooltip": `테마: ${n}`,
-		children: /* @__PURE__ */ (0, K.jsx)(du, { preference: e.preference })
+	let e = Cl(), [t, n] = (0, l.useState)(!1), r = (0, l.useRef)(null), i = (0, l.useRef)(null), a = (0, l.useRef)([]), o = e.preference === "system" ? `시스템 (${uu[e.resolved]})` : uu[e.preference];
+	(0, l.useEffect)(() => {
+		if (!t) return;
+		let e = (e) => {
+			r.current?.contains(e.target) || n(!1);
+		}, a = (e) => {
+			e.key === "Escape" && (e.stopPropagation(), n(!1), i.current?.focus());
+		};
+		return document.addEventListener("pointerdown", e), document.addEventListener("keydown", a, !0), () => {
+			document.removeEventListener("pointerdown", e), document.removeEventListener("keydown", a, !0);
+		};
+	}, [t]), (0, l.useEffect)(() => {
+		if (!t) return;
+		let n = Math.max(0, lu.indexOf(e.preference));
+		a.current[n]?.focus();
+	}, [t, e.preference]);
+	let s = (e, t) => {
+		let n = (e + t + lu.length) % lu.length;
+		a.current[n]?.focus();
+	};
+	return /* @__PURE__ */ (0, K.jsxs)("div", {
+		className: "theme-menu",
+		ref: r,
+		children: [/* @__PURE__ */ (0, K.jsx)("button", {
+			className: "btn btn--icon",
+			type: "button",
+			ref: i,
+			"aria-haspopup": "menu",
+			"aria-expanded": t,
+			"aria-label": `화면 테마: ${o}`,
+			"data-tooltip": `테마: ${o}`,
+			onClick: () => n((e) => !e),
+			children: /* @__PURE__ */ (0, K.jsx)(du, { preference: e.preference })
+		}), t && /* @__PURE__ */ (0, K.jsx)("div", {
+			className: "theme-menu-list",
+			role: "menu",
+			"aria-label": "화면 테마",
+			children: lu.map((t, r) => /* @__PURE__ */ (0, K.jsxs)("button", {
+				type: "button",
+				role: "menuitemradio",
+				"aria-checked": e.preference === t,
+				ref: (e) => {
+					a.current[r] = e;
+				},
+				onClick: () => {
+					e.setPreference(t), n(!1), i.current?.focus();
+				},
+				onKeyDown: (e) => {
+					e.key === "ArrowDown" && (e.preventDefault(), s(r, 1)), e.key === "ArrowUp" && (e.preventDefault(), s(r, -1));
+				},
+				children: [/* @__PURE__ */ (0, K.jsx)(du, { preference: t }), uu[t]]
+			}, t))
+		})]
 	});
 }
 var pu = [
@@ -23091,14 +23136,14 @@ function bu() {
 					children: [
 						/* @__PURE__ */ (0, K.jsx)("span", { children: h || i.statusText || "준비됨" }),
 						i.activeJobId && /* @__PURE__ */ (0, K.jsx)("span", { children: i.activeJobId }),
+						/* @__PURE__ */ (0, K.jsx)(fu, {}),
 						/* @__PURE__ */ (0, K.jsx)("button", {
 							className: "btn btn--sm",
 							type: "button",
 							onClick: T,
 							disabled: _,
 							children: _ ? "재시작 중" : "재시작"
-						}),
-						/* @__PURE__ */ (0, K.jsx)(fu, {})
+						})
 					]
 				})]
 			}),

@@ -70,20 +70,87 @@ function ThemeIcon({ preference }: { preference: ThemePreference }) {
 
 function ThemeToggle() {
   const theme = useThemePreference();
-  const next = THEME_CYCLE[(THEME_CYCLE.indexOf(theme.preference) + 1) % THEME_CYCLE.length];
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const current = theme.preference === "system"
     ? `시스템 (${THEME_LABELS[theme.resolved]})`
     : THEME_LABELS[theme.preference];
+
+  // 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫는다. 닫을 때 포커스를
+  // 트리거로 되돌려야 키보드 사용자가 상단바로 돌아온다.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const index = Math.max(0, THEME_CYCLE.indexOf(theme.preference));
+    itemRefs.current[index]?.focus();
+  }, [open, theme.preference]);
+
+  const moveFocus = (from: number, delta: number) => {
+    const next = (from + delta + THEME_CYCLE.length) % THEME_CYCLE.length;
+    itemRefs.current[next]?.focus();
+  };
+
   return (
-    <button
-      className="btn btn--icon"
-      type="button"
-      onClick={() => theme.setPreference(next)}
-      aria-label={`화면 테마: ${current}. 누르면 ${THEME_LABELS[next]}`}
-      data-tooltip={`테마: ${current}`}
-    >
-      <ThemeIcon preference={theme.preference} />
-    </button>
+    <div className="theme-menu" ref={wrapRef}>
+      <button
+        className="btn btn--icon"
+        type="button"
+        ref={triggerRef}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`화면 테마: ${current}`}
+        data-tooltip={`테마: ${current}`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <ThemeIcon preference={theme.preference} />
+      </button>
+      {open && (
+        <div className="theme-menu-list" role="menu" aria-label="화면 테마">
+          {THEME_CYCLE.map((value, index) => (
+            <button
+              key={value}
+              type="button"
+              role="menuitemradio"
+              aria-checked={theme.preference === value}
+              ref={(node) => { itemRefs.current[index] = node; }}
+              onClick={() => {
+                theme.setPreference(value);
+                setOpen(false);
+                triggerRef.current?.focus();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown") { event.preventDefault(); moveFocus(index, 1); }
+                if (event.key === "ArrowUp") { event.preventDefault(); moveFocus(index, -1); }
+              }}
+            >
+              <ThemeIcon preference={value} />
+              {THEME_LABELS[value]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -400,10 +467,10 @@ export function AppShell() {
         <div className="react-shell-status" aria-live="polite">
           <span>{restartStatus || status.statusText || "준비됨"}</span>
           {status.activeJobId && <span>{status.activeJobId}</span>}
+          <ThemeToggle />
           <button className="btn btn--sm" type="button" onClick={restartServer} disabled={restarting}>
             {restarting ? "재시작 중" : "재시작"}
           </button>
-          <ThemeToggle />
         </div>
       </header>
 

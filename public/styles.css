@@ -872,6 +872,81 @@ body:has(#folioReactRoot .react-shell) main.page {
   flex: 0 0 auto;
 }
 
+/* 테마 선택 — 아이콘을 누르면 아래로 펼친다. 세 값을 한 번에 보여주므로 원하는
+   것을 바로 고를 수 있다(순환은 시스템까지 두 번 눌러야 했다). */
+.theme-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.theme-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  gap: 2px;
+  min-width: 132px;
+  padding: 6px;
+  border: 1px solid var(--folio-border);
+  border-radius: var(--r-group);
+  background: var(--folio-surface);
+  box-shadow: var(--elev-overlay);
+}
+
+.theme-menu-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  /* 상단바는 어두운 면이라 잉크를 반전시켜 두는데, 이 목록은 밝은 패널 위에 뜬다. */
+  color: var(--folio-ink);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  text-align: left;
+  cursor: pointer;
+}
+
+.theme-menu-list button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--folio-ink-soft);
+}
+
+.theme-menu-list button:hover {
+  background: var(--surface-control);
+}
+
+.theme-menu-list button[aria-checked="true"] {
+  background: var(--folio-surface-dark);
+  color: var(--folio-ink-inverse);
+}
+
+.theme-menu-list button[aria-checked="true"] svg {
+  color: inherit;
+}
+
+.theme-menu-list button:focus-visible {
+  outline: 2px solid var(--folio-focus);
+  outline-offset: -2px;
+}
+
+/* 좁은 화면에서는 상단바가 줄바꿈되며 상태 줄이 왼쪽으로 간다. 오른쪽 정렬을 그대로
+   두면 메뉴가 화면 왼쪽 밖으로 나간다(375px에서 -33px). 넓은 화면은 반대로 트리거가
+   오른쪽 끝이라 왼쪽 정렬이면 오른쪽으로 넘친다. */
+@media (max-width: 760px) {
+  .theme-menu-list {
+    right: auto;
+    left: 0;
+  }
+}
+
 .react-shell-status span:empty {
   display: none;
 }
