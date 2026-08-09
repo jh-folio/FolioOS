@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
+from features.common.atomic_replace import write_bytes_atomic
 from features.common.canonical_report_io import safe_child_path
 
 
@@ -72,16 +73,24 @@ def read_json(path, fallback, *, root=None):
 
 
 def write_json(path, data, *, root=None):
+    """JSON을 원자적으로 쓴다. 읽는 쪽이 반쪽짜리 파일을 보지 않는다.
+
+    제자리에 바로 쓰면 저장 도중 크래시나 디스크 부족에 `portfolio.json`이나 보고서가
+    잘린 채 남는다. 게다가 `content_revision`이 mtime을 초 단위로 폴링해 화면이 곧바로
+    다시 읽으므로, 한 프로세스 안에서도 읽기가 쓰기 중간에 걸린다.
+
+    교체는 `atomic_replace.write_bytes_atomic()`에 맡긴다 — 제자리 교체를 직접 부르지
+    않는다(§파일 저장). Windows에서 백신·검색 색인기가 대상 핸들을 잡으면 `WinError
+    5/32`로 거부되므로 짧은 재시도가 필요하고, 그 로직이 거기 있다.
+    """
     candidate = _bounded_path(path, root) if root is not None else Path(path)
+    # Sensitive feature payloads are redacted at their owning schema boundary.
     # Callers that accept external identifiers pass an explicit storage root.
     # codeql[py/path-injection]
-    candidate.parent.mkdir(parents=True, exist_ok=True)
-    # Sensitive feature payloads are redacted at their owning schema boundary.
-    # codeql[py/path-injection]
     # codeql[py/clear-text-storage-sensitive-data]
-    candidate.write_text(  # lgtm[py/clear-text-storage-sensitive-data]
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    write_bytes_atomic(  # lgtm[py/clear-text-storage-sensitive-data]
+        candidate,
+        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"),
     )
 
 

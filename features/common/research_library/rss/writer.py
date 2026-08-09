@@ -14,6 +14,7 @@ import json
 import re
 from pathlib import Path
 
+from features.common.atomic_replace import replace_with_retry
 from features.common.market_calendar import infer_doc_markets
 from features.common.research_library.rss.article import normalize_text
 from features.common.research_library.rss.feed_config import feed_market_for_media
@@ -154,9 +155,22 @@ def _rss_evidence(media, title, description, published_at_utc, link, status, sum
 
 
 def _atomic_write(path: Path, content: str) -> None:
+    """기사 파일을 원자적으로 쓴다.
+
+    교체는 `replace_with_retry()`가 한다 — Windows에서 백신·검색 색인기가 대상 핸들을
+    잡으면 제자리 교체가 `WinError 5/32`로 거부되고, 그때 한 번에 실패로 끝내면 수집한
+    기사를 잃는다. 자료 폴더를 두 프로세스가 함께 보는 구성에서는 더 자주 걸린다.
+    """
     tmp = path.with_name(f".tmp-{path.name}")
-    tmp.write_text(content, encoding="utf-8")
-    tmp.replace(path)
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        replace_with_retry(tmp, path)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def sanitize_filename(text: str) -> str:
@@ -403,5 +417,12 @@ def write_state(archive_dir: Path, state: dict) -> None:
     state_path = archive_dir / ".state.json"
     digest = hashlib.sha256(json.dumps(state, ensure_ascii=False).encode("utf-8")).hexdigest()[:10]
     tmp = archive_dir / f".tmp-rss-state-{digest}.json"
-    tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(state_path)
+    try:
+        tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        replace_with_retry(tmp, state_path)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
