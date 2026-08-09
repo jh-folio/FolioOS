@@ -206,11 +206,19 @@ def _require_clean_release_inputs(manifest: dict) -> str:
 # `.gitattributes`에도 규칙을 넣었지만, 릴리즈가 개발자의 git 설정에 의존하면 안 되므로
 # 패키저에서 한 번 더 고정한다.
 LF_ONLY_SUFFIXES = {".sh"}
+# 배치 파일은 반대다. cmd.exe는 CRLF를 요구하고, 콘솔 OEM 코드페이지로 파싱하므로
+# 비ASCII가 들어가면 줄이 갈라져 가짜 명령이 실행된다(한국어 Windows에서 실측).
+CRLF_ONLY_SUFFIXES = {".cmd", ".bat"}
 
 
 def _copy_runtime_file(src: Path, target: Path) -> None:
     if src.suffix in LF_ONLY_SUFFIXES:
         target.write_bytes(src.read_bytes().replace(b"\r\n", b"\n"))
+        shutil.copystat(src, target)
+        return
+    if src.suffix in CRLF_ONLY_SUFFIXES:
+        body = src.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+        target.write_bytes(body)
         shutil.copystat(src, target)
         return
     shutil.copy2(src, target)

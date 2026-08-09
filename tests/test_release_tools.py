@@ -223,6 +223,18 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
         assert b"\r\n" not in raw, f"{script.name} must ship with LF endings"
         assert raw.startswith(b"#!"), f"{script.name} lost its shebang"
 
+    # 배치 파일은 정확히 반대다. cmd.exe는 CRLF를 요구하고, 파일을 콘솔 OEM
+    # 코드페이지로 파싱하므로 비ASCII 바이트가 lead byte 노릇을 해 줄을 가른다.
+    # 한국어 Windows(CP949)에서 실측: UTF-8 한글 주석이 든 LF 파일이
+    # `'?'은(는) 내부 또는 외부 명령...`을 두 번 찍고 나서야 런처가 돌았다.
+    for script in [*package_dir.rglob("*.cmd"), *package_dir.rglob("*.bat")]:
+        raw = script.read_bytes()
+        assert b"\n" in raw, f"{script.name} lost its line breaks"
+        assert raw.count(b"\r\n") == raw.count(b"\n"), f"{script.name} must ship with CRLF endings"
+        assert raw.decode("ascii", errors="ignore").encode("ascii") == raw, (
+            f"{script.name} must stay ASCII — cmd.exe parses it in the OEM codepage"
+        )
+
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
     assert build["version"] == "0.5.1"
     assert len(build["commit"]) == 40
