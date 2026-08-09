@@ -135,11 +135,13 @@ def test_documented_scope_matches_english_and_korean() -> None:
     for relative in REQUIRED_DOCS:
         assert (ROOT / relative).is_file(), relative
 
-    version = _source("VERSION").strip()
     english = _source("README.md")
     korean = _source("README.ko.md")
-    assert f"What You Can Do In {version}" in english
-    assert f"{version}에서 할 수 있는 일" in korean
+    # 제목에 버전을 박지 않는다 — 릴리즈마다 고쳐야 하는데 VERSION 파일과
+    # 버전 이름이 붙은 배포 폴더가 이미 그 정보를 갖는다.
+    assert "## What You Can Do" in english
+    assert "## 할 수 있는 일" in korean
+    assert not re.search(r"What You Can Do In \d", english), "제목에 버전을 넣지 않는다"
     for text in (english, korean):
         assert "Deep Research" in text
         assert "Smart Collection" in text

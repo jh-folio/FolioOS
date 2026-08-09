@@ -4,42 +4,29 @@
 
 [한국어 README](README.ko.md)
 
-Folio OS 0.5.1 helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance. It covers four markets: the US, Korea, Europe, and Japan.
+Folio OS helps you collect market news and research material on your own PC, then turn it into daily briefings, market context, company analysis, and auditable Deep Research with optional AI assistance. It covers four markets: the US, Korea, Europe, and Japan.
 
 Your files and generated reports stay local by default. LLM/API integrations are optional and only used when you configure them.
 
 ---
 
-## What You Can Do In 0.5.1
+## What You Can Do
 
-- Chat with the Folio OS AI Agent from the Home screen. Conversations are saved on your computer, so you can close the app, come back, and pick up where you left off — the Agent reads the earlier context.
-- Follow four markets: the US, Korea, Europe, and Japan. Briefings, market state, the RSS feed, the calendar, and the charts all use the same four.
-- Use the Research Cockpit Dashboard to see what actually changed in your latest reports, the market calendar, and native symbol/index charts, in that order. The chart symbol list is yours to edit and is separate from the Watchlist; it starts from the largest companies in each market.
-- Read a story-share bar built from the day's collected news, with each story's share and the move against the previous trading day. Share moves reflect coverage volume, not a change in what the story says.
-- Open a change card to see what moved: the verdict (new information, reversal, developing trend, coverage shift), a short reason, and the before/after side by side.
-- Maintain a local company, sector, and theme Watchlist with a per-symbol chart and the news collected for it.
-- Collect and search public RSS/news feeds from all four markets, in their own languages, and narrow by market, country, or language. The source filter lists only outlets still being collected, and corporate press-release wires stay out of the feed screen while remaining available to watchlist and company analysis.
-- Generate daily market briefings for any set of the four markets at once, each stored as its own report. The date you pick is the market session the briefing covers, not the day it is filed; a Korean briefing for a past date is labelled closed rather than intraday. Daily automation can choose its briefing type.
-- Read a simplified medium-term Market Memory view, with a separate reading per market when the evidence supports one.
-- Generate company analysis reports from local evidence and official data where available. Type a ticker, a company name, or a Korean or Japanese spelling — the screen shows which company it read before generating, offers a choice when several fit, and says so plainly when it recognises none.
-- See released figures on the market calendar, not just the schedule.
-- Ask an investment question and approve the research plan before anything runs, then reopen the report with its sources, gaps, Smart Collection scope, and your own thinking kept as separate layers.
-- Review rule-based change summaries produced together with each new Briefing, Company Analysis, Topic Report, and Market Memory update — without an extra Agent call.
-- Manage your Portfolio holdings — type each position in, with company names resolved to tickers as you go, and a save made elsewhere is flagged before it gets overwritten. See what they are worth now in one currency, how the weight sits across markets, sectors, and currencies, and where a single position has grown large. Save today's weights as a target, see how far each holding has drifted from it, and run that target back over past prices against a benchmark.
-- Carry on a conversation about a watchlist entry, a holding, or a report from the Agent dock, and come back to it later — the list of conversations lives there too. Conversation text is kept on your computer, separate from report sources, and only becomes an investment note when you explicitly choose “노트로 정리” (save as note).
-- Keep your own notes beside a report and check how old they are, what argues against them, and what you said you would follow up on — no AI required.
-- See the tickers you track quietly linked into related research screens, without exposing quantities, prices, weights, or note bodies.
-- Read a work log that shows what the AI did without storing what it wrote, and approve or reject any change it proposes to a saved report.
-- Write report-side Folio Notes.
-- Export generated reports to Obsidian or Notion.
-- Get a short first-run guide that sets up AI and your markets, skippable at any step.
-- See where your research data is stored and move it out of the app folder, so updating no longer means copying it by hand.
-- Choose Light, Dark, or System appearance across the workspace.
-- Configure LLM CLI/API, model choices, RSS, automation, appearance, and export settings.
+- **Collect** — Pull public RSS and news from four markets (US, Korea, Europe, Japan) in their own languages, and drop your own articles, reports, and filings into `research-inbox/`. Search across everything you have collected.
+- **Read the day** — Generate daily briefings for any set of the four markets, each saved as its own report. The Dashboard shows what actually changed since the last one, the market calendar with released figures rather than just the schedule, and charts you choose.
+- **Analyse a company** — Type a ticker, a company name, or a Korean or Japanese spelling. The screen shows which company it read before generating, offers a choice when several fit, and says so plainly when it recognises none.
+- **Answer a question** — Ask an investment question in Deep Research and approve the research plan before anything runs. The report keeps its sources, its gaps, its Smart Collection scope, and your own thinking as separate layers.
+- **Track what you follow** — Keep a Watchlist of companies, sectors, and themes, each with a chart and the news collected for it.
+- **See where you stand** — Enter your Portfolio holdings and see what they are worth in one currency, how the weight sits across markets, sectors, and currencies, and where one position has grown large. Save today's weights as a target, watch each holding drift from it, and run that target back over past prices against a benchmark.
+- **Follow the medium term** — Read a Market Memory view of the narratives running under the daily news, with a separate reading per market when the evidence supports one.
+- **Keep your own thinking separate** — Write notes beside a report and check how old they are, what argues against them, and what you said you would follow up on. Your notes stay marked as your thinking and never merge into a report's evidence.
+- **Use AI, or don't** — Chat with the Agent from Home or the dock about a holding, a watchlist entry, or a report; conversations are saved on your computer and resume later. The Work Log shows what the AI did, and any change it proposes to a saved report waits for your approval. **Folio OS runs without an AI key** — collection, search, charts, and rule-based reports all work locally.
+- **Export** — Send generated reports to Obsidian or Notion.
+- **Settle in** — A short first-run guide sets up AI and your markets, and can be skipped at any step. Settings covers LLM CLI/API, model choices, RSS, automation, appearance (Light, Dark, or System), and where your research data is stored — including moving it out of the app folder so updating no longer means copying by hand.
 
-Not included in the 0.5.1 user surface:
+Not included yet:
 
-- Company analysis for companies listed only in Europe or Japan. 0.5.1 reads official filings through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
+- Company analysis for companies listed only in Europe or Japan. Official filings are read through the SEC, so a European or Japanese company also registered there — ASML, Shell, SAP, Toyota, Sony and others — can be analysed by its US ticker. One listed only at home cannot yet, and the screen says so rather than producing a thin report. Home-market filings come in later releases.
 - Installer/tray-app polish.
 
 Fast-origin news is an early lead, not verified evidence. It is promoted from RSS items Folio OS already collected — no extra network call, credential, or provider setting. Folio OS does not scrape pages or bypass paywalls.
@@ -157,7 +144,7 @@ Generate company analysis reports from official data and local research material
 
 Write the target however you think of it — a ticker, a company name, a Korean or Japanese spelling. The screen tells you which company it read before it generates anything, offers a short list when more than one company fits, and says it recognises none rather than guessing.
 
-**What 0.5.1 can analyse.** Official filings are read through the SEC. A European or Japanese company that also registers there — ASML, Shell, SAP, TotalEnergies, Toyota, Sony and others — can be analysed by its US ticker. A company listed only on its home exchange cannot yet: the screen names the market it is listed on and suggests a US ticker if one exists, instead of generating a report with almost nothing behind it. Korean companies use DART.
+**What can be analysed.** Official filings are read through the SEC. A European or Japanese company that also registers there — ASML, Shell, SAP, TotalEnergies, Toyota, Sony and others — can be analysed by its US ticker. A company listed only on its home exchange cannot yet: the screen names the market it is listed on and suggests a US ticker if one exists, instead of generating a report with almost nothing behind it. Korean companies use DART.
 
 ### Deep Research
 

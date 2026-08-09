@@ -708,7 +708,9 @@ Invoke-RestMethod -Uri "http://localhost:8787/api/rss/items?offset=0&limit=20"
 - **기존 기능 수정 시**: 해당 기능의 README를 수정 내용에 맞게 업데이트한다. API 추가/변경, 동작 변경, 환경 변수 추가가 있으면 반드시 반영한다.
 - **`features/README.md` 테이블**: 새 기능 폴더를 만들면 폴더 역할 테이블에 한 줄 추가한다.
 - **`AGENTS.md`와 `CLAUDE.md`**: 본문을 항상 동일하게 유지한다. 기능 카탈로그(§8)·링크 목록(§9)·기능 경계(§10)에 새 기능을 두 파일 모두 반영한다.
-- **`README.md` / `README.ko.md`(최상위 사용자 문서)**: 사용자가 직접 쓰는 0.2 기능만 현재 기능으로 설명한다. 두 문서는 같은 제품 범위를 유지한다.
+- **`README.md` / `README.ko.md`(최상위 사용자 문서)**: 사용자가 직접 쓰는 기능만 현재 기능으로 설명한다. 두 문서는 같은 제품 범위를 유지한다.
+- **README에 버전을 박지 않는다**: 제목·본문 어디에도 릴리즈 번호를 넣지 않는다(`## What You Can Do` / `## 할 수 있는 일`). 버전은 `VERSION` 파일과 버전 이름이 붙은 배포 폴더가 이미 말하며, README에 넣으면 릴리즈마다 고쳐야 하는데 얻는 것이 없다. `web/tests/test_navigation_contract.py`가 검사한다.
+- **README는 릴리즈 노트가 아니다**: 최상위 README는 "이걸로 뭘 할 수 있나"만 간략히 적는다. 동작 규칙과 경계(세션일 기준, 보도량 이동의 의미 등)는 기능별 README가 갖는다.
 - **README에 스크린샷을 넣지 않는다**: 화면 미리보기 섹션을 두지 않는다. 이미지는 UI가 바뀔 때마다 낡고, 낡은 스크린샷은 없는 것보다 나쁘다. 화면 설명은 글로 한다.
 - **README 용어는 화면과 같아야 한다**: 화면에서 쓰지 않는 내부 용어(hypothesis, Canonical, provenance, bounded, metadata-only, freshness, artifact, fallback 등)를 사용자 문서 설명 문장에 쓰지 않는다. 기능명과 짧은 영문 부제목(Deep Research, Market Memory, Smart Collection)은 허용하되, 그것이 무엇인지 설명하는 문장은 화면에 표시되는 말과 같은 단어로 쓴다. UI 문구를 바꾸면 README도 함께 바꾼다.
 - **`README.dev.md`**: 이전 장문 README 백업이다. 일반 사용자 릴리즈 문서로 링크하거나 포함하지 않는다.
