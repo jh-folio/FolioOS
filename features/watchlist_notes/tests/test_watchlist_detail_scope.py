@@ -10,9 +10,14 @@ from features.watchlist_notes import service
 
 
 def _patched(docs):
+    """종목 매칭은 색인에서, 테마는 검색에서 온다. 같은 문서를 양쪽에 둔다.
+
+    실제 뉴스 문서는 항상 inbox 경로를 갖는다(`is_news_document`가 그것으로 가린다).
+    """
+    indexed = [{"path": f"research-inbox/rss/{i}.md", **doc} for i, doc in enumerate(docs)]
     return (
-        patch("features.common.research_library.indexing.service.load_index", return_value={"documents": []}),
-        patch("features.common.research_library.search.service.search_documents", return_value=docs),
+        patch("features.common.research_library.indexing.service.load_index", return_value={"documents": indexed}),
+        patch("features.common.research_library.search.service.search_documents", return_value=indexed),
     )
 
 

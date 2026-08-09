@@ -5,6 +5,8 @@ from features.watchlist_notes import service
 
 def _doc(title="NVIDIA expands AI server platform"):
     return {
+        # 종목 뉴스는 색인의 inbox 문서에서 온다. 경로가 없으면 뉴스로 잡히지 않는다.
+        "path": "research-inbox/rss/nvda.md",
         "title": title,
         "source": "Reuters",
         "date": "2026-06-24",
@@ -48,7 +50,7 @@ def test_watchlist_company_from_constituents_prefers_company_name_over_short_tic
 def test_watchlist_detail_returns_single_item_news_and_company_metadata():
     doc = _doc()
     with (
-        patch("features.common.research_library.indexing.service.load_index", return_value={"documents": []}),
+        patch("features.common.research_library.indexing.service.load_index", return_value={"documents": [doc]}),
         patch("features.common.research_library.search.service.search_documents", return_value=[doc]),
     ):
         detail = service.watchlist_detail("NVIDIA", limit=5)

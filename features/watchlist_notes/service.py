@@ -15,7 +15,7 @@ from features.common.company_lookup import (
     normalize_company_entry,
     sec_company_lookup,
 )
-from features.common.dataframe_ops import top_records
+from features.common.dataframe_ops import sort_records, top_records
 from features.common.instruments.registry import exchange_suffix
 from features.investment_notes.checkpoints import project_checkpoint_notes
 from features.common.workspace import data_dir
@@ -390,6 +390,18 @@ def _contains_name(haystack: str, needle: str) -> bool:
     return needle in haystack
 
 
+def _matches_core(q_core: str, q_lower: str, name_core: str, ticker: str) -> bool:
+    """비교용 이름끼리의 판정. 정규화를 이미 마친 값을 받는다."""
+    if ticker and q_lower == ticker:
+        return True
+    if not q_core:
+        # 법인 형태만 남은 항목은 어떤 회사도 가리키지 않는다.
+        return False
+    if q_core == name_core:
+        return True
+    return _contains_name(name_core, q_core) or _contains_name(q_core, name_core)
+
+
 def _item_matches_company(query: str, company: dict) -> bool:
     """워치리스트 항목이 이 회사를 가리키는가.
 
@@ -399,17 +411,12 @@ def _item_matches_company(query: str, company: dict) -> bool:
     Ltd.`를 물어왔다. 정식명이 길수록 짧은 이름이 우연히 들어갈 자리가 많아,
     `, Ltd.` `Co., Ltd.`가 붙는 일본 기업이 특히 자주 걸렸다.
     """
-    q_core = _company_core(query)
-    name_core = _company_core(company.get("name"))
-    ticker = str(company.get("ticker") or "").lower().strip()
-    if ticker and query.lower().strip() == ticker:
-        return True
-    if not q_core:
-        # 법인 형태만 남은 항목은 어떤 회사도 가리키지 않는다.
-        return False
-    if q_core == name_core:
-        return True
-    return _contains_name(name_core, q_core) or _contains_name(q_core, name_core)
+    return _matches_core(
+        _company_core(query),
+        query.lower().strip(),
+        _company_core(company.get("name")),
+        str(company.get("ticker") or "").lower().strip(),
+    )
 
 
 TRADINGVIEW_SUFFIX_EXCHANGES = {
@@ -500,6 +507,74 @@ def _public_news_doc(doc: dict) -> dict:
     }
 
 
+def news_company_index(idx) -> list[tuple[dict, list[tuple[str, str]]]]:
+    """뉴스 문서와 그 문서에 붙은 회사들의 비교용 이름.
+
+    항목마다 다시 만들면 실측으로 5개에 0.98초가 든다 — 문서 12,333건의 회사 이름을
+    항목 수만큼 반복해 정규화하기 때문이다. 결과는 항목과 무관하므로 한 번만 만든다.
+    """
+    from features.daily_briefing.service import is_news_document
+
+    rows = []
+    for doc in idx.get("documents") or []:
+        if not is_news_document(doc):
+            continue
+        rows.append((
+            doc,
+            [
+                (_company_core(company.get("name")), str(company.get("ticker") or "").lower().strip())
+                for company in (doc.get("companies") or [])
+            ],
+        ))
+    return rows
+
+
+def watchlist_news(idx, item: str, limit: int, company_index=None, ticker: str = "") -> tuple[list[dict], int, bool]:
+    """이 항목의 뉴스와 **전체 건수**. 카드와 상세가 같은 답을 하도록 한 곳에서 만든다.
+
+    돌려주는 건수는 목록의 길이가 아니라 색인 전체에서 이 회사가 언급된 문서 수다.
+    예전에는 검색 상위 200건 안에서만 세어 AMD가 297건인데 카드에 69건으로 나왔고,
+    매칭이 0건이면 **검색 결과 개수를 그대로** 건수로 썼다 — Howmet Aerospace는 색인에
+    단 한 건도 없는데 카드가 107건이라고 했고, 같은 항목의 상세 화면은 0건이라고 했다.
+
+    테마 키워드("AI", "ETF")는 매칭할 회사가 없으므로 검색 결과가 곧 답이다. 종목은
+    그 종목이 실제로 언급된 문서만 뉴스이며, 없으면 없다고 말한다.
+
+    `ticker`는 이 항목이 해석된 종목 코드다. **이름만으로는 이어지지 않는다** — 워치리스트는
+    해석된 정식명(`ADVANCED MICRO DEVICES INC`)을 저장하는데 기사에 붙은 회사는 `AMD`라,
+    이름끼리는 한 글자도 겹치지 않아 295건이 0건이 됐다. 코드가 있으면 그것이 가장 확실한
+    연결이고, 없거나 다른 표기일 때(도쿄 `6501.T` vs ADR `HTHIY`) 이름이 받는다.
+
+    `company_index`를 넘기면 그것을 쓴다. 만드는 데 항목당 0.2초가 드는데 결과는 항목과
+    무관하므로 목록 화면이 한 번만 만들어 넘긴다.
+    """
+    from features.common.research_library.search.service import search_documents
+
+    query = normalize(item).strip()
+    if not query:
+        return [], 0, False
+    rows = news_company_index(idx) if company_index is None else company_index
+    q_core = _company_core(query)
+    q_lower = query.lower().strip()
+    wanted_ticker = str(ticker or "").lower().strip()
+    matched = [
+        doc for doc, companies in rows
+        if any(
+            (wanted_ticker and doc_ticker == wanted_ticker)
+            or _matches_core(q_core, q_lower, name_core, doc_ticker)
+            for name_core, doc_ticker in companies
+        )
+    ]
+    if matched:
+        # 카드가 원하는 것은 관련도 순위가 아니라 최신 소식이다.
+        matched = sort_records(matched, ["date"], descending=True)
+        return matched[:limit], len(matched), False
+    if _is_watchlist_theme_query(query):
+        candidates = search_documents(idx, query=query, limit=WATCHLIST_MATCH_SCAN_LIMIT, scope="news")
+        return candidates[:limit], len(candidates), False
+    return [], 0, True
+
+
 def watchlist_detail(item: str, limit: int = 12) -> dict:
     from collections import Counter
     from features.common.research_library.indexing.service import load_index
@@ -518,19 +593,11 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
             "warnings": ["empty watchlist item"],
         }
     idx = load_index()
-    candidates = search_documents(idx, query=query, limit=max(limit * 3, 12), scope="news")
-    matched = [h for h in candidates if any(_item_matches_company(query, c) for c in h.get("companies", []))]
-    # 워치리스트에는 종목과 테마가 함께 들어간다. 테마("AI", "ETF" 등)는 매칭할 회사가
-    # 없으므로 검색 결과가 곧 답이다. 반면 종목은 그 종목이 실제로 언급된 문서만
-    # 뉴스여야 한다. 예전에는 매칭 0건이면 검색 결과 앞부분을 그대로 내보내서
-    # "NVDA" 카드에 무관한 기업 기사가 실렸다.
-    if matched or not _is_watchlist_theme_query(query):
-        hits = matched[:limit]
-        if not matched:
-            warnings.append("no_company_matched_news")
-    else:
-        hits = candidates[:limit]
-    company = resolve_watchlist_company(query, hits)
+    # 회사를 먼저 해석한다. 그 종목 코드가 기사에 붙은 회사와 이어 주는 열쇠다.
+    company = resolve_watchlist_company(query)
+    hits, total, empty = watchlist_news(idx, query, limit, ticker=(company or {}).get("ticker", ""))
+    if empty:
+        warnings.append("no_company_matched_news")
     if not company:
         company = {"name": query, "ticker": "", "market": "", "sector": ""}
     company = dict(company)
@@ -550,7 +617,10 @@ def watchlist_detail(item: str, limit: int = 12) -> dict:
         "company": company,
         "tags": tags,
         "news": news,
-        "newsCount": len(news),
+        # 목록은 `limit`까지만 싣지만 건수는 카드와 같은 전체 수다. 둘이 다르면
+        # 같은 항목을 두 화면에서 보는 사용자가 어느 쪽을 믿을지 알 수 없다.
+        "newsCount": total,
+        "shownCount": len(news),
         "latestDate": news[0].get("date", "") if news else "",
         "warnings": warnings,
     }
@@ -565,21 +635,15 @@ def watchlist_overview(limit_per_item: int = 5):
     cards = []
     seen_paths = set()
     combined = []
+    # 항목과 무관한 준비다. 항목마다 다시 하면 5개에 0.98초가 쌓인다.
+    company_index = news_company_index(idx)
     for item in items:
-        # Fix 5: 후보를 넉넉히 뽑은 뒤 companies 필드에 해당 기업이 실제 등장하는 문서만 사용
-        # 카드에 보여줄 건수는 실제 관련 문서 수라, 미리보기용 상위 N개와 따로 센다.
-        # 예전에는 잘라낸 hits의 길이를 그대로 써서 모든 카드가 limit_per_item(5)으로 고정됐다.
-        candidates = search_documents(idx, query=item, limit=WATCHLIST_MATCH_SCAN_LIMIT, scope="news")
-        matched = [h for h in candidates if any(_item_matches_company(item, c) for c in h.get("companies", []))]
-        if matched:
-            match_count = len(matched)
-            hits = matched[:limit_per_item]
-        else:
-            # 인덱스에 회사 정보가 없는 종목은 검색 결과를 그대로 쓰되 건수도 같은 기준으로 센다.
-            match_count = len(candidates)
-            hits = candidates[:limit_per_item]
-        resolved_company = resolve_watchlist_company(item, hits)
-        resolved_company = dict(resolved_company or {})
+        # 건수와 목록은 상세 화면과 같은 함수에서 나온다. 예전에는 여기만 검색 결과 개수를
+        # 세어 Howmet Aerospace 카드가 107건이라고 했는데 같은 항목의 상세는 0건이었다.
+        resolved_company = dict(resolve_watchlist_company(item) or {})
+        hits, match_count, _empty = watchlist_news(
+            idx, item, limit_per_item, company_index, resolved_company.get("ticker", "")
+        )
         resolved_symbol = tradingview_symbol_for_company(resolved_company) or tradingview_symbol_for_query(
             resolved_company.get("ticker") or item
         )
