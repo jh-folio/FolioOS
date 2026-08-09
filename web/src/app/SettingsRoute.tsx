@@ -56,16 +56,31 @@ type AgentSettings = {
   adapters?: AgentAdapter[];
 };
 
+type BriefingSchedule = {
+  id: string;
+  enabled: boolean;
+  time: string;
+  markets: string[];
+  briefingType: string;
+  qualityMode?: string;
+  runPrerequisites: boolean;
+};
+
 type AutomationSettings = {
   rss?: { enabled?: boolean; intervalMinutes?: number | string; saveFullText?: boolean };
   marketMemory?: { enabled?: boolean; intervalMinutes?: number | string; runAfterRss?: boolean };
-  briefing?: {
-    enabled?: boolean;
-    time?: string;
-    marketScope?: string;
-    briefingType?: string;
-    runPrerequisites?: boolean;
-  };
+  briefingSchedules?: BriefingSchedule[];
+  missedRuns?: { catchUpHours?: number | string };
+};
+
+type AutomationRun = {
+  kind?: string;
+  status?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  errorType?: string;
+  errorReason?: string;
+  scheduleId?: string;
 };
 
 type LlmTestResult = {
@@ -170,14 +185,196 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
       intervalMinutes: form.marketMemory?.intervalMinutes || 1440,
       runAfterRss: Boolean(form.marketMemory?.runAfterRss),
     },
-    briefing: {
-      enabled: Boolean(form.briefing?.enabled),
-      time: form.briefing?.time || "08:00",
-      marketScope: form.briefing?.marketScope || "both",
-      briefingType: form.briefing?.briefingType || "default",
-      runPrerequisites: Boolean(form.briefing?.runPrerequisites),
-    },
+    briefingSchedules: (form.briefingSchedules || []).slice(0, MAX_SCHEDULES).map((row) => ({
+      id: row.id,
+      enabled: Boolean(row.enabled),
+      time: row.time || "08:00",
+      markets: [...(row.markets || [])],
+      briefingType: row.briefingType || "default",
+      qualityMode: row.qualityMode || "diagnose_only",
+      runPrerequisites: Boolean(row.runPrerequisites),
+    })),
+    missedRuns: { catchUpHours: form.missedRuns?.catchUpHours ?? 3 },
   };
+}
+
+// 상한이 없으면 24개를 만들어 하루 종일 LLM을 돌릴 수 있다. 서버도 같은 값으로 자른다.
+const MAX_SCHEDULES = 5;
+const MARKET_CODES: Array<{ id: string; label: string }> = [
+  { id: "us", label: "US" },
+  { id: "kr", label: "KR" },
+  { id: "europe", label: "EU" },
+  { id: "jp", label: "JP" },
+];
+
+// 마감 시각이 전부 다르다 — 유럽 01:30 · 미국 05~06 · 일본 15:00 · 한국 15:30 (KST).
+// 사용자가 그걸 알아야 하는 화면은 만들지 않는다. 관심 시장에서 켠 것만 넣어 제안한다.
+const SCHEDULE_PROPOSALS: Array<{ label: string; time: string; markets: string[]; hint: string }> = [
+  { label: "아침", time: "08:00", markets: ["us", "europe"], hint: "밤사이 해외장" },
+  { label: "저녁", time: "18:00", markets: ["kr", "jp"], hint: "오늘 국내장" },
+];
+
+function newScheduleId() {
+  return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// 놓친 실행을 몇 시간까지 따라잡을지. 예전에는 `건너뛴다`/`따라잡는다` 둘뿐이었고 둘 다
+// 나빴다 — 앞의 것은 10분 창이 전부라 08:15에 PC를 켜면 그날 브리핑이 없었고, 뒤의 것은
+// 상한이 없어 23:50에 켜도 아침 브리핑을 만들었다.
+const CATCH_UP_CHOICES: Array<{ value: string; label: string }> = [
+  { value: "0", label: "정시에만" },
+  { value: "1", label: "1시간 안이면" },
+  { value: "3", label: "3시간 안이면" },
+  { value: "6", label: "6시간 안이면" },
+  { value: "24", label: "그날 안이면 언제든" },
+];
+
+function runOutcome(run: AutomationRun | undefined) {
+  if (!run) return { tone: "", text: "아직 실행된 적 없습니다" };
+  const at = run.finishedAt ? new Date(run.finishedAt) : null;
+  const when = at && !Number.isNaN(at.getTime())
+    ? at.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "";
+  if (run.status === "failed") {
+    // 예외 원문이 아니라 분류된 원인이다. 메시지에는 요청 URL·헤더·프롬프트 조각이
+    // 실릴 수 있어 화면으로 내보내지 않는다.
+    const reason = run.errorReason || "";
+    return { tone: "is-failed", text: `${when} 실패${reason ? ` — ${reason}` : ""}` };
+  }
+  return { tone: "is-done", text: `${when} 완료` };
+}
+
+/** 브리핑 예약 목록.
+ *
+ *  예전에는 하나만 등록할 수 있었다. 시장이 넷이 되면서 마감 시각이 전부 달라져
+ *  시각 하나로는 구조적으로 안 된다 — 08:00 한 번이면 미국 마감은 담지만 한국·일본은
+ *  개장 전이다. 목록이되, 비어 있을 때는 마감 시각에서 나온 제안을 눌러 넣게 한다.
+ */
+function BriefingSchedules({
+  schedules, watched, runsById, onChange,
+}: {
+  schedules: BriefingSchedule[];
+  watched: string[];
+  runsById: Record<string, AutomationRun>;
+  onChange: (next: BriefingSchedule[]) => void;
+}) {
+  const patch = (id: string, changes: Partial<BriefingSchedule>) =>
+    onChange(schedules.map((row) => (row.id === id ? { ...row, ...changes } : row)));
+
+  const toggleMarket = (row: BriefingSchedule, market: string) => {
+    const next = row.markets.includes(market)
+      ? row.markets.filter((m) => m !== market)
+      : MARKET_CODES.map((m) => m.id).filter((m) => m === market || row.markets.includes(m));
+    // 시장이 하나도 없으면 만들 보고서가 없다. 마지막 하나는 끄지 않는다.
+    if (next.length) patch(row.id, { markets: next });
+  };
+
+  const add = (markets: string[], time: string) => {
+    if (schedules.length >= MAX_SCHEDULES) return;
+    onChange([...schedules, {
+      id: newScheduleId(), enabled: true, time, markets,
+      briefingType: "default", qualityMode: "diagnose_only", runPrerequisites: true,
+    }]);
+  };
+
+  const proposals = SCHEDULE_PROPOSALS
+    .map((row) => ({ ...row, markets: row.markets.filter((m) => watched.includes(m)) }))
+    .filter((row) => row.markets.length);
+
+  return (
+    <div className="schedule-list">
+      {schedules.map((row) => {
+        const offScope = row.markets.filter((m) => !watched.includes(m));
+        return (
+          <div className="schedule-row" key={row.id}>
+            <div className="schedule-row-head">
+              <input
+                type="time"
+                aria-label="브리핑 시각"
+                value={row.time}
+                onChange={(event) => patch(row.id, { time: event.currentTarget.value })}
+              />
+              <select
+                aria-label="브리핑 유형"
+                value={row.briefingType}
+                onChange={(event) => patch(row.id, { briefingType: event.currentTarget.value })}
+              >
+                {Object.entries(AUTOMATION_BRIEFING_TYPES).map(([value, label]) => (
+                  <option value={value} key={value}>{label}</option>
+                ))}
+              </select>
+              <ToggleSwitch
+                ariaLabel={`${row.time} 예약 사용`}
+                checked={row.enabled}
+                onChange={(checked) => patch(row.id, { enabled: checked })}
+                compact
+              />
+              <button
+                className="btn btn--quiet"
+                type="button"
+                onClick={() => onChange(schedules.filter((item) => item.id !== row.id))}
+              >
+                삭제
+              </button>
+            </div>
+            <div className="settings-theme-options" role="group" aria-label={`${row.time} 예약의 시장`}>
+              {MARKET_CODES.map((market) => (
+                <button
+                  type="button"
+                  key={market.id}
+                  aria-pressed={row.markets.includes(market.id)}
+                  onClick={() => toggleMarket(row, market.id)}
+                >
+                  {market.label}
+                </button>
+              ))}
+            </div>
+            {offScope.length > 0 && (
+              // 선택 자체를 막지 않는다. 시장을 잠깐 껐다 켜는 동안 예약이 파괴되면 안 된다.
+              <p className="settings-hint">
+                관심 시장에서 꺼둔 {offScope.map((m) => MARKET_CODES.find((c) => c.id === m)?.label || m).join(" · ")}은(는) 빼고 생성합니다.
+              </p>
+            )}
+            <LastRun run={runsById[row.id]} />
+          </div>
+        );
+      })}
+
+      {!schedules.length && proposals.length > 0 && (
+        <div className="schedule-proposals">
+          <p className="settings-hint">아직 예약이 없습니다. 관심 시장의 마감 시각에 맞춰 제안합니다.</p>
+          {proposals.map((row) => (
+            <button className="btn" type="button" key={row.time} onClick={() => add(row.markets, row.time)}>
+              {row.label} {row.time} — {row.markets.map((m) => MARKET_CODES.find((c) => c.id === m)?.label).join(" · ")}
+              <span>{row.hint}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="schedule-actions">
+        <button
+          className="btn"
+          type="button"
+          disabled={schedules.length >= MAX_SCHEDULES}
+          onClick={() => add(watched.length ? [...watched] : MARKET_CODES.map((m) => m.id), "08:00")}
+        >
+          예약 추가
+        </button>
+        {schedules.length >= MAX_SCHEDULES && <span className="settings-hint">최대 {MAX_SCHEDULES}개까지 만들 수 있습니다.</span>}
+      </div>
+    </div>
+  );
+}
+
+function LastRun({ run }: { run?: AutomationRun }) {
+  const { tone, text } = runOutcome(run);
+  return (
+    <p className={`automation-last-run ${tone}`.trim()}>
+      <span>마지막 실행</span>
+      {text}
+    </p>
+  );
 }
 
 // 수동 생성 화면(BriefingRoute)과 같은 문구를 쓴다. 두 화면이 다른 이름으로
@@ -471,6 +668,10 @@ export function SettingsRoute() {
   const [automation, setAutomation] = useState<AutomationSettings>({});
   // 자동화 폼은 서버 응답을 그대로 편집하므로, dirty 판정용 기준선을 따로 든다.
   const [automationSaved, setAutomationSaved] = useState<AutomationSettings>({});
+  const [automationRuns, setAutomationRuns] = useState<AutomationRun[]>([]);
+  // 예약 제안은 관심 시장에서 켠 것만 넣는다. 못 읽으면 네 시장을 다 보여주고,
+  // 실행할 때 서버가 어차피 교집합을 낸다.
+  const [watchedMarkets, setWatchedMarkets] = useState<string[]>(MARKET_CODES.map((m) => m.id));
   const [obsidian, setObsidian] = useState<ObsidianSettings>({});
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [provider, setProvider] = useState<ProviderId>("openai");
@@ -516,17 +717,44 @@ export function SettingsRoute() {
   const obsidianDirty = vaultPath.trim() !== String(obsidian.vaultPath || "").trim();
   const automationDirty =
     JSON.stringify(buildAutomationPayload(automation)) !== JSON.stringify(buildAutomationPayload(automationSaved));
+  // 기록은 최신순으로 오므로 종류별 첫 행이 마지막 실행이다.
+  const lastRunByKind = useMemo(() => {
+    const map: Record<string, AutomationRun> = {};
+    for (const run of automationRuns) {
+      const kind = String(run.kind || "");
+      if (kind && !map[kind]) map[kind] = run;
+    }
+    return map;
+  }, [automationRuns]);
+  // 브리핑은 예약마다 따로 본다. 아침이 실패했는지 저녁이 실패했는지 구분되어야 한다.
+  const lastBriefingRunById = useMemo(() => {
+    const map: Record<string, AutomationRun> = {};
+    for (const run of automationRuns) {
+      if (run.kind !== "briefing") continue;
+      const id = String(run.scheduleId || "");
+      if (id && !map[id]) map[id] = run;
+    }
+    return map;
+  }, [automationRuns]);
 
   const loadAll = useCallback(async (refreshAgent = false) => {
     setError("");
     setBusy("load");
     try {
-      const [settingsPayload, agentPayload, automationPayload, obsidianPayload] = await Promise.all([
+      const [settingsPayload, agentPayload, automationPayload, obsidianPayload, runsPayload, scopePayload] = await Promise.all([
         getJson<SettingsPayload>(`/api/settings${refreshAgent ? "?refresh=true" : ""}`),
         getJson<AgentSettings>(`/api/agent-bridge/settings${refreshAgent ? "?refresh=true" : ""}`),
         getJson<AutomationSettings>("/api/automation/settings"),
         getJson<ObsidianSettings>("/api/obsidian/settings"),
+        // 실행 기록은 있었는데 부르는 화면이 없었다. 자동화가 돌았는지 실패했는지
+        // 볼 방법이 없으면 켜 둔 채로 몇 주가 지나도 모른다.
+        getJson<{ items?: AutomationRun[] }>("/api/automation/runs?limit=50").catch(() => ({ items: [] })),
+        getJson<MarketScopeState>("/api/market-scope").catch(() => null),
       ]);
+      setAutomationRuns(runsPayload.items || []);
+      if (scopePayload?.selected) {
+        setWatchedMarkets(scopePayload.selected.map((code) => String(code).toLowerCase()));
+      }
       setSettings(settingsPayload);
       setAgentEnabled(settingsPayload.agent?.enabled !== false);
       setAgentMode(settingsPayload.agent?.mode === "api" ? "api" : "cli");
@@ -1025,6 +1253,7 @@ export function SettingsRoute() {
                 </div>
                 <label className="field"><span>수집 간격</span><select value={String(automation.rss?.intervalMinutes || 60)} onChange={(event) => setAutomation({ ...automation, rss: { ...automation.rss, intervalMinutes: event.currentTarget.value } })}><option value="15">15분마다</option><option value="30">30분마다</option><option value="60">1시간마다</option><option value="180">3시간마다</option></select></label>
                 <div className="automation-inline-switch"><span>기사 전문 저장 (무료 공개 본문만, 로컬 보관용)</span><ToggleSwitch ariaLabel="기사 전문 저장" checked={automation.rss?.saveFullText !== false} onChange={(checked) => setAutomation({ ...automation, rss: { ...automation.rss, saveFullText: checked } })} compact /></div>
+                <LastRun run={lastRunByKind.rss} />
               </section>
 
               <section className="automation-card">
@@ -1038,6 +1267,7 @@ export function SettingsRoute() {
                 </div>
                 <label className="field"><span>정리 간격</span><select value={String(automation.marketMemory?.intervalMinutes || 1440)} onChange={(event) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, intervalMinutes: event.currentTarget.value } })}><option value="720">12시간마다</option><option value="1440">하루마다</option><option value="2880">이틀마다</option><option value="10080">일주일마다</option></select></label>
                 <div className="automation-inline-switch"><span>RSS 수집 직후에도 정리</span><ToggleSwitch ariaLabel="RSS 수집 직후 Market Memory 정리" checked={Boolean(automation.marketMemory?.runAfterRss)} onChange={(checked) => setAutomation({ ...automation, marketMemory: { ...automation.marketMemory, runAfterRss: checked } })} compact /></div>
+                <LastRun run={lastRunByKind.marketMemory} />
               </section>
 
               <section className="automation-card">
@@ -1045,16 +1275,26 @@ export function SettingsRoute() {
                   <div>
                     <span>Daily Briefing</span>
                     <strong>브리핑 생성</strong>
-                    <p>지정한 시각에 RSS와 Market Memory를 반영해 일일 브리핑을 생성합니다.</p>
+                    <p>예약한 시각에 그 시장의 일일 브리핑을 만듭니다. 마감 시각이 시장마다 달라 여러 개를 둘 수 있습니다.</p>
                   </div>
-                  <ToggleSwitch ariaLabel="일일 브리핑 자동 생성" checked={Boolean(automation.briefing?.enabled)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, enabled: checked } })} compact />
                 </div>
-                <div className="settings-grid compact">
-                  <label className="field"><span>브리핑 시각</span><input value={automation.briefing?.time || "08:00"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, time: event.currentTarget.value } })} type="time" /></label>
-                  <label className="field"><span>시장 범위</span><select value={automation.briefing?.marketScope || "both"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, marketScope: event.currentTarget.value } })}><option value="all">전체(미국+한국+유럽+일본)</option><option value="both">미국+한국</option><option value="us">미국</option><option value="kr">한국</option><option value="europe">유럽</option><option value="jp">일본</option></select></label>
-                  <label className="field"><span>브리핑 유형</span><select value={automation.briefing?.briefingType || "default"} onChange={(event) => setAutomation({ ...automation, briefing: { ...automation.briefing, briefingType: event.currentTarget.value } })}>{Object.entries(AUTOMATION_BRIEFING_TYPES).map(([value, label]) => (<option value={value} key={value}>{label}</option>))}</select></label>
-                </div>
-                <div className="automation-inline-switch"><span>브리핑 전 RSS/Memory 실행</span><ToggleSwitch ariaLabel="브리핑 전 RSS와 Market Memory 실행" checked={Boolean(automation.briefing?.runPrerequisites)} onChange={(checked) => setAutomation({ ...automation, briefing: { ...automation.briefing, runPrerequisites: checked } })} compact /></div>
+                <BriefingSchedules
+                  schedules={automation.briefingSchedules || []}
+                  watched={watchedMarkets}
+                  runsById={lastBriefingRunById}
+                  onChange={(next) => setAutomation({ ...automation, briefingSchedules: next })}
+                />
+                <label className="field">
+                  <span>시각을 놓쳤을 때</span>
+                  <select
+                    value={String(automation.missedRuns?.catchUpHours ?? 3)}
+                    onChange={(event) => setAutomation({ ...automation, missedRuns: { catchUpHours: event.currentTarget.value } })}
+                  >
+                    {CATCH_UP_CHOICES.map((choice) => (
+                      <option value={choice.value} key={choice.value}>{choice.label}</option>
+                    ))}
+                  </select>
+                </label>
               </section>
             </div>
             <div className="filter-actions settings-actions">

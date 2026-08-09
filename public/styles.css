@@ -11798,6 +11798,101 @@ main.page {
   font-weight: var(--fw-bold);
 }
 
+/* 브리핑 예약 목록. 시장이 넷이 되면서 마감 시각이 전부 달라져 예약을 여러 개 두게 됐다.
+   행마다 면을 주면 카드 안에 카드가 생기므로, 구분은 선 하나로만 한다. */
+.schedule-list {
+  display: grid;
+  gap: 12px;
+}
+
+.schedule-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--folio-border);
+  border-radius: var(--r-group);
+  background: var(--folio-surface-muted);
+}
+
+.schedule-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-row-head input[type="time"] {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.schedule-row-head select {
+  flex: 1 1 8ch;
+  min-width: 8ch;
+}
+
+.schedule-row-head .settings-switch {
+  margin-left: auto;
+}
+
+.schedule-row .automation-last-run {
+  padding-top: 8px;
+}
+
+.schedule-proposals {
+  display: grid;
+  gap: 8px;
+}
+
+/* 제안 버튼 — 무엇을 왜 만드는지 두 줄로 말한다. 마감 시각을 사용자가 알 필요는 없다. */
+.schedule-proposals .btn {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  height: auto;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.schedule-proposals .btn > span {
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-normal);
+  color: var(--folio-ink-subtle);
+}
+
+.schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 마지막 실행 — 카드 맨 아래 한 줄. `GET /api/automation/runs`는 오래전부터 있었는데
+   부르는 화면이 없어서, 자동화를 켜 둔 채로 실패해도 알 방법이 없었다. 카드 안의 다른
+   요소와 경쟁하지 않도록 면을 갖지 않고 잉크로만 구분한다. */
+.automation-last-run {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--folio-border);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-normal);
+  line-height: 1.5;
+  color: var(--folio-ink-subtle);
+  overflow-wrap: anywhere;
+}
+
+.automation-last-run > span {
+  color: var(--folio-ink-subtle);
+  opacity: 0.75;
+}
+
+.automation-last-run.is-failed {
+  color: var(--color-negative);
+}
+
 .automation-card-actions {
   display: flex;
   flex-wrap: wrap;

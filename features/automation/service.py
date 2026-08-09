@@ -6,13 +6,22 @@ import time
 from pathlib import Path
 
 from features.automation.schema import normalize_settings
-from features.automation.schema import MARKET_CALENDAR_INTERVAL_MINUTES
+from features.automation.schema import (
+    DEFAULT_CATCH_UP_HOURS,
+    default_schedule,
+    MARKET_CALENDAR_INTERVAL_MINUTES,
+    MAX_ATTEMPTS_PER_DAY,
+    ON_TIME_WINDOW_MINUTES,
+    RETRY_DELAY_MINUTES,
+)
 from features.agent_mode.bridge import submit_agent_task
 from features.agent_mode.generation_mode import llm_override_for_mode
 from features.common.research_library.rss.service import import_rssarchive
 from features.common.research_library.signals.runtime import promote_kr_rss_leads
 from features.common.utils import kst_date, now_iso, read_json, write_json
+from features.common.market_scope import load_market_scope
 from features.daily_briefing.builder import build_briefing
+from features.daily_briefing.schema import market_selection_scope, normalize_market_selection
 from features.llm_settings.client import default_generation_mode
 from features.market_memory.digest import run_rss_market_memory_update
 from features.market_calendar.service import refresh_calendar
@@ -34,6 +43,42 @@ def save_settings(raw: dict) -> dict:
     SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
     write_json(SETTINGS_PATH, settings)
     return settings
+
+
+# 실패 원인은 예외 **원문이 아니라 분류**로 남긴다. `run_automation_once`의 반환값은
+# HTTP로 나가고 실행 기록도 `/api/automation/runs`로 나가는데, 예외 메시지에는 요청 URL,
+# 헤더, 프롬프트 조각, 파일 경로가 그대로 실릴 수 있다. 키 패턴만 지우는 방식으로는
+# 모르는 형태를 막지 못한다(`tests/test_security_alert_regressions.py`가 그 경계를 지킨다).
+#
+# 그렇다고 예전처럼 `automation_failed` 한 마디만 남기면 왜 실패했는지 알 수 없다.
+# 예외 **종류**는 코드 식별자라 사용자 자료가 아니므로, 그것만 읽어 한국어 원인으로 옮긴다.
+FAILURE_REASONS = {
+    "TimeoutError": "시간이 초과되었습니다",
+    "ConnectionError": "네트워크에 연결하지 못했습니다",
+    "ConnectionResetError": "네트워크에 연결하지 못했습니다",
+    "HTTPError": "외부 서비스가 오류를 돌려줬습니다",
+    "URLError": "네트워크에 연결하지 못했습니다",
+    "PermissionError": "파일에 접근하지 못했습니다",
+    "FileNotFoundError": "필요한 파일을 찾지 못했습니다",
+    "OSError": "파일이나 네트워크 접근에 실패했습니다",
+    "JSONDecodeError": "응답을 해석하지 못했습니다",
+    "ValueError": "값이 올바르지 않습니다",
+    "MemoryError": "메모리가 부족합니다",
+}
+UNKNOWN_FAILURE_REASON = "알 수 없는 오류입니다"
+
+
+def failure_reason(exc: BaseException) -> str:
+    """Map an exception class to a cause a person can act on.
+
+    상속을 따라 올라가며 아는 종류를 찾는다. `requests`·`urllib` 계열은 이름이 제각각이라
+    정확히 맞지 않아도 부모 클래스(`OSError`)에서 걸린다.
+    """
+    for klass in type(exc).__mro__:
+        reason = FAILURE_REASONS.get(klass.__name__)
+        if reason:
+            return reason
+    return UNKNOWN_FAILURE_REASON
 
 
 def _append_run(row: dict) -> None:
@@ -82,6 +127,38 @@ def _last_run_for(kind: str, runs: list[dict] | None = None) -> dict | None:
     return None
 
 
+def _row_failed(row: dict) -> bool:
+    """Only an explicit `failed` counts as a failure.
+
+    옛 기록과 테스트 fixture에는 `status`가 없는 행이 있다. 그것까지 실패로 보면
+    이미 만든 브리핑을 다시 만든다.
+    """
+    return str(row.get("status") or "").strip() == "failed"
+
+
+def _runs_on_date(
+    kind: str, runs: list[dict], now: dt.datetime, *, schedule_id: str = ""
+) -> list[tuple[dt.datetime, dict]]:
+    """That day's attempts for one automation, newest first.
+
+    `schedule_id`를 주면 그 스케줄의 시도만 센다. 하루 3회 상한이 스케줄별이어야
+    아침 브리핑이 세 번 실패했다고 저녁 브리핑까지 막히지 않는다. 스케줄 id가 없는
+    옛 기록은 승격된 첫 스케줄의 것으로 본다.
+    """
+    rows = []
+    for row in runs:
+        if row.get("kind") != kind:
+            continue
+        if schedule_id:
+            row_id = str(row.get("scheduleId") or "").strip()
+            if row_id and row_id != schedule_id:
+                continue
+        finished = _parse_iso(row.get("finishedAt", ""))
+        if finished is not None and _date_in_reference_timezone(finished, now) == now.date():
+            rows.append((finished, row))
+    return sorted(rows, key=lambda pair: pair[0], reverse=True)
+
+
 def _minutes_from_time(value: str) -> int:
     hour, minute = str(value or "08:00").split(":")[:2]
     return int(hour) * 60 + int(minute)
@@ -113,19 +190,35 @@ def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | N
         finished = _parse_iso((last or {}).get("finishedAt", ""))
         return finished is None or _elapsed(now, finished) >= dt.timedelta(minutes=int(cfg["intervalMinutes"]))
     if kind == "briefing":
-        cfg = settings["briefing"]
-        if not cfg.get("enabled"):
-            return False
-        target = _minutes_from_time(cfg.get("time", "08:00"))
-        current = now.hour * 60 + now.minute
-        if current < target:
-            return False
-        if settings.get("missedRuns", {}).get("onStartup") != "catch_up" and current - target > 10:
-            return False
-        last = _last_run_for("briefing", runs)
-        finished = _parse_iso((last or {}).get("finishedAt", ""))
-        return finished is None or _date_in_reference_timezone(finished, now) != now.date()
+        schedules = settings.get("briefingSchedules") or []
+        return any(
+            schedule_due(schedule, settings=settings, now=now, runs=runs)
+            for schedule in schedules
+        )
     return False
+
+
+def schedule_due(schedule: dict, *, settings: dict, now: dt.datetime, runs: list[dict]) -> bool:
+    """Whether one briefing schedule should run right now."""
+    if not schedule.get("enabled"):
+        return False
+    target = _minutes_from_time(schedule.get("time", "08:00"))
+    current = now.hour * 60 + now.minute
+    if current < target:
+        return False
+    catch_up = int(settings.get("missedRuns", {}).get("catchUpHours", DEFAULT_CATCH_UP_HOURS))
+    if current - target > max(ON_TIME_WINDOW_MINUTES, catch_up * 60):
+        return False
+    today = _runs_on_date("briefing", runs, now, schedule_id=str(schedule.get("id") or ""))
+    # 성공한 실행만 "오늘 했다"로 친다. 예전에는 상태를 보지 않아서, LLM이 한 번
+    # 타임아웃 나면 그날 브리핑이 아예 없었고 실패했다는 사실도 화면에 없었다.
+    if any(not _row_failed(row) for _, row in today):
+        return False
+    if len(today) >= MAX_ATTEMPTS_PER_DAY:
+        return False
+    if today and _elapsed(now, today[0][0]) < dt.timedelta(minutes=RETRY_DELAY_MINUTES):
+        return False
+    return True
 
 
 def market_memory_recently_run(*, now: dt.datetime | None = None, max_age_hours: int = 12, runs: list[dict] | None = None) -> bool:
@@ -173,20 +266,59 @@ def run_briefing_prerequisites(*, now: dt.datetime | None = None, memory_max_age
     return prerequisites
 
 
-def _run_briefing(settings: dict | None = None) -> dict:
+def markets_in_scope(requested) -> tuple[list[str], list[str]]:
+    """Intersect a schedule's markets with the ones the user still watches.
+
+    관심 시장은 제품의 바깥 테두리다(CLAUDE.md). 자동화는 그 테두리를 몰라서, KR을 꺼도
+    KR 브리핑이 계속 만들어졌다. 선택 자체를 막지 않고 실행할 때 교집합을 쓰는 이유는
+    시장을 잠깐 껐다 켜는 동안 스케줄이 파괴되지 않아야 하기 때문이다.
+
+    범위를 못 읽으면 요청한 그대로 돌린다. 설정 파일 하나가 안 읽힌다고 브리핑이
+    통째로 멈추는 쪽이 더 나쁘다.
+    """
+    markets = list(normalize_market_selection(requested))
+    try:
+        selected = {str(code).strip().upper() for code in load_market_scope()["selected"]}
+    except Exception:  # noqa: BLE001 - 범위를 못 읽는다고 생성을 막지 않는다
+        return markets, []
+    # 시장 계약은 소문자(`us`), 관심 시장 저장값은 대문자(`US`)다. 비교만 맞추고
+    # 돌려주는 값은 생성기가 기대하는 표기 그대로 둔다.
+    kept = [code for code in markets if code.upper() in selected]
+    return kept, [code for code in markets if code.upper() not in selected]
+
+
+def _first_schedule(settings: dict) -> dict:
+    schedules = settings.get("briefingSchedules") or []
+    return schedules[0] if schedules else default_schedule(enabled=True)
+
+
+def _run_briefing(settings: dict | None = None, schedule: dict | None = None) -> dict:
     settings = normalize_settings(settings or read_settings())
-    cfg = settings["briefing"]
+    cfg = schedule if isinstance(schedule, dict) else _first_schedule(settings)
+    requested = cfg.get("markets") or []
+    markets, dropped = markets_in_scope(requested)
+    if not markets:
+        # 고른 시장을 전부 꺼둔 상태다. 조용히 넘기지 않고 왜 건너뛰었는지 남긴다.
+        return {
+            "skipped": True,
+            "reason": "markets_out_of_scope",
+            "scheduleId": cfg.get("id", ""),
+            "requestedMarkets": list(normalize_market_selection(requested)),
+            "droppedMarkets": dropped,
+        }
     prerequisites = {}
     if cfg.get("runPrerequisites"):
         prerequisites = run_briefing_prerequisites()
     date = kst_date()
     generation_mode = default_generation_mode()
+    scope_label = market_selection_scope(markets)
     if generation_mode == "llm_cli":
         briefing = submit_agent_task("briefing", {
             "date": date,
             "strict_date": False,
             "quality_mode": cfg.get("qualityMode", "diagnose_only"),
-            "market_scope": cfg.get("marketScope", "both"),
+            "market_scope": scope_label,
+            "markets": markets,
             "briefing_type": cfg.get("briefingType", "default"),
         })
     else:
@@ -195,21 +327,25 @@ def _run_briefing(settings: dict | None = None) -> dict:
             strict_date=False,
             llm_override=llm_override_for_mode(generation_mode),
             quality_mode=cfg.get("qualityMode", "diagnose_only"),
-            market_scope=cfg.get("marketScope", "both"),
+            markets=markets,
             briefing_type=cfg.get("briefingType", "default"),
         )
     return {
         "date": date,
         "generationMode": generation_mode,
-        "marketScope": cfg.get("marketScope", "both"),
+        "scheduleId": cfg.get("id", ""),
+        "marketScope": scope_label,
+        "markets": markets,
+        "droppedMarkets": dropped,
         "prerequisites": prerequisites,
         "briefing": briefing,
     }
 
 
-def run_automation_once(kind: str) -> dict:
+def run_automation_once(kind: str, schedule: dict | None = None) -> dict:
     kind = str(kind or "").strip()
     started = now_iso()
+    schedule_id = str((schedule or {}).get("id") or "").strip()
     try:
         if kind == "rss":
             result = import_rssarchive(run_collection=True)
@@ -228,14 +364,28 @@ def run_automation_once(kind: str) -> dict:
             memory = run_rss_market_memory_update()
             result = {"rss": rss, "marketMemory": memory}
         elif kind == "briefing":
-            result = _run_briefing()
+            result = _run_briefing(schedule=schedule)
         else:
             return {"ok": False, "error": f"Unsupported automation: {kind}"}
         row = {"kind": kind, "status": "done", "startedAt": started, "finishedAt": now_iso(), "result": result}
+        if schedule_id:
+            row["scheduleId"] = schedule_id
         _append_run(row)
         return {"ok": True, **row}
-    except Exception:
-        row = {"kind": kind, "status": "failed", "startedAt": started, "finishedAt": now_iso(), "error": "automation_failed"}
+    except Exception as exc:  # noqa: BLE001 - 어떤 실패든 기록으로 남기고 다음 주기로 넘긴다
+        row = {
+            "kind": kind,
+            "status": "failed",
+            "startedAt": started,
+            "finishedAt": now_iso(),
+            # 실패도 스케줄을 남긴다. 아침 브리핑이 세 번 실패했다고 저녁 브리핑까지
+            # 막히면 안 되므로 재시도 상한을 스케줄별로 세야 한다.
+            **({"scheduleId": schedule_id} if schedule_id else {}),
+            "error": "automation_failed",
+            # 예외 종류는 코드 식별자라 사용자 자료가 아니다. 원문 메시지는 담지 않는다.
+            "errorType": type(exc).__name__,
+            "errorReason": failure_reason(exc),
+        }
         _append_run(row)
         return {"ok": False, **row}
 
@@ -253,8 +403,21 @@ def run_due_automations(now: dt.datetime | None = None) -> dict:
     memory_cfg = settings.get("marketMemory", {})
     if memory_cfg.get("enabled") and ((rss_ran and memory_cfg.get("runAfterRss")) or automation_due("marketMemory", settings=settings, now=now, runs=runs)):
         executed.append(run_automation_once("marketMemory"))
-    if automation_due("briefing", settings=settings, now=now, runs=runs):
-        executed.append(run_automation_once("briefing"))
+    # 스케줄마다 독립된 job이다. 같은 날 같은 시장 집합을 두 번 만들지 않도록,
+    # 이번 주기에 이미 돈 집합은 건너뛴다(시각이 가까운 스케줄 둘이 같은 시장을 볼 때).
+    now_at = now or dt.datetime.now().astimezone()
+    produced: set[tuple[str, ...]] = set()
+    for schedule in settings.get("briefingSchedules") or []:
+        if not schedule_due(schedule, settings=settings, now=now_at, runs=runs):
+            continue
+        markets, _ = markets_in_scope(schedule.get("markets") or [])
+        key = tuple(markets)
+        if key and key in produced:
+            continue
+        outcome = run_automation_once("briefing", schedule=schedule)
+        executed.append(outcome)
+        if key and outcome.get("ok"):
+            produced.add(key)
     return {"ok": True, "executed": executed}
 
 

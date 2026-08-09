@@ -46,6 +46,7 @@ from features.agent_mode.setup import (
     settings_payload as agent_cli_settings_payload,
     submit_install as submit_agent_cli_install,
 )
+from features.automation.schema import wants_prerequisites as automation_wants_prerequisites
 from features.automation.service import (
     list_runs as list_automation_runs,
     read_settings as read_automation_settings,
@@ -531,7 +532,9 @@ def api_create_briefing(body: dict | None = Body(default=None)):
     body = body or {}
     automation_settings = read_automation_settings()
     prerequisites = {}
-    if automation_settings.get("briefing", {}).get("runPrerequisites"):
+    # 손으로 만드는 브리핑은 어느 스케줄에도 속하지 않는다. 켜 둔 스케줄 중
+    # 하나라도 수집을 원하면 수집한다(싱글톤이던 시절 동작과 같다).
+    if automation_wants_prerequisites(automation_settings):
         prerequisites = run_briefing_prerequisites()
     generation_mode = request_generation_mode(body)
     # 시장 다중 선택. 없으면 예전 단일 범위로 해석한다. 날짜 변환은 선택된

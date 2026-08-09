@@ -13,23 +13,32 @@ test("automation exposes the briefing type the schema already stores", async () 
       `자동화 유형 목록에 ${value}가 없습니다`,
     );
   }
-  assert.match(settings, /automation\.briefing\?\.briefingType/, "선택값이 자동화 설정에서 읽히지 않습니다");
+  // 브리핑 예약이 목록이 되면서 유형은 예약마다 고른다(2026-08-09).
+  assert.match(settings, /value=\{row\.briefingType\}/, "선택값이 예약에서 읽히지 않습니다");
 });
 
 test("the automation save payload carries briefingType", () => {
   // payload에서 빠지면 저장할 때마다 스키마가 default로 되돌린다 — 화면만 고쳐도 소용없다.
-  const block = settings.slice(settings.indexOf("    briefing: {"));
+  const block = settings.slice(settings.indexOf("    briefingSchedules: ("));
   assert.match(
-    block.slice(0, 400),
-    /briefingType: form\.briefing\?\.briefingType/,
+    block.slice(0, 500),
+    /briefingType: row\.briefingType/,
     "저장 payload에 briefingType이 없습니다",
   );
 });
 
-test("automation and manual generation label the types identically", async () => {
-  const briefing = await readFile(new URL("../src/app/BriefingRoute.tsx", import.meta.url), "utf8");
-  for (const [value, label] of [["default", "기본"], ["market_focused", "시황 중심"], ["concise", "요약"]]) {
-    assert.ok(briefing.includes(`${value}: "${label}"`), `수동 화면 라벨이 바뀌었습니다: ${value}`);
-    assert.ok(settings.includes(`${value}: "${label}"`), `자동화 라벨이 수동 화면과 다릅니다: ${value}`);
+test("every schedule field survives the save payload", () => {
+  // 예약이 목록이 되면서 필드가 늘었다. payload에서 빠진 필드는 저장할 때마다
+  // 서버 기본값으로 되돌아가고, 화면에서는 되돌아간 뒤에야 보인다.
+  const block = settings.slice(settings.indexOf("    briefingSchedules: ("));
+  for (const field of ["id", "enabled", "time", "markets", "briefingType", "qualityMode", "runPrerequisites"]) {
+    assert.ok(block.slice(0, 500).includes(`${field}:`), `저장 payload에 ${field}가 없습니다`);
   }
+});
+
+test("the schedule count is capped in the browser as well as the server", () => {
+  // 상한이 없으면 24개를 만들어 하루 종일 LLM을 돌릴 수 있다. 서버만 자르면
+  // 화면은 만들었다고 보여주고 저장 뒤에 조용히 사라진다.
+  assert.match(settings, /const MAX_SCHEDULES = 5/, "화면 쪽 예약 상한이 없습니다");
+  assert.match(settings, /slice\(0, MAX_SCHEDULES\)/, "저장 payload가 상한으로 자르지 않습니다");
 });
