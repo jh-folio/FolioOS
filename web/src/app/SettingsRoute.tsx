@@ -9,6 +9,11 @@ import { WorkLogMigrationControl } from "./WorkLogMigration";
 type ProviderId = "openai" | "gemini" | "claude";
 type SettingsTab = "integrations" | "admin";
 
+const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTab; label: string }> = [
+  { id: "admin", label: "관리" },
+  { id: "integrations", label: "연동" },
+];
+
 type ModelChoice = { value: string; label: string };
 
 type LlmProvider = {
@@ -1110,10 +1115,15 @@ export function SettingsRoute() {
         )}
       />
 
-      <nav className="sub-tabs" aria-label="설정 하위 탭">
-        <button aria-current={tab === "admin" ? "page" : undefined} type="button" onClick={() => setTab("admin")}>관리</button>
-        <button aria-current={tab === "integrations" ? "page" : undefined} type="button" onClick={() => setTab("integrations")}>연동</button>
-      </nav>
+      {/* 포트폴리오의 하위 탭과 같은 프리미티브다. 선택 상태는 `aria-pressed`가 소유하고,
+          화면 전용 클래스는 여백만 갖는다(§UI 프리미티브 우선). */}
+      <div className="segment settings-tabs" role="group" aria-label="설정 하위 탭">
+        {SETTINGS_TABS.map((item) => (
+          <button type="button" key={item.id} aria-pressed={tab === item.id} onClick={() => setTab(item.id)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
 
       {error && <p className="react-dashboard-error">{error}</p>}
       {status && <p className="react-dashboard-warning">{status}</p>}

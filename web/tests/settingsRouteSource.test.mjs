@@ -21,7 +21,11 @@ test("Settings route preserves legacy settings visual class contracts", async ()
   const source = await readFile(new URL("../src/app/SettingsRoute.tsx", import.meta.url), "utf8");
 
   assert.match(source, /RouteHero/);
-  assert.match(source, /sub-tabs/);
+  // 하위 탭은 포트폴리오와 같은 `.segment` 프리미티브다. 예전 `.sub-tabs`는 테두리 알약을
+  // 화면 CSS에서 따로 선언하고 선택을 `aria-current`로 칠해, 같은 자리의 두 화면이 달라 보였다.
+  assert.match(source, /className="segment settings-tabs"/);
+  assert.match(source, /aria-pressed=\{tab === item\.id\}/);
+  assert.doesNotMatch(source, /sub-tabs/);
   assert.match(source, /settings-panel input-panel/);
   assert.match(source, /settings-grid/);
   assert.match(source, /settings-switch/);
