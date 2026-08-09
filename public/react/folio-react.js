@@ -22335,18 +22335,23 @@ function eu(e) {
 function tu(e) {
 	return [e.source, e.date].filter(Boolean).join(" · ");
 }
-function nu(e) {
+var nu = /^(?:co|inc|ltd|corp|llc|plc|ag|nv|sa|se|kk|gmbh|s\.?a\.?s|co\.?,?\s*ltd)\.?$/i;
+function ru(e, t) {
+	let n = String(e || "").trim();
+	return n ? t ? [n] : n.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean).filter((e) => !nu.test(e)) : [];
+}
+function iu(e) {
 	window.location.hash = e ? `#/watchlist/${encodeURIComponent(e)}` : "#/watchlist";
 }
-function ru() {
+function au() {
 	let e = window.location.hash.match(/^#\/?watchlist\/(.+)$/);
 	return e ? decodeURIComponent(e[1]) : "";
 }
-function iu() {
+function ou() {
 	return window.location.hash.replace(/^#\/?/, "").split("/")[0] === "watchlist";
 }
-function au() {
-	let { resolved: e } = Cl(), [t, n] = (0, l.useState)([]), [r, i] = (0, l.useState)([]), [a, o] = (0, l.useState)(""), [s, c] = (0, l.useState)(() => ru()), [u, d] = (0, l.useState)(null), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)(!1), [g, _] = (0, l.useState)(!1), [v, y] = (0, l.useState)(""), [b, x] = (0, l.useState)(""), S = (0, l.useRef)(null), C = (0, l.useCallback)(async (e) => {
+function su() {
+	let { resolved: e } = Cl(), [t, n] = (0, l.useState)([]), [r, i] = (0, l.useState)([]), [a, o] = (0, l.useState)(""), [s, c] = (0, l.useState)(() => au()), [u, d] = (0, l.useState)(null), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)(!1), [g, _] = (0, l.useState)(!1), [v, y] = (0, l.useState)(""), [b, x] = (0, l.useState)(""), S = (0, l.useRef)(null), C = (0, l.useCallback)(async (e) => {
 		if (!e.length) {
 			i([]);
 			return;
@@ -22373,7 +22378,7 @@ function au() {
 		w();
 	}, [w]), (0, l.useEffect)(() => {
 		let e = () => {
-			iu() && c(ru());
+			ou() && c(au());
 		};
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), (0, l.useEffect)(() => {
@@ -22426,28 +22431,28 @@ function au() {
 			_(!1);
 		}
 	}
-	let { resolution: E, pending: D, picked: O, setPicked: k } = Ii(a, { preferHome: !0 }), A = a.trim() ? O ? `${O.name}로 추가합니다.` : D ? "확인 중…" : E?.status === "confident" && E.match ? `${E.match.name}로 추가합니다.` : E?.status === "ambiguous" && E.candidates.some((e) => e.strong) ? "여러 기업이 맞습니다. 고르거나, 이대로 주제 키워드로 추가합니다." : "주제 키워드로 추가합니다." : "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
-	async function j(e) {
+	let { resolution: E, pending: D, picked: O, setPicked: k } = Ii(a, { preferHome: !0 }), A = !!O || E?.status === "confident", j = a.trim() ? O ? `${O.name}로 추가합니다.` : D ? "확인 중…" : E?.status === "confident" && E.match ? `${E.match.name}로 추가합니다.` : E?.status === "ambiguous" && E.candidates.some((e) => e.strong) ? "여러 기업이 맞습니다. 고르거나, 이대로 주제 키워드로 추가합니다." : "주제 키워드로 추가합니다." : "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
+	async function M(e) {
 		try {
 			return (await B(`/api/watchlist/resolve?keyword=${encodeURIComponent(e)}`)).keyword || e;
 		} catch {
 			return e;
 		}
 	}
-	async function M() {
-		let e = a.split(/[,;\n]/).map((e) => e.trim()).filter(Boolean);
+	async function N() {
+		let e = ru(a, A);
 		if (!e.length) return;
 		let n = [...t];
 		for (let t of e) {
-			let e = await j(t);
+			let e = await M(t);
 			e && !n.some((t) => t.toLowerCase() === e.toLowerCase()) && n.push(e);
 		}
 		o(""), n.length !== t.length && await T(n, "워치리스트에 추가했습니다.");
 	}
-	async function N(e) {
-		await T(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), s === e && nu();
+	async function P(e) {
+		await T(t.filter((t) => t !== e), "워치리스트에서 삭제했습니다."), s === e && iu();
 	}
-	let P = (0, l.useMemo)(() => $l(u?.news || []), [u]), F = Zl(u, s);
+	let F = (0, l.useMemo)(() => $l(u?.news || []), [u]), I = Zl(u, s);
 	return s ? /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "react-watchlist-route",
 		"data-watchlist-route": !0,
@@ -22460,7 +22465,7 @@ function au() {
 					/* @__PURE__ */ (0, K.jsx)("button", {
 						type: "button",
 						className: "reader-crumb-link",
-						onClick: () => nu(),
+						onClick: () => iu(),
 						children: "워치리스트"
 					}),
 					/* @__PURE__ */ (0, K.jsx)("span", {
@@ -22470,7 +22475,7 @@ function au() {
 					}),
 					/* @__PURE__ */ (0, K.jsx)("span", {
 						className: "reader-breadcrumb-leaf",
-						children: F
+						children: I
 					})
 				]
 			}), /* @__PURE__ */ (0, K.jsxs)("section", {
@@ -22487,7 +22492,7 @@ function au() {
 							}),
 							/* @__PURE__ */ (0, K.jsx)("h2", {
 								id: "watchlistDetailTitle",
-								children: F
+								children: I
 							}),
 							/* @__PURE__ */ (0, K.jsx)("p", {
 								className: "section-subtitle",
@@ -22501,7 +22506,7 @@ function au() {
 								"aria-label": "닫기",
 								"data-tooltip": "닫기",
 								"data-tooltip-pos": "left",
-								onClick: () => nu(),
+								onClick: () => iu(),
 								children: "×"
 							})]
 						})]
@@ -22523,9 +22528,9 @@ function au() {
 						children: [/* @__PURE__ */ (0, K.jsx)("h3", { children: "수집한 뉴스" }), m ? /* @__PURE__ */ (0, K.jsx)("p", {
 							className: "section-subtitle",
 							children: "관련 뉴스를 불러오는 중입니다."
-						}) : P.length ? /* @__PURE__ */ (0, K.jsx)("div", {
+						}) : F.length ? /* @__PURE__ */ (0, K.jsx)("div", {
 							className: "watchlist-detail-news-list",
-							children: P.map((e, t) => /* @__PURE__ */ (0, K.jsxs)("article", {
+							children: F.map((e, t) => /* @__PURE__ */ (0, K.jsxs)("article", {
 								className: "compact-item",
 								children: [
 									/* @__PURE__ */ (0, K.jsx)("div", {
@@ -22592,7 +22597,7 @@ function au() {
 								value: a,
 								onChange: (e) => o(e.currentTarget.value),
 								onKeyDown: (e) => {
-									e.key === "Enter" && (e.preventDefault(), M());
+									e.key === "Enter" && (e.preventDefault(), N());
 								},
 								placeholder: "예: NVDA, 삼성전자, AI",
 								"aria-describedby": "watchlist-resolution",
@@ -22617,7 +22622,7 @@ function au() {
 					/* @__PURE__ */ (0, K.jsx)("button", {
 						className: "btn",
 						type: "button",
-						onClick: M,
+						onClick: N,
 						disabled: g,
 						children: "추가"
 					})
@@ -22627,7 +22632,7 @@ function au() {
 				className: "analysis-resolution",
 				id: "watchlist-resolution",
 				"data-status": a.trim() ? O ? "picked" : E?.status || "idle" : "idle",
-				children: A
+				children: j
 			}),
 			v && /* @__PURE__ */ (0, K.jsx)("p", {
 				className: "react-dashboard-error",
@@ -22647,9 +22652,9 @@ function au() {
 						tabIndex: 0,
 						role: "button",
 						"aria-label": `${t} 상세 보기`,
-						onClick: () => nu(t),
+						onClick: () => iu(t),
 						onKeyDown: (e) => {
-							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), nu(t));
+							(e.key === "Enter" || e.key === " ") && (e.preventDefault(), iu(t));
 						},
 						children: [
 							/* @__PURE__ */ (0, K.jsx)("span", {
@@ -22663,7 +22668,7 @@ function au() {
 								"data-tooltip": "삭제",
 								"data-tooltip-pos": "bottom",
 								onClick: (e) => {
-									e.stopPropagation(), N(t);
+									e.stopPropagation(), P(t);
 								},
 								children: /* @__PURE__ */ (0, K.jsx)("svg", {
 									width: "13",
@@ -22710,16 +22715,16 @@ function au() {
 }
 //#endregion
 //#region src/app/AppShell.tsx
-var ou = [
+var cu = [
 	"light",
 	"dark",
 	"system"
-], su = {
+], lu = {
 	light: "라이트",
 	dark: "다크",
 	system: "시스템"
 };
-function cu({ preference: e }) {
+function uu({ preference: e }) {
 	return e === "light" ? /* @__PURE__ */ (0, K.jsxs)("svg", {
 		viewBox: "0 0 16 16",
 		fill: "none",
@@ -22766,8 +22771,8 @@ function cu({ preference: e }) {
 		})]
 	});
 }
-function lu() {
-	let e = Cl(), [t, n] = (0, l.useState)(!1), r = (0, l.useRef)(null), i = (0, l.useRef)(null), a = (0, l.useRef)([]), o = e.preference === "system" ? `시스템 (${su[e.resolved]})` : su[e.preference];
+function du() {
+	let e = Cl(), [t, n] = (0, l.useState)(!1), r = (0, l.useRef)(null), i = (0, l.useRef)(null), a = (0, l.useRef)([]), o = e.preference === "system" ? `시스템 (${lu[e.resolved]})` : lu[e.preference];
 	(0, l.useEffect)(() => {
 		if (!t) return;
 		let e = (e) => {
@@ -22780,11 +22785,11 @@ function lu() {
 		};
 	}, [t]), (0, l.useEffect)(() => {
 		if (!t) return;
-		let n = Math.max(0, ou.indexOf(e.preference));
+		let n = Math.max(0, cu.indexOf(e.preference));
 		a.current[n]?.focus();
 	}, [t, e.preference]);
 	let s = (e, t) => {
-		let n = (e + t + ou.length) % ou.length;
+		let n = (e + t + cu.length) % cu.length;
 		a.current[n]?.focus();
 	};
 	return /* @__PURE__ */ (0, K.jsxs)("div", {
@@ -22800,12 +22805,12 @@ function lu() {
 			"data-tooltip": t ? "" : `테마: ${o}`,
 			"data-tooltip-pos": "bottom",
 			onClick: () => n((e) => !e),
-			children: /* @__PURE__ */ (0, K.jsx)(cu, { preference: e.preference })
+			children: /* @__PURE__ */ (0, K.jsx)(uu, { preference: e.preference })
 		}), t && /* @__PURE__ */ (0, K.jsx)("div", {
 			className: "theme-menu-list",
 			role: "menu",
 			"aria-label": "화면 테마",
-			children: ou.map((t, r) => /* @__PURE__ */ (0, K.jsxs)("button", {
+			children: cu.map((t, r) => /* @__PURE__ */ (0, K.jsxs)("button", {
 				type: "button",
 				role: "menuitemradio",
 				"aria-checked": e.preference === t,
@@ -22818,12 +22823,12 @@ function lu() {
 				onKeyDown: (e) => {
 					e.key === "ArrowDown" && (e.preventDefault(), s(r, 1)), e.key === "ArrowUp" && (e.preventDefault(), s(r, -1));
 				},
-				children: [/* @__PURE__ */ (0, K.jsx)(cu, { preference: t }), su[t]]
+				children: [/* @__PURE__ */ (0, K.jsx)(uu, { preference: t }), lu[t]]
 			}, t))
 		})]
 	});
 }
-var uu = [
+var fu = [
 	{
 		id: "home",
 		title: "홈",
@@ -22853,7 +22858,7 @@ var uu = [
 		title: "",
 		routes: ["settings"]
 	}
-], du = {
+], pu = {
 	home: /* @__PURE__ */ (0, K.jsxs)("svg", {
 		className: "react-left-nav-svg",
 		viewBox: "0 0 24 24",
@@ -22985,25 +22990,25 @@ var uu = [
 		"aria-hidden": "true",
 		children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" }), /* @__PURE__ */ (0, K.jsx)("path", { d: "M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-.4-1.1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.1-.4 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.22 3.43l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 .4 1.1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.2.34.4.7.6 1a1.7 1.7 0 0 0 1.1.4H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.1.4c-.17.14-.31.28-.41.2Z" })]
 	})
-}, fu = "(max-width: 1024px)";
-function pu() {
-	return typeof window < "u" && window.matchMedia(fu).matches;
+}, mu = "(max-width: 1024px)";
+function hu() {
+	return typeof window < "u" && window.matchMedia(mu).matches;
 }
-function mu() {
+function gu() {
 	let e = window.location.hash || Oi(vl());
 	return /^#\/?office(?:\/|$)/.test(e) ? (window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#/home`), Oi("home")) : e;
 }
-function hu() {
-	let [e, t] = (0, l.useState)(() => mu());
+function _u() {
+	let [e, t] = (0, l.useState)(() => gu());
 	return (0, l.useEffect)(() => {
-		let e = () => t(mu());
+		let e = () => t(gu());
 		return window.addEventListener("hashchange", e), e(), () => window.removeEventListener("hashchange", e);
 	}, []), {
 		hash: e,
 		routeId: Di(e)
 	};
 }
-async function gu(e) {
+async function vu(e) {
 	await new Promise((e) => window.setTimeout(e, 1500));
 	let t = Date.now() + 6e4;
 	for (; Date.now() < t;) {
@@ -23017,11 +23022,11 @@ async function gu(e) {
 	}
 	e("재시작 확인 실패 · 수동 새로고침 필요");
 }
-function _u() {
-	let { hash: e, routeId: t } = hu(), n = ki(t), r = vl(yl().preferences), [i, a] = (0, l.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), o = (0, l.useRef)(!1), [s, c] = (0, l.useState)(() => {
+function yu() {
+	let { hash: e, routeId: t } = _u(), n = ki(t), r = vl(yl().preferences), [i, a] = (0, l.useState)(() => localStorage.getItem("folio.react.navCollapsed") === "1"), o = (0, l.useRef)(!1), [s, c] = (0, l.useState)(() => {
 		let e = localStorage.getItem("folio.react.agentClosed"), t = e === null || e !== "1";
-		return t && pu() ? (o.current = !0, !1) : t;
-	}), [u, d] = (0, l.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, l.useState)(() => ({ [t]: mu() })), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(!1), v = (0, l.useRef)(null), y = (0, l.useRef)(t), b = (0, l.useRef)(!1), x = (0, l.useRef)({}), S = n.id !== "home", C = S && s ? " is-agent-open" : " is-agent-closed";
+		return t && hu() ? (o.current = !0, !1) : t;
+	}), [u, d] = (0, l.useState)(() => /* @__PURE__ */ new Set([t])), [f, p] = (0, l.useState)(() => ({ [t]: gu() })), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(!1), v = (0, l.useRef)(null), y = (0, l.useRef)(t), b = (0, l.useRef)(!1), x = (0, l.useRef)({}), S = n.id !== "home", C = S && s ? " is-agent-open" : " is-agent-closed";
 	(0, l.useEffect)(() => {
 		tt(n.id, {
 			surface: `react_${n.id}`,
@@ -23036,7 +23041,7 @@ function _u() {
 		}
 		localStorage.setItem("folio.react.agentClosed", s ? "0" : "1");
 	}, [s]), (0, l.useEffect)(() => {
-		let e = window.matchMedia(fu), t = (e) => {
+		let e = window.matchMedia(mu), t = (e) => {
 			e.matches && c((e) => e && (o.current = !0, !1));
 		};
 		return e.addEventListener("change", t), () => e.removeEventListener("change", t);
@@ -23080,7 +23085,7 @@ function _u() {
 					body: "{}"
 				});
 			} catch {}
-			h("서버 재시작 중"), await gu(h), _(!1);
+			h("서버 재시작 중"), await vu(h), _(!1);
 		}
 	}
 	function T(e) {
@@ -23089,7 +23094,7 @@ function _u() {
 	}
 	function E(e) {
 		let t = ki(e);
-		return t.id === "home" ? /* @__PURE__ */ (0, K.jsx)(ln, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, K.jsx)(po, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, K.jsx)(wi, {}) : t.id === "rss" ? /* @__PURE__ */ (0, K.jsx)(al, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, K.jsx)(Ys, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, K.jsx)(Ia, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, K.jsx)(us, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, K.jsx)(au, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, K.jsx)(dc, {}) : t.id === "settings" ? /* @__PURE__ */ (0, K.jsx)(Kl, {}) : null;
+		return t.id === "home" ? /* @__PURE__ */ (0, K.jsx)(ln, {}) : t.id === "dashboard" ? /* @__PURE__ */ (0, K.jsx)(po, {}) : t.id === "briefing" ? /* @__PURE__ */ (0, K.jsx)(wi, {}) : t.id === "rss" ? /* @__PURE__ */ (0, K.jsx)(al, {}) : t.id === "market-memory" ? /* @__PURE__ */ (0, K.jsx)(Ys, {}) : t.id === "analysis" ? /* @__PURE__ */ (0, K.jsx)(Ia, {}) : t.id === "deep-research" ? /* @__PURE__ */ (0, K.jsx)(us, {}) : t.id === "watchlist" ? /* @__PURE__ */ (0, K.jsx)(su, {}) : t.id === "portfolio" ? /* @__PURE__ */ (0, K.jsx)(dc, {}) : t.id === "settings" ? /* @__PURE__ */ (0, K.jsx)(Kl, {}) : null;
 	}
 	return /* @__PURE__ */ (0, K.jsxs)("div", {
 		className: `react-shell${i ? " is-nav-collapsed" : ""}${C}${S ? "" : " is-agent-suppressed"}`,
@@ -23117,7 +23122,7 @@ function _u() {
 					"aria-live": "polite",
 					children: [
 						/* @__PURE__ */ (0, K.jsx)("span", { children: m }),
-						/* @__PURE__ */ (0, K.jsx)(lu, {}),
+						/* @__PURE__ */ (0, K.jsx)(du, {}),
 						/* @__PURE__ */ (0, K.jsx)("button", {
 							className: "btn btn--sm",
 							type: "button",
@@ -23149,7 +23154,7 @@ function _u() {
 					children: [/* @__PURE__ */ (0, K.jsx)("div", {
 						className: "react-left-nav-title",
 						children: "Navigate"
-					}), uu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
+					}), fu.map((e) => /* @__PURE__ */ (0, K.jsxs)("section", {
 						className: "react-left-nav-group",
 						"data-nav-group": e.id,
 						children: [e.title && /* @__PURE__ */ (0, K.jsx)("h3", { children: e.title }), /* @__PURE__ */ (0, K.jsx)("div", {
@@ -23170,7 +23175,7 @@ function _u() {
 										children: [/* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-left-nav-icon",
 											"aria-hidden": "true",
-											children: du[a.id]
+											children: pu[a.id]
 										}), /* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-left-nav-label",
 											children: a.label
@@ -23210,12 +23215,12 @@ function _u() {
 }
 //#endregion
 //#region src/app/WelcomeWizard.tsx
-var vu = [
+var bu = [
 	"welcome",
 	"engine",
 	"markets",
 	"done"
-], yu = [
+], xu = [
 	{
 		id: "light",
 		label: "라이트"
@@ -23228,7 +23233,7 @@ var vu = [
 		id: "system",
 		label: "시스템"
 	}
-], bu = [
+], Su = [
 	{
 		id: "openai",
 		label: "OpenAI",
@@ -23244,12 +23249,12 @@ var vu = [
 		label: "Claude",
 		url: "https://console.anthropic.com/settings/keys"
 	}
-], xu = {
+], Cu = {
 	US: "US",
 	KR: "KR",
 	EUROPE: "EU",
 	JP: "JP"
-}, Su = {
+}, wu = {
 	welcome: /* @__PURE__ */ (0, K.jsx)("path", { d: "M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" }),
 	engine: /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("path", { d: "M12 3.5v3M12 17.5v3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M3.5 12h3M17.5 12h3M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" }), /* @__PURE__ */ (0, K.jsx)("circle", {
 		cx: "12",
@@ -23262,20 +23267,20 @@ var vu = [
 		r: "8.6"
 	}), /* @__PURE__ */ (0, K.jsx)("path", { d: "M3.4 12h17.2M12 3.4c2.5 2.6 3.8 5.5 3.8 8.6S14.5 18 12 20.6C9.5 18 8.2 15.1 8.2 12S9.5 6 12 3.4z" })] }),
 	done: /* @__PURE__ */ (0, K.jsx)("path", { d: "M5 12.6 9.6 17 19 7.6" })
-}, Cu = {
+}, Tu = {
 	welcome: "환영합니다",
 	engine: "선택 사항",
 	markets: "수집 범위",
 	done: "준비 완료"
 };
-function wu({ step: e }) {
+function Eu({ step: e }) {
 	return /* @__PURE__ */ (0, K.jsx)("svg", {
 		viewBox: "0 0 24 24",
 		"aria-hidden": "true",
-		children: Su[e]
+		children: wu[e]
 	});
 }
-function Tu({ onFinish: e }) {
+function Du({ onFinish: e }) {
 	let t = Cl(), [n, r] = (0, l.useState)("welcome"), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)((e) => {
 		s(""), r(e);
 	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)("openai"), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(null), [v, y] = (0, l.useState)([]), [b, x] = (0, l.useState)(!1), [S, C] = (0, l.useState)(null);
@@ -23353,7 +23358,7 @@ function Tu({ onFinish: e }) {
 		if (!t.length) return;
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
 		e.shiftKey && (i === n || !O.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
-	}, j = vu.indexOf(n), M = bu.find((e) => e.id === f);
+	}, j = bu.indexOf(n), M = Su.find((e) => e.id === f);
 	return /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "welcome-shell",
 		role: "dialog",
@@ -23372,7 +23377,7 @@ function Tu({ onFinish: e }) {
 							"단계 ",
 							/* @__PURE__ */ (0, K.jsx)("b", { children: j + 1 }),
 							" / ",
-							vu.length
+							bu.length
 						]
 					})]
 				}),
@@ -23381,16 +23386,16 @@ function Tu({ onFinish: e }) {
 					role: "progressbar",
 					"aria-label": "진행 단계",
 					"aria-valuemin": 1,
-					"aria-valuemax": vu.length,
+					"aria-valuemax": bu.length,
 					"aria-valuenow": j + 1,
-					style: { "--welcome-fill": `${(j + 1) / vu.length * 100}%` }
+					style: { "--welcome-fill": `${(j + 1) / bu.length * 100}%` }
 				}),
 				/* @__PURE__ */ (0, K.jsxs)("section", {
 					className: "welcome-body",
 					children: [
 						/* @__PURE__ */ (0, K.jsxs)("p", {
 							className: "welcome-eyebrow",
-							children: [/* @__PURE__ */ (0, K.jsx)(wu, { step: n }), Cu[n]]
+							children: [/* @__PURE__ */ (0, K.jsx)(Eu, { step: n }), Tu[n]]
 						}),
 						n === "welcome" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
 							/* @__PURE__ */ (0, K.jsx)("h1", {
@@ -23411,7 +23416,7 @@ function Tu({ onFinish: e }) {
 								className: "welcome-choices",
 								role: "group",
 								"aria-label": "화면 테마",
-								children: yu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+								children: xu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 									type: "button",
 									"aria-pressed": t.preference === e.id,
 									onClick: () => t.setPreference(e.id),
@@ -23461,7 +23466,7 @@ function Tu({ onFinish: e }) {
 									className: "welcome-choices",
 									role: "group",
 									"aria-label": "제공사",
-									children: bu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+									children: Su.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": f === e.id,
 										onClick: () => p(e.id),
@@ -23515,7 +23520,7 @@ function Tu({ onFinish: e }) {
 								role: "group",
 								"aria-label": "수집·표시할 시장",
 								children: g.markets.map((e) => {
-									let t = xu[e.id] ?? e.id;
+									let t = Cu[e.id] ?? e.id;
 									return /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"data-code": t,
@@ -23582,7 +23587,7 @@ function Tu({ onFinish: e }) {
 							j > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn",
 								type: "button",
-								onClick: () => c(vu[j - 1]),
+								onClick: () => c(bu[j - 1]),
 								disabled: !!i,
 								children: "이전"
 							}),
@@ -23622,7 +23627,7 @@ function Tu({ onFinish: e }) {
 }
 //#endregion
 //#region src/app/App.tsx
-function Eu() {
+function Ou() {
 	let [e, t] = (0, l.useState)(!1);
 	return (0, l.useEffect)(() => {
 		let e = !1;
@@ -23637,23 +23642,23 @@ function Eu() {
 	}, []), (0, l.useEffect)(() => {
 		let e = () => t(!0);
 		return window.addEventListener("folio:show-welcome", e), () => window.removeEventListener("folio:show-welcome", e);
-	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(_u, {}), e && /* @__PURE__ */ (0, K.jsx)(Tu, { onFinish: () => t(!1) })] });
+	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(yu, {}), e && /* @__PURE__ */ (0, K.jsx)(Du, { onFinish: () => t(!1) })] });
 }
 //#endregion
 //#region src/main.tsx
-var Du = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
-function Ou() {
+var ku = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
+function Au() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = Du[e.dataset.reactIsland || ""];
+		let t = ku[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: t() })));
 	});
 }
-function ku() {
+function ju() {
 	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(Eu, {}) })), !0) : !1;
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(Ou, {}) })), !0) : !1;
 }
-function Au() {
-	ku(), Ou();
+function Mu() {
+	ju(), Au();
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Au) : Au();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", Mu) : Mu();
 //#endregion

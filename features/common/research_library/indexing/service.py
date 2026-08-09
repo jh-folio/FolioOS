@@ -575,6 +575,7 @@ def list_indexed_documents(company: str = "", limit: int = 50, offset: int = 0):
 # 쓰고 문서는 건드리지 않는다. TTL은 그래도 혹시 모를 외부 변경을 위한 안전망이다.
 _INDEX_CACHE_LOCK = threading.Lock()
 _INDEX_CACHE = None            # (loaded_at, index)
+_INDEX_REFRESHING = False
 INDEX_CACHE_TTL_SECONDS = 300.0
 
 
@@ -583,6 +584,29 @@ def invalidate_index_cache() -> None:
     global _INDEX_CACHE
     with _INDEX_CACHE_LOCK:
         _INDEX_CACHE = None
+
+
+def _refresh_index_cache_async() -> None:
+    """낡은 캐시를 뒤에서 갈아 끼운다. 기다리는 사람은 없다."""
+    global _INDEX_REFRESHING
+    with _INDEX_CACHE_LOCK:
+        if _INDEX_REFRESHING:
+            return
+        _INDEX_REFRESHING = True
+
+    def _worker() -> None:
+        global _INDEX_CACHE, _INDEX_REFRESHING
+        try:
+            index = _read_index_from_store()
+            with _INDEX_CACHE_LOCK:
+                _INDEX_CACHE = (time.monotonic(), index)
+        except Exception:  # noqa: BLE001 - 갱신 실패 시 옛 값을 계속 쓴다
+            pass
+        finally:
+            with _INDEX_CACHE_LOCK:
+                _INDEX_REFRESHING = False
+
+    threading.Thread(target=_worker, name="folio-index-refresh", daemon=True).start()
 
 
 def _read_index_from_store():
@@ -607,10 +631,19 @@ def _read_index_from_store():
 
 
 def load_index():
+    """캐시된 인덱스. 낡았으면 **옛 값을 주고 뒤에서 갈아 끼운다**.
+
+    만료될 때마다 다음 요청이 5.9초를 뒤집어쓰면, 앱을 켜 두고 쓰는 사람은 5분마다
+    한 번씩 멈추는 화면을 본다 — 실제로 워치리스트에 종목을 추가하면 9.3초가 걸렸고
+    그중 6.2초가 이 재로딩이었다. 문서를 쓰는 곳은 `build_index()` 하나뿐이고 그
+    경로가 캐시를 직접 버리므로, TTL이 지난 값이 잠깐 더 쓰이는 것은 안전하다.
+    """
     global _INDEX_CACHE
     with _INDEX_CACHE_LOCK:
         cached = _INDEX_CACHE
-    if cached is not None and (time.monotonic() - cached[0]) < INDEX_CACHE_TTL_SECONDS:
+    if cached is not None:
+        if (time.monotonic() - cached[0]) >= INDEX_CACHE_TTL_SECONDS:
+            _refresh_index_cache_async()
         return cached[1]
 
     index = _read_index_from_store()

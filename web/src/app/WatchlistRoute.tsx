@@ -87,6 +87,31 @@ function sourceLabel(news: WatchlistNews) {
   return [news.source, news.date].filter(Boolean).join(" · ");
 }
 
+// 회사 정식명에 붙는 법인 형태. 이것만 남은 조각은 종목도 주제도 아니다.
+const LEGAL_SUFFIX_ONLY = /^(?:co|inc|ltd|corp|llc|plc|ag|nv|sa|se|kk|gmbh|s\.?a\.?s|co\.?,?\s*ltd)\.?$/i;
+
+/** 입력을 등록할 항목들로 가른다.
+ *
+ * 쉼표는 여러 개를 한 번에 넣는 구분자이면서 동시에 회사 정식명의 일부다
+ * (`Hitachi, Ltd.` · `Nintendo Co., Ltd.`). 그래서 후보에서 고른 이름을 그대로
+ * 쪼개 `Hitachi`와 `Ltd.` 두 개가 등록됐고, 남은 `Ltd.`는 아무 회사도 아닌 채
+ * 이후 모든 목록 갱신에서 검색과 회사해석을 계속 차지했다. 일본 기업은 정식명에
+ * `, Ltd.`가 붙는 경우가 많아 일본 종목을 추가할 때마다 이 항목이 하나씩 늘었다.
+ *
+ * 입력 전체가 이미 한 회사로 해석됐다면 쪼개지 않는다. 쪼개는 것은 사용자가 직접
+ * 여러 개를 나열했을 때뿐이고, 그때도 법인 형태만 남은 조각은 버린다.
+ */
+export function splitAddInput(raw: string, resolvedWhole: boolean) {
+  const text = String(raw || "").trim();
+  if (!text) return [];
+  if (resolvedWhole) return [text];
+  return text
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => !LEGAL_SUFFIX_ONLY.test(item));
+}
+
 function setWatchlistHash(item?: string) {
   window.location.hash = item ? `#/watchlist/${encodeURIComponent(item)}` : "#/watchlist";
 }
@@ -224,6 +249,8 @@ export function WatchlistRoute() {
   // 워치리스트는 회사를 따라다니는 화면이라 도쿄에 상장된 도요타를 봐야 한다.
   // 미국 ADR(TM)은 통화도 시간대도 가격도 다른 별개의 증권이다.
   const { resolution, pending: resolvePending, picked, setPicked } = useCompanyResolution(keyword, { preferHome: true });
+  // 입력 전체가 한 회사로 확정됐는가. 확정됐으면 그 이름 안의 쉼표는 구분자가 아니다.
+  const resolvedWholeInput = Boolean(picked) || resolution?.status === "confident";
   const watchlistResolutionMessage = (() => {
     const text = keyword.trim();
     if (!text) return "종목은 이름이나 티커로, 관심 주제는 그대로 적으면 됩니다.";
@@ -246,7 +273,7 @@ export function WatchlistRoute() {
   }
 
   async function addKeyword() {
-    const parts = keyword.split(/[,;\n]/).map((item) => item.trim()).filter(Boolean);
+    const parts = splitAddInput(keyword, resolvedWholeInput);
     if (!parts.length) return;
     const next = [...items];
     for (const raw of parts) {

@@ -271,26 +271,40 @@ def resolve_watchlist_company(query: str, hits: list[dict] | None = None) -> dic
     text = normalize(query).strip()
     if not text:
         return {}
+    if not _company_core(text):
+        # 법인 형태 표기만 남은 항목(`Ltd.`)은 어떤 회사도 가리키지 않는다. 그냥 두면
+        # 아래 사슬의 부분일치가 아무 회사나 붙여 줬다 — 실제로 Nvidia가 붙었다.
+        return {}
+    from_docs = {}
     for hit in hits or []:
         for raw_company in hit.get("companies", []):
             if _item_matches_company(text, raw_company):
-                return company_public(normalize_company_entry(raw_company))
+                from_docs = company_public(normalize_company_entry(raw_company))
+                break
+        if from_docs:
+            break
     if _is_watchlist_theme_query(text):
-        return {}
+        return from_docs
     # 채점 해석기를 먼저 쓴다. 아래 사슬의 부분일치는 한 낱말 질의에 너무 헐거워,
     # "Mitsubishi Corporation"이 시가총액 순서상 먼저 나오는 미쓰비시UFJ에 걸렸다.
+    #
+    # 문서에서 끌어온 회사보다도 앞선다. 인덱스 문서는 미국 기사가 많아 자국 상장
+    # 기업이 ADR 티커로 실려 있다 — 히타치가 도쿄 `6501.T`가 아니라 `HTHIY`로 떴다.
+    # 워치리스트는 회사를 따라다니는 화면이라 자국 상장을 봐야 한다(§10 입력 기업 판단).
+    # 문서 쪽은 섹터 같은 살을 붙이는 데 쓴다.
     scored = resolve_company_query(text, limit=1, prefer_home=True)
     if scored.get("status") == "confident" and (scored.get("match") or {}).get("ticker"):
         match = scored["match"]
         return company_public(normalize_company_entry({
             "name": match.get("name") or text,
             "ticker": match["ticker"],
-            "sector": match.get("sector") or "Unclassified",
-            "market": match.get("market") or "",
+            "sector": match.get("sector") or from_docs.get("sector") or "Unclassified",
+            "market": match.get("market") or from_docs.get("market") or "",
             "aliases": [match["ticker"], match.get("name") or ""],
         }))
     return (
-        watchlist_company_from_universe(text)
+        from_docs
+        or watchlist_company_from_universe(text)
         or watchlist_company_from_constituents(text)
         or sec_company_lookup(text)
         or watchlist_company_from_index(text)
@@ -347,12 +361,55 @@ def save_watchlist(items):
     return rows
 
 
+# 회사 정식명에 붙는 형태 표기. 회사를 가리키는 부분이 아니라 법인 형태다.
+_COMPANY_FORM_WORDS = frozenset({
+    "co", "inc", "ltd", "limited", "corp", "corporation", "company", "the",
+    "holdings", "holding", "group", "plc", "ag", "nv", "sa", "se", "kk", "gmbh", "llc",
+})
+# 이 길이 미만은 정확히 같을 때만 인정한다. 짧은 이름은 긴 이름 안에 우연히 들어간다.
+_MIN_ASCII_PARTIAL = 4
+_MIN_CJK_PARTIAL = 2
+
+
+def _company_core(value: str) -> str:
+    """비교용 핵심 이름. 구두점과 법인 형태 표기를 걷어낸다."""
+    text = re.sub(r"[^0-9a-z가-힣ぁ-ゖァ-ヺ一-鿿]+", " ", str(value or "").lower())
+    return " ".join(word for word in text.split() if word not in _COMPANY_FORM_WORDS)
+
+
+def _contains_name(haystack: str, needle: str) -> bool:
+    """낱말 경계를 지키는 포함 관계. 라틴 문자는 경계를, CJK는 길이를 본다."""
+    if not needle or not haystack:
+        return False
+    if needle.isascii():
+        if len(needle) < _MIN_ASCII_PARTIAL:
+            return False
+        return re.search(rf"(?<![0-9a-z]){re.escape(needle)}(?![0-9a-z])", haystack) is not None
+    if len(needle) < _MIN_CJK_PARTIAL:
+        return False
+    return needle in haystack
+
+
 def _item_matches_company(query: str, company: dict) -> bool:
-    """Return True if the watchlist query string matches a company dict (name or ticker)."""
-    q = query.lower().strip()
-    name = (company.get("name") or "").lower()
-    ticker = (company.get("ticker") or "").lower()
-    return q in name or name in q or (ticker and q == ticker)
+    """워치리스트 항목이 이 회사를 가리키는가.
+
+    예전에는 양방향 부분문자열이었다(`q in name or name in q`). 앵커가 없어
+    `TEN`이라는 회사명이 `ni**nten**do co., ltd.` 안에 들어맞았고, 닌텐도를
+    추가하면 카드가 Tsakos Energy Navigation으로 떴다. `Ltd.`는 `Micware Co.,
+    Ltd.`를 물어왔다. 정식명이 길수록 짧은 이름이 우연히 들어갈 자리가 많아,
+    `, Ltd.` `Co., Ltd.`가 붙는 일본 기업이 특히 자주 걸렸다.
+    """
+    q_core = _company_core(query)
+    name_core = _company_core(company.get("name"))
+    ticker = str(company.get("ticker") or "").lower().strip()
+    if ticker and query.lower().strip() == ticker:
+        return True
+    if not q_core:
+        # 법인 형태만 남은 항목은 어떤 회사도 가리키지 않는다.
+        return False
+    if q_core == name_core:
+        return True
+    return _contains_name(name_core, q_core) or _contains_name(q_core, name_core)
 
 
 TRADINGVIEW_SUFFIX_EXCHANGES = {

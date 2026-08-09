@@ -1,9 +1,20 @@
 """인덱스 캐시 — 첫 탭 로딩이 13.9초 걸리던 원인."""
 from __future__ import annotations
 
+import threading
 import time
 
 import features.common.research_library.indexing.service as svc
+
+
+def _wait_until(predicate, timeout: float = 3.0) -> None:
+    """배경 갱신이 끝나기를 기다린다. 스레드라 sleep 상수로 못 박지 않는다."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return
+        time.sleep(0.01)
+    raise AssertionError("배경 갱신이 시간 안에 끝나지 않았다")
 
 
 def test_the_index_is_read_once_and_reused(monkeypatch):
@@ -44,15 +55,67 @@ def test_the_cache_expires_on_its_own(monkeypatch):
     바뀌지 않아도 26초 만에 움직였다.
     """
     calls = []
-    monkeypatch.setattr(svc, "_read_index_from_store", lambda: calls.append(1) or {"count": 1, "documents": []})
+    monkeypatch.setattr(svc, "_read_index_from_store", lambda: calls.append(1) or {"count": len(calls), "documents": []})
     monkeypatch.setattr(svc, "INDEX_CACHE_TTL_SECONDS", 0.05)
     svc.invalidate_index_cache()
 
     svc.load_index()
     time.sleep(0.08)
     svc.load_index()
+    _wait_until(lambda: len(calls) == 2)
 
-    assert len(calls) == 2
+    assert svc.load_index()["count"] == 2
+    svc.invalidate_index_cache()
+
+
+def test_an_expired_cache_never_makes_the_caller_wait(monkeypatch):
+    """만료됐다고 요청을 붙잡아 두면 5분마다 한 번씩 화면이 멈춘다.
+
+    워치리스트에 종목을 추가하면 9.3초가 걸렸고 그중 6.2초가 이 재로딩이었다.
+    문서를 쓰는 곳은 `build_index()` 하나뿐이고 그 경로가 캐시를 직접 버리므로,
+    낡은 값을 잠깐 더 쓰면서 뒤에서 갈아 끼우는 편이 맞다.
+    """
+    released = threading.Event()
+
+    def slow_read():
+        released.wait(2.0)
+        return {"count": 2, "documents": []}
+
+    svc.invalidate_index_cache()
+    monkeypatch.setattr(svc, "_read_index_from_store", lambda: {"count": 1, "documents": []})
+    assert svc.load_index()["count"] == 1
+
+    monkeypatch.setattr(svc, "INDEX_CACHE_TTL_SECONDS", 0.0)
+    monkeypatch.setattr(svc, "_read_index_from_store", slow_read)
+
+    started = time.monotonic()
+    stale = svc.load_index()
+    elapsed = time.monotonic() - started
+
+    assert stale["count"] == 1, "만료되면 옛 값을 그대로 준다"
+    assert elapsed < 0.5, f"기다리지 않아야 하는데 {elapsed:.2f}초 걸렸다"
+
+    released.set()
+    _wait_until(lambda: svc.load_index()["count"] == 2)
+    svc.invalidate_index_cache()
+
+
+def test_a_failed_background_refresh_keeps_the_old_value(monkeypatch):
+    """갱신이 실패해도 화면은 계속 답을 받아야 한다."""
+    svc.invalidate_index_cache()
+    monkeypatch.setattr(svc, "_read_index_from_store", lambda: {"count": 1, "documents": []})
+    assert svc.load_index()["count"] == 1
+
+    monkeypatch.setattr(svc, "INDEX_CACHE_TTL_SECONDS", 0.0)
+
+    def boom():
+        raise RuntimeError("index unreadable")
+
+    monkeypatch.setattr(svc, "_read_index_from_store", boom)
+
+    assert svc.load_index()["count"] == 1
+    time.sleep(0.2)
+    assert svc.load_index()["count"] == 1
     svc.invalidate_index_cache()
 
 
