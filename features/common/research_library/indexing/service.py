@@ -353,7 +353,8 @@ def build_document(path):
     source = canonical_news_source(meta.get("source") or infer_source(f"{title} {body}", rel), url, title) or "User Archive"
     configured_feed = feed_metadata_for_query(meta.get("query", ""))
     language = str(meta.get("language") or configured_feed.get("language") or "").strip().lower()
-    country = str(meta.get("country") or configured_feed.get("country") or "").strip().upper()
+    # 피드 설정에는 국가가 없다(언어로 대체). 옛 파일의 front matter 값만 그대로 보존한다.
+    country = str(meta.get("country") or "").strip().upper()
     companies = find_companies(f"{title} {body}")
     sectors = sorted(set(normalize_tag(t) for t in ([c["sector"] for c in companies] + find_terms(f"{title} {body}", SECTOR_TERMS))))
     impact = [normalize_tag(t) for t in find_terms(f"{title} {body}", IMPACT_TERMS)]

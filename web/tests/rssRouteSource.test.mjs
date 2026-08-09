@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const SELECT_FILTERS = ["start", "end", "source", "market", "country", "language"];
+// 국가 필터는 없앴다 — 태그된 피드에서 언어와 정확히 1:1이었고, 국제 통신사(Reuters·FT)
+// 에서는 정의 자체가 안 됐다. 남은 축은 시장·언어·소스 셋이다.
+const SELECT_FILTERS = ["start", "end", "source", "market", "language"];
 
 test("RSS filter handlers read the event value before any async work", async () => {
   const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");

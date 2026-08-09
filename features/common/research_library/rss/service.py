@@ -9,9 +9,14 @@ import threading
 from pathlib import Path
 
 from features.common.utils import normalize, clean_brief_text, clean_embedded_sections, read_json
-from features.common.market_calendar import infer_doc_markets
+from features.common.market_calendar import MARKET_TAGGER_VERSION, infer_doc_markets
 from features.common.dataframe_ops import filter_archive_records
-from features.common.research_library.rss.feed_config import feed_metadata_for_query
+from features.common.research_library.rss.feed_config import (
+    feed_language_for_media,
+    feed_market_for_media,
+    feed_metadata_for_query,
+)
+from features.common.research_library.rss.normalizer import markets_with_feed_fallback
 from features.common.research_library.indexing.service import (
     RESEARCH_DB_PATH,
     canonical_news_source,
@@ -79,6 +84,24 @@ def parse_archive_filename(path):
     return ts_text, parsed, media, title
 
 
+# `infer_doc_markets`가 내는 순서. 합집합을 만들 때도 같은 순서로 되돌려, 화면과 저장값이
+# 어디서 왔는지에 따라 달라지지 않게 한다.
+_MARKET_TAG_ORDER = ("US", "KR", "EUROPE", "JP", "GLOBAL")
+
+
+def _merge_market_tags(inferred, stored):
+    """Union of fresh inference and the tag saved at collection time.
+
+    `UNKNOWN`은 "신호 없음"이라 무엇이든 하나라도 있으면 사라진다. 둘 다 비어 있을 때만
+    남고, 그 뒤에 feed 힌트가 채운다.
+    """
+    merged = {token for token in list(inferred or []) + list(stored or []) if token and token != "UNKNOWN"}
+    ordered = [token for token in _MARKET_TAG_ORDER if token in merged]
+    # 계약 밖의 값이 저장돼 있어도 버리지 않는다(예전 표기·수기 편집).
+    ordered += sorted(merged - set(_MARKET_TAG_ORDER))
+    return ordered or ["UNKNOWN"]
+
+
 def archive_item(path):
     raw = path.read_text(encoding="utf-8", errors="replace")
     meta, body = parse_rssarchive_markdown(raw)
@@ -94,18 +117,50 @@ def archive_item(path):
         description = normalize(body.replace(f"# {title}", "", 1) if body else "")
     description = clean_brief_text(description, 520)
     configured_feed = feed_metadata_for_query((meta or {}).get("query", ""))
-    language = str((meta or {}).get("language") or configured_feed.get("language") or "").strip().lower()
-    country = str((meta or {}).get("country") or configured_feed.get("country") or "").strip().upper()
+    resolved_source = canonical_news_source(
+        (meta or {}).get("source") or media or infer_source(f"{title} {description}", path.name),
+        (meta or {}).get("url", ""),
+        title,
+    ) or "User Archive"
+    # 시장 힌트와 같은 두 단계다. 저장 자료의 83%가 `query` 없는 legacy 파일이라 feed URL
+    # 조회만으로는 대부분 비어 있었다(실측 9,834행). 매체는 어느 피드에서 왔든 한 언어로
+    # 쓰므로 시장과 달리 모호해지지 않는다.
+    language = str(
+        (meta or {}).get("language")
+        or configured_feed.get("language")
+        or feed_language_for_media(resolved_source)
+        or ""
+    ).strip().lower()
+    # 저장된 태그를 `infer_doc_markets`의 입력으로 넘기지 않는다. 그러면 사다리 1단계로
+    # 걸려 옛 표가 만든 태그가 그대로 메아리치고, 표를 고쳐도 저장 자료가 따라오지 않는다.
+    # 대신 새로 추론한 뒤 **합집합**으로 얹는다 — 저장 태그는 수집 당시 본문 전체를 보고
+    # 만들어졌으므로 버리면 정보가 준다. 실측(2026-08-09)에서 새 표는 태그를 더하기만 하고
+    # 지운 적이 없어(추가 156건·손실 0건) 합집합이 재추론과 사실상 같은 결과를 낸다.
     raw_markets = (meta or {}).get("markets")
+    stored = [
+        str(value).strip().upper()
+        for value in (raw_markets if isinstance(raw_markets, list) else str(raw_markets or "").split(","))
+        if str(value).strip()
+    ]
     markets = infer_doc_markets({
-        "markets": raw_markets if isinstance(raw_markets, list) else [],
-        "market": ",".join(raw_markets) if isinstance(raw_markets, list) else str(raw_markets or ""),
         "title": title,
         "summary": description,
-        "content": description,
+        # 요약 520자가 아니라 본문을 넘긴다. `infer_doc_markets`가 1,600자로 자르므로
+        # 수집 당시와 같은 창을 본다.
+        "content": body or description,
         "url": (meta or {}).get("url", ""),
-        "source": canonical_news_source((meta or {}).get("source") or media or infer_source(f"{title} {description}", path.name), (meta or {}).get("url", ""), title) or "User Archive",
+        "source": resolved_source,
     })
+    markets = _merge_market_tags(markets, stored)
+    # 수집 경로와 같은 사후 보정을 여기에도 둔다. 이 경로가 없어서 UNKNOWN 3,912건이
+    # 재구성 때마다 그대로 살아남았다. 힌트는 두 단계로 찾는다 — 저장된 feed URL이
+    # 우선이고, 없으면 매체명이다. 저장 자료의 83%가 `query` 없는 legacy 파일이라
+    # URL만으로는 17%밖에 닿지 못한다. 매체가 여러 시장의 피드를 갖고 있으면
+    # (Reuters·연합인포맥스) 어느 피드에서 왔는지 알 수 없으므로 추측하지 않는다.
+    markets = markets_with_feed_fallback(
+        markets,
+        configured_feed.get("default_market") or feed_market_for_media(resolved_source),
+    )
     return {
         "filename": path.name,
         "title": title,
@@ -114,13 +169,12 @@ def archive_item(path):
         "url": (meta or {}).get("url", ""),
         "normalizedUrl": (meta or {}).get("normalizedUrl", ""),
         "description": description,
-        "media": canonical_news_source((meta or {}).get("source") or media or infer_source(f"{title} {description}", path.name), (meta or {}).get("url", ""), title) or "User Archive",
+        "media": resolved_source,
         "collector": (meta or {}).get("collector", ""),
         "sourceType": (meta or {}).get("sourceType", ""),
         "collectionStatus": (meta or {}).get("collectionStatus", ""),
         "reliabilityTier": (meta or {}).get("reliabilityTier", ""),
         "language": language,
-        "country": country,
         "markets": markets,
         "market": ",".join(markets),
     }
@@ -146,8 +200,8 @@ def ensure_rss_cache(conn):
             collection_status TEXT NOT NULL DEFAULT '',
             reliability_tier TEXT NOT NULL DEFAULT '',
             language TEXT NOT NULL DEFAULT '',
-            country TEXT NOT NULL DEFAULT '',
             markets TEXT NOT NULL DEFAULT '',
+            tagger_version INTEGER NOT NULL DEFAULT 0,
             visible INTEGER NOT NULL,
             parsed_at TEXT NOT NULL
         )
@@ -162,13 +216,25 @@ def ensure_rss_cache(conn):
         "collection_status": "TEXT NOT NULL DEFAULT ''",
         "reliability_tier": "TEXT NOT NULL DEFAULT ''",
         "language": "TEXT NOT NULL DEFAULT ''",
-        "country": "TEXT NOT NULL DEFAULT ''",
         "markets": "TEXT NOT NULL DEFAULT ''",
+        # 0은 "이 행이 어느 표로 태깅됐는지 모른다"는 뜻이라 반드시 한 번 다시 읽힌다.
+        "tagger_version": "INTEGER NOT NULL DEFAULT 0",
     }.items():
         if col not in existing_cols:
             conn.execute(f"ALTER TABLE {RSS_CACHE_TABLE} ADD COLUMN {col} {ddl}")
-            if col in {"language", "country"}:
+            if col == "language":
                 added_identity_columns = True
+    # 국가 필터는 없앴다. 컬럼을 지우는 것 자체보다 중요한 것은 **다시 읽게 만드는 것**이다 —
+    # 언어를 선언할 수 있는 피드가 유럽·일본뿐이던 시절에 파싱된 행은 언어가 비어 있고,
+    # 파일이 바뀐 적이 없어 평소 새로고침으로는 영원히 그대로다(실측 19,770행).
+    if "country" in existing_cols:
+        conn.execute("DROP INDEX IF EXISTS idx_rss_feed_country_time")
+        try:
+            conn.execute(f"ALTER TABLE {RSS_CACHE_TABLE} DROP COLUMN country")
+        except sqlite3.OperationalError:
+            # DROP COLUMN은 SQLite 3.35+다. 못 지워도 읽는 곳이 없으니 그대로 둔다.
+            pass
+        added_identity_columns = True
     if added_identity_columns:
         # Preserve every old row but force the next ordinary refresh to reparse
         # unchanged Markdown so exact feed-URL metadata can be filled in.
@@ -176,7 +242,6 @@ def ensure_rss_cache(conn):
     conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_visible_time ON {RSS_CACHE_TABLE}(visible, timestamp_sort DESC)")
     conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_source_time ON {RSS_CACHE_TABLE}(media, timestamp_sort DESC)")
     conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_language_time ON {RSS_CACHE_TABLE}(language, timestamp_sort DESC)")
-    conn.execute(f"CREATE INDEX IF NOT EXISTS idx_rss_feed_country_time ON {RSS_CACHE_TABLE}(country, timestamp_sort DESC)")
 
 
 def _repair_cached_media(conn):
@@ -241,7 +306,6 @@ def _row_to_item(row):
         "collectionStatus": row["collection_status"],
         "reliabilityTier": row["reliability_tier"],
         "language": row["language"],
-        "country": row["country"],
         "markets": [token for token in str(row["markets"] or "").split(",") if token],
         "market": row["markets"],
     }
@@ -316,7 +380,9 @@ def refresh_rss_feed_cache(progress=None, force=False):
     with _connect_cache() as conn:
         existing = {
             row["filename"]: row
-            for row in conn.execute(f"SELECT filename, size, mtime_ns FROM {RSS_CACHE_TABLE}")
+            for row in conn.execute(
+                f"SELECT filename, size, mtime_ns, tagger_version FROM {RSS_CACHE_TABLE}"
+            )
         }
         missing = set(existing) - set(by_name)
         for filename in missing:
@@ -325,7 +391,14 @@ def refresh_rss_feed_cache(progress=None, force=False):
         for idx, path in enumerate(files, 1):
             stat = path.stat()
             previous = existing.get(path.name)
-            if previous and int(previous["size"]) == stat.st_size and int(previous["mtime_ns"]) == stat.st_mtime_ns:
+            # 파일이 그대로여도 태깅 표가 바뀌었으면 다시 읽는다. 파일 변경만 보던
+            # 시절에는 표를 고쳐도 이미 저장된 자료가 옛 태그로 남았다.
+            if (
+                previous
+                and int(previous["size"]) == stat.st_size
+                and int(previous["mtime_ns"]) == stat.st_mtime_ns
+                and int(previous["tagger_version"] or 0) == MARKET_TAGGER_VERSION
+            ):
                 continue
             try:
                 item, visible = _archive_item_for_cache(path)
@@ -341,15 +414,14 @@ def refresh_rss_feed_cache(progress=None, force=False):
                     "description": "",
                     "media": canonical_news_source(media, "", title_from_name) or media or "User Archive",
                     "language": "",
-                    "country": "",
                 }
                 visible = False
             conn.execute(
                 f"""
                 INSERT INTO {RSS_CACHE_TABLE}
                     (filename, path, size, mtime_ns, title, timestamp, timestamp_sort, url, description, media,
-                     normalized_url, collector, source_type, collection_status, reliability_tier, language, country,
-                     markets, visible, parsed_at)
+                     normalized_url, collector, source_type, collection_status, reliability_tier, language,
+                     markets, tagger_version, visible, parsed_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(filename) DO UPDATE SET
                     path=excluded.path,
@@ -367,8 +439,8 @@ def refresh_rss_feed_cache(progress=None, force=False):
                     collection_status=excluded.collection_status,
                     reliability_tier=excluded.reliability_tier,
                     language=excluded.language,
-                    country=excluded.country,
                     markets=excluded.markets,
+                    tagger_version=excluded.tagger_version,
                     visible=excluded.visible,
                     parsed_at=excluded.parsed_at
                 """,
@@ -389,8 +461,8 @@ def refresh_rss_feed_cache(progress=None, force=False):
                     item.get("collectionStatus", ""),
                     str(item.get("reliabilityTier", "")),
                     item.get("language", ""),
-                    item.get("country", ""),
                     ",".join(item.get("markets") or []),
+                    MARKET_TAGGER_VERSION,
                     1 if visible else 0,
                     now,
                 ),
@@ -506,7 +578,7 @@ def _scope_visibility_sql():
     return "(" + " OR ".join(clauses) + ")", params
 
 
-def _cache_where(start_dt=None, end_dt=None, source="", market="", country="", language=""):
+def _cache_where(start_dt=None, end_dt=None, source="", market="", language=""):
     clauses = ["visible = 1", _HIDE_PRESS_RELEASE_SQL]
     params = []
     if start_dt:
@@ -527,10 +599,6 @@ def _cache_where(start_dt=None, end_dt=None, source="", market="", country="", l
     params.extend(scope_params)
     # 유럽은 6개국이 한 시장으로 묶이므로, 국가 필터가 없으면 독일 기사만 보는 방법이
     # 없다. 언어는 원문을 읽을 수 있는 항목만 추릴 때 쓴다.
-    country = str(country or "").strip().upper()
-    if country:
-        clauses.append("country = ?")
-        params.append(country)
     language = str(language or "").strip().lower()
     if language:
         clauses.append("language = ?")
@@ -538,9 +606,9 @@ def _cache_where(start_dt=None, end_dt=None, source="", market="", country="", l
     return " AND ".join(clauses), params
 
 
-def rss_cache_files(start_dt=None, end_dt=None, source="", market="", limit=None, offset=0, country="", language=""):
+def rss_cache_files(start_dt=None, end_dt=None, source="", market="", limit=None, offset=0, language=""):
     refresh_rss_feed_cache()
-    where, params = _cache_where(start_dt, end_dt, source, market, country, language)
+    where, params = _cache_where(start_dt, end_dt, source, market, language)
     sql = f"SELECT filename FROM {RSS_CACHE_TABLE} WHERE {where} ORDER BY timestamp_sort DESC, filename DESC"
     if limit is not None:
         sql += " LIMIT ? OFFSET ?"
@@ -588,15 +656,14 @@ def rss_feed_payload(qs):
     _, _, start_dt, end_dt = normalize_feed_range(qs)
     source = qs.get("source", [""])[0].strip()
     market = _normalize_market_filter(qs.get("market", [""])[0])
-    country = qs.get("country", [""])[0].strip().upper()
     language = qs.get("language", [""])[0].strip().lower()
     cache_stats = refresh_rss_feed_cache()
-    where, params = _cache_where(start_dt, end_dt, source, market, country, language)
+    where, params = _cache_where(start_dt, end_dt, source, market, language)
     with _connect_cache() as conn:
         rows = conn.execute(
             f"""
             SELECT filename, title, timestamp, timestamp_sort, url, normalized_url, description, media,
-                   collector, source_type, collection_status, reliability_tier, language, country, markets
+                   collector, source_type, collection_status, reliability_tier, language, markets
             FROM {RSS_CACHE_TABLE}
             WHERE {where}
             ORDER BY timestamp_sort DESC, filename DESC
@@ -618,11 +685,9 @@ def rss_feed_payload(qs):
         "sources": _selectable_sources(source_rows),
         "source": source,
         "market": market,
-        "country": country,
         "language": language,
         "markets": ["US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"],
         "languages": sorted({str(row["language"]) for row in deduped_rows if str(row["language"] or "")}),
-        "countries": sorted({str(row["country"]) for row in deduped_rows if str(row["country"] or "")}),
         "has_more": offset + limit < total,
         "cache": cache_stats,
     }
@@ -633,9 +698,8 @@ def rss_merge_payload(qs):
     source = qs.get("source", [""])[0].strip()
     market = _normalize_market_filter(qs.get("market", [""])[0])
     # 내려받는 병합 파일이 화면에 보이는 목록과 같은 범위여야 한다.
-    country = qs.get("country", [""])[0].strip().upper()
     language = qs.get("language", [""])[0].strip().lower()
-    files = rss_cache_files(start_dt, end_dt, source, market, country=country, language=language)
+    files = rss_cache_files(start_dt, end_dt, source, market, language=language)
     if start_dt and end_dt:
         filename = f"archive-{start_dt:%Y%m%d-%H%M}_to_{end_dt:%Y%m%d-%H%M}.md"
         range_label = f"{start_value.replace('T', ' ')} to {end_value.replace('T', ' ')}"

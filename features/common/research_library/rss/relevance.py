@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 
 from features.common.research_library.rss.article import normalize_text
+from features.common.research_library.rss.policy import keyword_gate_applies
 from features.common.utils import url_host_matches
 
 NOISY_TITLE_PATTERNS = [
@@ -91,17 +92,6 @@ def is_market_relevant_item(title: str, description: str, link: str) -> bool:
     return relevant >= 1 or company
 
 
-def feed_declares_target_market(feed: dict | None) -> bool:
-    """Whether a feed is a curated Europe/Japan target with declared country/language.
-
-    Those feeds are already scoped to a business/economy section of a national
-    outlet, and the config layer refuses to enable them without a country, a
-    language, and a verified freshness probe. The feed itself is the relevance
-    guarantee, so the keyword gate has nothing left to decide.
-    """
-    if not isinstance(feed, dict):
-        return False
-    return bool(str(feed.get("country") or "").strip() and str(feed.get("language") or "").strip())
 
 
 def should_archive_item(title: str, description: str, link: str, feed: dict | None = None) -> bool:
@@ -111,9 +101,16 @@ def should_archive_item(title: str, description: str, link: str, feed: dict | No
     German or Japanese headline does not measure relevance — it measures whether
     a Latin substring happened to collide, which is why probe pass rates ranged
     from 4% (Japanese) to 95% (French, where ``ai`` hides inside ``vrai`` and
-    ``aider``) with no relation to what the articles were about. So feeds that
-    declare their own country and language skip it; the structural filters above
-    still apply to every feed.
+    ``aider``) with no relation to what the articles were about. So feeds in a
+    language it cannot read skip it; the structural filters above still apply to
+    every feed.
+
+    Skipping leans on the feed being a business or economy section, and that
+    assumption has failed before: `kyodo.co.jp/feed/` turned out to be a press
+    release wire and `diamond.jp/list/feed/rss/dol` the whole magazine, so
+    shopping reviews and self-help arrived with nothing to stop them. The fix is
+    the feed list, not a wider gate — a keyword table in six more languages would
+    be guessing at relevance in languages nobody here can check.
     """
     for pattern in NOISY_TITLE_PATTERNS:
         if re.search(pattern, title or "", re.IGNORECASE):
@@ -122,6 +119,6 @@ def should_archive_item(title: str, description: str, link: str, feed: dict | No
         return False
     if _VENDOR_TICKER_RE.search(title or ""):
         return False
-    if feed_declares_target_market(feed):
+    if not keyword_gate_applies(feed):
         return True
     return is_market_relevant_item(title, description, link)

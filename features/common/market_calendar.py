@@ -786,6 +786,86 @@ JAPAN_TOKENS = (
 )
 
 
+# 아래 세 표는 EUROPE/JAPAN과 달리 오랫동안 **한국어와 영어만** 담고 있었다. 그래서
+# 현지어 기사는 자기 시장만 말할 수 있고 남의 시장은 가리키지 못했다 — 실측(2026-08-09)에서
+# 제목이 미국을 가리키는 일본어 기사 17건 중 16건(94.1%)이 US 태그를 못 받았고,
+# `NYダウ 3日連続最高値`가 일본장 레인에 들어갔다. 유럽어는 25.0%였는데 그나마 나은 건
+# 라틴 문자라 `Trump`·`Dollar`·`Nasdaq`가 우연히 그대로 쓰이기 때문이지 설계가 맞아서가 아니다.
+#
+# 추가 원칙은 EUROPE_TOKENS와 같다 — 그 시장을 특정하는 말만 넣는다. 그리고 두 가지를 주의한다.
+#   1. 한자·가나는 `_text_has_token()`에서 부분 문자열로 매칭된다. 다른 말 안에 우연히
+#      박히지 않는지 본다. `ダウ`는 넣지 않는다 — `ダウン`(down)에 걸린다. `米` 단독도
+#      넣지 않는다 — 쌀이다(`米価格`).
+#   2. 라틴 문자는 단어 경계로 매칭되어 뒤에 글자가 붙으면 안 걸린다. 로망스어 굴절형은
+#      형태를 직접 적는다(`americano/a/i/e`). 악센트가 있으면 비ASCII라 부분 일치가 되어
+#      한 형태로 충분하다(`américain` → `américaine(s)`).
+KR_TOKENS = (
+    "한국", "서울증시", "코스피", "코스닥", "kospi", "kosdaq", "krx",
+    "원달러", "원·달러", "원화", "외국인 순매", "기관 순매", ".ks", ".kq",
+    "korea chip", "korean semiconductor", "korean exporter", "korean chip",
+    "국내 증시", "국내증시", "유가증권시장", "한국은행", "금융감독원",
+    "실적 시즌", "실적발표", "잠정실적",
+    # 일본어
+    "韓国株", "韓国市場", "韓国銀行", "コスピ", "ソウル株式市場",
+    # 유럽어 — 한국 시장을 특정하는 말만. 국가명 단독은 넣지 않는다.
+    "kospi", "borsa di seoul", "bolsa de seúl", "bourse de séoul",
+)
+US_TOKENS = (
+    "미국", "뉴욕증시", "뉴욕 증시", "월스트리트", "나스닥", "nasdaq", "s&p", "dow",
+    "다우", "nyse", "wall street", "federal reserve", "연준", "treasury",
+    "fed", "fomc", "earnings", "earnings season", "월가", "미 증시", "미국채", "russell", "잭슨홀",
+    # 일본어 — `ダウ` 단독은 `ダウン`에 걸리므로 반드시 앞말을 붙인다.
+    "米国", "米株", "米市場", "米経済", "米金利", "米長期金利", "米利上げ", "米利下げ",
+    # 비교 대상 텍스트는 `.lower()`를 거치므로 라틴 문자가 섞인 토큰은 소문자로 적는다
+    # (`NYダウ`로 적으면 `token in text`가 영원히 거짓이다).
+    "米国債", "米連邦準備", "frb", "ナスダック", "nyダウ", "ダウ平均", "ny株",
+    "ニューヨーク株式市場", "ニューヨーク市場", "ウォール街", "米関税",
+    # 국적 형용사(americano·américain·estadounidense·amerikaans)는 넣지 않는다. 이 파일이
+    # EUROPE_TOKENS에 세운 "국가명 단독은 넣지 않는다"에 해당하고, 실측에서 다른 말 안에
+    # 박혔다 — `américain`이 `sud-américain`(남아메리카)에, `americana`가 브라질 유통사
+    # `Americanas`에 걸려 둘 다 미국장 기사가 됐다. 나라 이름 명사구만 남긴다.
+    # 독일어
+    "us-notenbank", "us-börse", "us-aktien", "us-zinsen", "us-märkte", "wall-street",
+    # 프랑스어
+    "états-unis", "etats-unis", "réserve fédérale", "bourse de new york",
+    # 이탈리아어
+    "stati uniti", "riserva federale", "borsa americana", "borsa di new york",
+    # 스페인어
+    "estados unidos", "reserva federal", "bolsa de nueva york",
+    # 네덜란드어
+    "verenigde staten", "amerikaanse beurs",
+)
+GLOBAL_TOKENS = (
+    "global", "international", "middle east", "oil", "crude", "dollar", "supply chain",
+    "원자재", "국제", "중동", "유가", "달러", "공급망", "관세", "지정학",
+    # 일본어
+    "原油", "原油価格", "供給網", "サプライチェーン", "地政学", "資源価格", "中東情勢",
+    # 독일어 — `zölle`는 움라우트 덕에 `Strafzölle`·`US-Zölle`까지 부분 일치로 잡힌다.
+    "ölpreis", "rohöl", "lieferkette", "zölle", "geopolitik",
+    # 프랑스어
+    "pétrole", "chaîne d'approvisionnement", "droits de douane", "géopolitique",
+    # 이탈리아어 — `crudo`는 넣지 않는다(생선·식품 기사와 충돌).
+    "petrolio", "greggio", "catena di fornitura", "dazi", "geopolitica",
+    # 스페인어
+    "petróleo", "cadena de suministro", "aranceles", "geopolítica",
+    # 네덜란드어 — `olie`는 단어 경계 때문에 `olieprijs`를 못 잡으므로 형태를 직접 적는다.
+    "olieprijs", "ruwe olie", "toeleveringsketen", "invoerheffingen", "geopolitiek",
+)
+EUROPE_TOKENS = EUROPE_TOKENS + (
+    # 일본어·한국어에서 유럽 시장을 가리키는 말. 유럽 피드가 아닌 곳에서 온 유럽 기사가
+    # 자기 시장 어휘를 쓰지 않기 때문에 따로 붙인다.
+    "欧州株", "欧州市場", "ユーロ圏", "欧州中央銀行", "英中銀", "独連銀",
+)
+
+
+# 위 다섯 표를 고치면 이 값을 올린다. RSS 캐시가 행마다 이 버전을 들고 있어서, 값이
+# 달라지면 파일이 그대로여도 그 행을 다시 읽는다. 이게 없으면 표를 고쳐도 이미 저장된
+# 자료는 영원히 옛 태그로 남는다 — 실제로 UNKNOWN 3,912건이 그렇게 쌓였다.
+# `test_market_inference_multilingual.py`가 표의 해시를 함께 검사하므로, 표만 고치고
+# 버전을 안 올리면 테스트가 잡는다.
+MARKET_TAGGER_VERSION = 2
+
+
 # 거래소 접미사는 자유 텍스트 토큰으로 두면 안 된다. `.t`는 URL·약어 어디에나
 # 들어 있어 미국·한국 기사를 일본으로 태깅했다(실측 회귀). 앞에 실제 티커가 붙은
 # 형태로만 인식한다: `7203.T`, `ASML.AS`, `SAP.DE`.
@@ -865,22 +945,9 @@ def infer_doc_markets(doc):
             company_markets.add(market)
     if _KR_STOCK_CODE_RE.search(text):
         company_markets.add("KR")
-    kr_tokens = (
-        "한국", "서울증시", "코스피", "코스닥", "kospi", "kosdaq", "krx",
-        "원달러", "원·달러", "원화", "외국인 순매", "기관 순매", ".ks", ".kq",
-        "korea chip", "korean semiconductor", "korean exporter", "korean chip",
-        "국내 증시", "국내증시", "유가증권시장", "한국은행", "금융감독원",
-        "실적 시즌", "실적발표", "잠정실적",
-    )
-    us_tokens = (
-        "미국", "뉴욕증시", "뉴욕 증시", "월스트리트", "나스닥", "nasdaq", "s&p", "dow",
-        "다우", "nyse", "wall street", "federal reserve", "연준", "treasury",
-        "fed", "fomc", "earnings", "earnings season", "월가", "미 증시", "미국채", "russell", "잭슨홀",
-    )
-    global_tokens = (
-        "global", "international", "middle east", "oil", "crude", "dollar", "supply chain",
-        "원자재", "국제", "중동", "유가", "달러", "공급망", "관세", "지정학",
-    )
+    kr_tokens = KR_TOKENS
+    us_tokens = US_TOKENS
+    global_tokens = GLOBAL_TOKENS
     is_kr = "KR" in company_markets or any(_text_has_token(text, token) for token in kr_tokens)
     is_us = "US" in company_markets or any(_text_has_token(text, token) for token in us_tokens)
     suffix_markets = _exchange_suffix_markets(text)

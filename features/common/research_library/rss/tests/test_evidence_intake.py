@@ -167,7 +167,7 @@ def test_rss_item_to_evidence_feed_default_market_is_fallback_only():
     assert "KR" in kr_item["markets"] and "US" not in kr_item["markets"]
 
 
-def test_rss_item_to_evidence_preserves_feed_language_and_country():
+def test_rss_item_to_evidence_preserves_feed_language():
     published = dt.datetime(2026, 8, 4, 10, 0, tzinfo=dt.timezone.utc)
     item = rss_item_to_evidence(
         item={"title": "日経平均が反発", "link": "https://example.com/jp", "published_at_utc": published},
@@ -176,12 +176,12 @@ def test_rss_item_to_evidence_preserves_feed_language_and_country():
             "url": "https://example.com/jp.xml",
             "default_market": "JP",
             "language": "ja",
-            "country": "JP",
             "reliability_tier": 2,
         },
     )
     assert item["language"] == "ja"
-    assert item["country"] == "JP"
+    # country는 없앴다 — 태그된 피드에서 언어와 1:1이었고 국제 통신사에서는 정의가 안 됐다.
+    assert "country" not in item
 
 
 def test_rss_archive_skips_stale_dated_feed_items():
@@ -383,6 +383,48 @@ def test_archive_item_exposes_multi_market_tags():
     assert item["market"] == "US,KR,GLOBAL"
 
 
+def test_archive_item_unions_stored_tags_with_fresh_inference():
+    """Stored tags are a floor, not an override.
+
+    Feeding them back into `infer_doc_markets` put them on the top rung of the
+    ladder, so a tag written by an older token table echoed forever and editing
+    the tables never reached already-collected material. Dropping them instead
+    would lose what collection-time inference read from the full article, so the
+    two are unioned: nothing is lost and new tokens still land.
+    """
+    from features.common.research_library.rss.service import _merge_market_tags
+
+    assert _merge_market_tags(["UNKNOWN"], ["US"]) == ["US"]
+    assert _merge_market_tags(["JP"], ["UNKNOWN"]) == ["JP"]
+    assert _merge_market_tags(["UNKNOWN"], ["UNKNOWN"]) == ["UNKNOWN"]
+    assert _merge_market_tags([], []) == ["UNKNOWN"]
+    # Canonical order, whichever side each tag came from.
+    assert _merge_market_tags(["GLOBAL", "US"], ["KR"]) == ["US", "KR", "GLOBAL"]
+    # A value outside the contract (older spelling, hand edit) is kept, not dropped.
+    assert _merge_market_tags(["EUROPE"], ["BOTH"]) == ["EUROPE", "BOTH"]
+
+
+def test_cache_rows_carry_the_tagger_version_that_wrote_them():
+    """An unchanged file must still be re-read when the token tables change.
+
+    The refresh loop skipped by size and mtime alone, so stored items kept their
+    old tags no matter how often the cache was rebuilt. Rows now record the
+    tagger version and a stale row is reparsed even though its file is identical.
+    """
+    import sqlite3
+
+    from features.common.market_calendar import MARKET_TAGGER_VERSION
+    from features.common.research_library.rss.service import RSS_CACHE_TABLE, ensure_rss_cache
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    ensure_rss_cache(conn)
+    columns = {row[1] for row in conn.execute(f"PRAGMA table_info({RSS_CACHE_TABLE})")}
+    assert "tagger_version" in columns
+    # 0 means "written before the column existed", which must never match.
+    assert MARKET_TAGGER_VERSION > 0
+
+
 def test_archive_item_prefers_frontmatter_market_tags():
     md = evidence_markdown({
         "id": "rss_tagged_market",
@@ -420,7 +462,8 @@ def test_rss_cache_schema_includes_markets_column():
     with sqlite3.connect(":memory:") as conn:
         ensure_rss_cache(conn)
         cols = {row[1] for row in conn.execute(f"PRAGMA table_info({RSS_CACHE_TABLE})").fetchall()}
-    assert {"markets", "language", "country"} <= cols
+    assert {"markets", "language", "tagger_version"} <= cols
+    assert "country" not in cols
 
 
 def test_rss_cache_upgrade_preserves_pre_language_schema_rows():
@@ -463,11 +506,11 @@ def test_rss_cache_upgrade_preserves_pre_language_schema_rows():
 
         ensure_rss_cache(conn)
         row = conn.execute(
-            f"SELECT filename, title, markets, language, country, mtime_ns, visible FROM {RSS_CACHE_TABLE} WHERE filename = ?",
+            f"SELECT filename, title, markets, language, mtime_ns, visible FROM {RSS_CACHE_TABLE} WHERE filename = ?",
             ("legacy.md",),
         ).fetchone()
 
-    assert row == ("legacy.md", "Legacy headline", "US", "", "", -1, 1)
+    assert row == ("legacy.md", "Legacy headline", "US", "", -1, 1)
 
 
 def test_existing_yonhap_cache_row_is_repaired_without_file_change():
@@ -525,8 +568,7 @@ def test_rss_feed_config_loads_default_feeds():
 def test_rss_feed_config_has_complete_europe_japan_selection_records():
     feeds = load_rss_feeds(ROOT / "config" / "rss_feeds.yaml")
     target = [feed for feed in feeds if feed["default_market"] in {"EUROPE", "JP"}]
-    assert {feed["country"] for feed in target} == {"GB", "DE", "FR", "NL", "IT", "ES", "JP"}
-    assert {feed["language"] for feed in target} >= {"en", "de", "fr", "nl", "it", "es", "ja"}
+    assert {feed["language"] for feed in target} == {"en", "de", "fr", "nl", "it", "es", "ja"}
     assert all(feed["source_type"] == "news" for feed in target)
     assert all(feed["reliability_tier"] in {1, 2, 3} for feed in target)
     assert all(feed["freshness_item_count"] > 0 for feed in target)
@@ -536,7 +578,7 @@ def test_rss_feed_config_has_complete_europe_japan_selection_records():
     packaged_target = [feed for feed in packaged if feed["default_market"] in {"EUROPE", "JP"}]
     selection = lambda rows: {
         (
-            feed["url"], feed["default_market"], feed["country"], feed["language"],
+            feed["url"], feed["default_market"], feed["language"],
             feed["source_type"], feed["reliability_tier"], feed["freshness_checked_at"],
             feed["freshness_latest_at"], feed["freshness_item_count"],
         )
@@ -550,19 +592,19 @@ def test_rss_feed_config_rejects_invalid_target_metadata():
         "media": "Example",
         "url": "https://example.com/rss",
         "default_market": "EUROPE",
-        "country": "DE",
         "language": "de",
         "freshness_checked_at": "2026-08-04T11:10:00Z",
         "freshness_latest_at": "2026-08-04T10:40:51Z",
         "freshness_item_count": 29,
     }
-    assert normalize_feed(valid)["country"] == "DE"
+    assert normalize_feed(valid)["language"] == "de"
 
     invalid_rows = [
         {**valid, "default_market": "EU"},
-        {**valid, "country": "CH"},
         {**valid, "language": "pt"},
-        {**valid, "country": "JP"},
+        # 언어는 이제 모든 피드가 선언한다. 빠지면 US 피드도 거부된다.
+        {k: v for k, v in valid.items() if k != "language"},
+        {"media": "Example", "url": "https://example.com/us.xml", "default_market": "US"},
         {**valid, "freshness_item_count": 0},
         {**valid, "freshness_latest_at": "2026-07-31T10:40:51Z"},
     ]
@@ -579,7 +621,6 @@ def test_feed_metadata_inference_requires_exact_unambiguous_feed_url(tmp_path: P
   - media: "Example {suffix}"
     url: "https://example.com/shared.xml"
     default_market: "JP"
-    country: "JP"
     language: "ja"
     freshness_checked_at: "2026-08-04T11:10:00Z"
     freshness_latest_at: "2026-08-04T11:05:00Z"
@@ -588,13 +629,57 @@ def test_feed_metadata_inference_requires_exact_unambiguous_feed_url(tmp_path: P
     one = tmp_path / "one.yaml"
     one.write_text("feeds:\n" + row.format(suffix="one"), encoding="utf-8")
     assert feed_metadata_for_query("https://example.com/shared.xml", config_path=one) == {
-        "language": "ja", "country": "JP",
+        "language": "ja", "default_market": "JP",
     }
     assert feed_metadata_for_query("https://example.com/other.xml", config_path=one) == {}
 
     duplicate = tmp_path / "duplicate.yaml"
     duplicate.write_text("feeds:\n" + row.format(suffix="one") + row.format(suffix="two"), encoding="utf-8")
     assert feed_metadata_for_query("https://example.com/shared.xml", config_path=duplicate) == {}
+
+
+def test_us_and_kr_feeds_are_indexed_with_their_market(tmp_path: Path):
+    """The index used to drop them, which is why re-tagging could never work.
+
+    Only Europe and Japan feeds were allowed to declare a country or a language,
+    and the index kept only rows that had one, so all 36 US/KR/GLOBAL feeds fell
+    out of it. The RSS cache rebuild therefore had no feed hint for them and
+    every legacy `UNKNOWN` item stayed `UNKNOWN` no matter how often it ran.
+    """
+    config = tmp_path / "feeds.yaml"
+    config.write_text(
+        'feeds:\n'
+        '  - media: "Bloomberg"\n'
+        '    url: "https://example.com/us.xml"\n'
+        '    default_market: "US"\n'
+        '    language: "en"\n',
+        encoding="utf-8",
+    )
+    assert feed_metadata_for_query("https://example.com/us.xml", config_path=config) == {
+        "language": "en", "default_market": "US",
+    }
+
+
+def test_outlet_market_lookup_refuses_to_guess_across_markets(tmp_path: Path):
+    """83% of stored items carry no feed URL, so the outlet name is the fallback.
+
+    An outlet whose feeds span several markets cannot be resolved this way — the
+    stored item does not record which of its feeds it arrived through — so it
+    returns nothing rather than picking one.
+    """
+    from features.common.research_library.rss.feed_config import feed_market_for_media
+
+    config = tmp_path / "feeds.yaml"
+    config.write_text(
+        'feeds:\n'
+        '  - media: "한국경제"\n    url: "https://example.com/kr.xml"\n    default_market: "KR"\n    language: "ko"\n'
+        '  - media: "Reuters"\n    url: "https://example.com/r-us.xml"\n    default_market: "US"\n    language: "en"\n'
+        '  - media: "Reuters"\n    url: "https://example.com/r-gl.xml"\n    default_market: "GLOBAL"\n    language: "en"\n',
+        encoding="utf-8",
+    )
+    assert feed_market_for_media("한국경제", config_path=config) == "KR"
+    assert feed_market_for_media("Reuters", config_path=config) == ""
+    assert feed_market_for_media("Unknown Outlet", config_path=config) == ""
 
 
 def test_rss_sample_parse():
@@ -683,7 +768,6 @@ def test_frontmatter_round_trips_intake_metadata():
             "query": "AI data center power demand",
             "query_source": "news_query",
             "language": "ja",
-            "country": "JP",
             "summary": "Power demand rises.",
             "collection_status": "summary_only",
             "error": "",
@@ -702,7 +786,8 @@ def test_frontmatter_round_trips_intake_metadata():
     assert meta["query"] == "AI data center power demand"
     assert meta["querySource"] == "news_query"
     assert meta["language"] == "ja"
-    assert meta["country"] == "JP"
+    # 파서는 옛 파일 호환으로 키를 계속 읽지만, 새로 쓰는 front matter에는 값이 없다.
+    assert meta["country"] == ""
     assert str(meta["reliabilityTier"]) == "2"
 
 
@@ -725,7 +810,6 @@ def test_rss_api_preserves_original_local_language_text(tmp_path: Path, monkeypa
         "query": "https://example.com/jp.xml",
         "query_source": "rss_feed",
         "language": "ja",
-        "country": "JP",
         "summary": summary,
         "collection_status": "summary_only",
         "relevance_score": 4,
@@ -751,13 +835,13 @@ def test_rss_api_preserves_original_local_language_text(tmp_path: Path, monkeypa
     assert payload["items"][0]["title"] == title
     assert payload["items"][0]["description"] == summary
     assert payload["items"][0]["language"] == "ja"
-    assert payload["items"][0]["country"] == "JP"
+    assert "country" not in payload["items"][0]
     assert payload["languages"] == ["ja"]
-    assert payload["countries"] == ["JP"]
+    assert "countries" not in payload
     _, merged = rss_service.rss_merge_payload({})
     assert title in merged and summary in merged
     assert 'language: "ja"' in merged
-    assert 'country: "JP"' in merged
+    assert 'country:' not in merged
 
 
 def test_old_markdown_infers_exact_feed_identity_without_rewrite(tmp_path: Path):
@@ -786,7 +870,7 @@ def test_old_markdown_infers_exact_feed_identity_without_rewrite(tmp_path: Path)
 
     item = archive_item(path)
 
-    assert (item["language"], item["country"]) == ("ja", "JP")
+    assert item["language"] == "ja"
     assert path.read_bytes() == before
 
 
@@ -868,6 +952,8 @@ def test_index_document_and_chunk_results_preserve_language_country(tmp_path: Pa
         "content": "Nikkei AI investment expands across Japanese semiconductor companies.",
         "contentHash": "hash-jp",
         "language": "ja",
+        # 예전 front matter에 남아 있는 국가 값은 인덱스가 계속 보존한다. 새로 수집하는
+        # 자료에는 붙지 않지만, 이미 저장된 문서에서 지우지는 않는다.
         "country": "JP",
         "markets": ["JP"],
     }
@@ -1010,34 +1096,42 @@ def test_rss_screen_never_shows_press_release_wires():
     assert "PR Newswire" in params
 
 
-def test_target_feeds_skip_the_korean_english_keyword_gate():
-    """Europe/Japan feeds declare country+language, so the keyword gate steps aside.
+def test_feeds_the_keyword_lists_cannot_read_skip_the_gate():
+    """The gate is keyed on language, because the term lists are Korean/English.
 
-    Measured against live feeds, the Korean/English term lists passed 4% of
-    Japanese items and 95% of French ones — the French number came from ``ai``
-    colliding inside ``vrai``/``aider``, not from relevance. Keeping the gate
-    would silently drop most real foreign market news.
+    Measured against live feeds, those lists passed 4% of Japanese items and 95%
+    of French ones — the French number came from ``ai`` colliding inside
+    ``vrai``/``aider``, not from relevance. Keeping the gate would silently drop
+    most real foreign market news.
     """
     from features.common.research_library.rss.relevance import should_archive_item
 
-    target = {"media": "Handelsblatt", "default_market": "EUROPE", "country": "DE", "language": "de"}
+    target = {"media": "Handelsblatt", "default_market": "EUROPE", "language": "de"}
     assert should_archive_item("SAP hebt Prognose nach starkem Cloud-Wachstum an", "", "https://handelsblatt.com/a", target)
-    assert should_archive_item("日経平均、半導体株高で反発", "", "https://nhk.or.jp/a", {**target, "country": "JP", "language": "ja"})
+    assert should_archive_item("日経平均、半導体株高で反発", "", "https://nhk.or.jp/a", {"media": "NHK", "language": "ja"})
 
-    # 구조 필터는 target feed에서도 그대로 적용된다.
+    # 구조 필터는 이 피드에서도 그대로 적용된다.
     assert not should_archive_item("About XYZ ETF", "", "https://handelsblatt.com/a", target)
     assert not should_archive_item("[포토] 행사 사진", "", "https://handelsblatt.com/a", target)
 
 
-def test_non_target_feeds_keep_the_keyword_gate():
-    """US/KR feeds carry no country/language, so their existing behaviour is untouched."""
+def test_korean_and_english_feeds_keep_the_keyword_gate():
+    """Every feed declares a language now, so "has metadata" would open the gate.
+
+    Reading the language as mere presence would hand the bypass to Korean and
+    English feeds too — exactly the ones these lists can judge — and the Korean
+    noise filter (`[포토]`, 맛집, 장바구니) would stop running.
+    """
     from features.common.research_library.rss.relevance import should_archive_item
 
-    us_feed = {"media": "CNBC", "default_market": "US"}
+    us_feed = {"media": "CNBC", "default_market": "US", "language": "en"}
+    kr_feed = {"media": "한국경제", "default_market": "KR", "language": "ko"}
     assert should_archive_item("삼성전자 영업이익 10조 돌파", "", "https://example.com/a", us_feed)
     assert not should_archive_item("맛집 랩스터 홈다이닝 할인 세일", "", "https://example.com/a", us_feed)
-    # feed 인자 없이 호출하던 기존 경로도 그대로 동작한다.
+    assert not should_archive_item("맛집 랩스터 홈다이닝 할인 세일", "", "https://hankyung.com/a", kr_feed)
+    # feed 인자 없이 호출하던 기존 경로도, 언어를 모르는 경우도 게이트를 지난다.
     assert should_archive_item("삼성전자 영업이익 10조 돌파", "", "https://example.com/a")
+    assert not should_archive_item("맛집 랩스터 홈다이닝 할인 세일", "", "https://example.com/a", {"media": "?"})
 
 
 def test_target_feed_score_floors_at_the_archive_threshold():
@@ -1045,7 +1139,7 @@ def test_target_feed_score_floors_at_the_archive_threshold():
     from features.common.research_library.rss.policy import calculate_relevance_score
 
     item = {"title": "SAP hebt Prognose nach starkem Cloud-Wachstum an", "description": ""}
-    target = {"country": "DE", "language": "de"}
+    target = {"language": "de"}
     assert calculate_relevance_score(item) < 1.0
     assert calculate_relevance_score(item, target, baseline=1.0) == 1.0
 
@@ -1053,29 +1147,25 @@ def test_target_feed_score_floors_at_the_archive_threshold():
     rich = {"title": "Nvidia revenue guidance and earnings", "description": ""}
     assert calculate_relevance_score(rich, target, baseline=1.0) > 1.0
     # US/KR 경로는 feed 유무와 무관하게 동일하다.
-    assert calculate_relevance_score(rich) == calculate_relevance_score(rich, {"media": "CNBC"})
+    assert calculate_relevance_score(rich) == calculate_relevance_score(rich, {"media": "CNBC", "language": "en"})
 
 
-def test_rss_feed_payload_filters_by_country_and_language():
-    """유럽 6개국이 한 시장으로 묶이므로 국가 필터가 없으면 독일 기사만 볼 수 없다."""
+def test_rss_feed_payload_filters_by_language():
+    """국가 필터는 없앴다. 언어는 원문을 읽을 수 있는 항목만 추릴 때 쓴다."""
     from features.common.research_library.rss.service import _cache_where
-
-    where, params = _cache_where(country="DE")
-    assert "country = ?" in where
-    assert "DE" in params
 
     where, params = _cache_where(language="ja")
     assert "language = ?" in where
     assert "ja" in params
 
-    # 소문자/대문자 입력을 저장 형식으로 맞춘다.
-    _, params = _cache_where(country="de", language="JA")
-    assert "DE" in params and "ja" in params
+    # 대문자 입력을 저장 형식으로 맞춘다.
+    _, params = _cache_where(language="JA")
+    assert "ja" in params
 
     # 필터를 주지 않으면 조건이 늘어나지 않는다.
     where_plain, _ = _cache_where()
-    assert "country = ?" not in where_plain
     assert "language = ?" not in where_plain
+    assert "country" not in where_plain
 
 
 def test_market_filter_accepts_the_new_markets_and_the_eu_alias():

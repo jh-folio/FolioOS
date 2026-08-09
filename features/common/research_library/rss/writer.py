@@ -16,6 +16,8 @@ from pathlib import Path
 
 from features.common.market_calendar import infer_doc_markets
 from features.common.research_library.rss.article import normalize_text
+from features.common.research_library.rss.feed_config import feed_market_for_media
+from features.common.research_library.rss.normalizer import markets_with_feed_fallback
 from features.common.research_library.rss.policy import normalize_url, should_retry_existing_item
 
 
@@ -76,20 +78,22 @@ def evidence_markdown(evidence: dict, *, store_full_text: bool = False) -> str:
             "query": evidence.get("query", ""),
             "query_source": evidence.get("query_source", "rss_feed"),
             "language": evidence.get("language", ""),
-            "country": evidence.get("country", ""),
             "collection_status": evidence.get("collection_status", ""),
             "relevance_score": evidence.get("relevance_score", 0),
             "search_score": evidence.get("search_score"),
             "reliability_tier": evidence.get("reliability_tier", 2),
             "related_tickers": evidence.get("related_tickers") or [],
             "related_themes": evidence.get("related_themes") or [],
-            "markets": evidence.get("markets") or infer_doc_markets({
-                "title": evidence.get("title", ""),
-                "summary": evidence.get("summary") or evidence.get("description") or "",
-                "content": evidence.get("full_text") or "",
-                "url": evidence.get("url", ""),
-                "source": evidence.get("source", ""),
-            }),
+            "markets": evidence.get("markets") or markets_with_feed_fallback(
+                infer_doc_markets({
+                    "title": evidence.get("title", ""),
+                    "summary": evidence.get("summary") or evidence.get("description") or "",
+                    "content": evidence.get("full_text") or "",
+                    "url": evidence.get("url", ""),
+                    "source": evidence.get("source", ""),
+                }),
+                feed_market_for_media(evidence.get("source", "")),
+            ),
             "event_id": evidence.get("event_id"),
             "narrative_ids": evidence.get("narrative_ids") or [],
         }
@@ -122,7 +126,6 @@ def _rss_evidence(media, title, description, published_at_utc, link, status, sum
         "query": "",
         "query_source": "rss_feed",
         "language": "",
-        "country": "",
         "description": description,
         "summary": summary,
         "full_text": full_text,
@@ -132,13 +135,18 @@ def _rss_evidence(media, title, description, published_at_utc, link, status, sum
         "search_score": None,
         "related_tickers": [],
         "related_themes": [],
-        "markets": infer_doc_markets({
-            "title": title,
-            "summary": summary or description,
-            "content": full_text,
-            "url": link,
-            "source": media,
-        }),
+        # 수집 경로는 항상 `evidence`를 넘기므로 여기는 방어용이다. 그래도 같은 규칙을
+        # 쓴다 — 세 경로가 다른 답을 내면 어느 것이 옳은지 나중에 알 수 없다.
+        "markets": markets_with_feed_fallback(
+            infer_doc_markets({
+                "title": title,
+                "summary": summary or description,
+                "content": full_text,
+                "url": link,
+                "source": media,
+            }),
+            feed_market_for_media(media),
+        ),
         "event_id": None,
         "narrative_ids": [],
         "reliability_tier": 2,

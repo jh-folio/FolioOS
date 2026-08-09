@@ -18,22 +18,20 @@ class FeedConfigError(ValueError):
     """Raised when an enabled feed violates the checked config contract."""
 
 
-TARGET_COUNTRIES = frozenset({"GB", "DE", "FR", "NL", "IT", "ES", "JP"})
-TARGET_LANGUAGES = frozenset({"en", "de", "fr", "nl", "it", "es", "ja"})
+# 모든 피드가 언어를 선언한다. 예전에는 유럽·일본 전용이었고 나머지 36개 피드는 선언이
+# **금지**돼 있었다(`country_language_only_supported_for_europe_japan`). 그래서 화면의 언어
+# 필터에 영어도 한국어도 뜨지 않았다.
+#
+# `country`는 없앴다. 태그된 17개 피드에서 language와 정확히 1:1이었고(DE↔de, FR↔fr, IT↔it,
+# ES↔es, NL↔nl, JP↔ja, GB↔en) 국제 통신사(Reuters·FT·Bloomberg)에서는 정의 자체가 안 됐다.
+# 축은 셋으로 정리됐다 — 시장 태그가 "무엇에 대한 기사인가", 언어가 "읽을 수 있는가",
+# 출처 필터가 "어느 매체인가"를 맡는다.
+FEED_LANGUAGES = frozenset({"ko", "en", "ja", "de", "fr", "nl", "it", "es"})
 TARGET_MARKETS = frozenset({MarketCode.EUROPE.value, MarketCode.JP.value})
 DEFAULT_MARKETS = frozenset(
     market.value for market in MarketCode if market is not MarketCode.UNKNOWN
 )
 SOURCE_TYPES = frozenset({"news", "press_release"})
-COUNTRY_MARKETS = {
-    "GB": MarketCode.EUROPE.value,
-    "DE": MarketCode.EUROPE.value,
-    "FR": MarketCode.EUROPE.value,
-    "NL": MarketCode.EUROPE.value,
-    "IT": MarketCode.EUROPE.value,
-    "ES": MarketCode.EUROPE.value,
-    "JP": MarketCode.JP.value,
-}
 
 
 def _coerce_scalar(value: str):
@@ -116,26 +114,22 @@ def _probe_datetime(row: dict, key: str) -> dt.datetime:
 
 
 def _target_metadata(row: dict, default_market: str) -> dict[str, object]:
-    """Validate the Europe/Japan selection record, including observed freshness."""
+    """Validate a feed's language, plus the freshness probe Europe/Japan must carry.
+
+    The probe stays scoped to Europe and Japan because those feeds were added by
+    hand from outlets nobody here reads daily — a dead one would sit there
+    returning stale items with an HTTP 200 and look fine. US/KR feeds get noticed.
+    """
+    language = _required_text(row, "language").lower()
+    if language not in FEED_LANGUAGES:
+        raise FeedConfigError(f"invalid_language:{language}")
     if default_market not in TARGET_MARKETS:
-        if row.get("country") or row.get("language"):
-            raise FeedConfigError("country_language_only_supported_for_europe_japan")
         return {
-            "country": "",
-            "language": "",
+            "language": language,
             "freshness_checked_at": "",
             "freshness_latest_at": "",
             "freshness_item_count": 0,
         }
-
-    country = _required_text(row, "country").upper()
-    language = _required_text(row, "language").lower()
-    if country not in TARGET_COUNTRIES:
-        raise FeedConfigError(f"invalid_country:{country}")
-    if language not in TARGET_LANGUAGES:
-        raise FeedConfigError(f"invalid_language:{language}")
-    if COUNTRY_MARKETS[country] != default_market:
-        raise FeedConfigError(f"country_market_mismatch:{country}:{default_market}")
 
     checked_at = _probe_datetime(row, "freshness_checked_at")
     latest_at = _probe_datetime(row, "freshness_latest_at")
@@ -149,7 +143,6 @@ def _target_metadata(row: dict, default_market: str) -> dict[str, object]:
     if age < dt.timedelta(0) or age > dt.timedelta(hours=72):
         raise FeedConfigError("freshness_probe_is_stale")
     return {
-        "country": country,
         "language": language,
         "freshness_checked_at": checked_at.isoformat().replace("+00:00", "Z"),
         "freshness_latest_at": latest_at.isoformat().replace("+00:00", "Z"),
@@ -217,6 +210,15 @@ def load_rss_feeds(path: str | Path) -> list[dict]:
 
 @lru_cache(maxsize=8)
 def _feed_identity_index(path_text: str, mtime_ns: int) -> dict[str, dict[str, str]]:
+    """Map an unambiguous feed URL to the metadata stored items can be re-read with.
+
+    `default_market` is here because the RSS cache rebuild has to re-tag items it
+    reads back from Markdown, and the index used to drop any feed without a
+    `country`/`language`. That excluded all 36 US/KR/GLOBAL feeds, so the rebuild
+    had no feed hint at all and legacy `UNKNOWN` items could never recover.
+    Feeds with no country or language now stay in the index with empty strings,
+    which is what the language lookup already saw for them.
+    """
     del mtime_ns  # cache key only; the file timestamp invalidates stale mappings
     candidates: dict[str, list[dict[str, str]]] = {}
     for feed in load_rss_feeds(path_text):
@@ -225,22 +227,76 @@ def _feed_identity_index(path_text: str, mtime_ns: int) -> dict[str, dict[str, s
             continue
         candidates.setdefault(url, []).append({
             "language": str(feed.get("language") or ""),
-            "country": str(feed.get("country") or ""),
+            "default_market": str(feed.get("default_market") or "").strip().upper(),
         })
+    return {url: rows[0] for url, rows in candidates.items() if len(rows) == 1}
+
+
+@lru_cache(maxsize=8)
+def _media_index(path_text: str, mtime_ns: int) -> dict[str, dict[str, str]]:
+    """Map an outlet name to the fields all of its feeds agree on.
+
+    Measured 2026-08-09: 83% of stored items carry no `query` in their front
+    matter — they are legacy line-oriented files — so a feed-URL lookup reaches
+    only 17% of them. The outlet name resolves 90%.
+
+    Disagreement means "we cannot tell", because the stored item does not say
+    which of that outlet's feeds it arrived through. In practice that only bites
+    the market (Reuters is US and GLOBAL, 연합인포맥스 is US, KR and GLOBAL);
+    an outlet writes in one language whichever feed you take it from.
+    """
+    del mtime_ns  # cache key only
+    seen: dict[str, dict[str, set[str]]] = {}
+    for feed in load_rss_feeds(path_text):
+        media = str(feed.get("media") or "").strip()
+        if not media:
+            continue
+        row = seen.setdefault(media, {"market": set(), "language": set()})
+        market = str(feed.get("default_market") or "").strip().upper()
+        language = str(feed.get("language") or "").strip().lower()
+        if market:
+            row["market"].add(market)
+        if language:
+            row["language"].add(language)
     return {
-        url: rows[0]
-        for url, rows in candidates.items()
-        if len(rows) == 1 and (rows[0]["language"] or rows[0]["country"])
+        media: {
+            field: next(iter(values)) if len(values) == 1 else ""
+            for field, values in fields.items()
+        }
+        for media, fields in seen.items()
     }
+
+
+def _config_index_key(config_path: str | Path | None) -> tuple[str, int] | None:
+    path = Path(config_path) if config_path is not None else resolve_config("rss_feeds.yaml")
+    if not path.exists():
+        return None
+    return str(path.resolve()), path.stat().st_mtime_ns
 
 
 def feed_metadata_for_query(query: object, *, config_path: str | Path | None = None) -> dict[str, str]:
     """Return metadata only for an exact, unambiguous configured feed URL."""
     feed_url = str(query or "").strip()
-    if not feed_url:
+    key = _config_index_key(config_path) if feed_url else None
+    if key is None:
         return {}
-    path = Path(config_path) if config_path is not None else resolve_config("rss_feeds.yaml")
-    if not path.exists():
-        return {}
-    row = _feed_identity_index(str(path.resolve()), path.stat().st_mtime_ns).get(feed_url)
+    row = _feed_identity_index(*key).get(feed_url)
     return dict(row) if row else {}
+
+
+def _media_field(media: object, field: str, config_path: str | Path | None) -> str:
+    name = str(media or "").strip()
+    key = _config_index_key(config_path) if name else None
+    if key is None:
+        return ""
+    return _media_index(*key).get(name, {}).get(field, "")
+
+
+def feed_market_for_media(media: object, *, config_path: str | Path | None = None) -> str:
+    """Return the declared market for an outlet, or `""` when its feeds disagree."""
+    return _media_field(media, "market", config_path)
+
+
+def feed_language_for_media(media: object, *, config_path: str | Path | None = None) -> str:
+    """Return the language an outlet publishes in, or `""` when its feeds disagree."""
+    return _media_field(media, "language", config_path)

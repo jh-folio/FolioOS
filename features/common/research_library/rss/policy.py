@@ -3,6 +3,30 @@ from __future__ import annotations
 
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+# 키워드 게이트가 실제로 판단할 수 있는 언어. 표가 한국어와 영어로 쓰여 있기 때문이다.
+# 이 모듈에 두는 이유는 두 가지다. 숫자 점수(`calculate_relevance_score`)와 boolean 게이트가
+# 같은 기준을 써야 하고, `relevance.py`는 `article.py`를 거쳐 이 모듈에 의존하므로
+# 반대로 import하면 순환이 된다.
+KEYWORD_GATE_LANGUAGES = frozenset({"ko", "en"})
+
+
+def keyword_gate_applies(feed: dict | None) -> bool:
+    """Whether the Korean/English keyword lists can judge this feed at all.
+
+    예전 조건은 "country와 language를 둘 다 선언했는가"였다. country를 없애면서 그대로
+    language 유무로 바꿀 수 없다 — 모든 피드가 언어를 선언하게 되었으므로, 있는지만 보면
+    한국·영어 피드까지 게이트를 건너뛴다. 그러면 한국어 잡음 필터(`[포토]`·장바구니·맛집)가
+    꺼진다. 원래 주석이 진짜 기준을 이미 적어두고 있었고(*"The keyword gate below is written
+    in Korean and English"*), 그것을 그대로 조건으로 쓴다.
+
+    언어를 모르면 게이트를 적용한다. 판단할 수 없는 자료를 그냥 들이는 것보다 낫고,
+    country/language가 없던 피드가 전부 게이트를 지나던 예전 동작과도 같다.
+    """
+    if not isinstance(feed, dict):
+        return True
+    language = str(feed.get("language") or "").strip().lower()
+    return language in KEYWORD_GATE_LANGUAGES or not language
+
 
 STRONG_MARKET_TERMS = {
     "주가",
@@ -136,12 +160,15 @@ def calculate_relevance_score(item: dict, feed: dict | None = None, *, baseline:
     """Score an item's market relevance from its text.
 
     The term lists are Korean and English, so a German or Japanese item scores
-    near zero regardless of what it is about. For feeds that declare their own
-    country and language — curated business sections whose config already
-    required a freshness probe — the feed's editorial scope is the relevance
-    signal, so the score floors at ``baseline`` instead of failing the archive
-    threshold. Items that also match terms still score above the floor, so
-    ranking between them is preserved.
+    near zero regardless of what it is about. For a feed in a language the lists
+    cannot read, the feed's editorial scope is the relevance signal, so the score
+    floors at ``baseline`` instead of failing the archive threshold. Items that
+    also match terms still score above the floor, so ranking between them is
+    preserved.
+
+    The condition is the feed's language, not "does it declare metadata": every
+    feed declares a language now, and reading it as a floor signal would hand the
+    floor to Korean and English feeds too — exactly the ones these lists judge.
     """
     text = " ".join(str(item.get(key) or "") for key in ("title", "description", "summary", "url", "link")).lower()
     score = 0.0
@@ -152,7 +179,7 @@ def calculate_relevance_score(item: dict, feed: dict | None = None, *, baseline:
     score -= sum(2 for term in NOISE_TERMS if term.lower() in text)
     if str(item.get("source_type") or "").startswith("official"):
         score += 3
-    if isinstance(feed, dict) and str(feed.get("country") or "").strip() and str(feed.get("language") or "").strip():
+    if not keyword_gate_applies(feed):
         score = max(score, baseline)
     return score
 

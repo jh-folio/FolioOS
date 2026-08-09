@@ -100,6 +100,104 @@ def test_exchange_suffixes_only_count_as_part_of_a_ticker():
     assert _exchange_suffix_markets("wsj.com/markets") == set()
 
 
+@pytest.mark.parametrize("title", [
+    "NYダウ 3日連続最高値",
+    "ナスダック続伸、FRBの利下げ観測強まる",
+    "米国債利回りが低下",
+    "ウォール街は米金利の低下を好感",
+    "Les États-Unis relèvent les droits de douane",
+    "Wall Street in rialzo dopo la riserva federale",
+    "Estados Unidos y la reserva federal",
+    "Die US-Notenbank senkt die Zinsen",
+])
+def test_local_language_articles_can_point_at_a_foreign_market(title):
+    """The tables were Korean and English only, so this was the 94.1% hole.
+
+    A Japanese or European outlet writing about Wall Street had no way to say so:
+    EUROPE_TOKENS and JAPAN_TOKENS gave each market words for *itself*, and
+    US_TOKENS had nothing a non-Korean, non-English headline would contain.
+    Measured 2026-08-09: 16 of 17 Japanese headlines naming the US market
+    (`NYダウ 3日連続最高値` among them) were filed under Japan or UNKNOWN.
+    """
+    assert "US" in infer_doc_markets({"title": title})
+
+
+@pytest.mark.parametrize("title", [
+    # `americana` matched the Brazilian retailer Americanas — the trailing plural
+    # is allowed by `_text_has_token`, so the guard has to be the token list.
+    "Brazil Police Deepen Americanas Probe, Execute Fresh Warrants",
+    # `américain` matched `sud-américain`; accented tokens are substring-matched.
+    "La Colombie fait le choix du C-390 d'Embraer pour le continent sud-américain",
+    # A nationality adjective is the "bare country name" case this file already
+    # refuses for Europe. US politics is not a US market signal.
+    "US-Senat bestätigt Todd Blanche als Justizminister",
+])
+def test_nationality_adjectives_are_not_market_signals(title):
+    assert "US" not in infer_doc_markets({"title": title})
+
+
+@pytest.mark.parametrize("title", [
+    # `ダウ` alone lives inside `ダウン`, and CJK tokens are substring-matched.
+    "ダウンロード数が過去最高を記録",
+    # `米` alone is rice. The corpus really does carry 米騒動 and 米とタイへ.
+    "スーパーのコメ平均価格 5キロ3311円",
+    "米騒動から100年の歴史をたどる",
+])
+def test_cjk_tokens_do_not_hide_inside_other_words(title):
+    assert infer_doc_markets({"title": title}) == ["UNKNOWN"]
+
+
+def test_japanese_words_for_the_other_markets():
+    assert infer_doc_markets({"title": "韓国株が上昇、コスピは2900台を回復"}) == ["KR"]
+    assert infer_doc_markets({"title": "欧州株は反落、ユーロ圏の物価指標を受け"}) == ["EUROPE"]
+    assert "GLOBAL" in infer_doc_markets({"title": "原油価格の上昇で供給網に影響"})
+
+
+def test_latin_letters_inside_cjk_tokens_are_stored_lowercase():
+    """The comparison text is lower-cased, so `NYダウ` could never match.
+
+    Every token is checked here rather than in review: a token with a capital
+    letter is dead on arrival and nothing else would notice.
+    """
+    from features.common.market_calendar import (
+        EUROPE_TOKENS, GLOBAL_TOKENS, JAPAN_TOKENS, KR_TOKENS, US_TOKENS,
+    )
+
+    for table in (US_TOKENS, KR_TOKENS, GLOBAL_TOKENS, EUROPE_TOKENS, JAPAN_TOKENS):
+        assert [token for token in table if token != token.lower()] == []
+
+
+def test_editing_a_token_table_forces_a_tagger_version_bump():
+    """Stored items only re-tag when `MARKET_TAGGER_VERSION` changes.
+
+    The RSS cache keeps this version per row and reparses a row whose version is
+    behind, so editing a table without bumping the version leaves every already
+    collected article on the old tags — which is how 3,912 `UNKNOWN` rows
+    accumulated. Nothing else would notice, so the fingerprint is checked here.
+
+    If this fails because you edited a table on purpose: bump
+    `MARKET_TAGGER_VERSION` and paste the new fingerprint below.
+    """
+    import hashlib
+    import json
+
+    from features.common.market_calendar import (
+        EUROPE_TOKENS, GLOBAL_TOKENS, JAPAN_TOKENS, KR_TOKENS, MARKET_TAGGER_VERSION, US_TOKENS,
+    )
+
+    tables = {
+        "US_TOKENS": list(US_TOKENS),
+        "KR_TOKENS": list(KR_TOKENS),
+        "GLOBAL_TOKENS": list(GLOBAL_TOKENS),
+        "EUROPE_TOKENS": list(EUROPE_TOKENS),
+        "JAPAN_TOKENS": list(JAPAN_TOKENS),
+    }
+    fingerprint = hashlib.sha256(
+        json.dumps(tables, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]
+    assert (MARKET_TAGGER_VERSION, fingerprint) == (2, "f296e418bc75ee7d")
+
+
 def test_wall_street_article_with_a_url_stays_us_only():
     """Regression: the bare-suffix bug turned this exact shape into US+JP+GLOBAL."""
     doc = {

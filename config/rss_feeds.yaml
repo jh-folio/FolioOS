@@ -7,6 +7,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   # Bloomberg 공식 피드. 유료벽으로 본문은 오지 않지만 제목·요약은 0.3~1.7시간 내로 신선하다.
   - media: "Bloomberg"
     url: "https://feeds.bloomberg.com/markets/news.rss"
@@ -16,6 +17,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "Bloomberg"
     url: "https://feeds.bloomberg.com/technology/news.rss"
     category: "technology"
@@ -24,6 +26,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "CNBC"
     url: "https://www.cnbc.com/id/10001147/device/rss/rss.html"
     category: "business"
@@ -32,6 +35,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "CNBC"
     url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"
     category: "top"
@@ -40,6 +44,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "CNBC"
     url: "https://www.cnbc.com/id/10000664/device/rss/rss.html"
     category: "finance"
@@ -48,6 +53,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "CNBC"
     url: "https://www.cnbc.com/id/20910258/device/rss/rss.html"
     category: "economy"
@@ -56,6 +62,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "CNBC"
     url: "https://www.cnbc.com/id/15839069/device/rss/rss.html"
     category: "investing"
@@ -64,6 +71,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "MarketWatch"
     url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"
     category: "markets"
@@ -72,6 +80,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   # MarketPulse는 2026-08-06 확인 시 최신 항목이 2025-07-03이다. 옛 호스트
   # (feeds.marketwatch.com)와 현행 호스트 양쪽이 같은 낡은 30건을 200 OK로 돌려준다.
   # 발행이 끊긴 코너이며, 켜 두면 건수만 늘고 새 기사는 들어오지 않는다.
@@ -83,6 +92,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   # 직접 피드(본문 확보 가능). Google 뉴스 경유는 제목만 남으므로 본문이 필요한 미국/영미권
   # 커버리지는 아래 공식 피드에서 받는다. 2026-08-03 확인: 최신 0.1~3.1시간, 본문 7~18k자.
   # Yahoo는 여러 발행처를 섞어 내보낸다(개인재테크 콘텐츠가 60% 이상). 아래 발행처만 남기고
@@ -95,6 +105,7 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "US"
+    language: "en"
     only_publishers:
       - "Reuters"
   - media: "The Guardian"
@@ -106,7 +117,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "GB"
     language: "en"
     freshness_checked_at: "2026-08-04T11:10:00Z"
     freshness_latest_at: "2026-08-04T10:48:19Z"
@@ -120,7 +130,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "GB"
     language: "en"
     freshness_checked_at: "2026-08-04T11:10:00Z"
     freshness_latest_at: "2026-08-04T10:34:45Z"
@@ -139,7 +148,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "DE"
     language: "de"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:46:53Z"
@@ -153,7 +161,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "DE"
     language: "de"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:30:00Z"
@@ -167,7 +174,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "FR"
     language: "fr"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:51:45Z"
@@ -181,7 +187,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "FR"
     language: "fr"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:00:01Z"
@@ -195,7 +200,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "NL"
     language: "nl"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:00:55Z"
@@ -209,7 +213,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "NL"
     language: "nl"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T10:12:45Z"
@@ -223,7 +226,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "IT"
     language: "it"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:40:26Z"
@@ -237,7 +239,6 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "IT"
     language: "it"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:43:06Z"
@@ -251,7 +252,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "ES"
     language: "es"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T11:46:26Z"
@@ -265,7 +265,6 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
-    country: "GB"
     language: "en"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T09:33:17Z"
@@ -279,53 +278,10 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "JP"
-    country: "JP"
     language: "ja"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T12:01:21Z"
     freshness_item_count: 80
-  - media: "Diamond Online"
-    url: "https://diamond.jp/list/feed/rss/dol"
-    category: "japan_ja"
-    source_type: "news"
-    enabled: true
-    priority: 5
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "JP"
-    country: "JP"
-    language: "ja"
-    freshness_checked_at: "2026-08-04T12:03:02Z"
-    freshness_latest_at: "2026-08-04T09:41:00Z"
-    freshness_item_count: 25
-  - media: "Toyo Keizai"
-    url: "https://toyokeizai.net/list/feed/rss"
-    category: "japan_ja"
-    source_type: "news"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "JP"
-    country: "JP"
-    language: "ja"
-    freshness_checked_at: "2026-08-04T12:03:02Z"
-    freshness_latest_at: "2026-08-04T10:00:00Z"
-    freshness_item_count: 20
-  - media: "Kyodo News"
-    url: "https://www.kyodo.co.jp/feed/"
-    category: "japan_ja"
-    source_type: "news"
-    enabled: true
-    priority: 4
-    allow_full_text: false
-    reliability_tier: 2
-    default_market: "JP"
-    country: "JP"
-    language: "ja"
-    freshness_checked_at: "2026-08-04T12:03:02Z"
-    freshness_latest_at: "2026-08-04T08:00:00Z"
-    freshness_item_count: 10
   - media: "Asahi Shimbun Business"
     url: "https://www.asahi.com/rss/asahi/business.rdf"
     category: "japan_ja"
@@ -335,7 +291,6 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "JP"
-    country: "JP"
     language: "ja"
     freshness_checked_at: "2026-08-04T12:03:02Z"
     freshness_latest_at: "2026-08-04T10:30:00Z"
@@ -351,6 +306,7 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "GlobeNewswire"
     url: "https://www.globenewswire.com/RssFeed/orgclass/1/feedTitle/GlobeNewswire%20-%20News%20about%20Public%20Companies"
     category: "press_release"
@@ -360,6 +316,7 @@ feeds:
     allow_full_text: true
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "Reuters"
     url: "https://news.google.com/rss/search?q=site%3Areuters.com%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
     category: "top"
@@ -368,6 +325,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "en"
   - media: "Reuters"
     url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fmarkets%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
     category: "markets"
@@ -376,6 +334,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "Reuters"
     url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fbusiness%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
     category: "business"
@@ -384,6 +343,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "Reuters"
     url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Fworld%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
     category: "world"
@@ -392,6 +352,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "en"
   - media: "Reuters"
     url: "https://news.google.com/rss/search?q=site%3Areuters.com%2Ftechnology%20when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
     category: "technology"
@@ -400,6 +361,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "WSJ"
     url: "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain"
     category: "markets"
@@ -408,6 +370,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "WSJ"
     url: "https://feeds.content.dowjones.io/public/rss/WSJcomUSBusiness"
     category: "business"
@@ -416,6 +379,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "WSJ"
     url: "https://feeds.content.dowjones.io/public/rss/RSSWorldNews"
     category: "markets"
@@ -424,6 +388,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "en"
   - media: "Financial Times"
     url: "https://www.ft.com/markets?format=rss"
     category: "markets"
@@ -432,6 +397,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "en"
   - media: "Financial Times"
     url: "https://www.ft.com/companies?format=rss"
     category: "companies"
@@ -440,6 +406,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "en"
   - media: "Financial Times"
     url: "https://www.ft.com/global-economy?format=rss"
     category: "macro"
@@ -448,6 +415,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "en"
   - media: "Financial Times"
     url: "https://www.ft.com/technology?format=rss"
     category: "technology"
@@ -456,6 +424,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "en"
   - media: "한국경제"
     url: "https://www.hankyung.com/feed/finance"
     category: "kr_markets"
@@ -464,6 +433,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "한국경제"
     url: "https://www.hankyung.com/feed/economy"
     category: "kr_macro"
@@ -472,6 +442,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "연합뉴스"
     url: "https://www.yna.co.kr/rss/market.xml"
     category: "kr_markets"
@@ -480,6 +451,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "연합뉴스"
     url: "https://www.yna.co.kr/rss/economy.xml"
     category: "kr_economy"
@@ -488,6 +460,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "매일경제"
     url: "https://www.mk.co.kr/rss/50200011/"
     category: "kr_markets"
@@ -496,6 +469,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "매일경제"
     url: "https://www.mk.co.kr/rss/30100041/"
     category: "kr_economy"
@@ -504,6 +478,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "연합인포맥스"
     url: "https://news.einfomax.co.kr/rss/S1N2.xml"
     category: "kr_markets"
@@ -512,6 +487,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "연합인포맥스"
     url: "https://news.einfomax.co.kr/rss/S1N7.xml"
     category: "kr_companies"
@@ -520,6 +496,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "연합인포맥스"
     url: "https://news.einfomax.co.kr/rss/S1N16.xml"
     category: "kr_rates_fx"
@@ -528,6 +505,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "KR"
+    language: "ko"
   - media: "연합인포맥스"
     url: "https://news.einfomax.co.kr/rss/S1N21.xml"
     category: "global_equities"
@@ -536,6 +514,7 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "US"
+    language: "ko"
   - media: "연합인포맥스"
     url: "https://news.einfomax.co.kr/rss/S1N23.xml"
     category: "global_news"
@@ -544,3 +523,23 @@ feeds:
     allow_full_text: false
     reliability_tier: 2
     default_market: "GLOBAL"
+    language: "ko"
+  # 일본 시장 매체는 공개 RSS가 사실상 닫혀 있다(日経 없음 · Reuters JP 401 · Bloomberg JP 403
+  # · 時事 404 · 株探/みんかぶ RSS 없음). Google News 검색이 日経 헤드라인에 닿는 유일한 경로다.
+  # aggregator 경유라 본문은 오지 않고 summary_only로 저장된다(Reuters·Bloomberg·WSJ와 같은 방식).
+  # 부수 효과로 검색어 자체가 일본어 관련성 게이트 역할을 한다 — 새 어휘표가 필요 없다.
+  - media: "Google News JP"
+    url: "https://news.google.com/rss/search?q=%E6%97%A5%E7%B5%8C%E5%B9%B3%E5%9D%87+OR+%E6%97%A5%E9%8A%80+OR+%E6%9D%B1%E8%A8%BC&hl=ja&gl=JP&ceid=JP:ja"
+    category: "japan_ja"
+    source_type: "news"
+    enabled: true
+    priority: 4
+    allow_full_text: false
+    reliability_tier: 2
+    default_market: "JP"
+    language: "ja"
+    freshness_checked_at: "2026-08-09T07:23:25Z"
+    freshness_latest_at: "2026-08-09T02:00:00Z"
+    freshness_item_count: 12
+    only_publishers:
+      - "日本経済新聞"

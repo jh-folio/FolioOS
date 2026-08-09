@@ -24,7 +24,6 @@ type RssPayload = {
   limit?: number;
   has_more?: boolean;
   sources?: string[];
-  countries?: string[];
   languages?: string[];
 };
 
@@ -33,7 +32,6 @@ type RssFilters = {
   end: string;
   source: string;
   market: string;
-  country: string;
   language: string;
 };
 
@@ -66,7 +64,7 @@ type AgentJob = {
   result?: Record<string, unknown>;
 };
 
-const EMPTY_FILTERS: RssFilters = { start: "", end: "", source: "", market: "", country: "", language: "" };
+const EMPTY_FILTERS: RssFilters = { start: "", end: "", source: "", market: "", language: "" };
 const pageSize = 20;
 const MARKET_OPTIONS = [
   { value: "", label: "전체 시장" },
@@ -77,10 +75,9 @@ const MARKET_OPTIONS = [
   { value: "GLOBAL", label: "글로벌" },
 ];
 
-// 유럽은 6개국이 한 시장으로 묶여 있어, 국가 필터가 없으면 독일 기사만 보는 방법이 없다.
-const COUNTRY_LABELS: Record<string, string> = {
-  GB: "영국", DE: "독일", FR: "프랑스", NL: "네덜란드", IT: "이탈리아", ES: "스페인", JP: "일본",
-};
+// 국가 필터는 없앴다. 태그된 피드에서 언어와 정확히 1:1이었고(DE↔de, FR↔fr, …) 국제
+// 통신사(Reuters·FT)에서는 정의 자체가 안 됐다. 축은 셋이다 — 시장은 "무엇에 대한
+// 기사인가", 언어는 "읽을 수 있는가", 소스는 "어느 매체인가".
 const LANGUAGE_LABELS: Record<string, string> = {
   en: "영어", de: "독일어", fr: "프랑스어", nl: "네덜란드어", it: "이탈리아어", es: "스페인어", ja: "일본어", ko: "한국어",
 };
@@ -102,7 +99,6 @@ function filterLabel(filters: RssFilters) {
     filters.end ? `${filters.end} 이전` : "",
     filters.source ? filters.source : "",
     filters.market ? MARKET_OPTIONS.find((item) => item.value === filters.market)?.label || filters.market : "",
-    filters.country ? COUNTRY_LABELS[filters.country] || filters.country : "",
     filters.language ? LANGUAGE_LABELS[filters.language] || filters.language : "",
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : "전체 RSS 피드";
@@ -117,7 +113,6 @@ function buildParams(page: number, filters: RssFilters) {
   if (filters.end) params.set("end", filters.end);
   if (filters.source) params.set("source", filters.source);
   if (filters.market) params.set("market", filters.market);
-  if (filters.country) params.set("country", filters.country);
   if (filters.language) params.set("language", filters.language);
   return params;
 }
@@ -193,7 +188,6 @@ export function RssRoute() {
   const total = payload?.total ?? items.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const sources = useMemo(() => payload?.sources || [], [payload?.sources]);
-  const countries = useMemo(() => payload?.countries || [], [payload?.countries]);
   const languages = useMemo(() => payload?.languages || [], [payload?.languages]);
 
   const loadItems = useCallback(async (nextPage = page, nextFilters = filters) => {
@@ -386,17 +380,10 @@ export function RssRoute() {
             <input type="datetime-local" aria-label="시작" value={draftFilters.start} onChange={(event) => void updateFilter({ start: event.currentTarget.value })} />
             <input type="datetime-local" aria-label="종료" value={draftFilters.end} onChange={(event) => void updateFilter({ end: event.currentTarget.value })} />
           </label>
-          {/* 국가·언어는 시장과 겹치는 좁힘 조건이라 평소에는 접어 둔다.
-              여섯 개를 한 줄에 늘어놓으면 매일 쓰는 시장·소스가 묻힌다. */}
+          {/* 언어는 시장과 겹치는 좁힘 조건이라 평소에는 접어 둔다.
+              한 줄에 다 늘어놓으면 매일 쓰는 시장·소스가 묻힌다. */}
           <details className="find-bar__detail">
             <summary>상세</summary>
-            <label className="find-bar__field">
-              <span>국가</span>
-              <select value={draftFilters.country} onChange={(event) => void updateFilter({ country: event.currentTarget.value })}>
-                <option value="">전체 국가</option>
-                {countries.map((code) => <option key={code} value={code}>{COUNTRY_LABELS[code] || code}</option>)}
-              </select>
-            </label>
             <label className="find-bar__field">
               <span>언어</span>
               <select value={draftFilters.language} onChange={(event) => void updateFilter({ language: event.currentTarget.value })}>
