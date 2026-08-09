@@ -165,3 +165,56 @@ def test_onedrive_destinations_are_flagged(moved, tmp_path, monkeypatch):
     monkeypatch.setattr(workspace, "documents_root", lambda: onedrive / "Documents")
     monkeypatch.setenv("OneDrive", str(onedrive))
     assert service.workspace_payload()["documentsIsOneDrive"] is True
+
+
+def test_a_live_sqlite_wal_does_not_fail_the_move(moved, tmp_path):
+    """옮기기가 **항상** 실패하던 원인.
+
+    서버가 도는 동안 WAL은 쉬지 않고 커진다(실측 120초에 117MB → 469MB). 1GB 복사는
+    몇 분이 걸리는데, 복사가 끝난 뒤 원본을 다시 재던 검증이 그 사이 달라진 WAL을 보고
+    "복사한 자료가 원본과 다릅니다"를 냈다. 파일이 실제로 상한 적은 없다.
+    """
+    import sqlite3
+
+    db = moved / "data" / "research-index.sqlite3"
+    conn = sqlite3.connect(str(db))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("CREATE TABLE t(a TEXT)")
+    conn.executemany("INSERT INTO t VALUES(?)", [("y" * 200,) for _ in range(2000)])
+    conn.commit()
+    assert (moved / "data" / "research-index.sqlite3-wal").exists()
+
+    result = service.move_workspace("documents")
+
+    target = tmp_path / "home" / "Documents" / "FolioOS"
+    # 곁다리는 따라가지 않는다. SQLite가 목적지에서 다시 만든다.
+    assert not (target / "data" / "research-index.sqlite3-wal").exists()
+    assert not (target / "data" / "research-index.sqlite3-shm").exists()
+    assert result["checkpointFailed"] == []
+    conn.close()
+
+    # 본체 파일만으로 자료가 온전하다 — WAL을 접어 넣었기 때문이다.
+    moved_db = sqlite3.connect(str(target / "data" / "research-index.sqlite3"))
+    assert moved_db.execute("select count(*) from t").fetchone()[0] == 2000
+    moved_db.close()
+
+
+def test_the_size_estimate_counts_the_wal_it_will_fold_in(moved):
+    """공간 검사는 넉넉히 잡는 쪽이 안전하다.
+
+    WAL을 빼고 세면 체크포인트 뒤 본체로 옮겨 갈 바이트가 빠져 필요한 공간을
+    과소평가한다 — 실측에서 1.8MB WAL을 빼자 총량이 1.88MB에서 9KB로 떨어졌다.
+    """
+    import sqlite3
+
+    conn = sqlite3.connect(str(moved / "data" / "research-index.sqlite3"))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("CREATE TABLE t(a TEXT)")
+    conn.executemany("INSERT INTO t VALUES(?)", [("y" * 200,) for _ in range(2000)])
+    conn.commit()
+    wal = (moved / "data" / "research-index.sqlite3-wal").stat().st_size
+    assert wal > 100_000
+
+    _, total = service._usage(moved)
+    assert total > wal
+    conn.close()

@@ -36,8 +36,55 @@ class WorkspaceMoveError(Exception):
     """옮기기를 시작할 수 없거나 검증에 실패했다."""
 
 
+# SQLite가 옆에 두는 파생 파일. 복사하지도 검증하지도 않는다.
+#
+# 이것 때문에 옮기기가 **항상** 실패했다. 서버가 도는 동안 WAL은 쉬지 않고 커지는데
+# (실측 120초에 117MB → 469MB), 1GB 복사는 몇 분이 걸린다. 복사가 끝난 뒤 원본을
+# 다시 재는 `_verify`는 그 사이 달라진 WAL을 보고 "복사한 자료가 원본과 다릅니다"를
+# 냈다. 파일이 실제로 상한 적은 없다.
+#
+# 게다가 살아 있는 WAL을 그대로 복사하면 목적지 DB가 어중간한 상태가 된다. 복사 전에
+# 체크포인트해서 본체 파일로 접어 넣고, 곁다리는 두고 간다 — SQLite가 다시 만든다.
+SQLITE_SIDECAR_SUFFIXES = ("-wal", "-shm", "-journal")
+
+
+def _is_sqlite_sidecar(path: Path) -> bool:
+    return path.name.endswith(SQLITE_SIDECAR_SUFFIXES)
+
+
+def _checkpoint_sqlite(root: Path) -> list[str]:
+    """Fold each database's WAL into its main file so the copy is self-contained.
+
+    체크포인트에 실패해도 옮기기를 막지 않는다 — 다른 프로세스가 쓰고 있으면 WAL이
+    남지만, 목적지에서 처음 열 때 SQLite가 알아서 복구한다. 실패한 파일만 돌려준다.
+    """
+    import sqlite3
+
+    failed: list[str] = []
+    for name in WORKSPACE_DIR_NAMES:
+        directory = root / name
+        if not directory.is_dir():
+            continue
+        for db in directory.rglob("*.sqlite3"):
+            try:
+                conn = sqlite3.connect(str(db), timeout=10)
+                try:
+                    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                finally:
+                    conn.close()
+            except Exception:  # noqa: BLE001 - 체크포인트 실패가 옮기기를 막지 않는다
+                failed.append(db.name)
+    return failed
+
+
 def _usage(root: Path) -> tuple[int, int]:
-    """(파일 수, 바이트). 세는 도중 파일이 사라져도 죽지 않는다."""
+    """(파일 수, 바이트). 세는 도중 파일이 사라져도 죽지 않는다.
+
+    SQLite 곁다리도 센다. 복사에서는 빼지만 디스크에 실제로 차지하는 바이트이고,
+    공간 검사에서는 넉넉히 잡는 쪽이 안전하다 — WAL에 든 내용은 체크포인트 뒤
+    본체 파일로 옮겨 가므로 빼고 세면 필요한 공간을 과소평가한다(실측: 1.8MB WAL을
+    빼자 총량이 1.88MB에서 9KB로 떨어졌다).
+    """
     files = 0
     total = 0
     for name in WORKSPACE_DIR_NAMES:
@@ -132,7 +179,7 @@ def _verify(source: Path, target: Path) -> list[str]:
             continue
         for item in origin.rglob("*"):
             try:
-                if not item.is_file():
+                if not item.is_file() or _is_sqlite_sidecar(item):
                     continue
                 expected = item.stat().st_size
             except OSError:
@@ -192,13 +239,17 @@ def move_workspace(destination: str, *, merge: bool = False) -> dict:
             f"공간이 부족합니다. {_human(total)}가 필요한데 {_human(free)}가 남아 있습니다."
         )
 
+    # 복사 전에 WAL을 본체로 접어 넣는다. 그래야 목적지 DB가 그 자체로 완결된다.
+    checkpoint_failed = _checkpoint_sqlite(source)
+
     target.mkdir(parents=True, exist_ok=True)
     copied = []
+    ignore = shutil.ignore_patterns(*(f"*{suffix}" for suffix in SQLITE_SIDECAR_SUFFIXES))
     for name in WORKSPACE_DIR_NAMES:
         origin = source / name
         if not origin.is_dir():
             continue
-        shutil.copytree(origin, target / name, dirs_exist_ok=True)
+        shutil.copytree(origin, target / name, dirs_exist_ok=True, ignore=ignore)
         copied.append(name)
 
     problems = _verify(source, target)
@@ -220,6 +271,9 @@ def move_workspace(destination: str, *, merge: bool = False) -> dict:
         "fileCount": files,
         "totalBytes": total,
         "copied": copied,
+        # 접어 넣지 못한 DB가 있으면 알린다. 자료가 상한 것은 아니지만(SQLite가 목적지에서
+        # 복구한다) 무슨 일이 있었는지는 숨기지 않는다.
+        "checkpointFailed": checkpoint_failed,
         "restartRequired": True,
     }
 

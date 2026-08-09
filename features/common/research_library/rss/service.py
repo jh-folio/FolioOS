@@ -227,14 +227,19 @@ def ensure_rss_cache(conn):
     # 국가 필터는 없앴다. 컬럼을 지우는 것 자체보다 중요한 것은 **다시 읽게 만드는 것**이다 —
     # 언어를 선언할 수 있는 피드가 유럽·일본뿐이던 시절에 파싱된 행은 언어가 비어 있고,
     # 파일이 바뀐 적이 없어 평소 새로고침으로는 영원히 그대로다(실측 19,770행).
+    #
+    # 여기서 캐시를 무효화하지는 않는다. 다시 읽어야 하는지는 `tagger_version`이 행마다
+    # 들고 있고, 업그레이드하면 그 컬럼이 0으로 새로 생겨 어차피 전 행이 한 번 다시
+    # 읽힌다 — 언어도 그때 같이 채워진다. 여기서 또 무효화하면, `DROP COLUMN`이
+    # 실패하는 DB에서(SQLite 3.35 미만이거나 인덱스·뷰가 걸린 경우) `ensure_rss_cache`가
+    # 불릴 때마다, 즉 피드를 열 때마다 22,000행을 다시 읽는다.
     if "country" in existing_cols:
         conn.execute("DROP INDEX IF EXISTS idx_rss_feed_country_time")
         try:
             conn.execute(f"ALTER TABLE {RSS_CACHE_TABLE} DROP COLUMN country")
         except sqlite3.OperationalError:
-            # DROP COLUMN은 SQLite 3.35+다. 못 지워도 읽는 곳이 없으니 그대로 둔다.
+            # 못 지워도 읽는 곳이 없으니 그대로 둔다. 다음 실행에서 다시 시도한다.
             pass
-        added_identity_columns = True
     if added_identity_columns:
         # Preserve every old row but force the next ordinary refresh to reparse
         # unchanged Markdown so exact feed-URL metadata can be filled in.

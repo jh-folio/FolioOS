@@ -1229,3 +1229,43 @@ def test_configured_source_names_reads_the_live_feed_config():
     assert names, "rss_feeds.yaml에서 매체를 읽지 못했다"
     assert "CNBC" in names
 
+
+
+def test_the_country_migration_cannot_reparse_the_archive_forever():
+    """`DROP COLUMN`이 실패해도 캐시를 되풀이해서 버리지 않는다.
+
+    처음에는 컬럼 삭제 실패를 무효화 신호로 썼다. `DROP COLUMN`은 SQLite 3.35+이고
+    인덱스나 뷰가 걸려 있으면 그 뒤로도 실패하는데, 그러면 `ensure_rss_cache`가 불릴
+    때마다 — 즉 피드를 열 때마다 — 22,000행이 전부 다시 읽힌다. 다시 읽어야 하는지는
+    `tagger_version`이 이미 행마다 들고 있으므로 여기서 따로 무효화하지 않는다.
+    """
+    from features.common.research_library.rss.service import RSS_CACHE_TABLE, ensure_rss_cache
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        """CREATE TABLE rss_feed_items (filename TEXT PRIMARY KEY, path TEXT NOT NULL, size INTEGER NOT NULL,
+        mtime_ns INTEGER NOT NULL, title TEXT NOT NULL, timestamp TEXT NOT NULL, timestamp_sort TEXT NOT NULL,
+        url TEXT NOT NULL, description TEXT NOT NULL, media TEXT NOT NULL, language TEXT NOT NULL DEFAULT '',
+        country TEXT NOT NULL DEFAULT '', visible INTEGER NOT NULL, parsed_at TEXT NOT NULL)"""
+    )
+    # 뷰가 컬럼을 붙잡고 있어 DROP COLUMN이 실패한다.
+    conn.execute("CREATE VIEW keeps_country AS SELECT country FROM rss_feed_items")
+    for index in range(5):
+        conn.execute(
+            "INSERT INTO rss_feed_items VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (f"f{index}.md", "p", 1, 100 + index, "t", "", "", "", "", "m", "", "US", 1, ""),
+        )
+
+    for _ in range(3):
+        ensure_rss_cache(conn)
+        invalidated = conn.execute(
+            f"SELECT COUNT(*) FROM {RSS_CACHE_TABLE} WHERE mtime_ns = -1"
+        ).fetchone()[0]
+        assert invalidated == 0
+
+    # 재파싱은 버전이 강제한다 — 업그레이드하면 컬럼이 0으로 새로 생긴다.
+    assert conn.execute(
+        f"SELECT COUNT(*) FROM {RSS_CACHE_TABLE} WHERE tagger_version = 0"
+    ).fetchone()[0] == 5
+    conn.close()
