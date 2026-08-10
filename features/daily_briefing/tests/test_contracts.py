@@ -636,3 +636,38 @@ def test_the_rule_path_and_the_agent_path_agree(label, date, generated_at, kr_ti
     for scope, expected in (("kr", kr_title), ("us", us_title)):
         assert agent[scope]["title"].endswith(expected), f"{label} agent {scope}"
         assert rules[scope]["title"] == agent[scope]["title"], f"{label} {scope}"
+
+
+@pytest.mark.parametrize("label, date, generated_at, expected", [
+    ("개장 전", "2026-08-10", "2026-08-09T23:03:50Z", "2026-08-07"),
+    ("장중", "2026-08-10", "2026-08-10T02:15:00Z", "2026-08-10"),
+    ("마감 후", "2026-08-10", "2026-08-10T13:00:00Z", "2026-08-10"),
+    ("화요일 개장 전", "2026-08-11", "2026-08-10T23:00:00Z", "2026-08-10"),
+])
+def test_korean_numbers_are_fetched_for_the_session_not_the_publication_day(label, date, generated_at, expected):
+    """수치를 발행일로 부르면 한 브리핑 안에서 날짜가 갈린다.
+
+    월요일 08:03에 만든 금요일 브리핑이 실제로 그랬다 — 차트는 세션일(08-07)로 갔는데
+    수치만 발행일(08-10)로 가서, 지수는 금요일 종가가 들어갔지만(월요일 봉이 아직 없어
+    떨어졌다) 환율은 24시간 거래라 일요일 봉이 잡혔다. 같은 시각에 장이 열린 뒤 다시
+    부르면 아직 마감도 안 한 월요일 장중 값을 받는다.
+    """
+    from features.common.market_calendar import briefing_market_windows
+    from features.daily_briefing.builder import _scope_session_date
+
+    windows = briefing_market_windows(date, as_of=generated_at)
+
+    assert (_scope_session_date("kr", windows) or date) == expected, label
+
+
+def test_both_generation_paths_fetch_korean_numbers_for_the_session_day():
+    """규칙 생성과 Agent 생성이 같은 날짜로 불러야 같은 수치가 실린다."""
+    import inspect
+
+    from features.agent_mode import service as agent_service
+    from features.daily_briefing import builder
+
+    for source in (inspect.getsource(builder.build_briefing), inspect.getsource(agent_service.prepare_briefing_pack)):
+        assert "cached_korea_market_data(" in source
+        call = source[source.index("cached_korea_market_data("):]
+        assert '_scope_session_date("kr", market_windows)' in call[:120], "발행일로 부르면 날짜가 갈린다"

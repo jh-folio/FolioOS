@@ -412,7 +412,11 @@ def build_briefing(
         doc["marketSessionDate"] = infer_market_session_date(doc, market_windows)
 
     market_snapshot = cached_market_snapshot()
-    korea_market_data = cached_korea_market_data(date)
+    # 발행일이 아니라 **한국장 세션일**로 부른다. 차트는 세션일로 가는데 수치만 발행일로
+    # 가면 한 브리핑 안에서 날짜가 갈린다 — 월요일 08:03에 만든 금요일 브리핑에 지수는
+    # 금요일 종가가 들어갔는데 환율만 일요일 값이 들어갔다(환율은 24시간 거래라 주말 봉이
+    # 잡힌다). 같은 시각에 발행일로 부르면 아직 열지도 않은 월요일 값을 받는다.
+    korea_market_data = cached_korea_market_data(_scope_session_date("kr", market_windows) or date)
     market_tape = build_market_tape(
         date=date, market_snapshot=market_snapshot, korea_market_data=korea_market_data,
         market_windows=market_windows,

@@ -284,7 +284,8 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
             "warnings": ["visual_snapshot_collection_failed"],
         }
     market_snapshot = cached_market_snapshot()
-    korea_market_data = cached_korea_market_data(date)
+    # 규칙 생성과 같은 기준이다 — 발행일이 아니라 한국장 세션일로 부른다.
+    korea_market_data = cached_korea_market_data(_scope_session_date("kr", market_windows) or date)
     market_tape = build_market_tape(
         date=date,
         market_snapshot=market_snapshot,

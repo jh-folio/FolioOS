@@ -134,8 +134,16 @@ def build_manifest_item(task):
     return combined
 
 
-def _rel_path(path, project_root):
-    return str(path.relative_to(project_root)) if path.is_relative_to(project_root) else str(path)
+def _rel_path(path, root=None):
+    """`evidence_items.markdown_path`에 넣을 자료 폴더 기준 상대 경로.
+
+    기준을 부르는 쪽이 넘기던 시절 `project_root` 지역변수를 지우면서 호출부 두 곳이
+    사라진 이름을 계속 참조했고, 수집이 첫 항목을 저장하는 순간 `NameError`로 죽었다.
+    기준은 항상 자료 폴더이므로 여기서 직접 구한다 — 부르는 쪽이 넘길 것이 없으면
+    넘기다 잃어버릴 것도 없다.
+    """
+    root = Path(root) if root else research_inbox_dir().parent
+    return str(path.relative_to(root)) if path.is_relative_to(root) else str(path)
 
 
 def _record_rejection(samples, title, url, source, score):
@@ -278,7 +286,7 @@ def main():
             )
             enriched += 1
             if item.get("evidence"):
-                save_evidence_item(evidence_db, item["evidence"], _rel_path(existing_path, project_root))
+                save_evidence_item(evidence_db, item["evidence"], _rel_path(existing_path))
             print(f"Updated: {existing_path.name} [{item['status']}]")
             continue
         item_key = item.get("normalized_url") or normalize_url(item["link"]) or item["link"]
@@ -295,7 +303,7 @@ def main():
             created += 1
             existing_links.add(item_key)
             if item.get("evidence"):
-                save_evidence_item(evidence_db, item["evidence"], _rel_path(path, project_root))
+                save_evidence_item(evidence_db, item["evidence"], _rel_path(path))
             print(f"Saved: {path.name} [{item['status']}]")
 
     # --- Official collector (stub; no fake data) ---------------------------
