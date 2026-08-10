@@ -599,7 +599,9 @@ body:has(#folioReactRoot .react-shell) main.page {
      16(margin) + 14(padding) + 48(항목) + 14(padding) = 92. 예전 76px은 여백을
      줄이고 항목을 가운데 정렬해서, 접을 때마다 아이콘이 9px 왼쪽으로 튀었다. */
   --react-nav-collapsed-width: 92px;
-  --react-agent-width: 384px;
+  /* 384px에서는 도크 컨트롤(CLI·모델·노력)이 두 줄로 접혀 툴바가 68px이 된다.
+     432px가 한 줄로 떨어지는 경계이며(32px), 본문 열은 889 -> 841px로 48px 준다. */
+  --react-agent-width: 432px;
   height: 100vh;
   display: grid;
   grid-template-columns: var(--react-nav-width) minmax(0, 1fr) var(--react-agent-width);
