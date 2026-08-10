@@ -109,3 +109,15 @@ test("Phase 6 shell no longer ships standalone portfolio and notes legacy surfac
   assert.doesNotMatch(html, /<section id="notes"/);
   assert.match(html, /id="folioReactRoot"/);
 });
+
+test("the agent dock never forces itself wider than its column", async () => {
+  const css = await readFile(new URL("../../public/styles.css", import.meta.url), "utf8");
+
+  // 도크는 384px 고정 열이다. 안쪽 컨트롤이 `min-width: auto`로 남으면 폼이 열보다
+  // 넓어지고 그만큼 화면 밖으로 잘린다 — CLI 선택을 더했을 때 실제로 77px이 넘쳤다.
+  const toolbar = css.slice(css.indexOf(".react-agent-form-toolbar {"));
+  assert.match(toolbar.slice(0, 220), /min-width:\s*0/);
+  assert.match(toolbar.slice(0, 220), /flex-wrap:\s*wrap/);
+  const select = css.slice(css.indexOf(".react-agent-tools select {"));
+  assert.match(select.slice(0, 260), /min-width:\s*0/);
+});

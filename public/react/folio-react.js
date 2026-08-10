@@ -19953,7 +19953,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 									children: (i?.adapters || []).map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
 										value: e.id,
 										disabled: e.bridgeSupported === !1,
-										children: e.label || e.id
+										children: (e.label || e.id).replace(/\s*(Code\s*)?CLI$/i, "")
 									}, e.id))
 								}),
 								/* @__PURE__ */ (0, K.jsx)("select", {

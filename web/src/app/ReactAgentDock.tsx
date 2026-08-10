@@ -756,7 +756,9 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
             >
               {(settings?.adapters || []).map((item) => (
                 <option key={item.id} value={item.id} disabled={item.bridgeSupported === false}>
-                  {item.label || item.id}
+                  {/* 도크는 폭이 좁다. 여기서는 CLI라는 것이 이미 라벨로 붙어 있으므로
+                      `Codex CLI`가 아니라 `Codex`로 줄인다. */}
+                  {(item.label || item.id).replace(/\s*(Code\s*)?CLI$/i, "")}
                 </option>
               ))}
             </select>
