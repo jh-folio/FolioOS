@@ -132,3 +132,23 @@ test("the agent dock never forces itself wider than its column", async () => {
   const menu = css.slice(css.indexOf(".react-agent-run-menu {"));
   assert.match(menu.slice(0, 320), /bottom:\s*calc\(100% \+/);
 });
+
+test("the dock header keeps its title on one line", async () => {
+  const css = await readFile(new URL("../../public/styles.css", import.meta.url), "utf8");
+  const dock = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
+
+  // 글자 버튼 셋이 175px을 가져가면 제목이 두 줄로 접혀 헤더가 107px까지 자란다 —
+  // 그만큼 대화가 밀린다. 셋 다 아이콘으로 줄이고 이름은 툴팁으로 남긴다.
+  const actions = dock.slice(dock.indexOf('className="react-agent-header-actions"'));
+  const block = actions.slice(0, actions.indexOf("</header>"));
+  assert.doesNotMatch(block, /react-agent-new-chat/);
+  for (const label of ["대화 목록", "새 대화", "AI Agent 닫기"]) {
+    assert.match(block, new RegExp(`aria-label="${label}"`), label);
+  }
+  // 아이콘만 남으므로 이름은 툴팁이 진다.
+  assert.equal(block.match(/data-tooltip="/g)?.length, 3);
+
+  const title = css.slice(css.indexOf(".react-agent-dock-title h2 {"));
+  assert.match(title.slice(0, 320), /white-space:\s*nowrap/);
+  assert.match(title.slice(0, 320), /text-overflow:\s*ellipsis/);
+});

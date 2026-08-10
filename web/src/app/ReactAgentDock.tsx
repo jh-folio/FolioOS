@@ -664,14 +664,27 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
             <h2>{adapter?.label || meta.label}</h2>
           </div>
         </div>
+        {/* 도크는 384px이라 글자 버튼 셋이 175px을 가져가면 제목이 두 줄로 접힌다.
+            셋 다 아이콘으로 줄이고 이름은 툴팁으로 남긴다 — 닫기가 이미 쓰던 방식이다. */}
         <div className="react-agent-header-actions">
           <button
-            className="react-agent-new-chat" type="button"
-            aria-expanded={threadsOpen}
+            className="icon-btn" type="button"
+            aria-label="대화 목록" aria-expanded={threadsOpen}
+            data-tooltip="대화 목록" data-tooltip-pos="bottom"
             onClick={() => setThreadsOpen((value) => !value)}
-          >대화 목록</button>
-          <button className="react-agent-new-chat" type="button" onClick={startNewChat}>
-            새 대화
+          >
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" width="15" height="15">
+              <path d="M3 4.5h10M3 8h10M3 11.5h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          </button>
+          <button
+            className="icon-btn" type="button"
+            aria-label="새 대화" data-tooltip="새 대화" data-tooltip-pos="bottom"
+            onClick={startNewChat}
+          >
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" width="15" height="15">
+              <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+            </svg>
           </button>
           <button className="icon-btn" type="button" aria-label="AI Agent 닫기" data-tooltip="닫기" data-tooltip-pos="left" onClick={onClose}>×</button>
         </div>

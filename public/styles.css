@@ -1210,18 +1210,27 @@ body:has(#folioReactRoot .react-shell) main.page {
   margin: 0;
 }
 
+.react-agent-dock-title > div {
+  min-width: 0;
+}
+
+/* 한 줄로 둔다. 접히면 헤더가 107px까지 자라 대화가 그만큼 밀린다 — 어느 CLI로 도는지는
+   하단 실행 설정 버튼이 요약으로 이미 말한다. */
 .react-agent-dock-title h2 {
   color: var(--folio-ink, #07111f);
   font-family: var(--font-display, var(--font-en, system-ui, sans-serif));
   font-size: var(--fs-lg, 1.5rem);
   line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .react-agent-header-actions {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 
 .react-agent-new-chat {

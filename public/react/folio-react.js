@@ -19798,17 +19798,47 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 					className: "react-agent-header-actions",
 					children: [
 						/* @__PURE__ */ (0, K.jsx)("button", {
-							className: "react-agent-new-chat",
+							className: "icon-btn",
 							type: "button",
+							"aria-label": "대화 목록",
 							"aria-expanded": d,
+							"data-tooltip": "대화 목록",
+							"data-tooltip-pos": "bottom",
 							onClick: () => f((e) => !e),
-							children: "대화 목록"
+							children: /* @__PURE__ */ (0, K.jsx)("svg", {
+								viewBox: "0 0 16 16",
+								fill: "none",
+								"aria-hidden": "true",
+								width: "15",
+								height: "15",
+								children: /* @__PURE__ */ (0, K.jsx)("path", {
+									d: "M3 4.5h10M3 8h10M3 11.5h6",
+									stroke: "currentColor",
+									strokeWidth: "1.6",
+									strokeLinecap: "round"
+								})
+							})
 						}),
 						/* @__PURE__ */ (0, K.jsx)("button", {
-							className: "react-agent-new-chat",
+							className: "icon-btn",
 							type: "button",
+							"aria-label": "새 대화",
+							"data-tooltip": "새 대화",
+							"data-tooltip-pos": "bottom",
 							onClick: ie,
-							children: "새 대화"
+							children: /* @__PURE__ */ (0, K.jsx)("svg", {
+								viewBox: "0 0 16 16",
+								fill: "none",
+								"aria-hidden": "true",
+								width: "15",
+								height: "15",
+								children: /* @__PURE__ */ (0, K.jsx)("path", {
+									d: "M8 3.5v9M3.5 8h9",
+									stroke: "currentColor",
+									strokeWidth: "1.7",
+									strokeLinecap: "round"
+								})
+							})
 						}),
 						/* @__PURE__ */ (0, K.jsx)("button", {
 							className: "icon-btn",
