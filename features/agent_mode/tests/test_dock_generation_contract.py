@@ -40,7 +40,8 @@ def dock(monkeypatch, tmp_path):
 
 
 def _cli(output: str, captured: dict):
-    def run(prompt, model="", job_id=""):
+    # 실제 시그니처는 `adapter`도 받는다 — 이 대화만 다른 CLI로 돌리는 경로다.
+    def run(prompt, adapter="", model="", job_id=""):
         captured["prompt"] = prompt
         return {"adapter": "test-cli", "output": output}
     return run

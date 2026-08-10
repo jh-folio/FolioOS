@@ -18,7 +18,8 @@ from features.agent_mode import consultation_store as store
 def cli(monkeypatch):
     captured: dict = {}
 
-    def run(prompt, model="", job_id=""):
+    # 실제 시그니처는 `adapter`도 받는다 — 이 대화만 다른 CLI로 돌리는 경로다.
+    def run(prompt, adapter="", model="", job_id=""):
         captured.setdefault("prompts", []).append(prompt)
         return {"adapter": "test-cli", "output": "전력 공급 제약이 병목입니다."}
 

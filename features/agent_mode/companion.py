@@ -103,6 +103,11 @@ def classify_agent_intent(message: str) -> str:
 VALID_EFFORT_LEVELS = {"low", "medium", "high", "max"}
 
 
+# 대화별로 고를 수 있는 CLI. `bridge.ADAPTERS`와 같은 집합이며, 여기서 다시 적어 두는
+# 이유는 이 모듈이 bridge를 import하지 않기 때문이다(순환).
+CHAT_ADAPTERS = frozenset({"codex", "claude", "antigravity"})
+
+
 def normalize_agent_options(raw: dict | None) -> dict:
     """채팅 도구 옵션(모델 버전·노력 단계·첨부파일)을 코드에서 정규화한다.
 
@@ -132,9 +137,13 @@ def normalize_agent_options(raw: dict | None) -> dict:
         if image_data:
             row["imageData"] = image_data
         attachments.append(row)
+    # 이 대화만 다른 CLI로 돌리고 싶을 때 쓴다. 비어 있으면 설정의 전역 기본을 따른다.
+    # 아는 어댑터가 아니면 무시한다 — 틀린 이름으로 전역 기본까지 못 쓰게 되면 안 된다.
+    adapter = str(raw.get("adapter") or "").strip().lower()
     return {
         "model": str(raw.get("model") or "").strip()[:80],
         "effort": effort if effort in VALID_EFFORT_LEVELS else "medium",
+        "adapter": adapter if adapter in CHAT_ADAPTERS else "",
         "attachments": attachments,
     }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 // React 19가 전역 JSX 네임스페이스를 없애 React.JSX로 옮겼다.
 import type { JSX } from "react";
+import { getJson, postJson } from "../api";
 import { AgentHome } from "./AgentHome";
 import { BriefingRoute } from "./BriefingRoute";
 import { CommandPalette } from "./CommandPalette";
@@ -149,6 +150,133 @@ function ThemeToggle() {
               {THEME_LABELS[value]}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type AgentAdapterRow = { id: string; label?: string; available?: boolean; installed?: boolean; bridgeSupported?: boolean };
+type AgentBridgeSettings = { provider?: string; adapters?: AgentAdapterRow[] };
+
+const AGENT_PROVIDERS = ["codex", "claude", "antigravity"] as const;
+
+function adapterState(row: AgentAdapterRow | undefined) {
+  if (!row) return "확인 중";
+  if (row.bridgeSupported === false) return "지원 안 됨";
+  if (!row.installed) return "미설치";
+  return row.available ? "사용 가능" : "로그인 필요";
+}
+
+/** 전역 Agent CLI. 예약 브리핑·기업분석처럼 도크 밖에서 도는 작업이 이 값을 쓴다.
+ *
+ *  설정 탭에도 같은 선택이 있고 둘은 같은 값을 본다 — 여기서 바꾸면 설정 탭도 따라
+ *  바뀐다. 도크의 선택은 **그 대화에만** 적용되는 다른 값이라 여기서 다루지 않는다.
+ */
+function AgentProviderMenu() {
+  const [settings, setSettings] = useState<AgentBridgeSettings | null>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      try {
+        const payload = await getJson<AgentBridgeSettings>("/api/agent-bridge/settings");
+        if (alive) setSettings(payload);
+      } catch {
+        if (alive) setSettings(null);
+      }
+    })();
+    // 설정 탭에서 바꾼 값이 이 버튼에도 즉시 보여야 한다. 두 화면이 같은 값을 다르게
+    // 말하면 어느 쪽이 진짜인지 알 수 없다.
+    const onUpdated = (event: Event) => setSettings((event as CustomEvent).detail as AgentBridgeSettings);
+    window.addEventListener("folio:agent-settings-updated", onUpdated);
+    return () => { alive = false; window.removeEventListener("folio:agent-settings-updated", onUpdated); };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus(); }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
+
+  const rows = AGENT_PROVIDERS.map((id) => ({
+    id,
+    row: settings?.adapters?.find((item) => item.id === id),
+  }));
+  const current = settings?.provider && AGENT_PROVIDERS.includes(settings.provider as typeof AGENT_PROVIDERS[number])
+    ? settings.provider
+    : "";
+  const currentLabel = rows.find((item) => item.id === current)?.row?.label || "선택 안 됨";
+
+  async function choose(id: string) {
+    setBusy(true);
+    try {
+      const models = Object.fromEntries((settings?.adapters || []).map((item) => [item.id, (item as { model?: string }).model || ""]));
+      const payload = await postJson<AgentBridgeSettings>("/api/agent-bridge/settings", { provider: id, models });
+      setSettings(payload);
+      window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: payload }));
+    } catch {
+      // 실패해도 메뉴만 닫는다. 저장 결과는 설정 탭이 자세히 말한다.
+    } finally {
+      setBusy(false);
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+  }
+
+  return (
+    <div className="theme-menu" ref={wrapRef}>
+      <button
+        className="btn btn--icon"
+        type="button"
+        ref={triggerRef}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Agent CLI: ${currentLabel}`}
+        data-tooltip={open ? "" : `Agent CLI: ${currentLabel}`}
+        data-tooltip-pos="bottom"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" width="16" height="16">
+          <path d="M4 5.5 L6.5 8 L4 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8.5 11 H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className="theme-menu-list agent-provider-menu" role="menu" aria-label="Agent CLI">
+          <p className="agent-provider-menu__note">
+            전역 기본입니다. 예약 브리핑과 기업분석이 이 CLI로 돕니다.
+          </p>
+          {rows.map(({ id, row }) => (
+            <button
+              key={id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={current === id}
+              disabled={busy || row?.bridgeSupported === false}
+              onClick={() => void choose(id)}
+            >
+              <span>{row?.label || id}</span>
+              <small>{adapterState(row)}</small>
+            </button>
+          ))}
+          <p className="agent-provider-menu__note">
+            도크에서 고르는 CLI는 그 대화에만 적용되며 이 값을 바꾸지 않습니다.
+          </p>
         </div>
       )}
     </div>
@@ -473,6 +601,7 @@ export function AppShell() {
               그 상수를 1초마다 다시 읽고 있었다. 비면 `span:empty`가 자리를 접는다. */}
           <span>{restartStatus}</span>
           <ThemeToggle />
+          <AgentProviderMenu />
           <button className="btn btn--sm" type="button" onClick={restartServer} disabled={restarting}>
             {restarting ? "재시작 중" : "재시작"}
           </button>

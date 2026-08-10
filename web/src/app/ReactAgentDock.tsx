@@ -55,6 +55,8 @@ type AgentAdapterSettings = {
   label?: string;
   model?: string;
   modelChoices?: AgentModelChoice[];
+  // 브리지가 지원하지 않는 CLI(버전이 못 미치는 agy 등)는 고를 수 없어야 한다.
+  bridgeSupported?: boolean;
 };
 
 type AgentSettings = {
@@ -219,17 +221,24 @@ export function buildAgentRequestContext(
   };
 }
 
-function selectedAdapter(settings: AgentSettings | null): AgentAdapterSettings | null {
-  const provider = settings?.provider && PROVIDERS.has(settings.provider)
+function globalProvider(settings: AgentSettings | null) {
+  return settings?.provider && PROVIDERS.has(settings.provider)
     ? settings.provider
     : settings?.selectedAdapter || "";
+}
+
+/** 이 대화가 실제로 쓸 어댑터.
+ *
+ *  `override`는 **이 대화에만** 적용된다 — 설정과 상단바가 소유한 전역 기본을 바꾸지
+ *  않으므로, 도크에서 다른 CLI로 한 번 물어봐도 내일 아침 예약 브리핑은 그대로다.
+ */
+function selectedAdapter(settings: AgentSettings | null, override = ""): AgentAdapterSettings | null {
+  const provider = override && PROVIDERS.has(override) ? override : globalProvider(settings);
   return settings?.adapters?.find((adapter) => adapter.id === provider) || null;
 }
 
-function providerMeta(settings: AgentSettings | null) {
-  const provider = settings?.provider && PROVIDERS.has(settings.provider)
-    ? settings.provider
-    : settings?.selectedAdapter || "";
+function providerMeta(settings: AgentSettings | null, override = "") {
+  const provider = override && PROVIDERS.has(override) ? override : globalProvider(settings);
   return PROVIDER_META[provider] || PROVIDER_META.default;
 }
 
@@ -254,6 +263,9 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
   const scopeChip = scopeChipLabel(threads.scope || undefined);
   const [input, setInput] = useState("");
   const [model, setModel] = useState("");
+  // 이 대화에만 쓰는 CLI. 비어 있으면 전역 기본(설정 탭·상단바)을 따른다. 새 대화는
+  // 다시 빈 값에서 시작한다 — "이 대화에만"이 말 그대로여야 한다.
+  const [providerOverride, setProviderOverride] = useState("");
   const [effort, setEffort] = useState("medium");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -266,8 +278,8 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     pollControllers.current.clear();
   }, []);
 
-  const applySettings = useCallback((payload: AgentSettings, keepCurrent = false) => {
-    const adapter = selectedAdapter(payload);
+  const applySettings = useCallback((payload: AgentSettings, keepCurrent = false, override = "") => {
+    const adapter = selectedAdapter(payload, override);
     setSettings(payload);
     setModel((current) => {
       const preferred = preferredModel(adapter);
@@ -275,6 +287,13 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
       return preferred;
     });
   }, []);
+
+  // CLI를 바꾸면 모델 목록이 통째로 달라진다. 이 대화의 모델을 새 CLI의 것으로 옮기고,
+  // 전역 설정은 건드리지 않는다.
+  const chooseProvider = useCallback((next: string) => {
+    setProviderOverride(next);
+    setModel(preferredModel(selectedAdapter(settings, next)));
+  }, [settings]);
 
   const loadAgentSettings = useCallback(async (refresh = false) => {
     const payload = await getJson<AgentSettings>(`/api/agent-bridge/settings${refresh ? "?refresh=true" : ""}`);
@@ -342,8 +361,10 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     return () => window.removeEventListener("folio:agent-settings-updated", handleSettingsUpdate);
   }, [applySettings, loadAgentSettings, loadPreflight]);
 
-  const adapter = selectedAdapter(settings);
-  const meta = providerMeta(settings);
+  const adapter = selectedAdapter(settings, providerOverride);
+  const meta = providerMeta(settings, providerOverride);
+  const globalId = globalProvider(settings);
+  const overridden = Boolean(providerOverride) && providerOverride !== globalId;
   const modelChoices = modelChoicesFor(adapter);
   const accentStyle = useMemo(() => ({ "--react-agent-accent": meta.color } as CSSProperties), [meta.color]);
   const failedPreflightChecks = (preflight?.checks || []).filter((check) => !check.ok);
@@ -394,7 +415,7 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
         })).id;
       const submitted = await postJson<{ job: AgentJob }>(
         `/api/agent/threads/${encodeURIComponent(threadId)}/messages`,
-        { message: text, operationId: messageId(), context: requestContext, options: { model, effort } },
+        { message: text, operationId: messageId(), context: requestContext, options: { model, effort, adapter: providerOverride } },
       );
       controller = new AbortController();
       replacePollController(pollControllers.current, assistantId, controller);
@@ -564,7 +585,9 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
 
   async function persistModel(nextModel: string) {
     setModel(nextModel);
-    if (!adapter?.id || !nextModel) return;
+    // 이 대화만 다른 CLI로 돌리는 중이면 전역 설정을 건드리지 않는다. 저장하면
+    // "이 대화에만"이 거짓이 되고, 예약 브리핑의 모델까지 조용히 바뀐다.
+    if (providerOverride || !adapter?.id || !nextModel) return;
     try {
       const models = Object.fromEntries((settings?.adapters || []).map((item) => [item.id, item.model || ""]));
       models[adapter.id] = nextModel;
@@ -725,6 +748,18 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
         />
         <div className="react-agent-form-toolbar">
           <div className="react-agent-tools">
+            <select
+              value={providerOverride || globalId}
+              onChange={(event) => chooseProvider(event.currentTarget.value === globalId ? "" : event.currentTarget.value)}
+              aria-label="이 대화의 CLI"
+              title="이 대화에만 적용됩니다. 전역 기본은 상단바와 설정에서 바꿉니다."
+            >
+              {(settings?.adapters || []).map((item) => (
+                <option key={item.id} value={item.id} disabled={item.bridgeSupported === false}>
+                  {item.label || item.id}
+                </option>
+              ))}
+            </select>
             <select value={model} onChange={(event) => persistModel(event.currentTarget.value)} aria-label="모델 버전">
               {modelChoices.length ? modelChoices.map((choice) => (
                 <option key={choice.value} value={choice.value}>{choice.label}</option>
@@ -739,6 +774,13 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
           </div>
           <button className="btn btn--primary btn--sm" type="submit" data-qa="agent-submit" disabled={busy || !input.trim()}>{busy ? "작업 중" : "보내기"}</button>
         </div>
+        {overridden && (
+          // 전역과 다르면 그 사실을 말한다. 말하지 않으면 설정 탭이 A라고 하는데 대화는
+          // B로 도는 상태가 되고, 어느 쪽이 진짜인지 알 수 없다.
+          <p className="react-agent-scope-note">
+            이 대화만 {adapter?.label || providerOverride}로 돕니다. 전역 기본은 그대로입니다.
+          </p>
+        )}
         {error && <p className="react-agent-error">{error}</p>}
       </form>
     </aside>

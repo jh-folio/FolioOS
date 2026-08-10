@@ -244,6 +244,7 @@ features/company_analysis/financial_quality_prompt.md
 
 - **보이는 핵심 화면**: Home/AI Agent, Dashboard(Research Cockpit), Watchlist, Portfolio, Briefing, RSS Feed, Market Memory, Company Analysis, Deep Research, Settings.
 - **보이는 보조 기능**: Deep Research의 question-first 계획 승인, Smart Collection 상세/상태/변화, Market State, Agent Work Log, 보고서 reader의 Folio Note·규칙 기반 note/thesis 검토, 기존 리서치 화면의 읽기 전용 Investment Context, Obsidian/Notion 내보내기, Agent Dock/Ask Agent/제안 승인 흐름, Dashboard의 Change Feed·시장 캘린더, Watchlist/Portfolio `짚어보기` 대화와 `노트로 정리`.
+- **CLI 선택은 범위가 둘이다.** 전역 기본은 상단바 `Agent CLI` 메뉴와 설정 탭이 소유하며 예약 브리핑·기업분석 등 도크 밖 작업이 쓴다. 도크의 `이 대화의 CLI`는 요청의 `options.adapter`로만 전달되어 그 대화에만 적용되고 전역을 저장하지 않는다 — 전역과 다르면 도크가 그 사실을 밝히고, 새 대화는 다시 전역 기본에서 시작한다.
 - **Agent 실행 경계**: 설정에서 LLM API 키를 넣거나 Agent CLI를 연결한 순간부터, 사용자는 그 프로젝트의 모든 동작에 대해 Agent 사용을 허락한 것으로 본다. 사용자가 요청한 산출물을 만드는 일(계획 작성·보고서 생성·분석)은 버튼을 한 번 더 누르게 하지 않는다. **명시적 action이 계속 필요한 것은 사용자 개인 맥락을 읽거나 저장물을 바꾸는 쪽이다** — Thesis Delta, Collection 변화 질문, Investment Context 위험 설명, 대화 답변, 보고서 수정 제안. freshness/health/context 배지와 `changeSummary`는 계속 규칙으로 자동 계산한다(Agent를 쓰지 않는다).
 - 엔진을 부르는 화면은 **얼마나 걸리는지 미리 말하고**, 실패하면 규칙 결과로 내려간 사실을 숨기지 않는다. Agent CLI는 한 번에 수십 초가 걸린다.
 - **테마/접근성**: 전체 공개 화면은 Light/Dark/System 테마를 지원하고, 기존 사용자 기본값은 Light, 신규 사용자 기본값은 System이다. 키보드 탐색, 명확한 focus, WCAG 2.2 AA 대비를 공개 화면 계약으로 둔다.

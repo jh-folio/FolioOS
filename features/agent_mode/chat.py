@@ -291,10 +291,15 @@ def _run_with_images(build_prompt, options: dict, *, model: str, job_id: str) ->
     The scratch files must outlive prompt building and the CLI call and nothing
     else, so their lifetime is scoped to exactly this call — cleanup runs on
     success, on CLI failure, and on cancellation alike.
+
+    `options["adapter"]`가 있으면 이 대화만 그 CLI로 돌린다. 비어 있으면
+    `_select_adapter("")`가 설정의 전역 기본을 고른다.
     """
     with StagedImages(options.get("attachments")) as staged:
         prompt = build_prompt(image_block(staged))
-        return bridge.run_agent_prompt(prompt, model=model, job_id=job_id)
+        return bridge.run_agent_prompt(
+            prompt, adapter=options.get("adapter", ""), model=model, job_id=job_id,
+        )
 
 
 def run_agent_chat(message: str, context: dict | None = None, options: dict | None = None,

@@ -64,6 +64,17 @@ context pack 생성
   -> 기존 JSON/SQLite 저장소에 writeback
 ```
 
+CLI 선택은 **범위가 둘**이다. 자리도 둘이고, 화면이 어느 쪽인지 말한다.
+
+| 범위 | 어디서 | 무엇이 쓰나 |
+| --- | --- | --- |
+| 전역 기본 | 상단바 `Agent CLI` 메뉴, 설정 탭 | 예약 브리핑, 기업분석, 오버레이 등 도크 밖에서 도는 모든 작업 |
+| 이 대화만 | Agent 도크의 `이 대화의 CLI` | 그 대화의 질문 하나뿐 |
+
+- 상단바와 설정 탭은 **같은 값**을 본다. 한쪽에서 바꾸면 `folio:agent-settings-updated`로 다른 쪽도 즉시 따라온다.
+- 도크 선택은 요청의 `options.adapter`로만 전달되며 전역 설정을 저장하지 않는다. 전역과 다를 때 도크가 `이 대화만 ...로 돕니다`라고 밝힌다. 새 대화는 다시 전역 기본에서 시작한다.
+- 도크에서 CLI를 바꾸면 모델 목록이 통째로 달라지므로 모델도 그 CLI의 것으로 옮긴다. 이때도 전역 모델은 저장하지 않는다 — 저장하면 `이 대화에만`이 거짓이 되고 예약 브리핑의 모델까지 조용히 바뀐다.
+
 설정 탭의 `AI Agent 설정`에서는 Agent 생성 ON/OFF와 CLI/API 모드를 토글하고, CLI 모드에서는 Codex CLI, Claude Code CLI, Antigravity CLI 중 하나를 선택해 모델을 지정합니다. 모델 목록은 마지막으로 갱신한 캐시를 기본으로 사용하고, 사용자가 새로고침을 누를 때만 CLI 모델 조회 명령을 실행합니다. 설치 명령은 실행 전에 사용자 확인을 받습니다.
 
 Antigravity CLI는 [공식 페이지](https://antigravity.google/product/antigravity-cli)의 `agy` 바이너리를 사용한다. 설치는 Windows `irm https://antigravity.google/cli/install.ps1 | iex`, 로그인은 인자 없이 `agy`(브라우저 OAuth)다. 실행은 `agy --model <model> --print <prompt>`로 단일 프롬프트를 비대화형 실행한다. 모델 이름에는 노력 단계가 함께 들어간다(`gemini-3.1-pro-high`, `gemini-3.6-flash-medium`, `claude-sonnet-4-6` 등). 단계 없는 예전 이름(`gemini-3.5-pro`)은 1.1.7이 `not recognized`로 거부하므로 기본 목록에서 뺐다 — 실시간 목록에 기본값이 덧붙는 구조라 선택지에 남아 있으면 고르는 순간 실행이 실패한다. 이 모델들로 브리핑·기업분석·테마분석 등 모든 Agent task를 작성할 수 있다.

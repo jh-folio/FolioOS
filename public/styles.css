@@ -1365,6 +1365,45 @@ body:has(#folioReactRoot .react-shell) main.page {
   line-height: 1.55;
 }
 
+/* 이 대화만 다른 CLI로 도는 중이라는 표시. 전역 설정과 달라졌다는 사실만 말하면
+   되므로 경고가 아니라 보조 정보 톤이다. */
+.react-agent-scope-note {
+  margin: 0;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+/* 전역 CLI 메뉴. 테마 메뉴와 같은 상자를 쓰되 항목마다 상태를 함께 보여준다. */
+.agent-provider-menu {
+  min-width: 232px;
+}
+
+.agent-provider-menu__note {
+  margin: 0;
+  padding: 6px 10px;
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+}
+
+.agent-provider-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.agent-provider-menu button small {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-caption);
+}
+
+.agent-provider-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .react-agent-message-head {
   display: flex;
   align-items: center;

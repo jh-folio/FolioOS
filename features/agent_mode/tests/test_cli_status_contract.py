@@ -61,3 +61,42 @@ def test_the_offered_agy_models_carry_an_effort_step():
 
     assert "gemini-3.5-pro" not in values
     assert all(value.count("-") >= 2 for value in values), values
+
+
+def test_a_conversation_can_pick_its_own_cli_without_touching_the_default():
+    """도크의 선택은 그 대화에만 적용된다.
+
+    전역 기본(설정 탭·상단바)은 예약 브리핑과 기업분석이 쓴다. 도크에서 한 번 다른
+    CLI로 물어봤다고 내일 아침 예약이 그 CLI로 돌면 안 된다.
+    """
+    from features.agent_mode.companion import normalize_agent_options
+
+    assert normalize_agent_options({"adapter": "codex"})["adapter"] == "codex"
+    assert normalize_agent_options({"adapter": "CLAUDE"})["adapter"] == "claude"
+    # 비어 있으면 전역 기본을 따른다.
+    assert normalize_agent_options({})["adapter"] == ""
+    # 아는 어댑터가 아니면 무시한다 — 틀린 이름 때문에 전역 기본까지 못 쓰면 안 된다.
+    assert normalize_agent_options({"adapter": "nope"})["adapter"] == ""
+
+
+def test_the_chat_run_hands_the_conversation_adapter_to_the_cli():
+    """옵션에만 담기고 실행에 안 넘어가면 화면은 고른 척만 한다."""
+    import inspect
+
+    from features.agent_mode import chat
+
+    source = inspect.getsource(chat._run_with_images)
+
+    assert 'adapter=options.get("adapter", "")' in source
+
+
+def test_the_dock_never_saves_a_conversation_choice_as_the_default():
+    """도크가 override 중에 전역 설정을 저장하면 `이 대화에만`이 거짓이 된다."""
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[3].joinpath(
+        "web", "src", "app", "ReactAgentDock.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "if (providerOverride || !adapter?.id || !nextModel) return;" in source
+    assert "options: { model, effort, adapter: providerOverride }" in source
