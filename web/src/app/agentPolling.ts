@@ -66,15 +66,23 @@ function waitForPoll(ms: number, signal?: AbortSignal) {
 
 export async function pollAgentJobBounded<T extends PollableAgentJob>(
   job: T,
-  options: { signal?: AbortSignal; timeoutMs?: number; intervalMs?: number } = {},
+  options: {
+    signal?: AbortSignal;
+    timeoutMs?: number;
+    intervalMs?: number;
+    /** 진행 중인 상태를 매 폴링마다 알려준다. 몇 분 걸리는 작업(CLI 설치)에서 화면이
+     *  아무 말도 없이 멈춰 있으면 사용자는 실패한 줄 안다. */
+    onUpdate?: (current: T) => void;
+  } = {},
 ): Promise<T> {
-  const { signal, timeoutMs = AGENT_POLL_TIMEOUT_MS, intervalMs = AGENT_POLL_INTERVAL_MS } = options;
+  const { signal, timeoutMs = AGENT_POLL_TIMEOUT_MS, intervalMs = AGENT_POLL_INTERVAL_MS, onUpdate } = options;
   const deadline = Date.now() + timeoutMs;
   let current = job;
   while (isActiveJobStatus(current.status)) {
     if (Date.now() >= deadline) throw new AgentPollTimeout(current);
     await waitForPoll(intervalMs, signal);
     current = await getJson<T>(`/api/jobs/${encodeURIComponent(current.id)}`, { signal });
+    onUpdate?.(current);
   }
   if (current.status !== "done") throw new AgentJobTerminalError(current);
   return current;

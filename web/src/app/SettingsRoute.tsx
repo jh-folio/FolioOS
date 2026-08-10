@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getJson, postJson, putJson } from "../api";
+import { AgentCliSetup } from "./AgentCliSetup";
+import { checkedAtLabel } from "./aiConnectionStatus";
 import { setReactAgentContextScope } from "./agentContext";
 import { useUiPreferences } from "./homePreference";
 import { RouteHero } from "./RouteHero";
@@ -94,7 +96,10 @@ type LlmTestResult = {
   status?: string;
   available?: boolean;
   message?: string;
+  /** `check_provider()`가 함께 준다. 언제 확인한 값인지 모르면 상태를 믿을 수 없다. */
+  checkedAt?: string;
 };
+
 
 type ObsidianSettings = { vaultPath?: string };
 type CacheStats = {
@@ -131,19 +136,8 @@ function statusText(hasValue: boolean | undefined, masked: string | undefined, e
   return hasValue ? `${label} 저장됨: ${masked || "저장됨"}` : emptyText;
 }
 
-function adapterStatus(adapter: AgentAdapter) {
-  if (adapter.bridgeSupported === false) return "지원 안 됨";
-  if (!adapter.installed) return "미설치";
-  if (adapter.authenticated || adapter.available) return "사용 가능";
-  return "로그인 필요";
-}
-
-function adapterStatusClass(adapter: AgentAdapter) {
-  if (adapter.bridgeSupported === false) return "warn";
-  if (adapter.authenticated || adapter.available) return "ready";
-  if (adapter.installed) return "warn";
-  return "";
-}
+// 어댑터 상태 문구·클래스는 `AgentCliSetup`이 소유한다. 여기 사본을 두면 같은 상태를
+// 두 화면이 다르게 말하게 된다.
 
 function ToggleSwitch({
   checked,
@@ -1181,7 +1175,8 @@ export function SettingsRoute() {
     const label = checking ? "확인 중" : result?.available ? "사용 가능" : result ? "확인 실패" : row.hasApiKey ? "확인 필요" : "키 없음";
     const className = result?.available ? "ready" : checking || result ? "warn" : "";
     const detail = result?.message || `${row.model || "모델 미설정"} · ${row.hasApiKey ? "저장된 키가 있습니다." : "API Key를 저장하세요."}`;
-    return { providerId, row, label, className, detail };
+    const checkedAt = checkedAtLabel(result?.checkedAt);
+    return { providerId, row, label, className, detail, checkedAt };
   }), [llmStatus, providers]);
 
   return (
@@ -1256,20 +1251,12 @@ export function SettingsRoute() {
                     </select>
                   </label>
                 </div>
-                <div className="cli-provider-list" aria-live="polite">
-                  {agentAdapters.map((adapter) => (
-                    <div className="cli-provider-row" key={adapter.id}>
-                      <div className="cli-provider-main">
-                        <div className="cli-provider-head">
-                          <strong>{adapter.label || adapter.id}</strong>
-                          <span className={`cli-chip status-chip ${adapterStatusClass(adapter)}`}>{adapterStatus(adapter)}</span>
-                        </div>
-                        <div className="cli-provider-meta">{adapter.bridgeSupported === false ? adapter.error || "현재 환경에서 사용할 수 없습니다." : adapter.model || "모델 미설정"}</div>
-                      </div>
-                      {adapter.docsUrl && <a className="btn" href={adapter.docsUrl} target="_blank" rel="noreferrer">문서</a>}
-                    </div>
-                  ))}
-                </div>
+                {/* 안내 화면과 같은 컴포넌트다. 안내가 "나중에 설정에서 바꿀 수 있습니다"라고
+                    말하므로 설정에서도 설치·로그인이 되어야 그 말이 참이 된다. */}
+                <AgentCliSetup
+                  adapters={agentAdapters}
+                  onSettings={(payload) => setAgentSettings((current) => ({ ...(current || {}), ...payload }))}
+                />
               </>
             ) : (
               <>
@@ -1296,22 +1283,29 @@ export function SettingsRoute() {
                   </label>
                 </div>
                 <div className="cli-provider-list" aria-live="polite">
-                  {providerRows.map(({ providerId, row, label, className, detail }) => (
+                  {providerRows.map(({ providerId, row, label, className, detail, checkedAt }) => (
                     <div className="cli-provider-row" key={providerId}>
                       <div className="cli-provider-main">
                         <div className="cli-provider-head">
                           <strong>{row.label || PROVIDER_LABELS[providerId].name}</strong>
                           <span className={`cli-chip status-chip ${className}`}>{label}</span>
+                          {/* 언제 잰 값인지 없으면 "사용 가능"이 지금인지 지난주인지 모른다. */}
+                          {checkedAt && <span className="cli-provider-checked">{checkedAt} 확인</span>}
                         </div>
                         <div className="cli-provider-meta">{detail}</div>
                       </div>
                       <div className="cli-provider-actions">
                         <button className="btn" type="button" disabled={Boolean(llmStatus[providerId]?.checking)} onClick={() => testProvider(providerId)}>연결 확인</button>
-                        {row.setupUrl && <a className="btn" href={row.setupUrl} target="_blank" rel="noreferrer">API Key 발급</a>}
+                        {row.setupUrl && <a className="btn" href={row.setupUrl} target="_blank" rel="noreferrer">콘솔 열기</a>}
                       </div>
                     </div>
                   ))}
                 </div>
+                {/* 사용량과 잔액은 이 앱이 볼 수 없다. 조회에 관리자 키가 필요해서 일반 API
+                    키로는 불가능하다 — 모르는 것을 아는 척하지 않고 어디서 보는지만 말한다. */}
+                <p className="cli-setup-note">
+                  이 앱은 키가 살아 있는지만 확인합니다. <b>사용량과 잔액은 제공사 콘솔</b>에서 보세요.
+                </p>
               </>
             )}
 

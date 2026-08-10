@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { getJson, postJson, putJson } from "../api";
+import { AgentCliSetup, type AgentCliSettings } from "./AgentCliSetup";
 import { FolioWordmark } from "./FolioWordmark";
+import { TOUR_SLIDES, WelcomeTour } from "./WelcomeTour";
 import { useThemePreference, type ThemePreference } from "./themePreference";
 
 /** 첫 실행 안내.
@@ -25,9 +27,10 @@ type MarketScopeState = {
 
 type WorkspaceLocation = { readonly path: string; readonly outsideAppFolder: boolean };
 
-type StepId = "welcome" | "engine" | "markets" | "done";
+type StepId = "welcome" | "theme" | "engine" | "markets" | "done";
 
-const STEPS: ReadonlyArray<StepId> = ["welcome", "engine", "markets", "done"];
+/** 튜토리얼은 여기 없다. 선택이지 절차가 아니라서 진행 막대의 단계로 세지 않는다. */
+const STEPS: ReadonlyArray<StepId> = ["welcome", "theme", "engine", "markets", "done"];
 
 const THEME_CHOICES: ReadonlyArray<{ id: ThemePreference; label: string }> = [
   { id: "light", label: "라이트" },
@@ -48,6 +51,12 @@ const MARKET_CODES: Record<string, string> = { US: "US", KR: "KR", EUROPE: "EU",
 
 const ICONS: Record<StepId, ReactNode> = {
   welcome: <path d="M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" />,
+  theme: (
+    <>
+      <circle cx="12" cy="12" r="8.6" />
+      <path d="M12 3.4a8.6 8.6 0 0 0 0 17.2z" fill="currentColor" stroke="none" />
+    </>
+  ),
   engine: (
     <>
       <path d="M12 3.5v3M12 17.5v3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M3.5 12h3M17.5 12h3M5.4 18.6l2.1-2.1M16.5 7.5l2.1-2.1" />
@@ -65,6 +74,7 @@ const ICONS: Record<StepId, ReactNode> = {
 
 const EYEBROWS: Record<StepId, string> = {
   welcome: "환영합니다",
+  theme: "화면",
   engine: "선택 사항",
   markets: "수집 범위",
   done: "준비 완료",
@@ -84,11 +94,15 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
 
   // 단계를 넘기면 안내 문구를 지운다. 남겨두면 이전 단계의 "저장했습니다"가 다음
   // 단계 아래에 그대로 붙어, 아직 저장하지 않은 것을 저장했다고 읽힌다.
-  const goto = useCallback((next: StepId) => { setNote(""); setStep(next); }, []);
+  const goto = useCallback((next: StepId) => { setNote(""); setTour(-1); setStep(next); }, []);
 
   const [engine, setEngine] = useState<"none" | "api" | "cli">("none");
   const [provider, setProvider] = useState<ProviderId>("openai");
   const [apiKey, setApiKey] = useState("");
+  const [cli, setCli] = useState<AgentCliSettings | null>(null);
+
+  // 튜토리얼은 단계가 아니라 완료 화면 위에 얹히는 별도 흐름이다. -1이면 안 보고 있다.
+  const [tour, setTour] = useState(-1);
 
   const [scope, setScope] = useState<MarketScopeState | null>(null);
   const [markets, setMarkets] = useState<string[]>([]);
@@ -112,6 +126,14 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
         if (!cancelled) setLocation(where);
       } catch {
         /* 위와 같다. */
+      }
+      try {
+        // CLI를 고르는 순간 목록이 비어 있으면 화면이 멈춘 것처럼 보인다. 미리 읽어 둔다.
+        // `refresh`는 하지 않는다 — 모델 목록까지 다시 물으면 안내가 뜨는 데만 수십 초다.
+        const bridge = await getJson<AgentCliSettings>("/api/agent-bridge/settings");
+        if (!cancelled) setCli(bridge);
+      } catch {
+        /* CLI를 못 읽어도 나머지 단계는 그대로 쓴다. */
       }
     })();
     return () => { cancelled = true; };
@@ -187,7 +209,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
     // 단계가 바뀌면 새 내용의 처음으로 포커스를 옮긴다. 그러지 않으면 이전 단계에서
     // 누른 버튼이 사라진 자리에 포커스가 남아 body로 떨어진다.
     shellRef.current?.querySelector<HTMLElement>("h1")?.focus();
-  }, [step]);
+  }, [step, tour]);
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
@@ -240,7 +262,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
         />
 
         <section className="welcome-body">
-          <p className="welcome-eyebrow"><StepIcon step={step} />{EYEBROWS[step]}</p>
+          {/* 튜토리얼은 자기 장 표시를 갖는다. 단계 eyebrow까지 남기면 `준비 완료` 위에
+              `1 / 3`이 겹쳐 붙어 무엇을 세는 숫자인지 알 수 없다. */}
+          {tour < 0 && <p className="welcome-eyebrow"><StepIcon step={step} />{EYEBROWS[step]}</p>}
 
           {step === "welcome" && (
             <>
@@ -250,7 +274,18 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                 <strong>자료와 보고서는 전부 이 컴퓨터에만 저장됩니다.</strong>
               </p>
               <p className="welcome-muted">
-                두 가지만 정하면 바로 쓸 수 있습니다. 둘 다 나중에 설정에서 바꿀 수 있습니다.
+                몇 가지만 정하면 바로 쓸 수 있습니다. 전부 나중에 설정에서 바꿀 수 있고, 건너뛰어도
+                앱은 그대로 동작합니다.
+              </p>
+            </>
+          )}
+
+          {step === "theme" && (
+            <>
+              <h1 id="welcomeTitle" tabIndex={-1}>어떤 화면으로 보시겠어요?</h1>
+              <p>
+                고르는 즉시 바뀝니다. <strong>시스템</strong>을 고르면 이 컴퓨터의 밝게·어둡게 설정을
+                따라갑니다.
               </p>
               <div className="welcome-choices" role="group" aria-label="화면 테마">
                 {THEME_CHOICES.map((choice) => (
@@ -264,6 +299,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                   </button>
                 ))}
               </div>
+              <p className="welcome-muted">
+                이 설정은 이 브라우저에만 저장됩니다. 상단바의 테마 버튼으로 언제든 바꿀 수 있습니다.
+              </p>
             </>
           )}
 
@@ -275,14 +313,27 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                 <strong>AI가 없어도 앱은 그대로 동작합니다</strong> — 자료 수집·검색·차트는 모두
                 규칙으로 만들고, 보고서도 규칙 기반으로 나옵니다.
               </p>
+              {/* 순서는 부담이 적은 것부터다. 라벨은 짧게 두고 설명이 무게를 진다 —
+                  처음 쓰는 사람에게 `CLI`와 `API`는 그 자체로 아무 뜻이 없다. */}
               <div className="welcome-choices" role="group" aria-label="생성 방식">
                 <button type="button" aria-pressed={engine === "none"} onClick={() => setEngine("none")}>AI 없이</button>
-                <button type="button" aria-pressed={engine === "api"} onClick={() => setEngine("api")}>API 키</button>
-                <button type="button" aria-pressed={engine === "cli"} onClick={() => setEngine("cli")}>Agent CLI</button>
+                <button type="button" aria-pressed={engine === "cli"} onClick={() => setEngine("cli")}>CLI</button>
+                <button type="button" aria-pressed={engine === "api"} onClick={() => setEngine("api")}>API</button>
               </div>
+
+              {engine === "none" && (
+                <p className="welcome-muted">
+                  규칙으로 보고서를 만듭니다. 자료 수집·검색·차트는 그대로 동작합니다. 나중에 설정에서
+                  언제든 켤 수 있습니다.
+                </p>
+              )}
 
               {engine === "api" && (
                 <>
+                  <p className="welcome-muted">
+                    <b>제공사 서버를 부르는 열쇠</b>입니다. 설치할 것이 없는 대신 쓴 만큼 요금이 붙습니다.
+                    지금 넣지 않아도 되고, 설정에서 나중에 넣어도 됩니다.
+                  </p>
                   <div className="welcome-choices" role="group" aria-label="제공사">
                     {PROVIDERS.map((item) => (
                       <button
@@ -313,10 +364,18 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
               )}
 
               {engine === "cli" && (
-                <p className="welcome-muted">
-                  이미 쓰고 있는 Codex·Claude·Antigravity CLI를 그대로 씁니다. 설정 탭의 AI Agent에서
-                  설치와 로그인을 마칠 수 있습니다. CLI는 한 번 실행에 수십 초가 걸립니다.
-                </p>
+                <>
+                  <p className="welcome-muted">
+                    <b>내 컴퓨터에 설치해서 쓰는 AI 프로그램</b>입니다(Codex·Claude Code·Antigravity).
+                    이미 구독 중이라면 추가 요금이 없고, 한 번 실행에 수십 초가 걸립니다. 아래에서 바로
+                    설치하고 로그인할 수 있습니다.
+                  </p>
+                  <AgentCliSetup
+                    adapters={cli?.adapters ?? []}
+                    onSettings={setCli}
+                    disabled={!!busy}
+                  />
+                </>
               )}
             </>
           )}
@@ -359,7 +418,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
             </>
           )}
 
-          {step === "done" && (
+          {step === "done" && tour >= 0 && <WelcomeTour index={tour} />}
+
+          {step === "done" && tour < 0 && (
             <>
               <h1 id="welcomeTitle" tabIndex={-1}>이제 시작할 수 있습니다</h1>
               {collecting && <p>뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다.</p>}
@@ -379,6 +440,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                   )}
                 </>
               )}
+              <button className="welcome-tour-open" type="button" onClick={() => setTour(0)}>
+                Folio OS가 어떻게 도는지 보기 · 30초
+              </button>
             </>
           )}
 
@@ -390,12 +454,33 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
             {step === "done" ? "닫기" : "건너뛰기"}
           </button>
           <div className="welcome-acts">
+            {/* 튜토리얼 안에서는 단계 이동이 아니라 장 이동이다. 마지막 장의 `이전`이
+                완료 화면으로 돌아가야 갇히지 않는다. */}
+            {step === "done" && tour >= 0 && (
+              <>
+                <button className="welcome-btn" type="button" onClick={() => setTour(tour - 1)}>
+                  {tour === 0 ? "돌아가기" : "이전"}
+                </button>
+                {tour < TOUR_SLIDES.length - 1 ? (
+                  <button className="welcome-btn welcome-btn--go" type="button" onClick={() => setTour(tour + 1)}>
+                    다음
+                  </button>
+                ) : (
+                  <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void finish(false)} disabled={!!busy}>
+                    시작하기
+                  </button>
+                )}
+              </>
+            )}
             {index > 0 && step !== "done" && (
               <button className="welcome-btn" type="button" onClick={() => goto(STEPS[index - 1])} disabled={!!busy}>
                 이전
               </button>
             )}
             {step === "welcome" && (
+              <button className="welcome-btn welcome-btn--go" type="button" onClick={() => goto("theme")}>다음</button>
+            )}
+            {step === "theme" && (
               <button className="welcome-btn welcome-btn--go" type="button" onClick={() => goto("engine")}>다음</button>
             )}
             {step === "engine" && (
@@ -408,7 +493,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                 {busy === "markets" ? "저장 중" : "저장하고 시작"}
               </button>
             )}
-            {step === "done" && (
+            {step === "done" && tour < 0 && (
               <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void finish(false)} disabled={!!busy}>
                 시작하기
               </button>

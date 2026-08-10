@@ -7381,6 +7381,12 @@ button:disabled {
   margin-bottom: 5px;
 }
 .cli-provider-head strong { font-size: var(--fs-base); }
+.cli-provider-checked {
+  color: var(--folio-ink-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
+}
 .cli-provider-meta {
   margin: 0;
   color: var(--folio-ink-muted);
@@ -7394,6 +7400,31 @@ button:disabled {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* Agent CLI 설치·로그인 한 벌. 첫 실행 안내와 설정 탭이 같은 컴포넌트를 쓴다. */
+.cli-setup {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.cli-setup-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.cli-setup-note {
+  margin: 0;
+  min-inline-size: 0;
+  flex: 1;
+  color: var(--folio-ink-subtle);
+  font-size: var(--fs-meta);
+  line-height: 1.6;
+}
+
+.cli-setup-note b { color: var(--folio-ink-muted); font-weight: var(--fw-medium); }
+.cli-setup-note--result { flex: none; color: var(--folio-ink-muted); }
 
 .cli-unsupported {
   color: var(--folio-ink-muted);
@@ -14846,7 +14877,13 @@ main.page {
    카드가 불투명해서 본문 대비는 뒤 화면과 무관하다.
 
    색은 전부 기존 토큰이다. 필요한 4단계(바탕 → 카드 → 그룹 → 눌린 면)가 라이트와
-   다크에서 서로 다른 토큰 이름에 맞아떨어져서 이름만 바꿔 잡는다. */
+   다크에서 서로 다른 토큰 이름에 맞아떨어져서 이름만 바꿔 잡는다.
+
+   **눌린 면과 CTA는 블루가 아니다.** 블루는 verdict 칩(`data-tone="blue"`)이 쓰는
+   의미색이라 UI 액센트로 쓰면 원칙 4를 깬다(§1). 실측으로 이 화면의 CTA는
+   rgb(122,182,234)인데 앱의 `.btn--primary`는 rgb(11,12,15)라 첫 화면만 톤이 달랐다.
+   지금은 `.btn--primary`·`.sym-chip[aria-pressed="true"]`와 같은 잉크 면을 쓴다.
+   포커스 링(`--folio-focus`)만 계속 블루다 — 그건 앱 전역 계약이다. */
 .welcome-shell {
   /* 튕겼다 자리를 잡는 곡선. 전역 --ease는 'ease'라 이 느낌이 안 난다.
      이 화면에서만 쓰므로 :root를 건드리지 않고 여기 둔다. */
@@ -14864,7 +14901,7 @@ main.page {
      위에는 조금 더 깊게 깔아 뒤 화면이 형태로만 읽히게 한다. */
   --wz-scrim: rgba(23, 34, 53, 0.48);
   --wz-lift: 0 2px 6px rgba(7, 17, 31, 0.05), 0 30px 70px -28px rgba(7, 17, 31, 0.4);
-  --wz-glow: 0 6px 16px -4px rgba(24, 95, 165, 0.45);
+  --wz-glow: 0 6px 16px -4px rgba(7, 17, 31, 0.28);
 
   position: fixed;
   inset: 0;
@@ -14941,7 +14978,7 @@ main.page {
   inset: 0 auto 0 0;
   inline-size: var(--welcome-fill);
   border-radius: var(--r-pill);
-  background: var(--folio-blue);
+  background: var(--folio-ink);
   transition: inline-size 0.5s var(--wz-spring);
 }
 
@@ -14961,7 +14998,7 @@ main.page {
   font-size: var(--fs-body);
   font-weight: var(--fw-bold);
   letter-spacing: -0.01em;
-  color: var(--folio-blue);
+  color: var(--folio-ink-muted);
   animation: welcome-up 0.44s var(--wz-spring) both;
 }
 
@@ -15042,8 +15079,8 @@ main.page {
 
 .welcome-choices button[aria-pressed="true"],
 .welcome-markets button[aria-pressed="true"] {
-  background: var(--folio-blue);
-  color: var(--folio-on-accent);
+  background: var(--folio-surface-dark);
+  color: var(--folio-ink-inverse);
   opacity: 1;
 }
 
@@ -15086,7 +15123,7 @@ main.page {
   font-family: var(--font-mono);
   font-size: var(--fs-meta);
   font-weight: var(--fw-bold);
-  color: var(--folio-blue);
+  color: var(--folio-ink-subtle);
   font-variant-numeric: tabular-nums;
 }
 
@@ -15101,6 +15138,90 @@ main.page {
 }
 
 .welcome-body .welcome-path b { color: var(--folio-ink-muted); font-weight: var(--fw-normal); }
+
+/* 튜토리얼 — 자료의 흐름을 박스로 쌓는다. 큰 SVG는 375px에서 글자가 뭉개진다. */
+/* 안내 카드 안의 CLI 목록은 설정 탭의 테두리 목록 대신 안내의 면 언어를 쓴다.
+   컴포넌트는 하나이고 기하만 공유한다 — 색·배치는 host가 훅으로 준다. */
+.welcome-body .cli-provider-list {
+  border-block-start: 0;
+  padding-inline: var(--sp-4);
+  border-radius: var(--r-group);
+  background: var(--wz-group);
+}
+
+.welcome-body .cli-provider-row:last-child { border-block-end: 0; }
+.welcome-body .cli-setup-note { color: var(--folio-ink-subtle); }
+
+.welcome-tour-open {
+  justify-self: start;
+  min-block-size: var(--touch-min);
+  padding: 10px 18px;
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--wz-deep);
+  color: var(--folio-ink-muted);
+  font: inherit;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.welcome-tour-open:hover { opacity: 0.78; }
+
+.welcome-body .welcome-tour-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--folio-ink-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.welcome-tour-flow {
+  display: grid;
+  /* 데스크톱은 가로 3칸 + 사이 화살표, 375px에서는 세로로 접힌다(아래 미디어 쿼리). */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+  animation: welcome-up 0.44s 0.14s var(--wz-spring) both;
+}
+
+.welcome-tour-flow li {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-group);
+  background: var(--wz-group);
+}
+
+.welcome-tour-flow li b {
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
+  color: var(--folio-ink);
+  letter-spacing: -0.01em;
+}
+
+.welcome-tour-flow li span {
+  font-size: var(--fs-meta);
+  line-height: 1.55;
+  color: var(--folio-ink-subtle);
+}
+
+/* 화살표는 장식이라 스크린리더가 읽지 않는 ::after로 둔다. 순서는 목록이 이미 말한다. */
+.welcome-tour-flow li + li::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(var(--sp-3) * -1);
+  inline-size: var(--sp-3);
+  block-size: 1px;
+  background: var(--folio-border);
+}
 
 /* 하단은 한 줄이다. 전폭 CTA는 모바일 문법이라 860px 카드에서는 시선이 위아래로 꺾인다. */
 .welcome-actions {
@@ -15153,10 +15274,12 @@ main.page {
 
 .welcome-btn--go {
   padding-inline: var(--sp-6);
-  background: var(--folio-blue);
-  color: var(--folio-on-accent);
+  background: var(--folio-surface-dark);
+  color: var(--folio-ink-inverse);
   box-shadow: var(--wz-glow);
 }
+
+.welcome-btn--go:hover:not(:disabled) { background: var(--folio-surface-dark-2); }
 
 .welcome-btn--go:hover { opacity: 0.92; }
 
@@ -15164,6 +15287,14 @@ main.page {
 
 @media (max-width: 700px) {
   .welcome-head, .welcome-body, .welcome-actions { padding-inline: var(--sp-5); }
+  /* 세로로 접고 화살표를 세로선으로 눕힌다. */
+  .welcome-tour-flow { grid-auto-flow: row; grid-auto-columns: auto; }
+  .welcome-tour-flow li + li::after {
+    inset-block-start: calc(var(--sp-3) * -1);
+    inset-inline-start: var(--sp-4);
+    inline-size: 1px;
+    block-size: var(--sp-3);
+  }
   .welcome-rule { margin-inline: var(--sp-5); }
   .welcome-body { padding-block-start: var(--sp-5); min-block-size: 0; }
   .welcome-body h1 { font-size: 24px; }
