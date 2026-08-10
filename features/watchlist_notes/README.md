@@ -66,11 +66,19 @@ projection 조회는 `watchlist.json`을 다시 쓰지 않는다.
 2회 이상 등장한 태그를 우선합니다. 미달 시 상위 4개로 fallback합니다.
 
 ### 기업 자체 섹터 고정 (Fix 4)
-검색 결과에서 해당 기업의 `sector` 값을 기본 태그로 수집해 태그 목록에 없으면 맨 앞에 고정합니다. 관련 기사가 적어 빈도 기준에 미달해도 Lam Research → Semiconductors, Visa → Financials 같은 기본 태그가 항상 표시됩니다.
+검색 결과에서 해당 기업의 `sector` 값을 기본 태그로 수집해 태그 목록에 없으면 맨 앞에 고정합니다. 관련 기사가 적어 빈도 기준에 미달해도 Lam Research → Technology, Visa → Financials 같은 기본 태그가 항상 표시됩니다.
+
+### `Unclassified`는 분류가 아니다
+`Unclassified`는 "모른다"는 자리표시자이므로 태그로 올리지 않는다(`_real_sector()`). **회사를 알아낸 출처가 섹터를 갖고 있지 않을 때가 많다** — SEC `company_tickers.json`은 `cik`/`ticker`/`title` 셋뿐이고 일본·유럽 구성종목 파일도 섹터를 담지 않아, 그 출처로 해석된 회사는 전부 이 값을 받는다. 섹터를 들고 있는 것은 수동 사전(`curated`)뿐이라 실측으로 종목 넷 중 셋(LRCX·8306.T·6501.T)이 `UNCLASSIFIED` 칩을 달고 있었다. 회사를 못 찾은 것이 아니라 티커는 아는데 섹터만 없는 상태다.
+
+빈 섹터는 `features/common/sector_cache.py`가 그 티커로 yfinance에 물어 채운다(`_fill_missing_sectors()`). 조회는 종목당 한 번이고 `data/sector-cache.json`에 90일 캐시되므로 화면을 열 때마다 치르는 값이 아니다(실측 콜드 5종목 2.4초, 이후 0초). 답이 없는 항목도 7일 캐시해 상장폐지 종목이 매번 네트워크를 태우지 않게 한다. 티커가 없는 관심 주제는 아예 묻지 않는다.
+
+**수동 사전이 조회 결과를 이긴다.** Howmet은 사전이 `Aerospace`, yfinance가 `Industrials`인데 앞엣것이 종목을 잘 설명한다. 그래서 섹터가 이미 있는 카드는 조회 대상에 넣지 않는다. 조회가 실패하거나 마감 시각(6초)을 넘기면 카드를 그대로 두고, 못 받은 값은 캐시에 적지 않는다 — 죽은 네트워크를 "이 회사는 섹터가 없다"로 굳히면 살아난 뒤에도 계속 빈 채로 남는다.
 
 ## 관련 코드
 
 - `features/watchlist_notes/service.py`: `watchlist_overview()`, `watchlist_detail()`, `watchlist_checkpoint_context()`, `_item_matches_company()`, `normalize_watchlist_keyword()`
+- `features/common/sector_cache.py`: `resolve_sectors()`, `cached_sector()`, `quote_symbols()` — 섹터를 모르는 출처로 해석된 회사의 섹터 캐시(`data/sector-cache.json`)
 - `features/investment_notes/checkpoints.py`: controlled checkpoint normalization/projection
 - `app.py`: 워치리스트/메모 API 엔드포인트
 - `public/app.js`: `loadWatchlistNews()`, `openWatchlistDetail()`, `renderWatchlistDetailNews()`, `renderNotes()`

@@ -17,6 +17,7 @@ from features.common.company_lookup import (
 )
 from features.common.dataframe_ops import sort_records, top_records
 from features.common.instruments.registry import exchange_suffix
+from features.common.sector_cache import UNKNOWN_SECTOR, resolve_sectors
 from features.investment_notes.checkpoints import project_checkpoint_notes
 from features.common.workspace import data_dir
 
@@ -679,7 +680,7 @@ def watchlist_overview(limit_per_item: int = 5):
             # Fix 4: is_primary 여부와 무관하게 기업 자체 섹터 수집
             if not base_sector:
                 for c in hit_companies:
-                    if _item_matches_company(item, c) and c.get("sector"):
+                    if _item_matches_company(item, c) and _real_sector(c.get("sector")):
                         base_sector = c["sector"]
                         break
             source = hit.get("source", "")
@@ -693,7 +694,7 @@ def watchlist_overview(limit_per_item: int = 5):
         tags = [t for t, cnt in tag_counts.most_common(8) if cnt >= 2]
         if not tags:
             tags = [t for t, _ in tag_counts.most_common(4)]
-        if not base_sector and resolved_company.get("sector"):
+        if not base_sector and _real_sector(resolved_company.get("sector")):
             base_sector = resolved_company["sector"]
         # Fix 4: 기업 자체 섹터가 있고 태그 목록에 없으면 맨 앞에 고정
         if base_sector and base_sector not in tags:
@@ -702,6 +703,8 @@ def watchlist_overview(limit_per_item: int = 5):
             "item": item,
             "ticker": resolved_company.get("ticker", ""),
             "companyName": resolved_company.get("name") or item,
+            "sector": _real_sector(resolved_company.get("sector")),
+            "market": resolved_company.get("market", ""),
             "tradingViewSymbol": resolved_symbol,
             "count": match_count,
             "latestDate": hits[0].get("date", "") if hits else "",
@@ -710,5 +713,38 @@ def watchlist_overview(limit_per_item: int = 5):
             "companies": companies[:6],
             "latest": hits[:3],
         })
+    _fill_missing_sectors(cards)
     combined = top_records(combined, ["date", "score"], 12, descending=True)
     return {"items": cards, "news": combined}
+
+
+def _real_sector(value: object) -> str:
+    """`Unclassified`는 분류가 아니라 "모른다"는 자리표시자다.
+
+    SEC `company_tickers.json`과 일본·유럽 구성종목 파일은 섹터를 담지 않아 그 출처로
+    해석된 회사는 전부 이 값을 받는다. 태그로 올리면 카드가 회사를 분류한 것처럼 보인다.
+    """
+    text = str(value or "").strip()
+    return "" if text == UNKNOWN_SECTOR else text
+
+
+def _fill_missing_sectors(cards: list[dict]) -> None:
+    """섹터가 비어 있는 카드만 캐시(필요하면 yfinance)에서 채운다.
+
+    회사를 알아낸 출처가 섹터를 갖고 있지 않을 뿐 티커는 알고 있다. 조회는 종목당
+    한 번뿐이고 90일 캐시된다 — 워치리스트를 열 때마다 치르는 값이 아니다.
+    """
+    pending = [c for c in cards if c.get("ticker") and not _real_sector(c.get("sector"))]
+    if not pending:
+        return
+    try:
+        sectors = resolve_sectors([(c["ticker"], c.get("market", "")) for c in pending])
+    except Exception:
+        return
+    for card in pending:
+        sector = str(sectors.get(str(card["ticker"]).upper()) or "").strip()
+        if not sector:
+            continue
+        card["sector"] = sector
+        tags = [t for t in card.get("tags", []) if t != sector]
+        card["tags"] = [sector] + tags

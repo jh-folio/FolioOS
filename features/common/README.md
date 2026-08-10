@@ -12,6 +12,7 @@
 | `markets.py` | `US | KR | EUROPE | JP | GLOBAL | UNKNOWN` 시장·브리핑 scope 단일 계약 |
 | `instruments/` | 거래소·suffix·공식 식별자를 보존하는 cross-market instrument identity 계약 |
 | `company_lookup.py` | 기업명/티커 정규화, SEC CIK 조회, 마스터 데이터 |
+| `sector_cache.py` | 섹터를 담지 않는 출처(SEC `company_tickers.json`, 일본·유럽 구성종목)로 해석된 회사의 섹터를 yfinance로 채우고 `data/sector-cache.json`에 90일 캐시 |
 | `utils.py` | 텍스트 정규화, JSON 읽기/쓰기, 날짜 유틸 |
 | `dataframe_ops.py` | Polars 기반 필터링, 정렬, 집계 |
 | `market_calendar.py` | 브리핑 날짜 계산, 시장별 세션 기술자(`marketSessions`) |
