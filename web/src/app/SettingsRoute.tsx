@@ -430,6 +430,17 @@ function BriefingSchedules({
                 </button>
               ))}
             </div>
+            {/* 예약별로 정한다. 예약이 여럿일 때 매번 모으면 같은 자료를 하루에 여러 번
+                수집하고, 하나도 안 모으면 어제 자료로 브리핑을 만든다. */}
+            <div className="automation-inline-switch">
+              <span>브리핑 전에 RSS 수집과 시장 메모리 갱신</span>
+              <ToggleSwitch
+                ariaLabel={`${row.time} 예약: 브리핑 전 RSS 수집과 시장 메모리 갱신`}
+                checked={row.runPrerequisites !== false}
+                onChange={(checked) => patch(row.id, { runPrerequisites: checked })}
+                compact
+              />
+            </div>
             {offScope.length > 0 && (
               // 선택 자체를 막지 않는다. 시장을 잠깐 껐다 켜는 동안 예약이 파괴되면 안 된다.
               <p className="settings-hint">

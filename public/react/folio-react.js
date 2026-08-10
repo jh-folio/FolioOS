@@ -21088,6 +21088,15 @@ function Zl({ schedules: e, watched: t, runsById: n, onChange: r }) {
 								children: e.label
 							}, e.id))
 						}),
+						/* @__PURE__ */ (0, G.jsxs)("div", {
+							className: "automation-inline-switch",
+							children: [/* @__PURE__ */ (0, G.jsx)("span", { children: "브리핑 전에 RSS 수집과 시장 메모리 갱신" }), /* @__PURE__ */ (0, G.jsx)(Fl, {
+								ariaLabel: `${s.time} 예약: 브리핑 전 RSS 수집과 시장 메모리 갱신`,
+								checked: s.runPrerequisites !== !1,
+								onChange: (e) => i(s.id, { runPrerequisites: e }),
+								compact: !0
+							})]
+						}),
 						c.length > 0 && /* @__PURE__ */ (0, G.jsxs)("p", {
 							className: "settings-hint",
 							children: [

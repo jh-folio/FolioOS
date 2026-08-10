@@ -61,3 +61,32 @@ def test_the_day_gate_comes_before_the_catch_up_window():
     settings = {**SETTINGS, "missedRuns": {"catchUpHours": 24}}
 
     assert schedule_due(row, settings=settings, now=at(15, hour=2), runs=[]) is False
+
+
+def test_each_schedule_decides_its_own_prerequisites():
+    """예약이 여럿일 때 매번 모으면 같은 자료를 하루에 여러 번 수집한다.
+
+    화면에서 이 토글이 사라진 동안(0.5.2) 값은 살아 있었지만 모든 예약이 무조건
+    수집했다. 사용자가 RSS 자동 수집을 끄고 브리핑 직전에만 모으는 구성을 쓰면 이
+    항목이 유일한 수집 경로다.
+    """
+    on = normalize_schedule({"id": "a", "runPrerequisites": True})
+    off = normalize_schedule({"id": "b", "runPrerequisites": False})
+    missing = normalize_schedule({"id": "c"})
+
+    assert on["runPrerequisites"] is True
+    assert off["runPrerequisites"] is False
+    # 예전 예약에는 이 값이 늘 있었고, 없으면 모으는 쪽이 안전하다.
+    assert missing["runPrerequisites"] is True
+
+
+def test_the_screen_lets_each_schedule_choose():
+    """백엔드만 살아 있고 화면에 컨트롤이 없으면 사용자가 정할 수 없다."""
+    from pathlib import Path
+
+    source = Path(__file__).resolve().parents[3].joinpath(
+        "web", "src", "app", "SettingsRoute.tsx"
+    ).read_text(encoding="utf-8")
+
+    assert "patch(row.id, { runPrerequisites: checked })" in source
+    assert "브리핑 전에 RSS 수집과 시장 메모리 갱신" in source
