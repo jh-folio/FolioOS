@@ -20772,13 +20772,15 @@ function Nl(e) {
 function Pl(e) {
 	return e.bridgeSupported === !1 ? "warn" : e.authenticated || e.available ? "ready" : e.installed ? "warn" : "";
 }
-function Fl({ checked: e, onChange: t, label: n, ariaLabel: r, compact: i = !1 }) {
+function Fl({ checked: e, onChange: t, label: n, ariaLabel: r, compact: i = !1, disabled: a = !1, title: o }) {
 	return /* @__PURE__ */ (0, K.jsxs)("label", {
-		className: `settings-switch${i ? " settings-switch-compact" : ""}${e ? " is-on" : ""}`,
+		className: `settings-switch${i ? " settings-switch-compact" : ""}${e ? " is-on" : ""}${a ? " is-disabled" : ""}`,
+		title: o,
 		children: [
 			/* @__PURE__ */ (0, K.jsx)("input", {
 				"aria-label": r || n || "설정 전환",
 				checked: e,
+				disabled: a,
 				onChange: (e) => t(e.currentTarget.checked),
 				type: "checkbox"
 			}),
@@ -21008,10 +21010,16 @@ function Ql({ schedules: e, watched: t, runsById: n, onChange: r }) {
 		...n
 	} : e)), a = (e, t) => {
 		let n = e.markets.includes(t) ? e.markets.filter((e) => e !== t) : zl.map((e) => e.id).filter((n) => n === t || e.markets.includes(n));
-		n.length && i(e.id, { markets: n });
+		i(e.id, {
+			markets: n,
+			...n.length ? {} : { enabled: !1 }
+		});
 	}, o = (e, t) => {
 		let n = Rl(e), r = n.includes(t) ? n.filter((e) => e !== t) : Ll.filter((e) => e === t || n.includes(e));
-		r.length && i(e.id, { days: r });
+		i(e.id, {
+			days: r,
+			...r.length ? {} : { enabled: !1 }
+		});
 	}, s = (t, n) => {
 		e.length >= Q || r([...e, {
 			id: Hl(),
@@ -21063,6 +21071,8 @@ function Ql({ schedules: e, watched: t, runsById: n, onChange: r }) {
 									ariaLabel: `${s.time} 예약 사용`,
 									checked: s.enabled,
 									onChange: (e) => i(s.id, { enabled: e }),
+									disabled: !s.markets.length || !Rl(s).length,
+									title: s.markets.length ? Rl(s).length ? void 0 : "요일을 하나 이상 골라야 켤 수 있습니다." : "시장을 하나 이상 골라야 켤 수 있습니다.",
 									compact: !0
 								}),
 								/* @__PURE__ */ (0, K.jsx)("button", {

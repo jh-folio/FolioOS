@@ -151,18 +151,26 @@ function ToggleSwitch({
   label,
   ariaLabel,
   compact = false,
+  disabled = false,
+  title,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
   ariaLabel?: string;
   compact?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
-    <label className={`settings-switch${compact ? " settings-switch-compact" : ""}${checked ? " is-on" : ""}`}>
+    <label
+      className={`settings-switch${compact ? " settings-switch-compact" : ""}${checked ? " is-on" : ""}${disabled ? " is-disabled" : ""}`}
+      title={title}
+    >
       <input
         aria-label={ariaLabel || label || "설정 전환"}
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.currentTarget.checked)}
         type="checkbox"
       />
@@ -349,12 +357,13 @@ function BriefingSchedules({
   const patch = (id: string, changes: Partial<BriefingSchedule>) =>
     onChange(schedules.map((row) => (row.id === id ? { ...row, ...changes } : row)));
 
+  // 마지막 하나를 끄는 것도 선택이다. 예전에는 그 클릭을 그냥 무시해서, 눌러도 아무
+  // 일이 없는 버튼으로 보였다. 이제 끄게 두고 — 만들 것이 없어진 예약은 스스로 꺼진다.
   const toggleMarket = (row: BriefingSchedule, market: string) => {
     const next = row.markets.includes(market)
       ? row.markets.filter((m) => m !== market)
       : MARKET_CODES.map((m) => m.id).filter((m) => m === market || row.markets.includes(m));
-    // 시장이 하나도 없으면 만들 보고서가 없다. 마지막 하나는 끄지 않는다.
-    if (next.length) patch(row.id, { markets: next });
+    patch(row.id, { markets: next, ...(next.length ? {} : { enabled: false }) });
   };
 
   const toggleDay = (row: BriefingSchedule, day: number) => {
@@ -362,8 +371,7 @@ function BriefingSchedules({
     const next = current.includes(day)
       ? current.filter((value) => value !== day)
       : WEEKDAYS_ALL.filter((value) => value === day || current.includes(value));
-    // 하나도 안 고른 예약은 영영 돌지 않는다. 마지막 하나는 끄지 않는다.
-    if (next.length) patch(row.id, { days: next });
+    patch(row.id, { days: next, ...(next.length ? {} : { enabled: false }) });
   };
 
   const add = (markets: string[], time: string) => {
@@ -406,6 +414,16 @@ function BriefingSchedules({
                 ariaLabel={`${row.time} 예약 사용`}
                 checked={row.enabled}
                 onChange={(checked) => patch(row.id, { enabled: checked })}
+                // 만들 시장도 돌 날도 없으면 켜 봐야 아무 일도 일어나지 않는다.
+                // 켤 수 있게 두면 화면은 켜졌다고 말하는데 브리핑은 나오지 않는다.
+                disabled={!row.markets.length || !scheduleDays(row).length}
+                title={
+                  !row.markets.length
+                    ? "시장을 하나 이상 골라야 켤 수 있습니다."
+                    : !scheduleDays(row).length
+                      ? "요일을 하나 이상 골라야 켤 수 있습니다."
+                      : undefined
+                }
                 compact
               />
               <button

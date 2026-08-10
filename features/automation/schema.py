@@ -125,6 +125,13 @@ def _markets(value, default: list[str]) -> list[str]:
         value = [part for part in text.split(",") if part]
     if not isinstance(value, (list, tuple)):
         return list(default)
+    # 빈 목록과 읽을 수 없는 값은 다르다. **빈 목록은 선택이다** — 마지막 시장을 끈
+    # 것이므로 그대로 둔다(예전에는 기본값으로 되돌려서 끄겠다는 선택이 정반대로
+    # 저장됐다). 반면 값이 있는데 하나도 알아볼 수 없으면(`marketScope: "bad"`) 그건
+    # 선택이 아니라 고장이라 기본값으로 되돌린다. 만들 보고서가 없는 예약은
+    # `normalize_schedule()`이 꺼 둔다.
+    if not value:
+        return []
     wanted = {str(item).strip().lower() for item in value}
     ordered = [market for market in ALL_MARKETS if market in wanted]
     return ordered or list(default)
@@ -138,14 +145,16 @@ def _days(raw: dict) -> list[int]:
     브리핑이 사라지면 그것도 사용자가 정한 적 없는 변화다. 화면에 요일 칩이 보이므로
     한 번 눌러 정하면 된다. 새로 만드는 예약은 `default_schedule()`이 평일로 시작한다.
 
-    빈 목록은 받지 않는다 — 하나도 안 고른 예약은 영영 돌지 않는 예약이라, 저장은
-    되는데 아무 일도 일어나지 않는 상태가 된다.
+    빈 목록은 그대로 둔다. 돌 날이 없는 예약은 `normalize_schedule()`이 꺼 둔다.
     """
     if "days" not in raw:
         return list(WEEKDAYS)
     value = raw.get("days")
     if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple, set)):
         return list(WEEKDAYS)
+    # 시장과 같은 규칙이다. 빈 목록은 선택이고, 읽을 수 없는 값은 고장이다.
+    if not value:
+        return []
     chosen = set()
     for item in value:
         try:
@@ -170,6 +179,11 @@ def normalize_schedule(raw: dict | None, *, index: int = 0) -> dict:
     row["qualityMode"] = _choice(raw.get("qualityMode"), VALID_QUALITY_MODES, "diagnose_only")
     row["runPrerequisites"] = bool(raw.get("runPrerequisites", True))
     row["days"] = _days(raw)
+    # 만들 시장이 없거나 돌 날이 없으면 예약은 꺼진 것이다. 켠 채로 두면 화면은 켜졌다고
+    # 말하는데 아무 일도 일어나지 않는다 — 켜고 끄는 것은 사용자가 정하고, 성립하지
+    # 않는 예약은 그 사실을 화면이 바로 보여준다(2026-08-10 사용자 결정).
+    if not row["markets"] or not row["days"]:
+        row["enabled"] = False
     return row
 
 

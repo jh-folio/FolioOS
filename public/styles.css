@@ -12059,6 +12059,13 @@ main.page {
   cursor: not-allowed;
 }
 
+/* 켤 수 없는 스위치. 예약에 시장이나 요일이 하나도 없으면 켜 봐야 아무 일도 일어나지
+   않으므로, 눌리지 않는다는 것이 보여야 한다. */
+.settings-switch.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .settings-switch input {
   position: absolute;
   width: 1px;

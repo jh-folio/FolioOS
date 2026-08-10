@@ -203,9 +203,13 @@ def schedule_due(schedule: dict, *, settings: dict, now: dt.datetime, runs: list
     """Whether one briefing schedule should run right now."""
     if not schedule.get("enabled"):
         return False
+    # 만들 시장도 돌 날도 없으면 성립하지 않는 예약이다. `normalize_schedule()`이 이미
+    # 꺼 두지만, 저장을 거치지 않고 들어온 값에도 같은 판정이 걸려야 한다.
+    if not schedule.get("markets") or not schedule.get("days"):
+        return False
     # 고른 요일에만. 예전에는 요일을 보지 않아 08:00 예약이 토·일에도 돌았고, 장이
     # 열리지 않은 날 금요일 자료로 만든 브리핑이 매주 두 건씩 쌓였다.
-    if now.weekday() not in set(schedule.get("days") or WEEKDAYS):
+    if now.weekday() not in set(schedule.get("days") or ()):
         return False
     target = _minutes_from_time(schedule.get("time", "08:00"))
     current = now.hour * 60 + now.minute
