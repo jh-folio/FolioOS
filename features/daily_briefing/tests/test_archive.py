@@ -44,21 +44,28 @@ def _write_combined_market_report(path, date, market_scope, text, briefing_type=
     }, ensure_ascii=False), encoding="utf-8")
 
 
-def test_combined_generation_collapses_to_single_both_card():
+def test_a_multi_market_run_still_shows_one_card_per_market():
+    """한 번의 다중 시장 생성이라도 카드는 시장별로 남는다.
+
+    예전에는 이 파일들을 카드 하나로 접었다. 그러면 US+KR을 함께 예약했을 때 카드가
+    15,000자짜리 합본으로 열려, 각 시장 보고서를 화면에서 읽을 수 없었다.
+    시장별로 읽는 것이 이 제품이 하려는 일이다(2026-08-10 사용자 결정).
+    """
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         _write_combined_market_report(root / "2026-06-22.us.json", "2026-06-22", "us", "combo-us")
         _write_combined_market_report(root / "2026-06-22.kr.json", "2026-06-22", "kr", "combo-kr")
+
         payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
-        assert payload["total"] == 1
-        item = payload["items"][0]
-        assert item["marketScope"] == "both"
-        assert item["reportScope"] == "both"
-        assert item["reportDate"] == "2026-06-22"
-        assert item["id"] == "2026-06-22:both"
-        # The collapsed card is searchable by either market's text.
-        assert BriefingArchiveIndex(root, ttl_seconds=0).query(q="combo-us")["total"] == 1
-        assert BriefingArchiveIndex(root, ttl_seconds=0).query(q="combo-kr")["total"] == 1
+
+        assert payload["total"] == 2
+        assert [item["marketScope"] for item in payload["items"]] == ["us", "kr"]
+        assert {item["reportDate"] for item in payload["items"]} == {"2026-06-22"}
+        # 각 카드는 그 시장의 본문으로만 찾힌다 — 합본 카드는 둘 다로 찾혔다.
+        us = BriefingArchiveIndex(root, ttl_seconds=0).query(q="combo-us")
+        assert us["total"] == 1 and us["items"][0]["marketScope"] == "us"
+        kr = BriefingArchiveIndex(root, ttl_seconds=0).query(q="combo-kr")
+        assert kr["total"] == 1 and kr["items"][0]["marketScope"] == "kr"
 
 
 def test_cache_reloads_only_changed_reports():

@@ -120,78 +120,6 @@ class BriefingArchiveIndex:
         return (item.get("reportDate", ""), item.get("marketScope", ""))
 
     @staticmethod
-    def _merge_combined_pairs(group, scope, markets=()):
-        """Collapse the per-market files of one aggregate generation into one card.
-
-        The card records the markets that were actually written, not the label
-        the generation was requested under: an `all` run whose Europe leg failed
-        produced three briefings, and claiming four would be a lie the reader
-        cannot check. Legacy combined `{date}.json` files are never grouped here
-        because their items carry `combinedGeneration=False`.
-        """
-        order = {key: index for index, key in enumerate(SINGLE_MARKET_SCOPES)}
-        items = sorted(
-            (pair["item"] for pair in group),
-            key=lambda it: order.get(it.get("marketScope"), len(order)),
-        )
-        rep = items[0]
-        date = rep.get("reportDate", "")
-        briefing_type = rep.get("briefingType", "default")
-        generated_at = max((it.get("generatedAt") or "") for it in items)
-        session_date = next((it.get("sessionDate") for it in items if it.get("sessionDate")), "")
-        synthetic = {
-            "date": date,
-            "marketScope": scope,
-            "briefingType": briefing_type,
-            "generatedAt": generated_at,
-            "title": f"Daily Market Briefing — {date}",
-            "summary": rep.get("summary", ""),
-        }
-        section = {
-            "generatedAt": generated_at,
-            "sessionDate": session_date,
-            "summary": rep.get("summary", ""),
-            "briefingType": briefing_type,
-        }
-        item = briefing_market_metadata(synthetic, scope, section)
-        item["combinedGeneration"] = True
-        item["generationScope"] = scope
-        item["includedMarkets"] = [it.get("marketScope") for it in items]
-        # 요청 시장은 저장된 목록이 우선이다. 레이블에서 되짚으면 `multi`가
-        # 네 시장을 요청했다고 말하게 된다.
-        item["expectedMarkets"] = list(markets or market_keys_for_briefing_scope(scope))
-        item["sessionDates"] = {
-            it.get("marketScope"): it.get("sessionDate", "") for it in items
-        }
-        search_text = " ".join(pair["searchText"] for pair in group)
-        return {"item": item, "searchText": search_text}
-
-    def _collapse_combined(self, pairs):
-        """Group per-market files from one aggregate run into one card per run.
-
-        Grouping keys on the generation scope as well as the date, so a `both`
-        run and an `all` run on the same date stay separate cards rather than
-        merging into one that claims markets neither produced together.
-        """
-        passthrough = []
-        groups = {}
-        for pair in pairs:
-            item = pair["item"]
-            if item.get("combinedGeneration"):
-                # 생성 시장 목록이 있으면 그게 묶음의 기준이다. 이름 없는 조합
-                # (미국+일본 등)은 레이블만으로 서로 구분되지 않는다.
-                markets = tuple(item.get("generationMarkets") or ())
-                key = markets or (normalize_market_scope(item.get("generationScope") or "both"),)
-                groups.setdefault((item.get("reportDate", ""), key), []).append(pair)
-            else:
-                passthrough.append(pair)
-        for (_, key), group in groups.items():
-            markets = key if len(key) > 1 or key[0] in SINGLE_MARKET_SCOPES else ()
-            scope = market_selection_scope(markets) if markets else key[0]
-            passthrough.append(self._merge_combined_pairs(group, scope, markets))
-        return passthrough
-
-    @staticmethod
     def _path_priority(path):
         return 1 if SCOPED_REPORT_FILE_RE.fullmatch(path.name) else 0
 
@@ -229,7 +157,11 @@ class BriefingArchiveIndex:
                     current = deduped.get(key)
                     if current is None or priority >= current["priority"]:
                         deduped[key] = {"pair": pair, "priority": priority}
-            pairs = self._collapse_combined([value["pair"] for value in deduped.values()])
+            # 시장별 파일은 시장별 카드로 남는다. 예전에는 한 번의 다중 시장 생성에서
+            # 나온 파일들을 카드 하나로 접었는데, US+KR을 함께 예약하면 그 카드가
+            # 15,000자짜리 합본으로 열려 시장별 보고서가 화면에서 사라졌다.
+            # 각 시장을 따로 읽는 것이 이 제품이 하려는 일이다(2026-08-10 사용자 결정).
+            pairs = [value["pair"] for value in deduped.values()]
             warnings = [entry["warning"] for entry in self._entries.values() if entry["warning"]]
             refreshed_at = self._refreshed_at
             report_files = len(self._entries)

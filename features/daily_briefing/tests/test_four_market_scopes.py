@@ -139,40 +139,48 @@ def test_a_legacy_both_read_never_reaches_for_europe_or_japan():
 # --- list ---------------------------------------------------------------
 
 
-def test_an_all_run_collapses_to_one_card_naming_its_markets():
+def test_an_all_run_still_shows_four_cards():
+    """다중 시장 생성이라도 카드는 시장별로 남는다.
+
+    예전에는 한 번의 생성에서 나온 파일들을 카드 하나로 접었다. 그 카드는 모든 시장을
+    이어 붙인 합본으로 열려, 각 시장 보고서를 화면에서 읽을 수 없었다
+    (2026-08-10 사용자 결정).
+    """
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         for written in SINGLE_MARKET_SCOPES:
             _write(root, written, generation_scope="all")
+
         payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
-        assert payload["total"] == 1
-        item = payload["items"][0]
-        assert item["marketScope"] == "all"
-        assert item["includedMarkets"] == ["us", "kr", "europe", "jp"]
-        assert item["expectedMarkets"] == ["us", "kr", "europe", "jp"]
+
+        assert payload["total"] == 4
+        assert [item["marketScope"] for item in payload["items"]] == list(SINGLE_MARKET_SCOPES)
 
 
-def test_a_partial_all_run_reports_three_markets_not_four():
+def test_a_partial_run_shows_only_the_markets_it_wrote():
+    """넷을 요청했다가 셋만 나왔으면 카드도 셋이다. 없는 시장의 카드를 만들지 않는다."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         for written in ("us", "kr", "jp"):
             _write(root, written, generation_scope="all")
-        item = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"][0]
-        assert item["includedMarkets"] == ["us", "kr", "jp"]
-        assert item["expectedMarkets"] == ["us", "kr", "europe", "jp"]
+
+        payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
+
+        assert [item["marketScope"] for item in payload["items"]] == ["us", "kr", "jp"]
 
 
-def test_a_both_run_and_an_all_run_on_one_date_stay_separate_cards():
-    """Merging them would produce a card claiming markets neither run made together."""
+def test_two_runs_on_one_date_do_not_multiply_the_cards():
+    """같은 날 `both` 생성과 `all` 생성이 있어도 시장당 한 장이다."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         _write(root, "us", generation_scope="both")
         _write(root, "kr", generation_scope="both")
         _write(root, "europe", generation_scope="all")
         _write(root, "jp", generation_scope="all")
+
         payload = BriefingArchiveIndex(root, ttl_seconds=0).query()
-        scopes = sorted(item["marketScope"] for item in payload["items"])
-        assert scopes == ["all", "both"]
+
+        assert sorted(item["marketScope"] for item in payload["items"]) == ["europe", "jp", "kr", "us"]
 
 
 @pytest.mark.parametrize("scope", SINGLE_MARKET_SCOPES)
@@ -352,8 +360,8 @@ def test_a_selection_label_reuses_all_and_both_only_for_their_own_sets(markets, 
     assert market_selection_scope(markets) == label
 
 
-def test_an_unnamed_combination_records_the_markets_it_actually_ran():
-    """`multi` is a label, not a coverage claim — the list is what a reader trusts."""
+def test_an_unnamed_combination_keeps_its_own_market_cards():
+    """`multi`는 레이블일 뿐이다. 읽는 사람이 믿는 것은 시장별 카드다."""
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         for key in ("us", "jp"):
@@ -364,14 +372,13 @@ def test_an_unnamed_combination_records_the_markets_it_actually_ran():
                 "generationScope": "multi", "generationMarkets": ["us", "jp"],
                 "markdown": f"# {TITLES[key]}\n\n{key}-body",
             }, ensure_ascii=False), encoding="utf-8")
-        item = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"][0]
-        assert item["marketScope"] == "multi"
-        assert item["includedMarkets"] == ["us", "jp"]
-        # 레이블에서 되짚으면 네 시장을 요청했다고 말하게 된다.
-        assert item["expectedMarkets"] == ["us", "jp"]
+        items = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"]
+
+        # 조합에 이름이 없어도(`multi`) 읽는 사람이 보는 것은 시장별 카드다.
+        assert [item["marketScope"] for item in items] == ["us", "jp"]
 
 
-def test_two_different_combinations_on_one_date_stay_separate_cards():
+def test_two_different_combinations_on_one_date_give_four_market_cards():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
         for key, markets in (("us", ["us", "jp"]), ("jp", ["us", "jp"]),
@@ -383,7 +390,5 @@ def test_two_different_combinations_on_one_date_stay_separate_cards():
                 "markdown": f"# {TITLES[key]}\n\n{key}-body",
             }, ensure_ascii=False), encoding="utf-8")
         items = BriefingArchiveIndex(root, ttl_seconds=0).query()["items"]
-        assert len(items) == 2
-        assert sorted(tuple(row["includedMarkets"]) for row in items) == [
-            ("kr", "europe"), ("us", "jp"),
-        ]
+
+        assert sorted(row["marketScope"] for row in items) == ["europe", "jp", "kr", "us"]

@@ -13,6 +13,7 @@ from features.automation.schema import (
     MAX_ATTEMPTS_PER_DAY,
     ON_TIME_WINDOW_MINUTES,
     RETRY_DELAY_MINUTES,
+    WEEKDAYS,
 )
 from features.agent_mode.bridge import submit_agent_task
 from features.agent_mode.generation_mode import llm_override_for_mode
@@ -201,6 +202,10 @@ def automation_due(kind: str, settings: dict | None = None, now: dt.datetime | N
 def schedule_due(schedule: dict, *, settings: dict, now: dt.datetime, runs: list[dict]) -> bool:
     """Whether one briefing schedule should run right now."""
     if not schedule.get("enabled"):
+        return False
+    # 고른 요일에만. 예전에는 요일을 보지 않아 08:00 예약이 토·일에도 돌았고, 장이
+    # 열리지 않은 날 금요일 자료로 만든 브리핑이 매주 두 건씩 쌓였다.
+    if now.weekday() not in set(schedule.get("days") or WEEKDAYS):
         return False
     target = _minutes_from_time(schedule.get("time", "08:00"))
     current = now.hour * 60 + now.minute

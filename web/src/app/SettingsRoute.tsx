@@ -69,6 +69,7 @@ type BriefingSchedule = {
   briefingType: string;
   qualityMode?: string;
   runPrerequisites: boolean;
+  days?: number[];
 };
 
 type AutomationSettings = {
@@ -199,6 +200,9 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
       briefingType: row.briefingType || "default",
       qualityMode: row.qualityMode || "diagnose_only",
       runPrerequisites: Boolean(row.runPrerequisites),
+      // 요일을 고른 적 없는 예약은 키를 보내지 않는다. 서버가 `매일`로 읽어 판올림
+      // 이전 동작을 지킨다 — 빈 배열을 보내면 영영 안 도는 예약이 된다.
+      ...(row.days ? { days: [...row.days] } : {}),
     })),
     missedRuns: { catchUpHours: form.missedRuns?.catchUpHours ?? 3 },
   };
@@ -206,6 +210,17 @@ function buildAutomationPayload(form: AutomationSettings): AutomationSettings {
 
 // 상한이 없으면 24개를 만들어 하루 종일 LLM을 돌릴 수 있다. 서버도 같은 값으로 자른다.
 const MAX_SCHEDULES = 5;
+// 서버의 WEEKDAYS와 짝. 0=월 … 6=일(`datetime.weekday()`).
+const WEEKDAY_CODES: ReadonlyArray<{ id: number; label: string }> = [
+  { id: 0, label: "월" }, { id: 1, label: "화" }, { id: 2, label: "수" }, { id: 3, label: "목" },
+  { id: 4, label: "금" }, { id: 5, label: "토" }, { id: 6, label: "일" },
+];
+const WEEKDAYS_ALL = WEEKDAY_CODES.map((day) => day.id);
+// 예약이 만들어졌을 때 요일을 고를 수 없었으면 매일이다. 판올림만으로 토·일 브리핑이
+// 사라지는 것도 사용자가 정한 적 없는 변화라, 서버와 같은 규칙을 화면도 따른다.
+function scheduleDays(row: BriefingSchedule) {
+  return row.days ?? WEEKDAYS_ALL;
+}
 const MARKET_CODES: Array<{ id: string; label: string }> = [
   { id: "us", label: "US" },
   { id: "kr", label: "KR" },
@@ -332,11 +347,22 @@ function BriefingSchedules({
     if (next.length) patch(row.id, { markets: next });
   };
 
+  const toggleDay = (row: BriefingSchedule, day: number) => {
+    const current = scheduleDays(row);
+    const next = current.includes(day)
+      ? current.filter((value) => value !== day)
+      : WEEKDAYS_ALL.filter((value) => value === day || current.includes(value));
+    // 하나도 안 고른 예약은 영영 돌지 않는다. 마지막 하나는 끄지 않는다.
+    if (next.length) patch(row.id, { days: next });
+  };
+
   const add = (markets: string[], time: string) => {
     if (schedules.length >= MAX_SCHEDULES) return;
     onChange([...schedules, {
       id: newScheduleId(), enabled: true, time, markets,
       briefingType: "default", qualityMode: "diagnose_only", runPrerequisites: true,
+      // 새 예약은 장이 서는 평일만. 주말 발행은 고르는 것이지 기본값이 아니다.
+      days: [0, 1, 2, 3, 4],
     }]);
   };
 
@@ -389,6 +415,18 @@ function BriefingSchedules({
                   onClick={() => toggleMarket(row, market.id)}
                 >
                   {market.label}
+                </button>
+              ))}
+            </div>
+            <div className="settings-theme-options" role="group" aria-label={`${row.time} 예약이 도는 요일`}>
+              {WEEKDAY_CODES.map((day) => (
+                <button
+                  type="button"
+                  key={day.id}
+                  aria-pressed={scheduleDays(row).includes(day.id)}
+                  onClick={() => toggleDay(row, day.id)}
+                >
+                  {day.label}
                 </button>
               ))}
             </div>

@@ -25,6 +25,15 @@ LEGACY_SCOPE_MARKETS = {
 # 늘리는 것은 나중에 쉽다.
 MAX_BRIEFING_SCHEDULES = 5
 
+# 예약이 도는 요일. `datetime.weekday()`와 같은 0=월 … 6=일이다.
+#
+# **거래일 판정으로 대신하지 않는다.** 그러면 "장이 열리는 날"이 곧 발행일이 되어 주말
+# 브리핑을 만들 길이 막힌다 — 주간 요약과 다음주 프리뷰는 토·일에 내는 것이 맞다.
+# 게다가 판정 대상이 당일이 아니라 직전 세션이라 공휴일이 끼면 꼬일 여지가 크다.
+# 언제 낼지는 사용자가 고르고, 코드는 그 선택을 지킨다(2026-08-10 사용자 결정).
+WEEKDAYS = (0, 1, 2, 3, 4, 5, 6)
+WEEKDAY_LABELS = ("월", "화", "수", "목", "금", "토", "일")
+
 
 def _bool(value) -> bool:
     return bool(value)
@@ -100,6 +109,8 @@ def default_schedule(**overrides) -> dict:
         "briefingType": "default",
         "qualityMode": "diagnose_only",
         "runPrerequisites": True,
+        # 새 예약은 장이 서는 평일만. 주말 브리핑은 고르는 것이지 기본값이 아니다.
+        "days": [0, 1, 2, 3, 4],
     }
     row.update(overrides)
     return row
@@ -119,6 +130,33 @@ def _markets(value, default: list[str]) -> list[str]:
     return ordered or list(default)
 
 
+def _days(raw: dict) -> list[int]:
+    """이 예약이 도는 요일. 계약 순서(월→일)로 돌려준다.
+
+    **이 항목이 없는 저장된 예약은 매일로 읽는다.** 요일을 고를 수 없던 시절에 만든
+    예약이라 "매일"이 선택이 아니라 선택지가 없었던 것이지만, 판올림만으로 토·일
+    브리핑이 사라지면 그것도 사용자가 정한 적 없는 변화다. 화면에 요일 칩이 보이므로
+    한 번 눌러 정하면 된다. 새로 만드는 예약은 `default_schedule()`이 평일로 시작한다.
+
+    빈 목록은 받지 않는다 — 하나도 안 고른 예약은 영영 돌지 않는 예약이라, 저장은
+    되는데 아무 일도 일어나지 않는 상태가 된다.
+    """
+    if "days" not in raw:
+        return list(WEEKDAYS)
+    value = raw.get("days")
+    if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple, set)):
+        return list(WEEKDAYS)
+    chosen = set()
+    for item in value:
+        try:
+            day = int(item)
+        except (TypeError, ValueError):
+            continue
+        if day in WEEKDAYS:
+            chosen.add(day)
+    return [day for day in WEEKDAYS if day in chosen] or list(WEEKDAYS)
+
+
 def normalize_schedule(raw: dict | None, *, index: int = 0) -> dict:
     raw = raw if isinstance(raw, dict) else {}
     row = default_schedule()
@@ -131,6 +169,7 @@ def normalize_schedule(raw: dict | None, *, index: int = 0) -> dict:
     row["briefingType"] = _choice(raw.get("briefingType"), VALID_BRIEFING_TYPES, "default")
     row["qualityMode"] = _choice(raw.get("qualityMode"), VALID_QUALITY_MODES, "diagnose_only")
     row["runPrerequisites"] = bool(raw.get("runPrerequisites", True))
+    row["days"] = _days(raw)
     return row
 
 
