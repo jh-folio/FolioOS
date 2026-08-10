@@ -87,37 +87,6 @@ def settings_payload(*, refresh: bool = False) -> dict:
     }
 
 
-def _saved_settings_payload(provider: str, models: dict) -> dict:
-    adapters = []
-    for adapter in ADAPTER_ORDER:
-        catalog = discover_cli_models(adapter, executable="", refresh=False)
-        adapters.append({
-            "id": adapter,
-            "label": INSTALL_INFO[adapter]["label"],
-            "available": False,
-            "installed": False,
-            "authenticated": False,
-            "executable": "",
-            "error": "저장되었습니다. 설치/로그인 상태와 최신 모델은 새로고침으로 확인하세요.",
-            "model": str(models.get(adapter) or configured_model(adapter)),
-            "modelChoices": choices_from_catalog(catalog),
-            "modelDiscovery": {k: v for k, v in catalog.items() if k != "modelChoices"},
-            "docsUrl": INSTALL_INFO[adapter]["docsUrl"],
-            "installCommand": INSTALL_INFO[adapter]["windowsCommand"] if os.name == "nt" else "",
-            "bridgeSupported": True,
-            "installSupported": os.name == "nt",
-            "loginSupported": True,
-        })
-    return {
-        "available": False,
-        "selectedAdapter": provider if provider in ADAPTERS else "",
-        "provider": provider,
-        "adapters": adapters,
-        "platform": os.name,
-        "message": "AI Agent 설정을 저장했습니다. 최신 CLI 상태와 모델 목록은 새로고침으로 확인하세요.",
-    }
-
-
 def save_settings(body: dict | None = None) -> dict:
     from features.agent_mode.bridge import invalidate_bridge_status
 
@@ -139,7 +108,14 @@ def save_settings(body: dict | None = None) -> dict:
         models[adapter] = model
     write_env_values(updates)
     invalidate_bridge_status()
-    return _saved_settings_payload(provider, models)
+    # 실제 상태를 다시 재서 돌려준다. 예전에는 탐지 비용을 아끼려고 모든 어댑터를
+    # `installed: False`로 채운 자리표시자를 냈는데, 화면은 그것을 그대로 "미설치"로
+    # 그렸다 — 저장을 누를 때마다 설치돼 있는 CLI가 사라졌다 나타났다.
+    #
+    # `refresh=False`다. 바로 위에서 캐시를 버렸으므로 설치/로그인 상태는 다시 재고(1초),
+    # 모델 목록은 캐시를 쓴다. `refresh=True`로 두면 CLI마다 모델을 다시 물어 20초가
+    # 걸린다 — 저장 버튼이 20초 동안 멈춘다.
+    return settings_payload(refresh=False)
 
 
 def _windows_install_command(adapter: str) -> list[str]:

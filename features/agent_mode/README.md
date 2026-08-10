@@ -66,13 +66,14 @@ context pack 생성
 
 설정 탭의 `AI Agent 설정`에서는 Agent 생성 ON/OFF와 CLI/API 모드를 토글하고, CLI 모드에서는 Codex CLI, Claude Code CLI, Antigravity CLI 중 하나를 선택해 모델을 지정합니다. 모델 목록은 마지막으로 갱신한 캐시를 기본으로 사용하고, 사용자가 새로고침을 누를 때만 CLI 모델 조회 명령을 실행합니다. 설치 명령은 실행 전에 사용자 확인을 받습니다.
 
-Antigravity CLI는 [공식 페이지](https://antigravity.google/product/antigravity-cli)의 `agy` 바이너리를 사용한다. 설치는 Windows `irm https://antigravity.google/cli/install.ps1 | iex`, 로그인은 인자 없이 `agy`(브라우저 OAuth)다. 실행은 `agy --model <model> --print <prompt>`로 단일 프롬프트를 비대화형 실행한다. 모델은 Gemini(`gemini-3.5-pro`/`gemini-3.5-flash`/`gemini-3.1-pro`)를 사용해 브리핑·기업분석·테마분석 등 모든 Agent task를 작성할 수 있다.
+Antigravity CLI는 [공식 페이지](https://antigravity.google/product/antigravity-cli)의 `agy` 바이너리를 사용한다. 설치는 Windows `irm https://antigravity.google/cli/install.ps1 | iex`, 로그인은 인자 없이 `agy`(브라우저 OAuth)다. 실행은 `agy --model <model> --print <prompt>`로 단일 프롬프트를 비대화형 실행한다. 모델 이름에는 노력 단계가 함께 들어간다(`gemini-3.1-pro-high`, `gemini-3.6-flash-medium`, `claude-sonnet-4-6` 등). 단계 없는 예전 이름(`gemini-3.5-pro`)은 1.1.7이 `not recognized`로 거부하므로 기본 목록에서 뺐다 — 실시간 목록에 기본값이 덧붙는 구조라 선택지에 남아 있으면 고르는 순간 실행이 실패한다. 이 모델들로 브리핑·기업분석·테마분석 등 모든 Agent task를 작성할 수 있다.
 
-**⚠️ Antigravity는 Windows headless에서 미지원**: `agy` 1.0.10의 Windows `--print`(headless) 모드는 모델 응답을 stdout으로 반환하지 못한다. 진단 결과 auth·모델 호출(`streamGenerateContent`)·종료(exit 0)는 정상이지만, 응답이 의존하는 `transcript.jsonl`을 `C:\Users\...`가 아닌 `/Users\...`(POSIX) 경로로 열려다 실패하는 **agy 업스트림 버그** 때문에 출력이 사라진다. 기본 `--print-timeout`(5분) 경과 후 빈 결과로 끝나 "최종 결과를 반환하지 않았습니다" 오류가 난다.
+**Antigravity Windows headless는 agy 1.1.7에서 해결됐다.** 1.0.10의 Windows `--print`(headless)는 모델 응답을 stdout으로 반환하지 못했다. auth·모델 호출(`streamGenerateContent`)·종료(exit 0)는 정상인데, 응답이 의존하는 `transcript.jsonl`을 `C:\Users\...`가 아닌 `/Users\...`(POSIX) 경로로 열려다 실패하는 **agy 업스트림 버그** 때문에 출력이 사라졌다. 기본 `--print-timeout`(5분)이 지난 뒤 빈 결과로 끝나 "최종 결과를 반환하지 않았습니다" 오류가 났다.
 
-- 따라서 Folio OS는 **Windows에서 Antigravity 어댑터를 미지원(`available: false`, `bridgeSupported: false`)으로 표시**하고, 실행 요청 시 5분 대기 없이 즉시 명확한 안내로 실패시킨다(`_invoke_agent_cli`의 사전 차단). Codex 또는 Claude CLI를 사용하면 된다.
-- macOS/Linux는 `/Users` 홈이 실제 경로라 이 버그가 없어 정상 동작할 것으로 보므로, 미지원 처리는 **Windows에 한정**한다.
-- agy가 차기 버전에서 경로 버그를 고치면 이 Windows 제한(`_probe_adapter`/`_invoke_agent_cli`의 `os.name == "nt"` 분기)을 제거한다.
+- 1.1.7에서 고쳐진 것을 직접 실행해 확인했다(`--print`가 stdout으로 정상 반환, exit 0, 13초). 브리지를 통한 실행도 확인했다.
+- **확인한 버전부터만 연다**(`bridge.AGY_HEADLESS_FIXED = (1, 1, 7)`). 1.1.0~1.1.6은 확인하지 않았고, 못 미치는 버전을 열어 주면 사용자가 5분을 기다린 뒤 빈 결과를 받는다. 버전을 못 읽으면 지원하지 않는 것으로 본다 — 잘못 열어 주는 쪽이 더 나쁘다.
+- 못 미치는 버전은 예전처럼 `bridgeSupported: false`로 표시하고, 실행 요청 시 5분 대기 없이 즉시 안내로 실패시킨다(`_invoke_agent_cli`의 사전 차단).
+- macOS/Linux는 `/Users` 홈이 실제 경로라 이 버그가 없었으므로 버전 게이트는 **Windows에 한정**한다.
 
 Codex/Claude는 stdout으로 결과를 정상 반환하므로 영향이 없다.
 

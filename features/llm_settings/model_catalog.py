@@ -52,10 +52,13 @@ CLI_MODEL_FALLBACKS = {
         *API_MODEL_FALLBACKS["openai"],
     ],
     "claude": API_MODEL_FALLBACKS["claude"],
+    # agy는 모델 이름에 노력 단계를 함께 담는다(`...-high`). 단계 없는 예전 이름
+    # (`gemini-3.5-pro` 등)은 1.1.7이 "not recognized"로 거부하는데, 실시간 목록에
+    # 이 기본값이 덧붙어 선택지에 남아 있었다 — 고르면 실행 시점에 실패한다.
     "antigravity": [
-        {"value": "gemini-3.5-pro", "label": "Gemini 3.5 Pro"},
-        {"value": "gemini-3.5-flash", "label": "Gemini 3.5 Flash"},
-        {"value": "gemini-3.1-pro", "label": "Gemini 3.1 Pro"},
+        {"value": "gemini-3.1-pro-high", "label": "Gemini 3.1 Pro High"},
+        {"value": "gemini-3.6-flash-medium", "label": "Gemini 3.6 Flash Medium"},
+        {"value": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6"},
     ],
 }
 

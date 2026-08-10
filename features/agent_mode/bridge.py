@@ -94,17 +94,20 @@ def _probe_adapter(adapter: str) -> dict:
             return result
 
         if adapter == "antigravity":
-            # agy 1.0.10의 Windows headless(--print)는 모델 응답을 stdout으로 내보내지 못한다
+            # agy 1.0.10의 Windows headless(--print)는 모델 응답을 stdout으로 내보내지 못했다
             # (transcript.jsonl을 /Users\... POSIX 경로로 열려다 실패하는 agy 버그). 대화는 완료돼도
-            # 출력이 사라져 브리핑 생성이 항상 빈 결과로 끝난다. 따라서 Windows에서는 브리지 미지원으로
-            # 표시하고 Codex/Claude를 안내한다. macOS(/Users 홈이 실제 경로)에서는 정상 동작한다.
-            if os.name == "nt":
+            # 출력이 사라져 브리핑 생성이 늘 빈 결과로 끝났고, 기본 --print-timeout 5분을 기다린
+            # 뒤에야 실패했다. 1.1.7에서 고쳐진 것을 실행해 확인했다(`--print`가 stdout으로 정상
+            # 반환, exit 0). 고쳐진 것을 확인한 버전부터만 연다 — 1.1.0~1.1.6은 확인하지 않았고,
+            # 못 미치는 버전을 열면 사용자가 5분을 기다린 뒤 빈 결과를 받는다.
+            if os.name == "nt" and not _agy_headless_works(result["version"]):
                 result["installed"] = True
                 result["available"] = False
                 result["bridgeSupported"] = False
                 result["error"] = (
-                    "agy의 Windows headless 모드는 결과를 반환하지 못합니다(agy 업스트림 버그). "
-                    "Codex 또는 Claude CLI를 사용하세요."
+                    f"agy {result['version'] or '이 버전'}의 Windows headless 모드는 결과를 반환하지 "
+                    f"못합니다(agy 업스트림 버그, {AGY_HEADLESS_FIXED} 이상에서 해결). "
+                    "agy를 업데이트하거나 Codex 또는 Claude CLI를 사용하세요."
                 )
                 return result
             # agy는 비대화형 로그인 상태 확인 서브커맨드를 제공하지 않는다. 설치되어 있으면
@@ -139,6 +142,24 @@ def invalidate_bridge_status() -> None:
     global _STATUS_CACHE
     with _STATUS_LOCK:
         _STATUS_CACHE = None
+
+
+# Windows headless(`--print`)가 stdout으로 결과를 돌려주는 것을 확인한 첫 버전.
+AGY_HEADLESS_FIXED = (1, 1, 7)
+
+
+def _agy_headless_works(version_text: str) -> bool:
+    """agy 버전이 Windows headless를 제대로 지원하는가.
+
+    버전을 못 읽으면 지원하지 않는 것으로 본다. 잘못 열어 주면 사용자가 5분을 기다린 뒤
+    빈 결과를 받는다 — 막아 두면 다른 CLI를 쓰라는 안내를 즉시 본다.
+    """
+    import re
+
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", str(version_text or ""))
+    if not match:
+        return False
+    return tuple(int(part) for part in match.groups()) >= AGY_HEADLESS_FIXED
 
 
 def bridge_status(*, refresh: bool = False) -> dict:
@@ -444,13 +465,13 @@ def _result_summary(task_type: str, pack: dict, result: dict, adapter: str) -> d
 
 def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "", model_override: str = "") -> str:
     is_antigravity = selected.get("id") == "antigravity"
-    if is_antigravity and os.name == "nt":
-        # agy 1.0.10 Windows headless(--print)는 모델 응답을 stdout으로 반환하지 못한다
-        # (transcript.jsonl을 /Users\... 경로로 열려다 실패하는 agy 버그). 기본 --print-timeout
-        # 5분을 기다린 뒤 빈 결과로 실패하므로, 5분 대기 없이 즉시 명확한 안내로 실패시킨다.
+    if is_antigravity and os.name == "nt" and not _agy_headless_works(selected.get("version", "")):
+        # 고쳐지기 전 agy는 기본 --print-timeout 5분을 기다린 뒤 빈 결과로 실패한다.
+        # 5분을 버리게 두지 않고 즉시 명확한 안내로 실패시킨다.
         raise RuntimeError(
-            "Antigravity(agy)는 Windows headless 모드에서 브리핑 결과를 반환하지 못합니다(agy 업스트림 버그). "
-            "Codex 또는 Claude CLI를 선택해 생성하세요."
+            f"Antigravity(agy) {selected.get('version') or '이 버전'}은 Windows headless 모드에서 결과를 "
+            f"반환하지 못합니다(agy 업스트림 버그, {AGY_HEADLESS_FIXED} 이상에서 해결). "
+            "agy를 업데이트하거나 Codex 또는 Claude CLI를 선택해 생성하세요."
         )
     command = _adapter_command(selected, prompt, model_override=model_override)
     proc = subprocess.Popen(
