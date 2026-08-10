@@ -130,6 +130,10 @@ def prune_orphan_evidence(db_path: Path | None = None, rss_dir: Path | None = No
     인덱서도 피드 캐시도 이 표는 건드리지 않는다. 남겨 두면 source ledger가 없는
     파일을 근거로 인용한다. `markdown_path`는 역슬래시로 저장돼 있고 `documents.path`는
     슬래시라, 경로 문자열이 아니라 파일명으로 맞춘다.
+
+    **대소문자는 무시한다.** Windows 파일 시스템이 구분하지 않으므로, 매체가 제목의
+    대문자만 바꿔도(`Lost its` -> `Lost Its`) 저장된 이름과 디스크의 이름이 갈린다.
+    구분해서 비교하면 파일이 멀쩡히 있는 근거를 고아로 보고 지운다.
     """
     from features.common.workspace import data_dir, research_inbox_dir
 
@@ -137,7 +141,7 @@ def prune_orphan_evidence(db_path: Path | None = None, rss_dir: Path | None = No
     rss_dir = rss_dir or (research_inbox_dir() / "rss")
     if not Path(db_path).exists():
         return 0
-    alive = {entry.name for entry in os.scandir(rss_dir) if entry.is_file()} if rss_dir.is_dir() else set()
+    alive = {entry.name.casefold() for entry in os.scandir(rss_dir) if entry.is_file()} if rss_dir.is_dir() else set()
     conn = sqlite3.connect(db_path, timeout=30)
     try:
         rows = conn.execute(
@@ -146,7 +150,7 @@ def prune_orphan_evidence(db_path: Path | None = None, rss_dir: Path | None = No
         gone = [
             (row[0],)
             for row in rows
-            if str(row[1]).replace("\\", "/").rsplit("/", 1)[-1] not in alive
+            if str(row[1]).replace("\\", "/").rsplit("/", 1)[-1].casefold() not in alive
         ]
         if gone:
             with conn:

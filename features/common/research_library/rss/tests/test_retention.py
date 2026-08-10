@@ -155,3 +155,28 @@ def test_upgrading_never_deletes_what_you_already_have():
     # 한 번 고르면 그 값이 그대로 남는다.
     assert normalize_settings({"rss": {"retentionDays": 30}})["rss"]["retentionDays"] == 30
     assert normalize_settings({"rss": {"retentionDays": 0}})["rss"]["retentionDays"] == 0
+
+
+def test_a_headline_recapitalised_by_the_outlet_is_not_an_orphan(tmp_path):
+    """Windows는 파일명 대소문자를 구분하지 않는다.
+
+    매체가 제목의 대문자만 바꾸면(`Lost its` -> `Lost Its`) 저장된 이름과 디스크의
+    이름이 갈린다. 구분해서 비교하면 파일이 멀쩡히 있는 근거를 지운다 — 실제로
+    WSJ 기사 한 건이 그 상태였다.
+    """
+    rss = make_archive(tmp_path, ["2026-08-01 10-00-00 - WSJ - How OpenAI Lost Its AI Crown.md"])
+    db = tmp_path / "research-index.sqlite3"
+    conn = sqlite3.connect(db)
+    conn.execute("CREATE TABLE evidence_items (id TEXT PRIMARY KEY, markdown_path TEXT)")
+    conn.execute(
+        "INSERT INTO evidence_items (id, markdown_path) VALUES (?, ?)",
+        ("wsj", r"research-inbox\rss\2026-08-01 10-00-00 - WSJ - How OpenAI Lost its AI Crown.md"),
+    )
+    conn.commit()
+    conn.close()
+
+    assert retention.prune_orphan_evidence(db_path=db, rss_dir=rss) == 0
+
+    conn = sqlite3.connect(db)
+    assert [r[0] for r in conn.execute("SELECT id FROM evidence_items")] == ["wsj"]
+    conn.close()
