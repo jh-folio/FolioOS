@@ -599,9 +599,7 @@ body:has(#folioReactRoot .react-shell) main.page {
      16(margin) + 14(padding) + 48(항목) + 14(padding) = 92. 예전 76px은 여백을
      줄이고 항목을 가운데 정렬해서, 접을 때마다 아이콘이 9px 왼쪽으로 튀었다. */
   --react-nav-collapsed-width: 92px;
-  /* 384px에서는 도크 컨트롤(CLI·모델·노력)이 두 줄로 접혀 툴바가 68px이 된다.
-     432px가 한 줄로 떨어지는 경계이며(32px), 본문 열은 889 -> 841px로 48px 준다. */
-  --react-agent-width: 432px;
+  --react-agent-width: 384px;
   height: 100vh;
   display: grid;
   grid-template-columns: var(--react-nav-width) minmax(0, 1fr) var(--react-agent-width);
@@ -1610,8 +1608,8 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 /* 도크는 384px 고정 열이다. 안쪽 컨트롤이 늘어나면 `min-width: auto` 때문에 폼이
-   열보다 넓어지고 그만큼 화면 밖으로 잘린다 — CLI 선택을 더했을 때 실제로 77px이
-   넘쳤다. 줄어들 수 있게 두고, 그래도 안 들어가면 줄을 바꾼다. */
+   열보다 넓어지고 그만큼 화면 밖으로 잘린다 — 컨트롤 셋을 나란히 뒀을 때 실제로
+   77px이 넘쳤다. 지금은 버튼 하나로 접었지만 바닥은 그대로 열어 둔다. */
 .react-agent-form-toolbar {
   display: flex;
   align-items: center;
@@ -1622,6 +1620,7 @@ body:has(#folioReactRoot .react-shell) main.page {
 }
 
 .react-agent-tools {
+  position: relative;
   display: flex;
   flex: 1 1 0;
   flex-wrap: wrap;
@@ -1629,23 +1628,80 @@ body:has(#folioReactRoot .react-shell) main.page {
   gap: 8px;
 }
 
-.react-agent-tools select {
-  width: auto;
-  /* 내용 너비를 바닥으로 삼지 않는다. 그러면 긴 모델 이름 하나가 도크를 넘긴다. */
+/* 실행 설정 버튼. 열지 않고도 무엇으로 도는지 읽히도록 요약을 그대로 적고,
+   폭이 모자라면 요약만 줄인다 — 버튼이 도크를 밀어내면 안 된다. */
+.react-agent-run-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-  flex: 0 1 auto;
-  text-overflow: ellipsis;
-  max-width: 132px;
+  max-width: 100%;
   min-height: 30px;
-  padding: 2px 8px;
-  border: 1px solid var(--folio-border, #dde2e9);
-  border-radius: var(--radius-pill, 999px);
-  background: var(--folio-surface-clean, #ffffff);
-  color: var(--folio-ink-soft, #213047);
-  font-size: var(--fs-xs, 0.75rem);
+  padding: 2px 10px;
+  border: 1px solid var(--folio-border);
+  border-radius: var(--r-pill);
+  background: var(--folio-surface-clean);
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
+  cursor: pointer;
 }
 
+.react-agent-run-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.react-agent-run-trigger svg { flex: none; }
+.react-agent-run-trigger:hover { background: var(--surface-control-hover); }
+.react-agent-run-trigger:focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
+
+/* 접어 둔 컨트롤. 위로 열린다 — 도크 맨 아래라 아래로 열면 화면 밖이다. */
+.react-agent-run-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: grid;
+  gap: 10px;
+  width: min(300px, 100%);
+  padding: 12px;
+  border-radius: var(--r-panel);
+  background: var(--folio-surface-clean);
+  box-shadow: var(--elev-overlay);
+}
+
+.react-agent-run-menu label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.react-agent-run-menu label > span {
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+}
+
+.react-agent-run-menu select {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 2px 8px;
+  border: 1px solid var(--folio-border);
+  border-radius: var(--r-control);
+  background: var(--folio-surface-clean);
+  color: var(--folio-ink-soft);
+  font-size: var(--fs-meta);
+}
+
+.react-agent-run-menu small {
+  color: var(--folio-ink-muted);
+  font-size: var(--fs-caption);
+  line-height: 1.45;
+}
 
 .react-placeholder {
   display: grid;
@@ -16004,13 +16060,11 @@ select { min-height: 36px; padding: 0 12px; }
 /* (0,2,0)으로 위 규칙을 이기는 나머지 세 곳. 같은 특이성으로 되받는다. */
 .report-feed-view-pill select,
 .input-panel .report-feed-view-pill select,
-.react-agent-form textarea,
-.react-agent-tools select {
+.react-agent-form textarea {
   border: none;
   background: var(--surface-control);
 }
-.report-feed-view-pill select:hover,
-.react-agent-tools select:hover { background: var(--surface-control-hover); }
+.report-feed-view-pill select:hover { background: var(--surface-control-hover); }
 /* (0,2,0) 이상으로 이기는 나머지 화면 규칙들. */
 .react-rss-filter-grid input,
 .react-rss-filter-grid select,

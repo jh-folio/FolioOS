@@ -112,12 +112,23 @@ test("Phase 6 shell no longer ships standalone portfolio and notes legacy surfac
 
 test("the agent dock never forces itself wider than its column", async () => {
   const css = await readFile(new URL("../../public/styles.css", import.meta.url), "utf8");
+  const dock = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
 
-  // 도크는 384px 고정 열이다. 안쪽 컨트롤이 `min-width: auto`로 남으면 폼이 열보다
-  // 넓어지고 그만큼 화면 밖으로 잘린다 — CLI 선택을 더했을 때 실제로 77px이 넘쳤다.
+  // 도크는 384px 고정 열이다. 컨트롤 셋을 나란히 두면 폼이 461px로 벌어져 77px이
+  // 잘렸다. 지금은 버튼 하나로 접고, 열린 컨트롤은 팝오버 안에 세로로 쌓는다.
+  assert.match(dock, /react-agent-run-trigger/);
+  assert.match(dock, /className="react-agent-run-menu"/);
+  // 요약을 버튼에 적어 열지 않고도 무엇으로 도는지 읽힌다.
+  assert.match(dock, /const runSummary =/);
+
+  // 바닥은 그대로 열어 둔다 — 나중에 무엇을 더해도 도크를 밀어내지 않는다.
   const toolbar = css.slice(css.indexOf(".react-agent-form-toolbar {"));
   assert.match(toolbar.slice(0, 220), /min-width:\s*0/);
   assert.match(toolbar.slice(0, 220), /flex-wrap:\s*wrap/);
-  const select = css.slice(css.indexOf(".react-agent-tools select {"));
-  assert.match(select.slice(0, 260), /min-width:\s*0/);
+  const trigger = css.slice(css.indexOf(".react-agent-run-trigger {"));
+  assert.match(trigger.slice(0, 420), /min-width:\s*0/);
+  assert.match(trigger.slice(0, 420), /max-width:\s*100%/);
+  // 팝오버는 위로 열린다. 도크 맨 아래라 아래로 열면 화면 밖이다.
+  const menu = css.slice(css.indexOf(".react-agent-run-menu {"));
+  assert.match(menu.slice(0, 320), /bottom:\s*calc\(100% \+/);
 });

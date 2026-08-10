@@ -267,6 +267,9 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
   // 다시 빈 값에서 시작한다 — "이 대화에만"이 말 그대로여야 한다.
   const [providerOverride, setProviderOverride] = useState("");
   const [effort, setEffort] = useState("medium");
+  const [runMenuOpen, setRunMenuOpen] = useState(false);
+  const runMenuRef = useRef<HTMLDivElement | null>(null);
+  const runTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -277,6 +280,23 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     for (const controller of pollControllers.current.values()) controller.abort();
     pollControllers.current.clear();
   }, []);
+
+  // 상단바 메뉴와 같은 규칙 — 바깥을 누르거나 Escape면 닫고 포커스를 버튼으로 돌린다.
+  useEffect(() => {
+    if (!runMenuOpen) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!runMenuRef.current?.contains(event.target as Node)) setRunMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setRunMenuOpen(false); runTriggerRef.current?.focus(); }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [runMenuOpen]);
 
   const applySettings = useCallback((payload: AgentSettings, keepCurrent = false, override = "") => {
     const adapter = selectedAdapter(payload, override);
@@ -366,6 +386,12 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
   const globalId = globalProvider(settings);
   const overridden = Boolean(providerOverride) && providerOverride !== globalId;
   const modelChoices = modelChoicesFor(adapter);
+  // 버튼에 적을 요약. 열지 않고도 무엇으로 도는지 읽혀야 접어 둔 값이 있다.
+  const runSummary = [
+    (adapter?.label || meta.label || "").replace(/\s*(Code\s*)?CLI$/i, ""),
+    modelChoices.find((choice) => choice.value === model)?.label || model,
+    effortLabel(effort),
+  ].filter(Boolean).join(" · ");
   const accentStyle = useMemo(() => ({ "--react-agent-accent": meta.color } as CSSProperties), [meta.color]);
   const failedPreflightChecks = (preflight?.checks || []).filter((check) => !check.ok);
 
@@ -747,32 +773,62 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
           placeholder="현재 화면에 대해 물어보세요"
         />
         <div className="react-agent-form-toolbar">
-          <div className="react-agent-tools">
-            <select
-              value={providerOverride || globalId}
-              onChange={(event) => chooseProvider(event.currentTarget.value === globalId ? "" : event.currentTarget.value)}
-              aria-label="이 대화의 CLI"
-              title="이 대화에만 적용됩니다. 전역 기본은 상단바와 설정에서 바꿉니다."
+          {/* 컨트롤 셋을 버튼 하나로 접는다. 도크는 384px이라 나란히 두면 두 줄이 되고,
+              그 두 줄이 늘 접혀 있으면 폭이 모자란 것이지 안전장치가 아니다. 요약은
+              버튼에 그대로 적어 열지 않고도 무엇으로 도는지 읽을 수 있게 한다. */}
+          <div className="react-agent-tools" ref={runMenuRef}>
+            <button
+              type="button"
+              className="react-agent-run-trigger"
+              ref={runTriggerRef}
+              aria-haspopup="dialog"
+              aria-expanded={runMenuOpen}
+              aria-label={`실행 설정: ${runSummary}`}
+              title={runSummary}
+              onClick={() => setRunMenuOpen((value) => !value)}
             >
-              {(settings?.adapters || []).map((item) => (
-                <option key={item.id} value={item.id} disabled={item.bridgeSupported === false}>
-                  {/* 도크는 폭이 좁다. 여기서는 CLI라는 것이 이미 라벨로 붙어 있으므로
-                      `Codex CLI`가 아니라 `Codex`로 줄인다. */}
-                  {(item.label || item.id).replace(/\s*(Code\s*)?CLI$/i, "")}
-                </option>
-              ))}
-            </select>
-            <select value={model} onChange={(event) => persistModel(event.currentTarget.value)} aria-label="모델 버전">
-              {modelChoices.length ? modelChoices.map((choice) => (
-                <option key={choice.value} value={choice.value}>{choice.label}</option>
-              )) : <option value="">기본 버전</option>}
-            </select>
-            <select value={effort} onChange={(event) => setEffort(event.currentTarget.value)} aria-label="노력 단계">
-              <option value="low">노력 낮음</option>
-              <option value="medium">노력 중간</option>
-              <option value="high">노력 높음</option>
-              <option value="max">노력 최대</option>
-            </select>
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" width="14" height="14">
+                <path d="M2.5 5h11M2.5 11h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="6" cy="5" r="1.9" fill="currentColor" />
+                <circle cx="10.5" cy="11" r="1.9" fill="currentColor" />
+              </svg>
+              <span>{runSummary}</span>
+            </button>
+            {runMenuOpen && (
+              <div className="react-agent-run-menu" role="dialog" aria-label="실행 설정">
+                <label>
+                  <span>이 대화의 CLI</span>
+                  <select
+                    value={providerOverride || globalId}
+                    onChange={(event) => chooseProvider(event.currentTarget.value === globalId ? "" : event.currentTarget.value)}
+                  >
+                    {(settings?.adapters || []).map((item) => (
+                      <option key={item.id} value={item.id} disabled={item.bridgeSupported === false}>
+                        {item.label || item.id}
+                      </option>
+                    ))}
+                  </select>
+                  <small>이 대화에만 적용됩니다. 전역 기본은 상단바와 설정에서 바꿉니다.</small>
+                </label>
+                <label>
+                  <span>모델 버전</span>
+                  <select value={model} onChange={(event) => persistModel(event.currentTarget.value)}>
+                    {modelChoices.length ? modelChoices.map((choice) => (
+                      <option key={choice.value} value={choice.value}>{choice.label}</option>
+                    )) : <option value="">기본 버전</option>}
+                  </select>
+                </label>
+                <label>
+                  <span>노력 단계</span>
+                  <select value={effort} onChange={(event) => setEffort(event.currentTarget.value)}>
+                    <option value="low">노력 낮음</option>
+                    <option value="medium">노력 중간</option>
+                    <option value="high">노력 높음</option>
+                    <option value="max">노력 최대</option>
+                  </select>
+                </label>
+              </div>
+            )}
           </div>
           <button className="btn btn--primary btn--sm" type="submit" data-qa="agent-submit" disabled={busy || !input.trim()}>{busy ? "작업 중" : "보내기"}</button>
         </div>

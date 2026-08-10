@@ -19501,26 +19501,36 @@ function Kc(e) {
 	return t.length ? t.some((t) => t.value === e?.model) ? String(e?.model || "") : t[0].value : "";
 }
 function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
-	let [i, a] = (0, l.useState)(null), [o, s] = (0, l.useState)(null), [c, u] = (0, l.useState)([bc]), [d, f] = (0, l.useState)(!1), p = vc(bc), m = pc(p.scope || void 0), [h, g] = (0, l.useState)(""), [_, v] = (0, l.useState)(""), [y, b] = (0, l.useState)(""), [x, S] = (0, l.useState)("medium"), [C, w] = (0, l.useState)(!1), [T, E] = (0, l.useState)(""), D = (0, l.useRef)(null), O = (0, l.useRef)({
+	let [i, a] = (0, l.useState)(null), [o, s] = (0, l.useState)(null), [c, u] = (0, l.useState)([bc]), [d, f] = (0, l.useState)(!1), p = vc(bc), m = pc(p.scope || void 0), [h, g] = (0, l.useState)(""), [_, v] = (0, l.useState)(""), [y, b] = (0, l.useState)(""), [x, S] = (0, l.useState)("medium"), [C, w] = (0, l.useState)(!1), T = (0, l.useRef)(null), E = (0, l.useRef)(null), [D, O] = (0, l.useState)(!1), [k, A] = (0, l.useState)(""), j = (0, l.useRef)(null), M = (0, l.useRef)({
 		ownerSurface: e,
 		patch: {}
-	}), k = (0, l.useRef)(/* @__PURE__ */ new Map());
+	}), N = (0, l.useRef)(/* @__PURE__ */ new Map());
 	(0, l.useEffect)(() => () => {
-		for (let e of k.current.values()) e.abort();
-		k.current.clear();
-	}, []);
-	let A = (0, l.useCallback)((e, t = !1, n = "") => {
+		for (let e of N.current.values()) e.abort();
+		N.current.clear();
+	}, []), (0, l.useEffect)(() => {
+		if (!C) return;
+		let e = (e) => {
+			T.current?.contains(e.target) || w(!1);
+		}, t = (e) => {
+			e.key === "Escape" && (w(!1), E.current?.focus());
+		};
+		return document.addEventListener("pointerdown", e), document.addEventListener("keydown", t, !0), () => {
+			document.removeEventListener("pointerdown", e), document.removeEventListener("keydown", t, !0);
+		};
+	}, [C]);
+	let P = (0, l.useCallback)((e, t = !1, n = "") => {
 		let r = Uc(e, n);
 		a(e), v((e) => {
 			let n = Kc(r);
 			return t && Gc(r).some((t) => t.value === e) ? e : n;
 		});
-	}, []), j = (0, l.useCallback)((e) => {
+	}, []), F = (0, l.useCallback)((e) => {
 		b(e), v(Kc(Uc(i, e)));
-	}, [i]), M = (0, l.useCallback)(async (e = !1) => {
+	}, [i]), I = (0, l.useCallback)(async (e = !1) => {
 		let t = await B(`/api/agent-bridge/settings${e ? "?refresh=true" : ""}`);
-		return A(t, !0), t;
-	}, [A]), N = (0, l.useCallback)(async (e) => {
+		return P(t, !0), t;
+	}, [P]), L = (0, l.useCallback)(async (e) => {
 		try {
 			let t = e?.provider && yc.has(e.provider) ? e.provider : "", n = t ? `?adapter=${encodeURIComponent(t)}` : "";
 			s(await B(`/api/agent-bridge/preflight${n}`));
@@ -19540,32 +19550,36 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 	(0, l.useEffect)(() => {
 		let e = !0;
 		return B("/api/agent-bridge/settings").then((t) => {
-			e && (A(t), N(t));
+			e && (P(t), L(t));
 		}).catch((t) => {
-			e && E(t instanceof Error ? t.message : "Agent 설정을 불러오지 못했습니다.");
+			e && A(t instanceof Error ? t.message : "Agent 설정을 불러오지 못했습니다.");
 		}), () => {
 			e = !1;
 		};
-	}, [A, N]), (0, l.useEffect)(() => {
-		D.current && (D.current.scrollTop = D.current.scrollHeight);
+	}, [P, L]), (0, l.useEffect)(() => {
+		j.current && (j.current.scrollTop = j.current.scrollHeight);
 	}, [c, t]), (0, l.useEffect)(() => {
-		O.current = zc(O.current, e);
+		M.current = zc(M.current, e);
 	}, [e]), (0, l.useEffect)(() => {
 		let e = (e) => {
 			let t = e.detail;
-			t ? (A(t), N(t)) : M().then((e) => N(e)).catch((e) => E(e instanceof Error ? e.message : "Agent 설정을 불러오지 못했습니다."));
+			t ? (P(t), L(t)) : I().then((e) => L(e)).catch((e) => A(e instanceof Error ? e.message : "Agent 설정을 불러오지 못했습니다."));
 		};
 		return window.addEventListener("folio:agent-settings-updated", e), () => window.removeEventListener("folio:agent-settings-updated", e);
 	}, [
-		A,
-		M,
-		N
+		P,
+		I,
+		L
 	]);
-	let P = Uc(i, y), F = Wc(i, y), I = Hc(i), L = !!y && y !== I, R = Gc(P), z = (0, l.useMemo)(() => ({ "--react-agent-accent": F.color }), [F.color]), H = (o?.checks || []).filter((e) => !e.ok), U = (0, l.useCallback)(async (t, n = {}) => {
+	let R = Uc(i, y), z = Wc(i, y), H = Hc(i), U = !!y && y !== H, ee = Gc(R), te = [
+		(R?.label || z.label || "").replace(/\s*(Code\s*)?CLI$/i, ""),
+		ee.find((e) => e.value === _)?.label || _,
+		Nc(x)
+	].filter(Boolean).join(" · "), W = (0, l.useMemo)(() => ({ "--react-agent-accent": z.color }), [z.color]), G = (o?.checks || []).filter((e) => !e.ok), q = (0, l.useCallback)(async (t, n = {}) => {
 		let r = t.trim();
-		if (!r || C) return;
-		O.current = zc(O.current, e);
-		let i = Vc(window.FolioAgent?.currentContext, O.current, e, n), a = jc(), o = Date.now(), s = new Date(o).toISOString(), c = P?.label || F.label, l = _ || P?.model || "model";
+		if (!r || D) return;
+		M.current = zc(M.current, e);
+		let i = Vc(window.FolioAgent?.currentContext, M.current, e, n), a = jc(), o = Date.now(), s = new Date(o).toISOString(), c = R?.label || z.label, l = _ || R?.model || "model";
 		u((e) => [
 			...e,
 			{
@@ -19584,7 +19598,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 				runMeta: `${l} · ${Nc(x)} · on-request`,
 				createdAt: s
 			}
-		]), g(""), w(!0), E("");
+		]), g(""), O(!0), A("");
 		let d = null;
 		try {
 			let e = p.threadId || (await p.createThread({
@@ -19600,9 +19614,9 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 					adapter: y
 				}
 			});
-			d = new AbortController(), st(k.current, a, d);
+			d = new AbortController(), st(N.current, a, d);
 			let n = await ut(t.job, { signal: d.signal });
-			ct(k.current, a, d);
+			ct(N.current, a, d);
 			let s = {
 				...n.result || {},
 				reply: await p.latestReply(e)
@@ -19619,7 +19633,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 				runMeta: `${l} · ${Nc(x)} · ${Pc(o)}`
 			} : e));
 		} catch (e) {
-			if (d && ct(k.current, a, d), e instanceof at) {
+			if (d && ct(N.current, a, d), e instanceof at) {
 				u((t) => t.map((t) => t.id === a ? {
 					...t,
 					text: e.message,
@@ -19632,7 +19646,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 				return;
 			}
 			let t = e instanceof Error ? e.message : "Agent 요청에 실패했습니다.";
-			E(t), u((e) => e.map((e) => e.id === a ? {
+			A(t), u((e) => e.map((e) => e.id === a ? {
 				...e,
 				text: t,
 				pending: !1,
@@ -19641,20 +19655,20 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 				runMeta: `${l} · ${Nc(x)}`
 			} : e));
 		} finally {
-			w(!1);
+			O(!1);
 		}
 	}, [
-		P?.label,
-		P?.model,
-		C,
+		R?.label,
+		R?.model,
+		D,
 		x,
-		F.label,
+		z.label,
 		_,
 		e
 	]);
-	async function ee(e, t) {
+	async function ne(e, t) {
 		let n = new AbortController();
-		st(k.current, e, n), u((t) => t.map((t) => t.id === e ? {
+		st(N.current, e, n), u((t) => t.map((t) => t.id === e ? {
 			...t,
 			pending: !0,
 			runState: "pending",
@@ -19689,18 +19703,18 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 				runTitle: "Agent 오류"
 			} : n));
 		} finally {
-			ct(k.current, e, n);
+			ct(N.current, e, n);
 		}
 	}
 	(0, l.useEffect)(() => {
 		let t = (t) => {
 			let { message: n, prompt: r, autoSubmit: i, ...a } = t.detail || {};
-			O.current = Bc(O.current, e, a);
+			M.current = Bc(M.current, e, a);
 			let o = String(n || r || "");
-			o && (i ? U(o, a) : g(o));
+			o && (i ? q(o, a) : g(o));
 		};
 		return window.addEventListener("folio:react-agent-request", t), () => window.removeEventListener("folio:react-agent-request", t);
-	}, [U, e]), (0, l.useEffect)(() => {
+	}, [q, e]), (0, l.useEffect)(() => {
 		async function e(e) {
 			let t = e.detail || {};
 			t.scope && (p.setThreadId(""), p.setPending({
@@ -19713,43 +19727,43 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 		}
 		return window.addEventListener("folio:open-agent-thread", e), () => window.removeEventListener("folio:open-agent-thread", e);
 	}, [p]);
-	async function te(e) {
-		e.preventDefault(), await U(h);
+	async function re(e) {
+		e.preventDefault(), await q(h);
 	}
-	function W() {
+	function ie() {
 		u([{
 			...bc,
 			createdAt: (/* @__PURE__ */ new Date()).toISOString()
-		}]), g(""), E(""), p.setThreadId(""), p.setPending(null), f(!1);
+		}]), g(""), A(""), p.setThreadId(""), p.setPending(null), f(!1);
 	}
-	async function G(e) {
-		E("");
+	async function se(e) {
+		A("");
 		try {
 			u(await p.openThread(e)), f(!1);
 		} catch (e) {
-			E(e instanceof Error ? e.message : "대화를 불러오지 못했습니다.");
+			A(e instanceof Error ? e.message : "대화를 불러오지 못했습니다.");
 		}
 	}
-	function q(e) {
+	function ce(e) {
 		e === p.threadId && (p.setThreadId(""), p.setScope(null), u([{
 			...bc,
 			createdAt: (/* @__PURE__ */ new Date()).toISOString()
 		}]));
 	}
-	async function ne(e) {
-		if (v(e), !(y || !P?.id || !e)) try {
+	async function le(e) {
+		if (v(e), !(y || !R?.id || !e)) try {
 			let t = Object.fromEntries((i?.adapters || []).map((e) => [e.id, e.model || ""]));
-			t[P.id] = e;
+			t[R.id] = e;
 			let n = await V("/api/agent-bridge/settings", {
-				provider: P.id,
+				provider: R.id,
 				models: t
 			});
-			A(n, !0), window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: n }));
+			P(n, !0), window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: n }));
 		} catch (e) {
-			E(e instanceof Error ? e.message : "모델 설정 저장에 실패했습니다.");
+			A(e instanceof Error ? e.message : "모델 설정 저장에 실패했습니다.");
 		}
 	}
-	async function re(e, t, n) {
+	async function ue(e, t, n) {
 		try {
 			let r = await Ie(t, n);
 			u((t) => t.map((t) => t.id === e ? {
@@ -19757,12 +19771,12 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 				proposalStatus: r.status
 			} : t)), Le(r);
 		} catch (e) {
-			E(e instanceof Error ? e.message : "제안 처리에 실패했습니다.");
+			A(e instanceof Error ? e.message : "제안 처리에 실패했습니다.");
 		}
 	}
 	return t ? /* @__PURE__ */ (0, K.jsxs)("aside", {
 		className: "react-agent-dock",
-		style: z,
+		style: W,
 		"aria-label": "AI Agent",
 		children: [
 			/* @__PURE__ */ (0, K.jsxs)("header", {
@@ -19774,12 +19788,12 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 						"aria-hidden": "true",
 						children: /* @__PURE__ */ (0, K.jsx)("span", {
 							className: "react-agent-logo-mark",
-							dangerouslySetInnerHTML: { __html: F.logo }
+							dangerouslySetInnerHTML: { __html: z.logo }
 						})
 					}), /* @__PURE__ */ (0, K.jsxs)("div", { children: [/* @__PURE__ */ (0, K.jsx)("p", {
 						className: "section-kicker",
 						children: "Agent"
-					}), /* @__PURE__ */ (0, K.jsx)("h2", { children: P?.label || F.label })] })]
+					}), /* @__PURE__ */ (0, K.jsx)("h2", { children: R?.label || z.label })] })]
 				}), /* @__PURE__ */ (0, K.jsxs)("div", {
 					className: "react-agent-header-actions",
 					children: [
@@ -19793,7 +19807,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 						/* @__PURE__ */ (0, K.jsx)("button", {
 							className: "react-agent-new-chat",
 							type: "button",
-							onClick: W,
+							onClick: ie,
 							children: "새 대화"
 						}),
 						/* @__PURE__ */ (0, K.jsx)("button", {
@@ -19814,8 +19828,8 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 					d && /* @__PURE__ */ (0, K.jsx)(hc, {
 						activeId: p.threadId,
 						refreshKey: p.refreshKey,
-						onSelect: (e) => void G(e),
-						onDeleted: q
+						onSelect: (e) => void se(e),
+						onDeleted: ce
 					}),
 					m && /* @__PURE__ */ (0, K.jsxs)("p", {
 						className: "react-agent-scope",
@@ -19832,17 +19846,17 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 			}),
 			/* @__PURE__ */ (0, K.jsxs)("div", {
 				className: "react-agent-dock-body",
-				ref: D,
+				ref: j,
 				children: [
 					/* @__PURE__ */ (0, K.jsx)("div", {
 						className: "react-agent-watermark",
 						"aria-hidden": "true",
-						dangerouslySetInnerHTML: { __html: F.monoLogo }
+						dangerouslySetInnerHTML: { __html: z.monoLogo }
 					}),
-					H.length > 0 && /* @__PURE__ */ (0, K.jsxs)("div", {
+					G.length > 0 && /* @__PURE__ */ (0, K.jsxs)("div", {
 						className: "react-agent-preflight",
 						role: "status",
-						children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "Agent 준비 상태 확인 필요" }), H.slice(0, 3).map((e) => /* @__PURE__ */ (0, K.jsx)("p", { children: e.message }, e.id))]
+						children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "Agent 준비 상태 확인 필요" }), G.slice(0, 3).map((e) => /* @__PURE__ */ (0, K.jsx)("p", { children: e.message }, e.id))]
 					}),
 					/* @__PURE__ */ (0, K.jsx)("div", {
 						className: "react-agent-messages",
@@ -19855,9 +19869,9 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 										/* @__PURE__ */ (0, K.jsx)("span", {
 											className: "react-agent-mini-logo",
 											"aria-hidden": "true",
-											dangerouslySetInnerHTML: { __html: F.logo }
+											dangerouslySetInnerHTML: { __html: z.logo }
 										}),
-										/* @__PURE__ */ (0, K.jsx)("strong", { children: P?.label || F.label }),
+										/* @__PURE__ */ (0, K.jsx)("strong", { children: R?.label || z.label }),
 										/* @__PURE__ */ (0, K.jsx)("time", { children: Mc(e.createdAt) })
 									]
 								}),
@@ -19871,7 +19885,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 									children: /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"data-qa": "agent-job-resume",
-										onClick: () => void ee(e.id, e.jobId),
+										onClick: () => void ne(e.id, e.jobId),
 										children: "상태 다시 확인"
 									})
 								}),
@@ -19906,12 +19920,12 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 											children: [/* @__PURE__ */ (0, K.jsx)("button", {
 												type: "button",
 												"data-qa": "proposal-approve",
-												onClick: () => re(e.id, e.proposal.id, "approve"),
+												onClick: () => ue(e.id, e.proposal.id, "approve"),
 												children: "승인"
 											}), /* @__PURE__ */ (0, K.jsx)("button", {
 												type: "button",
 												"data-qa": "proposal-reject",
-												onClick: () => re(e.id, e.proposal.id, "reject"),
+												onClick: () => ue(e.id, e.proposal.id, "reject"),
 												children: "거절"
 											})]
 										}) : /* @__PURE__ */ (0, K.jsxs)("p", {
@@ -19928,7 +19942,7 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 			}),
 			/* @__PURE__ */ (0, K.jsxs)("form", {
 				className: "react-agent-form",
-				onSubmit: te,
+				onSubmit: re,
 				children: [
 					/* @__PURE__ */ (0, K.jsx)("textarea", {
 						"data-qa": "agent-input",
@@ -19944,80 +19958,122 @@ function qc({ surface: e, open: t, onOpen: n, onClose: r }) {
 						className: "react-agent-form-toolbar",
 						children: [/* @__PURE__ */ (0, K.jsxs)("div", {
 							className: "react-agent-tools",
-							children: [
-								/* @__PURE__ */ (0, K.jsx)("select", {
-									value: y || I,
-									onChange: (e) => j(e.currentTarget.value === I ? "" : e.currentTarget.value),
-									"aria-label": "이 대화의 CLI",
-									title: "이 대화에만 적용됩니다. 전역 기본은 상단바와 설정에서 바꿉니다.",
-									children: (i?.adapters || []).map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
-										value: e.id,
-										disabled: e.bridgeSupported === !1,
-										children: (e.label || e.id).replace(/\s*(Code\s*)?CLI$/i, "")
-									}, e.id))
-								}),
-								/* @__PURE__ */ (0, K.jsx)("select", {
-									value: _,
-									onChange: (e) => ne(e.currentTarget.value),
-									"aria-label": "모델 버전",
-									children: R.length ? R.map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
-										value: e.value,
-										children: e.label
-									}, e.value)) : /* @__PURE__ */ (0, K.jsx)("option", {
-										value: "",
-										children: "기본 버전"
-									})
-								}),
-								/* @__PURE__ */ (0, K.jsxs)("select", {
-									value: x,
-									onChange: (e) => S(e.currentTarget.value),
-									"aria-label": "노력 단계",
+							ref: T,
+							children: [/* @__PURE__ */ (0, K.jsxs)("button", {
+								type: "button",
+								className: "react-agent-run-trigger",
+								ref: E,
+								"aria-haspopup": "dialog",
+								"aria-expanded": C,
+								"aria-label": `실행 설정: ${te}`,
+								title: te,
+								onClick: () => w((e) => !e),
+								children: [/* @__PURE__ */ (0, K.jsxs)("svg", {
+									viewBox: "0 0 16 16",
+									fill: "none",
+									"aria-hidden": "true",
+									width: "14",
+									height: "14",
 									children: [
-										/* @__PURE__ */ (0, K.jsx)("option", {
-											value: "low",
-											children: "노력 낮음"
+										/* @__PURE__ */ (0, K.jsx)("path", {
+											d: "M2.5 5h11M2.5 11h11",
+											stroke: "currentColor",
+											strokeWidth: "1.5",
+											strokeLinecap: "round"
 										}),
-										/* @__PURE__ */ (0, K.jsx)("option", {
-											value: "medium",
-											children: "노력 중간"
+										/* @__PURE__ */ (0, K.jsx)("circle", {
+											cx: "6",
+											cy: "5",
+											r: "1.9",
+											fill: "currentColor"
 										}),
-										/* @__PURE__ */ (0, K.jsx)("option", {
-											value: "high",
-											children: "노력 높음"
-										}),
-										/* @__PURE__ */ (0, K.jsx)("option", {
-											value: "max",
-											children: "노력 최대"
+										/* @__PURE__ */ (0, K.jsx)("circle", {
+											cx: "10.5",
+											cy: "11",
+											r: "1.9",
+											fill: "currentColor"
 										})
 									]
-								})
-							]
+								}), /* @__PURE__ */ (0, K.jsx)("span", { children: te })]
+							}), C && /* @__PURE__ */ (0, K.jsxs)("div", {
+								className: "react-agent-run-menu",
+								role: "dialog",
+								"aria-label": "실행 설정",
+								children: [
+									/* @__PURE__ */ (0, K.jsxs)("label", { children: [
+										/* @__PURE__ */ (0, K.jsx)("span", { children: "이 대화의 CLI" }),
+										/* @__PURE__ */ (0, K.jsx)("select", {
+											value: y || H,
+											onChange: (e) => F(e.currentTarget.value === H ? "" : e.currentTarget.value),
+											children: (i?.adapters || []).map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
+												value: e.id,
+												disabled: e.bridgeSupported === !1,
+												children: e.label || e.id
+											}, e.id))
+										}),
+										/* @__PURE__ */ (0, K.jsx)("small", { children: "이 대화에만 적용됩니다. 전역 기본은 상단바와 설정에서 바꿉니다." })
+									] }),
+									/* @__PURE__ */ (0, K.jsxs)("label", { children: [/* @__PURE__ */ (0, K.jsx)("span", { children: "모델 버전" }), /* @__PURE__ */ (0, K.jsx)("select", {
+										value: _,
+										onChange: (e) => le(e.currentTarget.value),
+										children: ee.length ? ee.map((e) => /* @__PURE__ */ (0, K.jsx)("option", {
+											value: e.value,
+											children: e.label
+										}, e.value)) : /* @__PURE__ */ (0, K.jsx)("option", {
+											value: "",
+											children: "기본 버전"
+										})
+									})] }),
+									/* @__PURE__ */ (0, K.jsxs)("label", { children: [/* @__PURE__ */ (0, K.jsx)("span", { children: "노력 단계" }), /* @__PURE__ */ (0, K.jsxs)("select", {
+										value: x,
+										onChange: (e) => S(e.currentTarget.value),
+										children: [
+											/* @__PURE__ */ (0, K.jsx)("option", {
+												value: "low",
+												children: "노력 낮음"
+											}),
+											/* @__PURE__ */ (0, K.jsx)("option", {
+												value: "medium",
+												children: "노력 중간"
+											}),
+											/* @__PURE__ */ (0, K.jsx)("option", {
+												value: "high",
+												children: "노력 높음"
+											}),
+											/* @__PURE__ */ (0, K.jsx)("option", {
+												value: "max",
+												children: "노력 최대"
+											})
+										]
+									})] })
+								]
+							})]
 						}), /* @__PURE__ */ (0, K.jsx)("button", {
 							className: "btn btn--primary btn--sm",
 							type: "submit",
 							"data-qa": "agent-submit",
-							disabled: C || !h.trim(),
-							children: C ? "작업 중" : "보내기"
+							disabled: D || !h.trim(),
+							children: D ? "작업 중" : "보내기"
 						})]
 					}),
-					L && /* @__PURE__ */ (0, K.jsxs)("p", {
+					U && /* @__PURE__ */ (0, K.jsxs)("p", {
 						className: "react-agent-scope-note",
 						children: [
 							"이 대화만 ",
-							P?.label || y,
+							R?.label || y,
 							"로 돕니다. 전역 기본은 그대로입니다."
 						]
 					}),
-					T && /* @__PURE__ */ (0, K.jsx)("p", {
+					k && /* @__PURE__ */ (0, K.jsx)("p", {
 						className: "react-agent-error",
-						children: T
+						children: k
 					})
 				]
 			})
 		]
 	}) : /* @__PURE__ */ (0, K.jsx)("aside", {
 		className: "react-agent-dock is-closed",
-		style: z,
+		style: W,
 		"aria-label": "AI Agent 닫힘",
 		children: /* @__PURE__ */ (0, K.jsxs)("button", {
 			type: "button",
