@@ -279,22 +279,40 @@ def briefing_session_mode(scope, value="", market_windows=None):
     return ""
 
 
-def briefing_session_date(report_date, scope, *, session_date="", session_mode="", market_windows=None):
-    explicit = str(session_date or "").strip()[:10]
-    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", explicit):
-        return explicit
-    windows = market_windows or {}
-    normalized_scope = normalize_market_scope(scope)
-    if normalized_scope == "us":
-        return str(windows.get("usRegularSessionDate") or report_date or "")[:10]
-    if normalized_scope == "kr":
+def _session_date_from_windows(scope, windows, session_mode=""):
+    """이 시장의 세션일을 창에서 읽는다. 창에 답이 없으면 빈 문자열."""
+    if scope == "us":
+        return str(windows.get("usRegularSessionDate") or "")[:10]
+    if scope == "kr":
         mode = briefing_session_mode("kr", session_mode, windows)
         if mode in {"kr_intraday", "kr_close"} and windows.get("krCurrentSessionDate"):
             return str(windows.get("krCurrentSessionDate"))[:10]
-        return str(windows.get("krPreviousSessionDate") or report_date or "")[:10]
-    if normalized_scope in {"europe", "jp"}:
-        session = (windows.get("marketSessions") or {}).get(normalized_scope) or {}
-        return str(session.get("sessionDate") or report_date or "")[:10]
+        return str(windows.get("krPreviousSessionDate") or "")[:10]
+    if scope in {"europe", "jp"}:
+        session = (windows.get("marketSessions") or {}).get(scope) or {}
+        return str(session.get("sessionDate") or "")[:10]
+    return ""
+
+
+def briefing_session_date(report_date, scope, *, session_date="", session_mode="", market_windows=None):
+    """이 브리핑이 다루는 거래일.
+
+    **창이 있으면 창이 권위다.** 저장된 `sessionDate`는 원래 이 창에서 파생된 값이라
+    제대로 만들어진 보고서에서는 둘이 같다. 다른 경우는 창을 못 받고 만들어져 발행일이
+    박힌 보고서뿐이고, 그때 저장값을 믿으면 틀린 제목이 영원히 남는다 — 실제로 월요일
+    08:03에 만든 브리핑이 아직 열지도 않은 그날 장을 `2026.08.10 마감`이라고 계속
+    말했다. 창을 권위로 두면 이미 저장된 보고서도 읽을 때 제자리를 찾는다.
+
+    창이 없는 옛 보고서는 저장값을 그대로 쓴다.
+    """
+    windows = market_windows or {}
+    normalized_scope = normalize_market_scope(scope)
+    from_windows = _session_date_from_windows(normalized_scope, windows, session_mode)
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", from_windows or ""):
+        return from_windows
+    explicit = str(session_date or "").strip()[:10]
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", explicit):
+        return explicit
     return str(report_date or "")[:10]
 
 

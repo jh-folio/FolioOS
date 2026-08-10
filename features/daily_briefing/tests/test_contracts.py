@@ -32,6 +32,7 @@ from features.daily_briefing.schema import (
     briefing_expected_titles,
     briefing_file_name,
     briefing_archive_items,
+    briefing_market_metadata,
     briefing_export_units,
     briefing_scope_view,
     enrich_briefing_sections,
@@ -570,3 +571,68 @@ def test_both_generation_paths_hand_over_the_windows():
 
     for source in (inspect.getsource(builder.build_briefing), inspect.getsource(agent_service.write_briefing_from_markdown)):
         assert "market_windows=" in enrich_call(source), "창을 넘기지 않으면 세션 판정이 버려진다"
+
+
+def test_the_windows_outrank_a_session_date_saved_from_the_publication_day():
+    """저장된 `sessionDate`는 원래 창에서 파생된 값이다. 둘이 어긋나면 창이 맞다.
+
+    실제로 월요일 08:03에 만든 브리핑이 `sessionDate: 2026-08-10`을 달고 저장돼,
+    아직 열지도 않은 그날 장을 `2026.08.10 마감`이라고 계속 말했다. 본문 제목은
+    `2026.08.07 마감`으로 맞았는데 메타데이터만 틀린 상태였다. 창을 권위로 두면
+    이미 저장된 보고서도 읽을 때 제자리를 찾는다.
+    """
+    from features.common.market_calendar import briefing_market_windows
+
+    windows = briefing_market_windows("2026-08-10", as_of="2026-08-09T23:03:50Z")
+    report = {
+        "date": "2026-08-10", "marketScope": "us", "briefingType": "default",
+        "generatedAt": "2026-08-09T23:03:50Z", "marketWindows": windows,
+        # 창을 못 받고 만들어져 발행일이 박힌 값
+        "sessionDate": "2026-08-10",
+    }
+
+    item = briefing_market_metadata(report, "us", {"markdown": "# US Market Briefing"})
+
+    assert item["sessionDate"] == "2026-08-07"
+    assert item["title"] == "US Market Briefing — 2026.08.07 마감"
+
+
+def test_a_report_without_windows_keeps_its_saved_session_date():
+    """창이 없는 옛 보고서까지 발행일로 되돌리면 맞던 것이 틀어진다."""
+    report = {
+        "date": "2026-06-22", "marketScope": "us", "briefingType": "default",
+        "generatedAt": "2026-06-22T08:00:00+09:00",
+    }
+
+    item = briefing_market_metadata(report, "us", {"markdown": "# US", "marketSessionDate": "2026-06-19"})
+
+    assert item["sessionDate"] == "2026-06-19"
+
+
+@pytest.mark.parametrize("label, date, generated_at, kr_title, us_title", SESSION_TITLE_CASES)
+def test_the_rule_path_and_the_agent_path_agree(label, date, generated_at, kr_title, us_title):
+    """규칙 생성은 섹션에 `marketSessionDate`를 실어 보내고 Agent 생성은 markdown만 보낸다.
+    두 경로가 같은 시각에 다른 제목을 저장하면 안 된다."""
+    from features.common.market_calendar import briefing_market_windows
+    from features.daily_briefing.builder import _scope_session_date
+    from features.daily_briefing.service import session_modes_from_windows
+
+    windows = briefing_market_windows(date, as_of=generated_at)
+    modes = session_modes_from_windows(windows)
+    common = dict(
+        report_date=date, report_scope="both", briefing_type="default",
+        generated_at=generated_at, market_windows=windows,
+    )
+    agent = enrich_briefing_sections({"kr": {"markdown": "# a"}, "us": {"markdown": "# b"}}, **common)
+    rules = enrich_briefing_sections({
+        scope: {
+            "markdown": "# x",
+            "marketSessionDate": _scope_session_date(scope, windows),
+            "sessionMode": modes.get(scope, ""),
+        }
+        for scope in ("kr", "us")
+    }, **common)
+
+    for scope, expected in (("kr", kr_title), ("us", us_title)):
+        assert agent[scope]["title"].endswith(expected), f"{label} agent {scope}"
+        assert rules[scope]["title"] == agent[scope]["title"], f"{label} {scope}"
