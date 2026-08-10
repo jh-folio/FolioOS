@@ -272,6 +272,16 @@ type RetentionPreview = {
   reclaimableBytes?: number;
 };
 
+/** 그 패널이 방금 한 일의 결과. 누른 버튼 바로 아래에 뜬다. */
+function PanelNote({ note, panel }: { note: { panel: string; text: string; tone: "ok" | "error" } | null; panel: string }) {
+  if (!note || note.panel !== panel) return null;
+  return (
+    <p className={note.tone === "error" ? "react-dashboard-error" : "react-dashboard-warning"} role="status">
+      {note.text}
+    </p>
+  );
+}
+
 export function megabytes(bytes: number) {
   return `${Math.max(bytes / 1e6, 0).toFixed(bytes >= 1e8 ? 0 : 1)}MB`;
 }
@@ -802,8 +812,13 @@ export function SettingsRoute() {
   const [notionDraft, setNotionDraft] = useState({ token: "", dbId: "" });
   const [vaultPath, setVaultPath] = useState("");
   const [llmStatus, setLlmStatus] = useState<Record<string, LlmTestResult & { checking?: boolean }>>({});
-  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState("");
+  // 결과는 누른 버튼 옆에 뜬다. 예전에는 한 곳(화면 맨 위)에 모아서, 문서상 1,991px에 있는
+  // 자동화 저장을 눌러도 메시지가 54px에 떠 두 화면 반 위에 있었다 — 보이지 않는 확인이다.
+  const [note, setNote] = useState<{ panel: string; text: string; tone: "ok" | "error" } | null>(null);
+  const say = useCallback((panel: string, text: string) => setNote({ panel, text, tone: "ok" }), []);
+  const fail = useCallback((panel: string, text: string) => setNote({ panel, text, tone: "error" }), []);
+  // 화면 전체를 못 불러온 것은 어느 패널의 일도 아니라 위에 남긴다.
   const [error, setError] = useState("");
 
   const providers = settings?.llm?.providers || {};
@@ -910,13 +925,13 @@ export function SettingsRoute() {
 
   const loadCacheStats = useCallback(async () => {
     setBusy("cache");
-    setError("");
+    setNote(null);
     try {
       const payload = await getJson<CacheStats>("/api/cache/stats");
       setCacheStats(payload);
-      setStatus("캐시 상태를 불러왔습니다.");
+      say("cache", "캐시 상태를 불러왔습니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "캐시 상태를 불러오지 못했습니다.");
+      fail("cache", err instanceof Error ? err.message : "캐시 상태를 불러오지 못했습니다.");
     } finally {
       setBusy("");
     }
@@ -924,18 +939,18 @@ export function SettingsRoute() {
 
   async function cleanupCache() {
     setBusy("cache-cleanup");
-    setError("");
-    setStatus("오래된 기업 데이터 캐시를 정리하는 중입니다.");
+    fail("cache", "");
+    say("cache", "오래된 기업 데이터 캐시를 정리하는 중입니다.");
     try {
       const result = await postJson<CacheCleanup>("/api/cache/cleanup", {});
       const statsPayload = await getJson<CacheStats>("/api/cache/stats");
       setCacheStats(statsPayload);
       // 0개 삭제만 적으면 고장인지 지울 게 없는 것인지 알 수 없다.
-      setStatus(result.deleted
+      say("cache", result.deleted
         ? `캐시 정리 완료: ${result.deleted}개 삭제, ${result.freed_mb || 0}MB 확보`
         : "정리할 오래된 캐시가 없습니다. 보관 기간이 지난 파일만 지웁니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "캐시 정리에 실패했습니다.");
+      fail("cache", err instanceof Error ? err.message : "캐시 정리에 실패했습니다.");
     } finally {
       setBusy("");
     }
@@ -956,13 +971,13 @@ export function SettingsRoute() {
 
   async function runRetentionNow() {
     setBusy("retention");
-    setError("");
+    fail("automation", "");
     try {
       // 백그라운드 작업이라 여기서는 접수만 확인한다. 진행률은 상단 작업 표시가 맡는다.
       await postJson("/api/rss/retention/run", {});
-      setStatus("정리 작업을 시작했습니다. 진행 상황은 상단 작업 표시에서 확인합니다.");
+      say("automation", "정리 작업을 시작했습니다. 진행 상황은 상단 작업 표시에서 확인합니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "정리를 시작하지 못했습니다.");
+      fail("automation", err instanceof Error ? err.message : "정리를 시작하지 못했습니다.");
     } finally {
       setBusy("");
     }
@@ -995,11 +1010,11 @@ export function SettingsRoute() {
 
   async function saveAiAgentSettings() {
     if (!agentDirty) {
-      setStatus("변경 사항이 없습니다.");
+      say("agent", "변경 사항이 없습니다.");
       return;
     }
     setBusy("agent");
-    setStatus("AI Agent 설정을 저장하는 중입니다.");
+    say("agent", "AI Agent 설정을 저장하는 중입니다.");
     try {
       const models = Object.fromEntries(agentAdapters.map((adapter) => [adapter.id, adapter.model || ""]));
       models[agentProvider] = agentModel;
@@ -1024,11 +1039,11 @@ export function SettingsRoute() {
         return next;
       });
       window.dispatchEvent(new CustomEvent("folio:agent-settings-updated", { detail: agentPayload }));
-      setStatus(agentEnabled
+      say("agent", agentEnabled
         ? `AI Agent를 ${agentMode === "cli" ? "LLM CLI" : "LLM API"} 모드로 저장했습니다.`
         : "AI Agent 생성을 비활성화했습니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "AI Agent 설정 저장에 실패했습니다.");
+      fail("agent", err instanceof Error ? err.message : "AI Agent 설정 저장에 실패했습니다.");
     } finally {
       setBusy("");
     }
@@ -1057,11 +1072,11 @@ export function SettingsRoute() {
 
   async function saveApiSettings() {
     if (!apiDirty) {
-      setStatus("변경 사항이 없습니다.");
+      say("api", "변경 사항이 없습니다.");
       return;
     }
     setBusy("api");
-    setStatus("외부 데이터 API 설정을 저장하는 중입니다.");
+    say("api", "외부 데이터 API 설정을 저장하는 중입니다.");
     try {
       const payload = await postJson<SettingsPayload>("/api/settings", {
         fred: { apiKey: apiDraft.fred.trim() },
@@ -1074,9 +1089,9 @@ export function SettingsRoute() {
         bok: "",
         dart: "",
       });
-      setStatus("외부 데이터 API 설정을 저장했습니다.");
+      say("api", "외부 데이터 API 설정을 저장했습니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "API 설정 저장에 실패했습니다.");
+      fail("api", err instanceof Error ? err.message : "API 설정 저장에 실패했습니다.");
     } finally {
       setBusy("");
     }
@@ -1084,20 +1099,20 @@ export function SettingsRoute() {
 
   async function saveNotionSettings() {
     if (!notionDirty) {
-      setStatus("변경 사항이 없습니다.");
+      say("notion", "변경 사항이 없습니다.");
       return;
     }
     setBusy("notion");
-    setStatus("Notion 설정을 저장하는 중입니다.");
+    say("notion", "Notion 설정을 저장하는 중입니다.");
     try {
       const payload = await postJson<SettingsPayload>("/api/settings", {
         notion: { token: notionDraft.token.trim(), dbId: notionDraft.dbId.trim() },
       });
       setSettings(payload);
       setNotionDraft({ token: "", dbId: payload.notion?.dbId || "" });
-      setStatus("Notion 설정을 저장했습니다.");
+      say("notion", "Notion 설정을 저장했습니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Notion 설정 저장에 실패했습니다.");
+      fail("notion", err instanceof Error ? err.message : "Notion 설정 저장에 실패했습니다.");
     } finally {
       setBusy("");
     }
@@ -1105,18 +1120,18 @@ export function SettingsRoute() {
 
   async function saveObsidianSettings() {
     if (!obsidianDirty) {
-      setStatus("변경 사항이 없습니다.");
+      say("obsidian", "변경 사항이 없습니다.");
       return;
     }
     setBusy("obsidian");
-    setStatus("Obsidian 경로를 저장하는 중입니다.");
+    say("obsidian", "Obsidian 경로를 저장하는 중입니다.");
     try {
       const payload = await postJson<ObsidianSettings>("/api/obsidian/settings", { vaultPath: vaultPath.trim() });
       setObsidian(payload);
       setVaultPath(payload.vaultPath || vaultPath);
-      setStatus(payload.vaultPath ? "Obsidian 경로를 저장했습니다." : "Vault 경로를 입력하세요.");
+      say("obsidian", payload.vaultPath ? "Obsidian 경로를 저장했습니다." : "Vault 경로를 입력하세요.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Obsidian 설정 저장에 실패했습니다.");
+      fail("obsidian", err instanceof Error ? err.message : "Obsidian 설정 저장에 실패했습니다.");
     } finally {
       setBusy("");
     }
@@ -1124,18 +1139,18 @@ export function SettingsRoute() {
 
   async function saveAutomationSettings() {
     if (!automationDirty) {
-      setStatus("변경 사항이 없습니다.");
+      say("automation", "변경 사항이 없습니다.");
       return;
     }
     setBusy("automation");
-    setStatus("자동화 설정을 저장하는 중입니다.");
+    say("automation", "자동화 설정을 저장하는 중입니다.");
     try {
       const payload = await postJson<AutomationSettings>("/api/automation/settings", buildAutomationPayload(automation));
       setAutomation(buildAutomationPayload(payload));
       setAutomationSaved(buildAutomationPayload(payload));
-      setStatus("자동화 설정을 저장했습니다.");
+      say("automation", "자동화 설정을 저장했습니다.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "자동화 설정 저장에 실패했습니다.");
+      fail("automation", err instanceof Error ? err.message : "자동화 설정 저장에 실패했습니다.");
     } finally {
       setBusy("");
     }
@@ -1175,7 +1190,6 @@ export function SettingsRoute() {
       </div>
 
       {error && <p className="react-dashboard-error">{error}</p>}
-      {status && <p className="react-dashboard-warning">{status}</p>}
 
       {tab === "integrations" ? (
         <div id="settings-integrations" className="sub-tab-panel active">
@@ -1289,6 +1303,7 @@ export function SettingsRoute() {
               <button className={agentDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveAiAgentSettings} disabled={busy === "agent"}>AI Agent 설정 저장</button>
               <button className="btn" type="button" onClick={() => loadAll(true)} disabled={busy === "load"}>모델/상태 새로고침</button>
             </div>
+            <PanelNote note={note} panel="agent" />
           </section>
 
           <section className="settings-panel input-panel">
@@ -1309,6 +1324,7 @@ export function SettingsRoute() {
               {apiDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
               <button className={apiDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveApiSettings} disabled={busy === "api"}>API 설정 저장</button>
             </div>
+            <PanelNote note={note} panel="api" />
           </section>
 
           <section className="settings-panel input-panel">
@@ -1325,6 +1341,7 @@ export function SettingsRoute() {
               {notionDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
               <button className={notionDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveNotionSettings} disabled={busy === "notion"}>Notion 설정 저장</button>
             </div>
+            <PanelNote note={note} panel="notion" />
           </section>
 
           <section className="settings-panel input-panel">
@@ -1337,6 +1354,7 @@ export function SettingsRoute() {
               {obsidianDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
               <button className={obsidianDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveObsidianSettings} disabled={busy === "obsidian"}>Obsidian 설정 저장</button>
             </div>
+            <PanelNote note={note} panel="obsidian" />
           </section>
         </div>
       ) : (
@@ -1471,6 +1489,7 @@ export function SettingsRoute() {
               {automationDirty && !busy && <span className="settings-dirty-hint">저장 안 된 변경</span>}
               <button className={automationDirty && !busy ? "btn btn--primary" : "btn"} type="button" onClick={saveAutomationSettings} disabled={busy === "automation"}>자동화 저장</button>
             </div>
+            <PanelNote note={note} panel="automation" />
           </section>
           <section className="settings-panel input-panel">
             <div className="input-panel-header">
@@ -1510,6 +1529,7 @@ export function SettingsRoute() {
                 {busy === "cache-cleanup" ? "정리 중" : "오래된 캐시 정리"}
               </button>
             </div>
+            <PanelNote note={note} panel="cache" />
           </section>
           <section className="settings-panel input-panel">
             <div className="input-panel-header">

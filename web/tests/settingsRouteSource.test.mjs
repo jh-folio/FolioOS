@@ -62,6 +62,20 @@ test("Settings route preserves legacy settings visual class contracts", async ()
   assert.doesNotMatch(source, /tossClientSecret/);
 });
 
+test("each settings panel reports its own outcome next to its own button", async () => {
+  const source = await readFile(new URL("../src/app/SettingsRoute.tsx", import.meta.url), "utf8");
+
+  // 결과를 화면 맨 위 한 곳에 모으면, 문서상 1,991px에 있는 자동화 저장을 눌러도
+  // 메시지가 54px에 떠 두 화면 반 위에 있다 — 보이지 않는 확인이다.
+  assert.match(source, /function PanelNote/);
+  for (const panel of ["agent", "api", "notion", "obsidian", "automation", "cache"]) {
+    assert.match(source, new RegExp(`<PanelNote note=\{note\} panel="${panel}" />`), panel);
+  }
+  // 페이지 전체를 못 불러온 것만 위에 남는다.
+  assert.doesNotMatch(source, /\{status && <p/);
+  assert.doesNotMatch(source, /setStatus\(/);
+});
+
 test("AppShell renders SettingsRoute on the settings route", async () => {
   const source = await readFile(new URL("../src/app/AppShell.tsx", import.meta.url), "utf8");
 

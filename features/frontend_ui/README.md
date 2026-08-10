@@ -8,6 +8,14 @@
 
 우측 전역 Action Panel은 제거되었다. 보고서 조작은 리더 내부 조작 레일과 노트 패널에서 처리한다.
 
+## 설정 화면의 결과 알림
+
+각 패널의 저장·정리 결과는 **그 패널 안, 누른 버튼 바로 아래**에 뜹니다(`PanelNote`). 예전에는 화면 맨 위 한 곳에 모았는데, 문서상 1,991px에 있는 `자동화 저장`을 눌러도 메시지가 54px에 떠 뷰포트 720px 기준 두 화면 반 위에 있었습니다 — 보이지 않는 확인입니다.
+
+- 알림은 한 번에 하나입니다. 어느 패널이 방금 무엇을 했는지가 헷갈리면 안 됩니다.
+- 화면 전체를 못 불러온 오류만 상단에 남습니다. 어느 패널의 일도 아니기 때문입니다.
+- 성공은 `react-dashboard-warning`, 실패는 `react-dashboard-error`이며 `role="status"`를 답니다.
+
 ## React SPA 전환 방향
 
 `web/` React/TypeScript SPA가 routing, navigation, Agent Home, Deep Research, Dashboard, Report Reader, Notes, Settings를 소유한다. `public/app.js`는 더 이상 화면 상태나 view 전환을 관리하지 않고, 검증된 Markdown/visual/source 렌더러를 React에 제공하는 bridge-only 역할만 맡는다. React 전환 자체는 [REACT_SPA_REWRITE_PLAN.md](../../roadmap/completed/REACT_SPA_REWRITE_PLAN.md)에 완료 이력으로 남긴다.
