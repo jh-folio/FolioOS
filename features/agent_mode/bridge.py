@@ -26,6 +26,22 @@ STATUS_ADAPTERS = ADAPTERS
 # adapter id → 실제 실행 바이너리 이름.
 BINARY_NAMES = {"codex": "codex", "claude": "claude", "antigravity": "agy"}
 
+# agy headless가 파일 읽기를 거부했다는 표시. Folio OS의 Agent task는 **전부** 컨텍스트
+# 팩 파일을 읽는 것으로 시작하므로(팩이 5MB라 프롬프트에 넣을 수 없다), 이 권한이 없으면
+# 브리핑·기업분석 같은 task를 아예 만들 수 없다. 대화처럼 파일을 안 읽는 호출은 된다.
+AGY_PERMISSION_DENIED_MARK = 'the "read_file" permission'
+AGY_PERMISSION_HELP = (
+    "Antigravity(agy)의 headless 모드가 파일 읽기 권한을 자동 거부했습니다. Folio OS의 "
+    "브리핑·기업분석은 컨텍스트 팩 파일을 읽어야 하므로 이 상태에서는 만들 수 없습니다. "
+    "설정에서 Codex나 Claude CLI로 바꾸거나, "
+    "`~/.gemini/antigravity-cli/settings.json`의 permissions.allow에 read_file 규칙을 "
+    "추가하세요."
+)
+
+# 한 번 거부당하면 같은 실행에서 다시 시도하지 않는다. 예약 브리핑이 매번 팩을 만들고
+# 수 분을 버린 뒤 같은 곳에서 실패했다(실측 8분 30초).
+_AGY_FILE_READS_BLOCKED = False
+
 _STATUS_CACHE: tuple[float, dict] | None = None
 _STATUS_LOCK = threading.Lock()
 _PROCESS_LOCK = threading.Lock()
@@ -91,6 +107,13 @@ def _probe_adapter(adapter: str) -> dict:
             result["installed"] = True
         else:
             result["error"] = f"버전 확인 실패 (exit {proc.returncode})"
+            return result
+
+        if adapter == "antigravity" and _AGY_FILE_READS_BLOCKED:
+            # 설치·로그인은 멀쩡하다. 막힌 것은 파일 읽기라 Agent task만 못 만든다.
+            result["bridgeSupported"] = False
+            result["available"] = False
+            result["error"] = AGY_PERMISSION_HELP
             return result
 
         if adapter == "antigravity":
@@ -165,6 +188,10 @@ def _agy_headless_works(version_text: str) -> bool:
 def bridge_status(*, refresh: bool = False) -> dict:
     global _STATUS_CACHE
     load_dotenv()
+    if refresh:
+        # 사용자가 새로고침을 눌렀다면 설정을 고쳤을 수 있다. 한 번 막혔다고 영영
+        # 막아두면 고치고도 되돌릴 방법이 화면에 없다.
+        reset_agy_permission_state()
     with _STATUS_LOCK:
         if not refresh and _STATUS_CACHE and time.monotonic() - _STATUS_CACHE[0] < 15:
             return _STATUS_CACHE[1]
@@ -463,6 +490,27 @@ def _result_summary(task_type: str, pack: dict, result: dict, adapter: str) -> d
     return summary
 
 
+def _mark_agy_file_reads_blocked() -> None:
+    global _AGY_FILE_READS_BLOCKED
+    _AGY_FILE_READS_BLOCKED = True
+    invalidate_bridge_status()
+
+
+def reset_agy_permission_state() -> None:
+    """설정을 고친 뒤 다시 시도할 수 있게 한다(상태 새로고침이 부른다)."""
+    global _AGY_FILE_READS_BLOCKED
+    _AGY_FILE_READS_BLOCKED = False
+
+
+def _prompt_needs_file_read(prompt: str) -> bool:
+    """컨텍스트 팩을 읽으라는 프롬프트인가.
+
+    대화처럼 파일을 안 읽는 호출은 권한 없이도 정상 동작한다(실측으로 짧은 프롬프트는
+    20초에 응답했다). 그것까지 막으면 도크가 통째로 죽는다.
+    """
+    return "Agent Context Pack" in prompt
+
+
 def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "", model_override: str = "") -> str:
     is_antigravity = selected.get("id") == "antigravity"
     if is_antigravity and os.name == "nt" and not _agy_headless_works(selected.get("version", "")):
@@ -473,6 +521,10 @@ def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "
             f"반환하지 못합니다(agy 업스트림 버그, {AGY_HEADLESS_FIXED} 이상에서 해결). "
             "agy를 업데이트하거나 Codex 또는 Claude CLI를 선택해 생성하세요."
         )
+    if is_antigravity and _AGY_FILE_READS_BLOCKED and _prompt_needs_file_read(prompt):
+        # 이미 거부당한 것을 알고 있다. 팩을 만들고 수 분을 버린 뒤 같은 곳에서
+        # 실패하게 두지 않는다.
+        raise RuntimeError(AGY_PERMISSION_HELP)
     command = _adapter_command(selected, prompt, model_override=model_override)
     proc = subprocess.Popen(
         command,
@@ -508,6 +560,12 @@ def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "
     output = _strip_outer_fence(stdout)
     if not output:
         detail = (stderr or "").strip()[-500:]
+        if is_antigravity and AGY_PERMISSION_DENIED_MARK in (stderr or ""):
+            # agy는 이 경우 exit 0에 빈 stdout으로 끝난다. 일반 "빈 결과"로 보고하면
+            # 사용자는 무엇을 고쳐야 할지 알 수 없다 — 실제로 예약 브리핑이 며칠 동안
+            # `internal_error`로만 남았다.
+            _mark_agy_file_reads_blocked()
+            raise RuntimeError(AGY_PERMISSION_HELP)
         raise RuntimeError(
             "Agent CLI가 최종 결과를 반환하지 않았습니다." + (f" (stderr: {detail})" if detail else "")
         )

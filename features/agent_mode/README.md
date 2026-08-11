@@ -82,6 +82,23 @@ CLI 선택은 **범위가 둘**이다. 자리도 둘이고, 화면이 어느 쪽
 
 설정 탭의 `AI Agent 설정`에서는 Agent 생성 ON/OFF와 CLI/API 모드를 토글하고, CLI 모드에서는 Codex CLI, Claude Code CLI, Antigravity CLI 중 하나를 선택해 모델을 지정합니다. 모델 목록은 마지막으로 갱신한 캐시를 기본으로 사용하고, 사용자가 새로고침을 누를 때만 CLI 모델 조회 명령을 실행합니다. 설치 명령은 실행 전에 사용자 확인을 받습니다.
 
+### agy headless는 파일을 읽지 못한다 (0.5.3 확인)
+
+agy 1.1.12의 headless(`--print`)는 **파일 읽기 권한을 자동 거부한다.** 대화형이 아니라 물어볼 수 없으니 거부하는 것이고, exit 0에 stdout이 비어 끝난다:
+
+```
+jetski: no output produced — a tool required the "read_file" permission that headless
+mode cannot prompt for, so it was auto-denied. Add an allow-rule under permissions.allow
+in settings.json (e.g. read_file(<target>)).
+```
+
+**Folio OS의 Agent task는 전부 컨텍스트 팩 파일을 읽는 것으로 시작한다.** 팩이 5.2MB라 프롬프트에 넣을 수 없고(게다가 agy는 프롬프트를 명령 인자로 받아 Windows 32,767자 한계가 걸린다), `--add-dir`로도 열리지 않는다(실측). 그래서 antigravity로는 브리핑·기업분석을 만들 수 없다. 파일을 읽지 않는 호출(도크 대화, 테마 계획)은 정상 동작한다 — 실측으로 짧은 프롬프트는 20초에 응답했다.
+
+- 실패는 `AGY_PERMISSION_DENIED_MARK`로 알아보고 `AGY_PERMISSION_HELP`를 올린다. 예전에는 일반 "빈 결과"와 구분되지 않아 예약 브리핑이 `internal_error`로만 남았고, 한 번에 **8분 30초**를 버린 뒤 실패했다(실측 2026-08-11 18:00 KR/JP 예약).
+- 한 번 거부당하면 `_AGY_FILE_READS_BLOCKED`가 서고, 다음 팩 task는 팩을 만들기 전에 즉시 막는다. 상태 행도 `bridgeSupported: false`로 사유를 함께 낸다.
+- `상태 새로고침`(`bridge_status(refresh=True)`)이 이 표시를 지운다. 설정을 고치고도 되돌릴 방법이 화면에 없으면 안 된다.
+- **`--dangerously-skip-permissions`를 자동으로 붙이지 않는다.** 이름 그대로 파일 쓰기와 셸 실행까지 전부 자동 승인한다. 사용자의 자료가 든 폴더에서 도는 일이라 우리가 대신 정할 문제가 아니다. 설정 파일은 `~/.gemini/antigravity-cli/settings.json`이며, 여기에 규칙을 넣는 것도 사용자의 전역 CLI 설정을 바꾸는 일이라 앱이 손대지 않는다.
+
 Antigravity CLI는 [공식 페이지](https://antigravity.google/product/antigravity-cli)의 `agy` 바이너리를 사용한다. 설치는 Windows `irm https://antigravity.google/cli/install.ps1 | iex`, 로그인은 인자 없이 `agy`(브라우저 OAuth)다. 실행은 `agy --model <model> --print <prompt>`로 단일 프롬프트를 비대화형 실행한다. 모델 이름에는 노력 단계가 함께 들어간다(`gemini-3.1-pro-high`, `gemini-3.6-flash-medium`, `claude-sonnet-4-6` 등). 단계 없는 예전 이름(`gemini-3.5-pro`)은 1.1.7이 `not recognized`로 거부하므로 기본 목록에서 뺐다 — 실시간 목록에 기본값이 덧붙는 구조라 선택지에 남아 있으면 고르는 순간 실행이 실패한다. 이 모델들로 브리핑·기업분석·테마분석 등 모든 Agent task를 작성할 수 있다.
 
 **Antigravity Windows headless는 agy 1.1.7에서 해결됐다.** 1.0.10의 Windows `--print`(headless)는 모델 응답을 stdout으로 반환하지 못했다. auth·모델 호출(`streamGenerateContent`)·종료(exit 0)는 정상인데, 응답이 의존하는 `transcript.jsonl`을 `C:\Users\...`가 아닌 `/Users\...`(POSIX) 경로로 열려다 실패하는 **agy 업스트림 버그** 때문에 출력이 사라졌다. 기본 `--print-timeout`(5분)이 지난 뒤 빈 결과로 끝나 "최종 결과를 반환하지 않았습니다" 오류가 났다.
