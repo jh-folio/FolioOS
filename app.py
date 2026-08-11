@@ -551,17 +551,37 @@ def api_create_briefing(body: dict | None = Body(default=None)):
     requested_markets = list(
         normalize_market_selection(body.get("markets") or body.get("marketScope", "both"))
     )
-    # 화면의 날짜 선택은 "시장 기준일"(그 시장의 세션일)이다. 저장 키와 아카이브
-    # 정렬은 계속 발행일이므로 여기서 한 번 옮긴다. 한 브리핑 안에서 미국장은
-    # 전일 정규장을, 한국장은 당일 장을 다루므로 변환은 시장마다 다르고, 그래서
-    # 발행일이 갈리면 그룹을 나눠 각각 만든다 — 하나로 합치면 나머지 시장이 고르지
-    # 않은 날의 브리핑을 받는다.
+    # 무엇에 대한 브리핑인지를 **먼저** 정한다. 화면의 날짜는 발행일이 아니라 그 시장의
+    # 세션일이며, 성립하지 않는 요청은 여기서 거부한다 — 08-10 08:02에 08-10 한국장을
+    # 요청하면 아직 열리지도 않은 장이고, 그것을 금요일 종가로 메운 것이 지난 사고였다.
     from features.common.market_calendar import publication_date_groups
+    from features.daily_briefing.target import resolve_targets
 
     requested_date = str(body.get("date") or "").strip()
+    targets, target_errors = resolve_targets(requested_markets, session_date=requested_date)
+    accepted = [target.market for target in targets]
+    if not accepted:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "no_valid_briefing_target",
+                "markets": [
+                    {"market": err.market, "reason": err.reason, "message": str(err)}
+                    for err in target_errors
+                ],
+            },
+        )
+    skipped = [
+        {"market": err.market, "reason": err.reason, "message": str(err)}
+        for err in target_errors
+    ]
+    # 앵커는 **아직** 발행일이다. 자료 창과 분석 모드가 발행일에 걸려 있어서(Phase 4가
+    # 옮긴다) 여기서 세션일을 앵커로 바꾸면 내용이 조용히 달라진다 — 특히 주말 생성은
+    # 직전 세션으로 앵커가 내려가 off-session 뉴스 창을 잃는다. target은 지금은 판정과
+    # 거부만 소유하고, 앵커 계산은 기존 경로를 그대로 쓴다.
     date_groups = (
-        publication_date_groups(requested_date, requested_markets)
-        if requested_date else [(kst_date(), requested_markets)]
+        publication_date_groups(requested_date, accepted)
+        if requested_date else [(kst_date(), accepted)]
     )
     if generation_mode == "llm_cli":
         jobs = [
@@ -578,12 +598,16 @@ def api_create_briefing(body: dict | None = Body(default=None)):
         if len(jobs) == 1:
             if prerequisites and isinstance(jobs[0], dict):
                 jobs[0]["prerequisites"] = prerequisites
+            if skipped and isinstance(jobs[0], dict):
+                jobs[0]["skippedMarkets"] = skipped
             return jobs[0]
         # 발행일이 갈렸다. 작업이 둘이라는 사실을 숨기지 않는다 — 하나만 돌려주면
         # 화면이 그것만 기다리다 나머지가 끝나기 전에 다 됐다고 말한다.
         payload = {"jobs": jobs}
         if prerequisites:
             payload["prerequisites"] = prerequisites
+        if skipped:
+            payload["skippedMarkets"] = skipped
         return payload
     reports = [
         build_briefing(
@@ -601,10 +625,14 @@ def api_create_briefing(body: dict | None = Body(default=None)):
     if len(reports) == 1:
         if prerequisites and isinstance(reports[0], dict):
             reports[0]["prerequisites"] = prerequisites
+        if skipped and isinstance(reports[0], dict):
+            reports[0]["skippedMarkets"] = skipped
         return reports[0]
     payload = {"reports": reports}
     if prerequisites:
         payload["prerequisites"] = prerequisites
+    if skipped:
+        payload["skippedMarkets"] = skipped
     return payload
 
 

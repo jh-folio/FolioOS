@@ -92,6 +92,59 @@ def test_cli_mode_submits_one_job_per_publication_date(monkeypatch: pytest.Monke
     assert [job["id"] for job in result["jobs"]] == ["job-2026-08-07", "job-2026-08-10"]
 
 
+def test_a_session_that_has_not_happened_is_refused(briefing_app):
+    """성립하지 않는 요청은 거부한다.
+
+    지난 사고의 직접 원인이 이것이었다 — 08-10 08:02에 08-10 한국장을 요청하자 코드가
+    금요일 종가로 메우고 그 값을 영구 캐시했다. 아주 먼 미래 날짜로 시각과 무관하게
+    같은 판정이 나오는지 본다.
+    """
+    from fastapi import HTTPException
+
+    app, calls = briefing_app
+
+    with pytest.raises(HTTPException) as caught:
+        app.api_create_briefing({"date": "2099-01-04", "markets": ["kr"]})
+
+    assert caught.value.status_code == 400
+    assert caught.value.detail["error"] == "no_valid_briefing_target"
+    assert [row["reason"] for row in caught.value.detail["markets"]] == ["session_not_available"]
+    assert calls == [], "거부된 요청은 생성을 시작하지 않는다"
+
+
+def test_a_weekend_session_is_refused(briefing_app):
+    """2026-08-08은 토요일이다."""
+    from fastapi import HTTPException
+
+    app, calls = briefing_app
+
+    with pytest.raises(HTTPException) as caught:
+        app.api_create_briefing({"date": "2026-08-08", "markets": ["kr", "us"]})
+
+    assert caught.value.status_code == 400
+    assert {row["reason"] for row in caught.value.detail["markets"]} == {"not_a_session"}
+    assert calls == []
+
+
+def test_a_market_closed_that_day_is_skipped_while_the_others_proceed(briefing_app):
+    """2026-07-03은 미국 독립기념일 대체휴장이라 뉴욕만 쉰다. 서울은 연다.
+
+    한 시장이 휴장이라고 다른 시장 브리핑까지 막을 이유가 없다. 대신 빠졌다는 사실을
+    응답에 남긴다 — 조용히 빠지면 사용자는 왜 없는지 알 수 없다.
+
+    날짜를 충분히 과거로 잡는다. 최근 날짜를 쓰면 그 시장의 오늘 장이 끝났는지에 따라
+    거부 사유가 `not_a_session`과 `session_not_available` 사이를 오간다(둘 다 옳은
+    거부지만 테스트가 시각에 의존하게 된다).
+    """
+    app, calls = briefing_app
+
+    result = app.api_create_briefing({"date": "2026-07-03", "markets": ["kr", "us"]})
+
+    assert [row["markets"] for row in calls] == [["kr"]]
+    assert [row["market"] for row in result["skippedMarkets"]] == ["us"]
+    assert result["skippedMarkets"][0]["reason"] == "not_a_session"
+
+
 def test_cli_mode_with_one_group_still_returns_a_bare_job(monkeypatch: pytest.MonkeyPatch):
     import app
 
