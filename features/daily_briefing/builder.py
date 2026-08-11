@@ -19,6 +19,7 @@ from features.common.canonical_reports import commit_sync, prepare
 from features.common.change_intelligence.service import decorate_candidate, project_committed_report
 from features.common.dataframe_ops import top_records
 from features.common.market_data.korea_session import korea_market_data as fetch_korea_session_data, session_state
+from features.daily_briefing.source_window import scope_session_documents
 from features.common.market_data.snapshot import fetch_market_snapshot
 from features.common.market_data.tape import build_market_tape
 from features.common.quality_generation.loop import apply_quality_loop
@@ -398,8 +399,9 @@ def build_briefing(
     except Exception:
         pass
     index = load_index()
+    all_documents = news_documents(index)
     docs, source_date, market_windows = select_briefing_docs(
-        news_documents(index), date, strict=bool(strict_date), today=today,
+        all_documents, date, strict=bool(strict_date), today=today,
         as_of=generated_at,
     )
     for doc in docs:
@@ -423,10 +425,25 @@ def build_briefing(
     prev_checklist = extract_prev_checklist((prev_briefing or {}).get("markdown", ""))
 
     requested_scopes = list(requested_markets)
+    # 자료 창을 시장별로 나눈다. 예전에는 한 풀을 모두가 공유했는데, 그 창이 발행일
+    # 하나에서 나와 미국·한국 세션이 union으로 섞여 있었다. 세션과 세션 사이로 창을
+    # 잡으면 주말·휴장 사이 뉴스도 다음 세션 브리핑에 자연히 들어온다.
+    scope_docs = {}
+    for scope in requested_scopes:
+        selected = scope_session_documents(
+            all_documents, scope, market_windows, today=today,
+            session_date=_scope_session_date(scope, market_windows),
+        )
+        # 창이 비면 예전 풀로 되돌아간다. 창을 좁히는 변경이 브리핑을 지우면 안 된다.
+        scope_docs[scope] = selected or docs
+    for scope_rows in scope_docs.values():
+        for doc in scope_rows:
+            doc.setdefault("marketSessionDate", infer_market_session_date(doc, market_windows))
     results, scope_warnings = generate_scope_results(
         requested_scopes,
         lambda scope: _scope_result(
-            scope, briefing_type, date, source_date, docs, market_windows, market_snapshot, korea_market_data,
+            scope, briefing_type, date, source_date, scope_docs[scope], market_windows,
+            market_snapshot, korea_market_data,
             memories, prev_checklist, quality_preflight, web_search_override, llm_override,
         ),
     )

@@ -29,6 +29,7 @@ from features.common.quality_generation.preflight_enrichment import build_prefli
 from features.common.quality_generation.prompt_hints import render_prompt_hints
 from features.common.quality_generation.quality_targets import render_quality_target_context
 from features.common.quality_generation.schema import normalize_quality_mode
+from features.daily_briefing.source_window import scope_session_documents
 from features.daily_briefing.service import (
     append_briefing_sources,
     briefing_sources_from_headlines,
@@ -274,10 +275,32 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         pass
     today = kst_date()
     index = load_index()
+    all_documents = news_documents(index)
     docs, source_date, market_windows = select_briefing_docs(
-        news_documents(index), date, strict=bool(strict_date), today=today,
+        all_documents, date, strict=bool(strict_date), today=today,
         as_of=generated_at,
     )
+    # 자료 창을 시장별 세션에서 파생한다. 예전에는 발행일 하나에서 나온 union을 모든
+    # 시장이 공유했다. 한 pack이 여러 시장을 담을 수 있으므로(같은 발행일 그룹) 풀은
+    # 시장별 창의 합집합이고, 시장 태그 필터가 그다음을 좁힌다.
+    scope_docs = {
+        target: scope_session_documents(
+            all_documents, target, market_windows, today=today,
+            session_date=_scope_session_date(target, market_windows),
+        )
+        for target in requested_markets
+    }
+    session_pool = []
+    seen_keys = set()
+    for rows in scope_docs.values():
+        for row in rows:
+            key = row.get("path") or row.get("url") or (row.get("title"), row.get("date"))
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            session_pool.append(row)
+    # 창이 비면 예전 풀로 되돌아간다. 창을 좁히는 변경이 브리핑을 지우면 안 된다.
+    docs = session_pool or docs
     for doc in docs:
         doc["marketSessionDate"] = infer_market_session_date(doc, market_windows)
     scoped_docs = documents_for_scope(docs, market_scope)
@@ -289,7 +312,7 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         issue_coverage_raw.extend(build_issue_coverage(scoped_docs, target, market_windows, limit=10))
     visual_scope_results = {}
     for target in requested_markets:
-        target_docs = documents_for_scope(docs, target)
+        target_docs = documents_for_scope(scope_docs.get(target) or docs, target)
         visual_scope_results[target] = {
             # 세션 기준일은 빌더와 같은 규칙을 쓴다. 여기서 따로 고르면 Agent 경로만
             # 유럽·일본에 한국 세션일을 찍는다.

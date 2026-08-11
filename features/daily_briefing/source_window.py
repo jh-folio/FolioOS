@@ -37,6 +37,37 @@ def kst_close_date(market: str, session_date: str) -> dt.date:
     return day + dt.timedelta(days=1) if market in OVERNIGHT_MARKETS else day
 
 
+def scope_session_state(scope: str, market_windows) -> str:
+    """그 시장 세션이 진행 중인가. 창에서 읽는다.
+
+    미국·유럽은 `phase`가 없다 — 한국시간 자정 이후에 마감하므로 브리핑 시점에는 언제나
+    직전 완료 세션이다.
+    """
+    windows = market_windows or {}
+    if scope == "kr":
+        phase = windows.get("krSessionPhase")
+    else:
+        phase = ((windows.get("marketSessions") or {}).get(scope) or {}).get("phase")
+    return "intraday" if phase == "intraday" else "closed"
+
+
+def scope_session_documents(documents, scope, market_windows, *, today: str = "", session_date: str = ""):
+    """그 시장 세션의 창에 드는 기사만 고른다.
+
+    예전에는 한 번 고른 문서 풀을 모든 시장이 공유했다. 창이 발행일 하나에서 나왔기
+    때문인데, 그 union에는 미국·한국 세션이 섞여 있어 시장별 브리핑이 서로의 자료를 봤다.
+
+    **창이 비면 호출부가 기존 풀로 되돌아간다.** 여기서 빈 목록을 돌려주면 예전에는
+    만들어지던 브리핑이 자료 없이 나온다 — 자료 창을 좁히는 변경이 브리핑을 지우는
+    결과로 이어지면 안 된다.
+    """
+    session = str(session_date or "")[:10]
+    if not session:
+        return []
+    dates = set(target_source_dates(scope, session, scope_session_state(scope, market_windows), today=today))
+    return [row for row in (documents or []) if str(row.get("date") or "") in dates]
+
+
 def target_source_dates(
     market: str,
     session_date: str,
