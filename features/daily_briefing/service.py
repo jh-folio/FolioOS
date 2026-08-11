@@ -1579,6 +1579,64 @@ def resolve_briefing(date, market_scope="both"):
     return _with_visual_compatibility(legacy) if isinstance(legacy, dict) else None
 
 
+def effective_session_date(report, market_scope):
+    """저장된 보고서가 **실제로** 다루는 세션일.
+
+    저장된 `sessionDate`를 그대로 믿지 않는다. 세션 창이 저장값을 이긴다는 기존 읽기
+    규칙(`briefing_market_metadata`)을 그대로 쓴다 — 창을 못 받고 만들어진 옛 보고서에는
+    발행일이 `sessionDate`로 박혀 있고, 그 값을 믿으면 틀린 세션으로 색인된다.
+    """
+    from features.daily_briefing.schema import briefing_market_metadata
+
+    if not isinstance(report, dict):
+        return ""
+    try:
+        return str(briefing_market_metadata(report, market_scope).get("sessionDate") or "")[:10]
+    except Exception:
+        return ""
+
+
+def resolve_briefing_by_session(session_date, market_scope):
+    """세션일로 찾는다. 새 키와 옛 발행일 키를 모두 본다.
+
+    저장 키가 세션일로 넘어가는 동안 두 형식이 섞여 있다. 파일명 모양은 같고
+    (`YYYY-MM-DD.market.json`) **날짜의 뜻만** 다르므로, 이름만 보고 고를 수 없다 —
+    찾은 파일이 정말 그 세션을 다루는지 확인해야 한다. 확인 없이 첫 후보를 받으면
+    옛 발행일 파일이 다른 세션의 브리핑으로 잘못 잡힌다.
+    """
+    from features.common.market_calendar import publication_date_for_session
+
+    scope = normalize_market_scope(market_scope)
+    if scope not in SINGLE_MARKET_SCOPES:
+        return None
+    import datetime as dt
+
+    from features.common.market_calendar import next_trading_day
+
+    session_text = _valid_briefing_date(session_date)
+    session_day = dt.date.fromisoformat(session_text)
+    market_code = {"us": "US", "kr": "KR", "europe": "EUROPE", "jp": "JP"}[scope]
+    # 옛 파일이 어느 날짜에 있는지는 **언제 만들어졌는지**에 달려 있었다.
+    #   - 세션일 그대로        마감 후에 만든 경우(한국·일본)
+    #   - 다음 거래일          `publication_date_for_session` 규칙(미국·유럽)
+    #   - 다음 달력 날짜       개장 전 예약이 `kst_date()`로 저장한 경우. 07:45 예약이
+    #                          전일 세션을 다루면서 그날 날짜로 저장돼 하루 앞섰다.
+    candidates = []
+    for candidate in (
+        session_text,
+        publication_date_for_session(session_text, [scope]),
+        (session_day + dt.timedelta(days=1)).isoformat(),
+        next_trading_day(session_day, market_code).isoformat(),
+    ):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+    for candidate in candidates:
+        report = resolve_briefing(candidate, scope)
+        if report and effective_session_date(report, scope) == session_text:
+            return report
+    return None
+
+
 def delete_briefing(date, market=None):
     """Delete a saved briefing report and its immutable visual sidecars.
 
