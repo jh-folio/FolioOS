@@ -62,6 +62,12 @@ def configured_provider() -> str:
 def settings_payload(*, refresh: bool = False) -> dict:
     from features.agent_mode.bridge import bridge_status
 
+    if refresh:
+        # 사용자가 명시적으로 누른 새로고침에서만 agy를 실제로 재본다. 상태를 볼 때마다
+        # 모델을 부를 수는 없다(실측 20초). 이 경로는 원래도 CLI마다 모델을 물어 느리고,
+        # 화면이 그 사실을 먼저 말한다.
+        _verify_agy_file_reads()
+
     status = bridge_status(refresh=refresh)
     adapters = []
     for item in status.get("adapters") or []:
@@ -85,6 +91,36 @@ def settings_payload(*, refresh: bool = False) -> dict:
         "adapters": adapters,
         "platform": os.name,
     }
+
+
+def _verify_agy_file_reads() -> None:
+    """agy가 팩 파일을 읽을 수 있는지 실제로 시켜 보고 결과를 남긴다.
+
+    **버전으로 판정하지 않는다**(§agy_capability). 재본 적이 없으면 브리지를 열지
+    않으므로, 이 확인이 유일한 개통 경로다.
+    """
+    from features.agent_mode import agy_capability, bridge
+
+    try:
+        row = next(
+            (item for item in bridge.bridge_status(refresh=True).get("adapters") or []
+             if item.get("id") == "antigravity"),
+            None,
+        )
+        if not row or not row.get("installed"):
+            return
+        version = str(row.get("version") or "")
+        if agy_capability.cached_file_reads(version) is not None:
+            return  # 이 버전은 이미 재봤다. 20초를 다시 쓰지 않는다.
+        ok, detail = agy_capability.probe_file_reads(
+            str(row.get("executable") or ""), version, configured_model("antigravity")
+        )
+        agy_capability.record(version, ok, detail)
+        bridge.reset_agy_permission_state()
+        bridge.invalidate_bridge_status()
+    except Exception:
+        # 확인에 실패해도 설정 화면은 떠야 한다. 못 재면 계속 막힌 상태로 남는다.
+        pass
 
 
 def save_settings(body: dict | None = None) -> dict:

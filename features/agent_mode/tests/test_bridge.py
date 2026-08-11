@@ -55,13 +55,13 @@ def test_probe_requires_executable_to_run():
     assert status["version"]
 
 
-def test_antigravity_probe_available_on_non_windows():
-    # macOS/Linux에서는 agy headless가 정상 동작한다. --version만 확인하고 사용 가능으로 본다.
-    version = Mock(returncode=0, stdout="agy 1.0\n", stderr="")
+def test_antigravity_opens_only_after_it_is_actually_measured():
+    """재본 결과가 있어야 열린다. `--version`만으로는 열지 않는다."""
+    version = Mock(returncode=0, stdout="agy 1.1.12\n", stderr="")
     with (
-        patch.object(bridge.os, "name", "posix"),
         patch.object(bridge, "_configured_executable", return_value="/usr/local/bin/agy"),
         patch.object(bridge.subprocess, "run", side_effect=[version]) as run,
+        patch("features.agent_mode.agy_capability.cached_file_reads", return_value=True),
     ):
         status = bridge._probe_adapter("antigravity")
     assert status["installed"] is True
@@ -70,19 +70,27 @@ def test_antigravity_probe_available_on_non_windows():
     assert run.call_count == 1
 
 
-def test_antigravity_probe_unavailable_on_windows():
-    # agy 1.0.10 Windows headless는 결과를 반환하지 못하므로(업스트림 버그) 미지원으로 표시한다.
-    version = Mock(returncode=0, stdout="agy 1.0\n", stderr="")
-    with (
-        patch.object(bridge.os, "name", "nt"),
-        patch.object(bridge, "_configured_executable", return_value=r"C:\Apps\agy.exe"),
-        patch.object(bridge.subprocess, "run", side_effect=[version]),
-    ):
-        status = bridge._probe_adapter("antigravity")
-    assert status["installed"] is True
-    assert status["available"] is False
-    assert status["bridgeSupported"] is False
-    assert "Windows" in status["error"]
+def test_antigravity_stays_shut_until_it_is_measured():
+    """**안 재본 것을 된다고 가정하지 않는다.**
+
+    예전 게이트는 버전 숫자로 판정했다. 버전 비교는 권한 문제를 구조적으로 볼 수 없어,
+    기준을 넘겼다는 이유로 열어 둔 뒤 Agent 잡 두 건이 모두 실패했다(그전까지
+    antigravity로 성공한 잡은 한 건도 없다). 플랫폼으로도 가르지 않는다 — 거부를
+    실측한 것은 Windows지만 macOS/Linux를 재본 것도 아니다.
+    """
+    version = Mock(returncode=0, stdout="agy 9.9.9\n", stderr="")
+    for platform in ("nt", "posix"):
+        with (
+            patch.object(bridge.os, "name", platform),
+            patch.object(bridge, "_configured_executable", return_value=r"C:\Apps\agy.exe"),
+            patch.object(bridge.subprocess, "run", side_effect=[version]),
+            patch("features.agent_mode.agy_capability.cached_file_reads", return_value=None),
+        ):
+            status = bridge._probe_adapter("antigravity")
+        assert status["installed"] is True, platform
+        assert status["available"] is False, platform
+        assert status["bridgeSupported"] is False, platform
+        assert "확인하지 않았습니다" in status["error"], platform
 
 
 def test_antigravity_command_uses_current_long_model_flag_and_print_prompt():
@@ -615,14 +623,20 @@ def test_antigravity_invoke_does_not_send_prompt_to_stdin_on_non_windows():
     assert (sent.args[0] if sent.args else sent.kwargs.get("input")) is None
 
 
-def test_antigravity_invoke_fails_fast_on_windows():
-    # agy Windows headless는 빈 결과를 반환하므로 5분 대기 없이 즉시 명확한 오류로 실패한다.
-    selected = {"id": "antigravity", "executable": "agy", "available": True}
-    with patch.object(bridge.os, "name", "nt"), \
-         patch("subprocess.Popen") as popen:
-        with pytest.raises(RuntimeError, match="Windows headless"):
-            bridge._invoke_agent_cli(selected, "PROMPT", timeout=30)
-    popen.assert_not_called()  # agy를 실행조차 하지 않는다
+def test_antigravity_invoke_fails_fast_once_file_reads_are_known_blocked():
+    """이미 거부당한 것을 알고 있으면 팩을 만들고 수 분을 버리지 않는다(실측 8분 30초).
+
+    예전에는 여기서 버전을 봤다. 버전 게이트는 지웠다 — 재본 결과만 믿는다.
+    """
+    selected = {"id": "antigravity", "executable": "agy", "available": True, "version": "1.1.12"}
+    bridge.reset_agy_permission_state()
+    try:
+        with patch.object(bridge, "_AGY_FILE_READS_BLOCKED", True), patch("subprocess.Popen") as popen:
+            with pytest.raises(RuntimeError, match="권한"):
+                bridge._invoke_agent_cli(selected, "Read the UTF-8 Agent Context Pack at: C:/x.json", timeout=30)
+        popen.assert_not_called()  # agy를 실행조차 하지 않는다
+    finally:
+        bridge.reset_agy_permission_state()
 
 
 def test_codex_invoke_sends_prompt_to_stdin():

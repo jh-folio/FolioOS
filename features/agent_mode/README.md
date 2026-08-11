@@ -101,14 +101,28 @@ in settings.json (e.g. read_file(<target>)).
 
 Antigravity CLI는 [공식 페이지](https://antigravity.google/product/antigravity-cli)의 `agy` 바이너리를 사용한다. 설치는 Windows `irm https://antigravity.google/cli/install.ps1 | iex`, 로그인은 인자 없이 `agy`(브라우저 OAuth)다. 실행은 `agy --model <model> --print <prompt>`로 단일 프롬프트를 비대화형 실행한다. 모델 이름에는 노력 단계가 함께 들어간다(`gemini-3.1-pro-high`, `gemini-3.6-flash-medium`, `claude-sonnet-4-6` 등). 단계 없는 예전 이름(`gemini-3.5-pro`)은 1.1.7이 `not recognized`로 거부하므로 기본 목록에서 뺐다 — 실시간 목록에 기본값이 덧붙는 구조라 선택지에 남아 있으면 고르는 순간 실행이 실패한다. 이 모델들로 브리핑·기업분석·테마분석 등 모든 Agent task를 작성할 수 있다.
 
-**Antigravity Windows headless는 agy 1.1.7에서 해결됐다.** 1.0.10의 Windows `--print`(headless)는 모델 응답을 stdout으로 반환하지 못했다. auth·모델 호출(`streamGenerateContent`)·종료(exit 0)는 정상인데, 응답이 의존하는 `transcript.jsonl`을 `C:\Users\...`가 아닌 `/Users\...`(POSIX) 경로로 열려다 실패하는 **agy 업스트림 버그** 때문에 출력이 사라졌다. 기본 `--print-timeout`(5분)이 지난 뒤 빈 결과로 끝나 "최종 결과를 반환하지 않았습니다" 오류가 났다.
+**버전 게이트는 지웠다(0.5.3).** 예전에는 `AGY_HEADLESS_FIXED = (1, 1, 7)` 이상이면 브리지를 열었다. 1.0.10의 Windows `--print`가 모델 응답을 stdout으로 반환하지 못하던 업스트림 버그(`transcript.jsonl`을 POSIX 경로로 열려다 실패)가 1.1.7에서 고쳐진 것을 확인하고 연 것이다.
 
-- 1.1.7에서 고쳐진 것을 직접 실행해 확인했다(`--print`가 stdout으로 정상 반환, exit 0, 13초). 브리지를 통한 실행도 확인했다.
-- **확인한 버전부터만 연다**(`bridge.AGY_HEADLESS_FIXED = (1, 1, 7)`). 1.1.0~1.1.6은 확인하지 않았고, 못 미치는 버전을 열어 주면 사용자가 5분을 기다린 뒤 빈 결과를 받는다. 버전을 못 읽으면 지원하지 않는 것으로 본다 — 잘못 열어 주는 쪽이 더 나쁘다.
-- 못 미치는 버전은 예전처럼 `bridgeSupported: false`로 표시하고, 실행 요청 시 5분 대기 없이 즉시 안내로 실패시킨다(`_invoke_agent_cli`의 사전 차단).
-- macOS/Linux는 `/Users` 홈이 실제 경로라 이 버그가 없었으므로 버전 게이트는 **Windows에 한정**한다.
+**그 확인이 틀린 것은 아니지만 충분하지 않았다.** 짧은 프롬프트 하나로 "출력이 돌아오는가"만 재고 열었는데, Folio OS의 Agent task는 예외 없이 컨텍스트 팩 **파일을 읽는 것으로 시작**한다. 그 경로는 한 번도 돌려보지 않았고, 1.1.12는 그 읽기를 거부한다. 결과는 기록에 그대로 남아 있다 — 게이트를 연 뒤 실행된 Agent 잡 두 건이 모두 실패했고, 그전까지 antigravity로 성공한 잡은 한 건도 없다.
 
-Codex/Claude는 stdout으로 결과를 정상 반환하므로 영향이 없다.
+**버전 비교는 권한 문제를 구조적으로 볼 수 없다.** 그래서 게이트를 `features/agent_mode/agy_capability.py`의 **실측**으로 바꿨다.
+
+- 실제 팩과 같은 폴더(`data/agent-context/`)에 한 줄짜리 파일을 만들고 **읽어 오라고 시켜 본다.** 통과해야 연다.
+- **재본 적이 없으면(`None`) 막는다.** 모르는 것을 된다고 가정한 것이 지난 실수다. 화면은 `상태 새로고침`을 누르면 확인한다고 안내한다(약 20초, 버전별 1회 캐시).
+- 결과는 `data/agent-cli-capability.json`에 버전과 함께 남는다. 판올림하면 다시 잰다 — 고쳐졌을 수도, 새로 깨졌을 수도 있다.
+- **플랫폼으로 가르지 않는다.** 거부를 실측한 것은 Windows지만 macOS/Linux를 재본 것도 아니다. 조회는 어느 플랫폼에서든 같은 방식으로 사실을 확인한다.
+- 게이트를 둘 두지 않는다. 버전 게이트를 남겨 두면 "재봤더니 되는데 버전 때문에 막는" 모순이 생긴다.
+
+**조회 파일의 위치가 판정을 가른다.** 처음에는 `%TEMP%`에 만들었는데 그건 통과하고 진짜 팩은 거부당했다. 실측으로 갈린 것은 크기가 아니다.
+
+| 조건 | 결과 |
+| --- | --- |
+| 프로젝트 안 12바이트 파일 | 권한 거부 |
+| `%TEMP%`의 5.2MB 파일 | 성공 |
+
+agy headless는 프로젝트 안의 읽기를 거부한다. 바깥에 만든 파일로 재면 "된다"는 답을 받고 브리지를 열게 되는데, 그것이 정확히 같은 실수의 반복이다.
+
+Codex/Claude는 stdout으로 결과를 정상 반환하고 프롬프트를 stdin으로 받으므로 영향이 없다.
 
 Bridge 상태는 `GET /api/agent-bridge/status`에서 확인합니다. Codex/Claude는 버전 확인과 로그인 상태 확인이 모두 성공해야 사용 가능으로 처리하고, Antigravity는 `agy --version` 성공 시 사용 가능으로 처리합니다.
 릴리즈 진단용 `GET /api/agent-bridge/preflight?adapter=codex|claude|antigravity`는 workspace, data directory, CLI 설치, 버전, 인증, Direct Bridge 지원 여부를 구조화된 check 목록으로 반환합니다. UI는 이 값을 그대로 사용해 "설치 필요", "로그인 필요", "현재 Windows 미지원" 같은 실패 상태를 명확히 표시할 수 있습니다.

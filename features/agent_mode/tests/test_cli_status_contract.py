@@ -29,24 +29,29 @@ def test_the_placeholder_payload_is_gone():
     assert not hasattr(setup, "_saved_settings_payload")
 
 
-def test_agy_opens_only_from_the_version_that_was_verified():
-    """Windows headless(`--print`)가 결과를 돌려주는 것을 확인한 버전부터만 연다.
+def test_the_version_gate_is_gone():
+    """**버전 숫자로 능력을 판정하지 않는다.**
 
-    못 미치는 버전을 열어 주면 사용자가 기본 `--print-timeout` 5분을 기다린 뒤 빈 결과를
-    받는다. 막아 두면 다른 CLI를 쓰라는 안내를 즉시 본다.
+    예전에는 `AGY_HEADLESS_FIXED = (1, 1, 7)` 이상이면 브리지를 열었다. 그 근거는 짧은
+    프롬프트 하나가 stdout으로 돌아온 것이었는데, 정작 Folio OS의 Agent task는 전부
+    컨텍스트 팩 **파일을 읽는 것으로 시작**한다. 그 경로는 재보지 않았고 1.1.12는 그
+    읽기를 거부한다 — 버전 비교로는 볼 수 없는 종류의 문제였다.
+
+    게이트를 연 뒤 실행된 Agent 잡 두 건이 모두 실패했고, 그전까지 antigravity로 성공한
+    잡은 한 건도 없었다. 지금은 `agy_capability`가 실제로 파일을 읽혀 보고 그 결과로만
+    연다. 게이트를 둘 두면 "재봤더니 되는데 버전 때문에 막는" 모순이 생긴다.
     """
-    assert bridge.AGY_HEADLESS_FIXED == (1, 1, 7)
-    assert bridge._agy_headless_works("1.1.7") is True
-    assert bridge._agy_headless_works("1.2.0") is True
-    assert bridge._agy_headless_works("2.0.0") is True
-    assert bridge._agy_headless_works("1.1.6") is False
-    assert bridge._agy_headless_works("1.0.10") is False
+    assert not hasattr(bridge, "AGY_HEADLESS_FIXED")
+    assert not hasattr(bridge, "_agy_headless_works")
 
 
-def test_an_unreadable_agy_version_stays_blocked():
-    """버전을 모르면 지원하지 않는 것으로 본다. 잘못 열어 주는 쪽이 더 나쁘다."""
-    for text in ("", "알 수 없음", None, "agy"):
-        assert bridge._agy_headless_works(text) is False
+def test_the_capability_is_measured_not_assumed():
+    """조회는 실제 팩과 같은 폴더에서 한다 — 실측으로 갈린 것은 크기가 아니라 위치다."""
+    from features.agent_mode import agy_capability
+
+    assert agy_capability.PROBE_DIR.name == "agent-context"
+    # 재본 적이 없으면 `None`이고, `None`은 "된다"가 아니다.
+    assert agy_capability.cached_file_reads("없는버전-0.0.0") is None
 
 
 def test_the_offered_agy_models_carry_an_effort_step():

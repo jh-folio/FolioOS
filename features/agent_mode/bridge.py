@@ -38,6 +38,13 @@ AGY_PERMISSION_HELP = (
     "추가하세요."
 )
 
+AGY_UNVERIFIED_HELP = (
+    "Antigravity(agy)가 컨텍스트 팩 파일을 읽을 수 있는지 아직 확인하지 않았습니다. "
+    "Folio OS의 브리핑·기업분석은 팩 파일을 읽어야 하므로 확인 전에는 열지 않습니다. "
+    "설정 > AI Agent에서 `상태 새로고침`을 누르면 실제로 확인합니다(약 20초). "
+    "그동안은 Codex나 Claude CLI를 사용하세요."
+)
+
 # 한 번 거부당하면 같은 실행에서 다시 시도하지 않는다. 예약 브리핑이 매번 팩을 만들고
 # 수 분을 버린 뒤 같은 곳에서 실패했다(실측 8분 30초).
 _AGY_FILE_READS_BLOCKED = False
@@ -109,30 +116,26 @@ def _probe_adapter(adapter: str) -> dict:
             result["error"] = f"버전 확인 실패 (exit {proc.returncode})"
             return result
 
-        if adapter == "antigravity" and _AGY_FILE_READS_BLOCKED:
-            # 설치·로그인은 멀쩡하다. 막힌 것은 파일 읽기라 Agent task만 못 만든다.
-            result["bridgeSupported"] = False
-            result["available"] = False
-            result["error"] = AGY_PERMISSION_HELP
-            return result
+        if adapter == "antigravity":
+            # **재본 결과로만 연다.** 예전에는 버전 숫자로 판정했는데, 버전 비교는
+            # 권한 문제를 구조적으로 볼 수 없다 — 그래서 열어 둔 뒤 Agent 잡 두 건이
+            # 모두 실패했다. 모르면(None) 막는다.
+            #
+            # 플랫폼으로 가르지 않는다. 거부를 실측한 것은 Windows지만 macOS/Linux를
+            # 재본 것도 아니다 — 안 재본 것을 된다고 가정하는 것이 바로 지난 실수다.
+            # 조회는 어느 플랫폼에서든 같은 방식으로 사실을 확인한다.
+            from features.agent_mode import agy_capability
+
+            # 플래그가 서 있으면 방금 거부당했다는 뜻이다 — `False`이지 `None`이 아니다.
+            # `None`으로 읽으면 "아직 안 재봤다" 문구가 나가 무엇이 막혔는지 못 말한다.
+            can_read = False if _AGY_FILE_READS_BLOCKED else agy_capability.cached_file_reads(result["version"])
+            if can_read is not True:
+                result["bridgeSupported"] = False
+                result["available"] = False
+                result["error"] = AGY_PERMISSION_HELP if can_read is False else AGY_UNVERIFIED_HELP
+                return result
 
         if adapter == "antigravity":
-            # agy 1.0.10의 Windows headless(--print)는 모델 응답을 stdout으로 내보내지 못했다
-            # (transcript.jsonl을 /Users\... POSIX 경로로 열려다 실패하는 agy 버그). 대화는 완료돼도
-            # 출력이 사라져 브리핑 생성이 늘 빈 결과로 끝났고, 기본 --print-timeout 5분을 기다린
-            # 뒤에야 실패했다. 1.1.7에서 고쳐진 것을 실행해 확인했다(`--print`가 stdout으로 정상
-            # 반환, exit 0). 고쳐진 것을 확인한 버전부터만 연다 — 1.1.0~1.1.6은 확인하지 않았고,
-            # 못 미치는 버전을 열면 사용자가 5분을 기다린 뒤 빈 결과를 받는다.
-            if os.name == "nt" and not _agy_headless_works(result["version"]):
-                result["installed"] = True
-                result["available"] = False
-                result["bridgeSupported"] = False
-                result["error"] = (
-                    f"agy {result['version'] or '이 버전'}의 Windows headless 모드는 결과를 반환하지 "
-                    f"못합니다(agy 업스트림 버그, {AGY_HEADLESS_FIXED} 이상에서 해결). "
-                    "agy를 업데이트하거나 Codex 또는 Claude CLI를 사용하세요."
-                )
-                return result
             # agy는 비대화형 로그인 상태 확인 서브커맨드를 제공하지 않는다. 설치되어 있으면
             # 사용 가능으로 보고, 실제 인증 여부는 실행 시점의 오류로 사용자에게 노출한다.
             result["authenticated"] = True
@@ -167,22 +170,13 @@ def invalidate_bridge_status() -> None:
         _STATUS_CACHE = None
 
 
-# Windows headless(`--print`)가 stdout으로 결과를 돌려주는 것을 확인한 첫 버전.
-AGY_HEADLESS_FIXED = (1, 1, 7)
-
-
-def _agy_headless_works(version_text: str) -> bool:
-    """agy 버전이 Windows headless를 제대로 지원하는가.
-
-    버전을 못 읽으면 지원하지 않는 것으로 본다. 잘못 열어 주면 사용자가 5분을 기다린 뒤
-    빈 결과를 받는다 — 막아 두면 다른 CLI를 쓰라는 안내를 즉시 본다.
-    """
-    import re
-
-    match = re.search(r"(\d+)\.(\d+)\.(\d+)", str(version_text or ""))
-    if not match:
-        return False
-    return tuple(int(part) for part in match.groups()) >= AGY_HEADLESS_FIXED
+# 예전에는 여기에 버전 게이트(`AGY_HEADLESS_FIXED = (1, 1, 7)`)가 있었다. 지웠다 —
+# **버전 숫자로 능력을 판정하지 않는다.** agy 1.0.10의 headless 출력 버그가 1.1.7에서
+# 고쳐진 것을 짧은 프롬프트 하나로 확인하고 브리지를 열었는데, 정작 Agent task는 전부
+# 컨텍스트 팩 파일을 읽는 것으로 시작한다. 그 경로는 재보지 않았고, 1.1.12는 그 읽기를
+# 거부한다. 버전 비교로는 볼 수 없는 종류의 문제였다. 지금은 `agy_capability`가 실제로
+# 파일을 읽혀 보고 그 결과로만 연다. 게이트를 둘 두면 "재봤더니 되는데 버전 때문에
+# 막는" 모순이 생기므로 하나만 남긴다.
 
 
 def bridge_status(*, refresh: bool = False) -> dict:
@@ -490,9 +484,14 @@ def _result_summary(task_type: str, pack: dict, result: dict, adapter: str) -> d
     return summary
 
 
-def _mark_agy_file_reads_blocked() -> None:
+def _mark_agy_file_reads_blocked(version: str = "", detail: str = "") -> None:
     global _AGY_FILE_READS_BLOCKED
     _AGY_FILE_READS_BLOCKED = True
+    if version:
+        # 재시작해도 막혀 있어야 한다. 모듈 플래그만 두면 다음 실행이 또 한 번 실패한다.
+        from features.agent_mode import agy_capability
+
+        agy_capability.record(version, False, detail)
     invalidate_bridge_status()
 
 
@@ -513,14 +512,6 @@ def _prompt_needs_file_read(prompt: str) -> bool:
 
 def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "", model_override: str = "") -> str:
     is_antigravity = selected.get("id") == "antigravity"
-    if is_antigravity and os.name == "nt" and not _agy_headless_works(selected.get("version", "")):
-        # 고쳐지기 전 agy는 기본 --print-timeout 5분을 기다린 뒤 빈 결과로 실패한다.
-        # 5분을 버리게 두지 않고 즉시 명확한 안내로 실패시킨다.
-        raise RuntimeError(
-            f"Antigravity(agy) {selected.get('version') or '이 버전'}은 Windows headless 모드에서 결과를 "
-            f"반환하지 못합니다(agy 업스트림 버그, {AGY_HEADLESS_FIXED} 이상에서 해결). "
-            "agy를 업데이트하거나 Codex 또는 Claude CLI를 선택해 생성하세요."
-        )
     if is_antigravity and _AGY_FILE_READS_BLOCKED and _prompt_needs_file_read(prompt):
         # 이미 거부당한 것을 알고 있다. 팩을 만들고 수 분을 버린 뒤 같은 곳에서
         # 실패하게 두지 않는다.
@@ -564,7 +555,7 @@ def _invoke_agent_cli(selected: dict, prompt: str, timeout: int, job_id: str = "
             # agy는 이 경우 exit 0에 빈 stdout으로 끝난다. 일반 "빈 결과"로 보고하면
             # 사용자는 무엇을 고쳐야 할지 알 수 없다 — 실제로 예약 브리핑이 며칠 동안
             # `internal_error`로만 남았다.
-            _mark_agy_file_reads_blocked()
+            _mark_agy_file_reads_blocked(selected.get("version", ""), detail)
             raise RuntimeError(AGY_PERMISSION_HELP)
         raise RuntimeError(
             "Agent CLI가 최종 결과를 반환하지 않았습니다." + (f" (stderr: {detail})" if detail else "")
