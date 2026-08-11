@@ -34,6 +34,10 @@ from features.common.workspace import data_dir
 
 SCHEMA_VERSION = 1
 
+# 캐시 키에 들어가는 세션 상태. `daily_briefing.target`의 같은 값과 문자열이 같아야 한다.
+CLOSED = "closed"
+INTRADAY = "intraday"
+
 # 장중 값은 몇 분이면 낡는다. 마감 종가는 바뀌지 않으므로 다시 받을 이유가 없다.
 INTRADAY_TTL_SECONDS = 300
 CLOSED_TTL_SECONDS: int | None = None

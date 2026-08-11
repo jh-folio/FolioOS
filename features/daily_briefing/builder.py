@@ -18,7 +18,7 @@ from features.common.canonical_report_types import WriteKind
 from features.common.canonical_reports import commit_sync, prepare
 from features.common.change_intelligence.service import decorate_candidate, project_committed_report
 from features.common.dataframe_ops import top_records
-from features.common.market_data.providers import fetch_korea_market_data
+from features.common.market_data.korea_session import korea_market_data as fetch_korea_session_data, session_state
 from features.common.market_data.snapshot import fetch_market_snapshot
 from features.common.market_data.tape import build_market_tape
 from features.common.quality_generation.loop import apply_quality_loop
@@ -112,20 +112,14 @@ def cached_market_snapshot(ttl_minutes=20):
     return snapshot
 
 
-def cached_korea_market_data(date, ttl_minutes=60):
-    _ensure_dirs()
-    cache_path = DATA_DIR / f"korea-market-data-{date}.json"
-    cached = read_json(cache_path, None)
-    if cached:
-        try:
-            fetched = dt.datetime.fromisoformat(cached.get("cachedAt", ""))
-            if dt.datetime.now(dt.timezone.utc) - fetched < dt.timedelta(minutes=ttl_minutes):
-                return cached.get("marketData", cached)
-        except Exception:
-            pass
-    market_data = fetch_korea_market_data(date)
-    write_json(cache_path, {"cachedAt": now_iso(), "marketData": market_data})
-    return market_data
+def cached_korea_market_data(date, market_windows=None):
+    """대상 세션의 한국장 수치. 정책은 `session_cache`가 갖는다.
+
+    돌려주는 값이 `None`일 수 있다 — 그 세션 수치를 못 받았다는 뜻이며, 직전 세션 값으로
+    메우지 않는다. 호출부는 이미 `ok`가 아닌 값을 dataGap으로 다룬다.
+    """
+    payload, _reason = fetch_korea_session_data(date, session_state(market_windows))
+    return payload
 
 
 def _scope_groups_and_drivers(docs, market_windows):
@@ -416,7 +410,7 @@ def build_briefing(
     # 가면 한 브리핑 안에서 날짜가 갈린다 — 월요일 08:03에 만든 금요일 브리핑에 지수는
     # 금요일 종가가 들어갔는데 환율만 일요일 값이 들어갔다(환율은 24시간 거래라 주말 봉이
     # 잡힌다). 같은 시각에 발행일로 부르면 아직 열지도 않은 월요일 값을 받는다.
-    korea_market_data = cached_korea_market_data(_scope_session_date("kr", market_windows) or date)
+    korea_market_data = cached_korea_market_data(_scope_session_date("kr", market_windows) or date, market_windows)
     market_tape = build_market_tape(
         date=date, market_snapshot=market_snapshot, korea_market_data=korea_market_data,
         market_windows=market_windows,

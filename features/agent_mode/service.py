@@ -182,9 +182,22 @@ def _single_market_briefing(briefing, scope):
 
 
 def _cache_json(path: Path, ttl_seconds: int, fetcher):
+    """`ttl_seconds`를 실제로 지킨다.
+
+    예전에는 이 인자를 받고 **한 번도 쓰지 않았다.** 호출부가 3600을 넘기고 있어서 한
+    시간 TTL이 있는 것처럼 보였지만, 캐시 파일이 있으면 나이를 보지 않고 그대로 돌려줬다.
+    그래서 08-10 08:02(개장 전)에 받은 금요일 종가가 08-10 수치로 영구히 굳었다.
+    """
     cached = read_json(path, None)
-    if cached:
-        return cached.get("snapshot") or cached.get("marketData") or cached
+    if isinstance(cached, dict):
+        payload = cached.get("snapshot") or cached.get("marketData") or cached
+        try:
+            age = (datetime.now(UTC) - datetime.fromisoformat(cached.get("cachedAt", ""))).total_seconds()
+            if age < ttl_seconds:
+                return payload
+        except (TypeError, ValueError):
+            # 나이를 알 수 없는 캐시는 신선하다고 볼 근거가 없다. 다시 받는다.
+            pass
     value = fetcher()
     path.parent.mkdir(parents=True, exist_ok=True)
     key = "marketData" if "korea-market-data" in path.name else "snapshot"
@@ -196,8 +209,15 @@ def cached_market_snapshot():
     return _cache_json(DATA_DIR / "market-snapshot.json", 1200, fetch_market_snapshot)
 
 
-def cached_korea_market_data(date: str):
-    return _cache_json(DATA_DIR / f"korea-market-data-{date}.json", 3600, lambda: fetch_korea_market_data(date))
+def cached_korea_market_data(date: str, market_windows=None):
+    """규칙 경로와 **같은** 정책을 쓴다. 두 벌이던 캐시가 서로 다르게 동작했다.
+
+    `None`일 수 있다 — 그 세션 수치를 못 받았다는 뜻이며, 직전 세션 값으로 메우지 않는다.
+    """
+    from features.common.market_data.korea_session import korea_market_data, session_state
+
+    payload, _reason = korea_market_data(date, session_state(market_windows))
+    return payload
 
 
 def _briefing_headlines(groups):
@@ -285,7 +305,7 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         }
     market_snapshot = cached_market_snapshot()
     # 규칙 생성과 같은 기준이다 — 발행일이 아니라 한국장 세션일로 부른다.
-    korea_market_data = cached_korea_market_data(_scope_session_date("kr", market_windows) or date)
+    korea_market_data = cached_korea_market_data(_scope_session_date("kr", market_windows) or date, market_windows)
     market_tape = build_market_tape(
         date=date,
         market_snapshot=market_snapshot,
