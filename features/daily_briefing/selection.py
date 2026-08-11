@@ -13,7 +13,7 @@ service.py / app.py 는 이 모듈을 얇게 호출한다.
 import re
 
 from features.common.company_lookup import term_in_text
-from features.common.utils import normalize
+from features.common.utils import normalize, clean_embedded_sections
 from features.common.market_calendar import (
     doc_analysis_priority,
     doc_market_bucket,
@@ -435,4 +435,6 @@ def briefing_doc_excerpt(doc, clean_fn, tier="support"):
     clean_fn 은 service.clean_brief_text 처럼 (text, limit) -> str 인 정리 함수.
     """
     limit = _TIER_LIMIT.get(tier, _TIER_LIMIT["support"])
-    return clean_fn(doc.get("summary") or doc.get("content") or "", limit)
+    # body 섹션 마커를 먼저 걷어낸다. `clean_fn`은 URL·공백만 정리해서, 마커가 남으면
+    # 기사 본문 대신 매체 페이지의 공유 버튼·글자 크기 위젯이 발췌로 실린다.
+    return clean_fn(clean_embedded_sections(doc.get("summary") or doc.get("content") or ""), limit)

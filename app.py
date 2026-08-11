@@ -419,11 +419,16 @@ def request_generation_mode(_payload: dict | None) -> str:
 
 _RESTART_REQUESTED = False
 
+# 재시작 신호. **3을 쓰지 않는다** — `uvicorn.config.STARTUP_FAILURE`가 3이라
+# 포트 충돌을 비롯한 모든 uvicorn 시작 실패가 같은 코드로 끝난다. 런처는 그것을
+# 재시작 신호로 읽어 무한히 다시 띄웠다: 시작 → 바인드 실패(exit 3) → "Restarting..."
+# → 시작 → … (실측으로 이미 서버가 떠 있을 때 `py -3 app.py`가 exit 3을 냈다).
+RESTART_EXIT_CODE = 7
+
 
 def schedule_server_restart(delay: float = 0.5):
-    """Exit with code 3 so start.ps1 / start.sh can restart the process.
+    """Exit with RESTART_EXIT_CODE so start.ps1 / start.sh can restart the process.
 
-    Exit code 3 is the restart signal agreed upon with the start scripts.
     A guard prevents multiple simultaneous restart requests.
     """
     global _RESTART_REQUESTED
@@ -433,7 +438,7 @@ def schedule_server_restart(delay: float = 0.5):
 
     def _exit():
         time.sleep(delay)
-        os._exit(3)
+        os._exit(RESTART_EXIT_CODE)
 
     threading.Thread(target=_exit, daemon=True).start()
 
@@ -1642,6 +1647,46 @@ def api_delete_topic_report(report_id: str):
 fastapi_app.mount("/", StaticFiles(directory=PUBLIC_DIR, html=True), name="public")
 
 
+def _port_owner_message(host: str, port: int) -> str:
+    """포트가 이미 쓰이고 있으면 사람이 읽을 문장을, 비어 있으면 빈 문자열을 돌려준다.
+
+    같은 Folio OS가 이미 떠 있는 경우가 대부분이라 그 사실을 먼저 확인한다. 두 번
+    켜는 것은 실수가 아니라 흔한 일이고(창을 닫지 않고 .cmd를 다시 누른다), 그때
+    필요한 답은 "이미 켜져 있으니 그 주소를 여세요"다.
+    """
+    import socket
+
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.bind((host, port))
+    except OSError:
+        pass
+    else:
+        return ""
+    finally:
+        probe.close()
+
+    address = f"http://127.0.0.1:{port}"
+    mine = False
+    try:
+        import urllib.request
+
+        with urllib.request.urlopen(f"{address}/api/onboarding", timeout=3) as response:
+            mine = 200 <= response.status < 300
+    except Exception:
+        mine = False
+
+    if mine:
+        return (
+            f"Folio OS is already running. Open {address} in your browser.\n"
+            "Close the other Folio OS window first if you want to restart it."
+        )
+    return (
+        f"Port {port} is already in use by another program, so Folio OS cannot start.\n"
+        "Close that program, or start Folio OS on another port: set PORT=8788 before running."
+    )
+
+
 def main():
     ensure_dirs()
     load_jobs()
@@ -1665,6 +1710,15 @@ def main():
         print("LAN access disabled. Set FOLIO_HOST=0.0.0.0 to access from another device.")
 
     print("RSS collection is embedded in this Python app.")
+
+    # 포트를 먼저 잡아 본다. **uvicorn이 실패하면 종료 코드가 3인데 그것은 예전
+    # 재시작 신호와 같은 값이었다** — 런처가 무한히 다시 띄웠다. 코드를 갈랐어도
+    # 여기서 미리 확인하는 편이 낫다: 이미 켜져 있다는 사실을 말할 수 있고,
+    # uvicorn의 영어 소켓 오류 대신 무엇을 해야 하는지 알려줄 수 있다.
+    already = _port_owner_message(host, port)
+    if already:
+        print(already)
+        raise SystemExit(1)
 
     import uvicorn
     uvicorn.run(fastapi_app, host=host, port=port, log_level="info")

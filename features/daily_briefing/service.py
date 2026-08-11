@@ -5,7 +5,7 @@ from pathlib import Path
 
 from features.common.canonical_report_io import safe_child_path
 from features.common.dataframe_ops import top_records
-from features.common.utils import normalize, kst_date
+from features.common.utils import normalize, kst_date, doc_brief_text
 from features.common.market_calendar import briefing_market_windows, doc_market_bucket, doc_analysis_priority
 from features.daily_briefing.issue_selection import (
     canonical_publisher,
@@ -811,7 +811,7 @@ def build_llm_context(
             )
             for dd in driver.get("docs", [])[:3]:
                 dtitle = clean_brief_text(dd.get("title", ""), 160)
-                dbrief = clean_brief_text(dd.get("summary") or dd.get("content") or "", 320)
+                dbrief = doc_brief_text(dd, 320)
                 lines.append(
                     f"   - [{dd.get('source', '')}, {dd.get('date', '')}, {dd.get('marketBucket', '')}, "
                     f"score={dd.get('briefingDocScore', 0):.1f}] {dtitle}"
@@ -835,7 +835,7 @@ def build_llm_context(
         # 정규장 자료가 계속 상단에 노출되지 않게 한다.
         for gd in sorted(group.get("docs", []), key=lambda d: briefing_doc_score(d, market_windows), reverse=True)[:3]:
             gtitle = clean_brief_text(gd.get("title", ""), 160)
-            gbrief = clean_brief_text(gd.get("summary") or gd.get("content") or "", 240)
+            gbrief = doc_brief_text(gd, 240)
             suffix = f" — {gbrief}" if gbrief and gbrief.lower() != gtitle.lower() else ""
             lines.append(f"   [{doc_analysis_priority(gd, market_windows)} | {doc_market_bucket(gd, market_windows)} | {gd.get('source', '')}] {gtitle}{suffix}")
 
@@ -1001,7 +1001,7 @@ def choose_leaders(groups):
 
 def doc_sentence(doc):
     title = clean_brief_text(doc.get("title", ""), 180)
-    summary = clean_brief_text(doc.get("summary") or doc.get("content") or "", 280)
+    summary = doc_brief_text(doc, 280)
     if title and summary.lower().startswith(title.lower()):
         summary = summary[len(title):].strip(" .:-")
     source = doc.get("source", "자료")

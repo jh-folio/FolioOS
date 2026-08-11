@@ -96,7 +96,11 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   // 단계 아래에 그대로 붙어, 아직 저장하지 않은 것을 저장했다고 읽힌다.
   const goto = useCallback((next: StepId) => { setNote(""); setTour(-1); setStep(next); }, []);
 
+  // **지금 설정에서 시작한다.** 늘 `none`으로 두면, 안내를 다시 열어 아무것도 고르지
+  // 않고 다음만 눌러도 쓰던 사람의 AI가 꺼진다 — 저장이 `enabled: false`를 쓴다.
+  // 실제로 그렇게 꺼진 뒤 다음 날 예약 브리핑이 규칙 기반으로 떨어진 적이 있다.
   const [engine, setEngine] = useState<"none" | "api" | "cli">("none");
+  const [engineTouched, setEngineTouched] = useState(false);
   const [provider, setProvider] = useState<ProviderId>("openai");
   const [apiKey, setApiKey] = useState("");
   const [cli, setCli] = useState<AgentCliSettings | null>(null);
@@ -128,6 +132,16 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
         /* 위와 같다. */
       }
       try {
+        // 지금 설정을 읽어 그 값에서 시작한다. 처음 쓰는 사람은 어차피 기본값이고,
+        // 쓰던 사람이 안내를 다시 열었을 때 자기 설정이 이미 선택돼 있어야 한다.
+        const current = await getJson<{ agent?: { enabled?: boolean; mode?: string } }>("/api/settings");
+        if (!cancelled && current.agent?.enabled) {
+          setEngine(current.agent.mode === "cli" ? "cli" : "api");
+        }
+      } catch {
+        /* 못 읽으면 기본값에서 시작한다. 저장은 고른 적이 있을 때만 한다. */
+      }
+      try {
         // CLI를 고르는 순간 목록이 비어 있으면 화면이 멈춘 것처럼 보인다. 미리 읽어 둔다.
         // `refresh`는 하지 않는다 — 모델 목록까지 다시 물으면 안내가 뜨는 데만 수십 초다.
         const bridge = await getJson<AgentCliSettings>("/api/agent-bridge/settings");
@@ -137,6 +151,11 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
       }
     })();
     return () => { cancelled = true; };
+  }, []);
+
+  const pickEngine = useCallback((next: "none" | "api" | "cli") => {
+    setEngineTouched(true);
+    setEngine(next);
   }, []);
 
   const finish = useCallback(async (skipped: boolean) => {
@@ -152,6 +171,8 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   }, [onFinish]);
 
   const saveEngine = async () => {
+    // 고르지 않고 지나가면 아무것도 쓰지 않는다. 지나가는 것은 선택이 아니다.
+    if (!engineTouched) { goto("markets"); return; }
     setBusy("engine");
     setNote("");
     try {
@@ -316,9 +337,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
               {/* 순서는 부담이 적은 것부터다. 라벨은 짧게 두고 설명이 무게를 진다 —
                   처음 쓰는 사람에게 `CLI`와 `API`는 그 자체로 아무 뜻이 없다. */}
               <div className="welcome-choices" role="group" aria-label="생성 방식">
-                <button type="button" aria-pressed={engine === "none"} onClick={() => setEngine("none")}>AI 없이</button>
-                <button type="button" aria-pressed={engine === "cli"} onClick={() => setEngine("cli")}>CLI</button>
-                <button type="button" aria-pressed={engine === "api"} onClick={() => setEngine("api")}>API</button>
+                <button type="button" aria-pressed={engine === "none"} onClick={() => pickEngine("none")}>AI 없이</button>
+                <button type="button" aria-pressed={engine === "cli"} onClick={() => pickEngine("cli")}>CLI</button>
+                <button type="button" aria-pressed={engine === "api"} onClick={() => pickEngine("api")}>API</button>
               </div>
 
               {engine === "none" && (

@@ -48,7 +48,10 @@ $Opener = Start-Job -ArgumentList $Url, $Port -ScriptBlock {
   }
 }
 
-# Exit code 3 = restart signal from the in-app restart button.
+# Exit code 7 = restart signal from the in-app restart button (app.py RESTART_EXIT_CODE).
+# NOT 3: uvicorn exits 3 (STARTUP_FAILURE) on any startup failure, including a port
+# that is already in use. Treating 3 as "restart" made this loop forever - start,
+# fail to bind, print Restarting..., start again. Measured on this machine.
 # Loop until the server exits with any other code.
 $shouldRestart = $true
 while ($shouldRestart) {
@@ -68,11 +71,17 @@ while ($shouldRestart) {
     $shouldRestart = $false
     continue
   }
-  $shouldRestart = ($LASTEXITCODE -eq 3)
+  $exitCode = $LASTEXITCODE
+  $shouldRestart = ($exitCode -eq 7)
   if ($shouldRestart) {
     Write-Host ""
     Write-Host "Restarting..." -ForegroundColor Yellow
     Write-Host ""
+  } elseif ($exitCode -ne 0) {
+    # The server printed why it could not start. Hold the window so the reason
+    # stays readable instead of vanishing when the window closes.
+    Write-Host ""
+    Read-Host "Press Enter to close"
   }
 }
 

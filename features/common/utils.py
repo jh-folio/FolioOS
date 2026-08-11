@@ -132,6 +132,23 @@ def clean_embedded_sections(text):
     return summary or full_text or prefix
 
 
+def doc_brief_text(doc, limit=280):
+    """문서 하나에서 사람이 읽을 발췌를 만든다.
+
+    **`clean_brief_text()`만 쓰면 안 된다.** 그것은 URL과 공백만 정리할 뿐 body 섹션
+    마커를 모르므로, `summary` 필드에 `# Summary … # Full Text …`가 통째로 들어 있으면
+    기사 본문 대신 매체 페이지의 공유 버튼·글자 크기 위젯이 그대로 실린다. 실측으로
+    2026-08-11 규칙 기반 브리핑에 이런 문장이 나왔다:
+
+        매일경제는 '…'에서 # Summary … # Full Text 공유 이메일에 공유하기 카카오톡에
+        공유하기 … 글자 크기 가 가 가 가 가 … 라고 전했습니다.
+
+    인덱서는 두 섹션을 갈라 저장하지만(`indexing/service.py`) 그러지 못한 문서가
+    남아 있다. 읽는 쪽에서 한 번 더 거른다 — 섹션 마커가 없으면 원문 그대로다.
+    """
+    return clean_brief_text(clean_embedded_sections(doc.get("summary") or doc.get("content") or ""), limit)
+
+
 def summarize(text, sentences=3):
     parts = re.split(r"(?<=[.!?。！？])\s+|(?<=다\.)\s+", normalize(text))
     parts = [p.strip() for p in parts if len(p.strip()) > 25]

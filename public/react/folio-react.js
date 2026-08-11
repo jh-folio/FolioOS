@@ -23990,36 +23990,46 @@ function Xu({ step: e }) {
 }
 function Zu({ onFinish: e }) {
 	let t = Ml(), [n, r] = (0, l.useState)("welcome"), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)((e) => {
-		s(""), y(-1), r(e);
-	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)("openai"), [m, h] = (0, l.useState)(""), [g, _] = (0, l.useState)(null), [v, y] = (0, l.useState)(-1), [b, x] = (0, l.useState)(null), [S, C] = (0, l.useState)([]), [w, T] = (0, l.useState)(!1), [E, D] = (0, l.useState)(null);
+		s(""), x(-1), r(e);
+	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)("openai"), [g, _] = (0, l.useState)(""), [v, y] = (0, l.useState)(null), [b, x] = (0, l.useState)(-1), [S, C] = (0, l.useState)(null), [w, T] = (0, l.useState)([]), [E, D] = (0, l.useState)(!1), [O, k] = (0, l.useState)(null);
 	(0, l.useEffect)(() => {
 		let e = !1;
 		return (async () => {
 			try {
 				let t = await B("/api/market-scope");
 				if (e) return;
-				x(t), C([...t.selected]);
+				C(t), T([...t.selected]);
 			} catch {}
 			try {
 				let t = await B("/api/workspace");
-				e || D(t);
+				e || k(t);
+			} catch {}
+			try {
+				let t = await B("/api/settings");
+				!e && t.agent?.enabled && d(t.agent.mode === "cli" ? "cli" : "api");
 			} catch {}
 			try {
 				let t = await B("/api/agent-bridge/settings");
-				e || _(t);
+				e || y(t);
 			} catch {}
 		})(), () => {
 			e = !0;
 		};
 	}, []);
-	let O = (0, l.useCallback)(async (t) => {
+	let A = (0, l.useCallback)((e) => {
+		p(!0), d(e);
+	}, []), j = (0, l.useCallback)(async (t) => {
 		a("finish");
 		try {
 			await V("/api/onboarding/complete", { skipped: t });
 		} catch {} finally {
 			a(""), e();
 		}
-	}, [e]), k = async () => {
+	}, [e]), M = async () => {
+		if (!f) {
+			c("markets");
+			return;
+		}
 		a("engine"), s("");
 		try {
 			await V("/api/settings", {
@@ -24027,57 +24037,57 @@ function Zu({ onFinish: e }) {
 					enabled: u !== "none",
 					mode: u === "cli" ? "cli" : "api"
 				},
-				...u === "api" && m.trim() ? { llm: {
-					provider: f,
-					providers: { [f]: { apiKey: m.trim() } }
+				...u === "api" && g.trim() ? { llm: {
+					provider: m,
+					providers: { [m]: { apiKey: g.trim() } }
 				} } : {}
-			}), h(""), c("markets");
+			}), _(""), c("markets");
 		} catch (e) {
 			s(e instanceof Error ? e.message : "저장하지 못했습니다.");
 		} finally {
 			a("");
 		}
-	}, A = async () => {
-		if (!b || !S.length) {
+	}, N = async () => {
+		if (!S || !w.length) {
 			c("done");
 			return;
 		}
 		a("markets"), s("");
 		try {
-			let e = await te("/api/market-scope", { selected: S });
-			T(!!e.newlyEnabled?.length), c("done");
+			let e = await te("/api/market-scope", { selected: w });
+			D(!!e.newlyEnabled?.length), c("done");
 		} catch (e) {
 			s(e instanceof Error ? e.message : "저장하지 못했습니다.");
 		} finally {
 			a("");
 		}
-	}, j = (e) => {
-		C((t) => {
+	}, P = (e) => {
+		T((t) => {
 			let n = t.includes(e) ? t.filter((t) => t !== e) : [...t, e];
 			return n.length ? n : t;
 		});
-	}, M = (0, l.useRef)(null), N = () => Array.from(M.current?.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])") ?? []);
+	}, F = (0, l.useRef)(null), I = () => Array.from(F.current?.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])") ?? []);
 	(0, l.useEffect)(() => {
-		M.current?.querySelector("h1")?.focus();
-	}, [n, v]);
-	let P = (e) => {
+		F.current?.querySelector("h1")?.focus();
+	}, [n, b]);
+	let L = (e) => {
 		if (e.key === "Escape") {
-			e.preventDefault(), O(!0);
+			e.preventDefault(), j(!0);
 			return;
 		}
 		if (e.key !== "Tab") return;
-		let t = N();
+		let t = I();
 		if (!t.length) return;
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
-		e.shiftKey && (i === n || !M.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
-	}, F = Wu.indexOf(n), I = Ku.find((e) => e.id === f);
+		e.shiftKey && (i === n || !F.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
+	}, R = Wu.indexOf(n), z = Ku.find((e) => e.id === m);
 	return /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "welcome-shell",
 		role: "dialog",
 		"aria-modal": "true",
 		"aria-labelledby": "welcomeTitle",
-		ref: M,
-		onKeyDown: P,
+		ref: F,
+		onKeyDown: L,
 		children: /* @__PURE__ */ (0, K.jsxs)("div", {
 			className: "welcome-card",
 			children: [
@@ -24087,7 +24097,7 @@ function Zu({ onFinish: e }) {
 						className: "welcome-count",
 						children: [
 							"단계 ",
-							/* @__PURE__ */ (0, K.jsx)("b", { children: F + 1 }),
+							/* @__PURE__ */ (0, K.jsx)("b", { children: R + 1 }),
 							" / ",
 							Wu.length
 						]
@@ -24099,13 +24109,13 @@ function Zu({ onFinish: e }) {
 					"aria-label": "진행 단계",
 					"aria-valuemin": 1,
 					"aria-valuemax": Wu.length,
-					"aria-valuenow": F + 1,
-					style: { "--welcome-fill": `${(F + 1) / Wu.length * 100}%` }
+					"aria-valuenow": R + 1,
+					style: { "--welcome-fill": `${(R + 1) / Wu.length * 100}%` }
 				}),
 				/* @__PURE__ */ (0, K.jsxs)("section", {
 					className: "welcome-body",
 					children: [
-						v < 0 && /* @__PURE__ */ (0, K.jsxs)("p", {
+						b < 0 && /* @__PURE__ */ (0, K.jsxs)("p", {
 							className: "welcome-eyebrow",
 							children: [/* @__PURE__ */ (0, K.jsx)(Xu, { step: n }), Yu[n]]
 						}),
@@ -24172,19 +24182,19 @@ function Zu({ onFinish: e }) {
 									/* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": u === "none",
-										onClick: () => d("none"),
+										onClick: () => A("none"),
 										children: "AI 없이"
 									}),
 									/* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": u === "cli",
-										onClick: () => d("cli"),
+										onClick: () => A("cli"),
 										children: "CLI"
 									}),
 									/* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": u === "api",
-										onClick: () => d("api"),
+										onClick: () => A("api"),
 										children: "API"
 									})
 								]
@@ -24204,8 +24214,8 @@ function Zu({ onFinish: e }) {
 									"aria-label": "제공사",
 									children: Ku.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
-										"aria-pressed": f === e.id,
-										onClick: () => p(e.id),
+										"aria-pressed": m === e.id,
+										onClick: () => h(e.id),
 										children: e.label
 									}, e.id))
 								}),
@@ -24213,10 +24223,10 @@ function Zu({ onFinish: e }) {
 									className: "welcome-field",
 									children: [/* @__PURE__ */ (0, K.jsx)("span", { children: "API 키" }), /* @__PURE__ */ (0, K.jsx)("input", {
 										type: "password",
-										value: m,
+										value: g,
 										autoComplete: "off",
 										placeholder: "나중에 설정에서 넣어도 됩니다",
-										onChange: (e) => h(e.target.value)
+										onChange: (e) => _(e.target.value)
 									})]
 								}),
 								/* @__PURE__ */ (0, K.jsxs)("p", {
@@ -24227,10 +24237,10 @@ function Zu({ onFinish: e }) {
 										" 파일에만 저장됩니다. 발급:",
 										" ",
 										/* @__PURE__ */ (0, K.jsxs)("a", {
-											href: I?.url,
+											href: z?.url,
 											target: "_blank",
 											rel: "noreferrer",
-											children: [I?.label, " 키 페이지"]
+											children: [z?.label, " 키 페이지"]
 										})
 									]
 								})
@@ -24239,8 +24249,8 @@ function Zu({ onFinish: e }) {
 								className: "welcome-muted",
 								children: [/* @__PURE__ */ (0, K.jsx)("b", { children: "내 컴퓨터에 설치해서 쓰는 AI 프로그램" }), "입니다(Codex·Claude Code·Antigravity). 이미 구독 중이라면 추가 요금이 없고, 한 번 실행에 수십 초가 걸립니다. 아래에서 바로 설치하고 로그인할 수 있습니다."]
 							}), /* @__PURE__ */ (0, K.jsx)(ml, {
-								adapters: g?.adapters ?? [],
-								onSettings: _,
+								adapters: v?.adapters ?? [],
+								onSettings: y,
 								disabled: !!i
 							})] })
 						] }),
@@ -24255,18 +24265,18 @@ function Zu({ onFinish: e }) {
 								className: "welcome-muted",
 								children: "US 뉴욕·나스닥 · KR 코스피·코스닥 · EU 런던·프랑크푸르트 · JP 도쿄"
 							}),
-							b ? /* @__PURE__ */ (0, K.jsx)("div", {
+							S ? /* @__PURE__ */ (0, K.jsx)("div", {
 								className: "welcome-markets",
 								role: "group",
 								"aria-label": "수집·표시할 시장",
-								children: b.markets.map((e) => {
+								children: S.markets.map((e) => {
 									let t = qu[e.id] ?? e.id;
 									return /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"data-code": t,
 										"aria-label": `${t} ${e.label}`,
-										"aria-pressed": S.includes(e.id),
-										onClick: () => j(e.id),
+										"aria-pressed": w.includes(e.id),
+										onClick: () => P(e.id),
 										children: t
 									}, e.id);
 								})
@@ -24279,14 +24289,14 @@ function Zu({ onFinish: e }) {
 								children: "저장하면 고른 시장의 뉴스를 바로 모으기 시작합니다. 몇 분 걸리고, 그동안에도 다른 화면을 쓸 수 있습니다."
 							})
 						] }),
-						n === "done" && v >= 0 && /* @__PURE__ */ (0, K.jsx)(Uu, { index: v }),
-						n === "done" && v < 0 && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+						n === "done" && b >= 0 && /* @__PURE__ */ (0, K.jsx)(Uu, { index: b }),
+						n === "done" && b < 0 && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
 							/* @__PURE__ */ (0, K.jsx)("h1", {
 								id: "welcomeTitle",
 								tabIndex: -1,
 								children: "이제 시작할 수 있습니다"
 							}),
-							w && /* @__PURE__ */ (0, K.jsx)("p", { children: "뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다." }),
+							E && /* @__PURE__ */ (0, K.jsx)("p", { children: "뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다." }),
 							/* @__PURE__ */ (0, K.jsxs)("ol", {
 								className: "welcome-next",
 								children: [
@@ -24295,21 +24305,21 @@ function Zu({ onFinish: e }) {
 									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "기업 분석" }), "에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다."] })
 								]
 							}),
-							E && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsxs)("p", {
+							O && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsxs)("p", {
 								className: "welcome-path",
 								children: [
 									/* @__PURE__ */ (0, K.jsx)("b", { children: "자료 저장 위치" }),
 									" · ",
-									E.path
+									O.path
 								]
-							}), !E.outsideAppFolder && /* @__PURE__ */ (0, K.jsx)("p", {
+							}), !O.outsideAppFolder && /* @__PURE__ */ (0, K.jsx)("p", {
 								className: "welcome-muted",
 								children: "새 버전은 새 폴더로 풀립니다. 설정 > 자료 위치에서 옮겨두면 업데이트할 때 그대로 이어집니다."
 							})] }),
 							/* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-tour-open",
 								type: "button",
-								onClick: () => y(0),
+								onClick: () => x(0),
 								children: "Folio OS가 어떻게 도는지 보기 · 30초"
 							})
 						] }),
@@ -24325,33 +24335,33 @@ function Zu({ onFinish: e }) {
 					children: [/* @__PURE__ */ (0, K.jsx)("button", {
 						className: "welcome-skip",
 						type: "button",
-						onClick: () => void O(n !== "done"),
+						onClick: () => void j(n !== "done"),
 						disabled: !!i,
 						children: n === "done" ? "닫기" : "건너뛰기"
 					}), /* @__PURE__ */ (0, K.jsxs)("div", {
 						className: "welcome-acts",
 						children: [
-							n === "done" && v >= 0 && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("button", {
+							n === "done" && b >= 0 && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn",
 								type: "button",
-								onClick: () => y(v - 1),
-								children: v === 0 ? "돌아가기" : "이전"
-							}), v < Hu.length - 1 ? /* @__PURE__ */ (0, K.jsx)("button", {
+								onClick: () => x(b - 1),
+								children: b === 0 ? "돌아가기" : "이전"
+							}), b < Hu.length - 1 ? /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => y(v + 1),
+								onClick: () => x(b + 1),
 								children: "다음"
 							}) : /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void O(!1),
+								onClick: () => void j(!1),
 								disabled: !!i,
 								children: "시작하기"
 							})] }),
-							F > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
+							R > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn",
 								type: "button",
-								onClick: () => c(Wu[F - 1]),
+								onClick: () => c(Wu[R - 1]),
 								disabled: !!i,
 								children: "이전"
 							}),
@@ -24370,21 +24380,21 @@ function Zu({ onFinish: e }) {
 							n === "engine" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void k(),
+								onClick: () => void M(),
 								disabled: !!i,
 								children: i === "engine" ? "저장 중" : "저장하고 다음"
 							}),
 							n === "markets" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void A(),
+								onClick: () => void N(),
 								disabled: !!i,
 								children: i === "markets" ? "저장 중" : "저장하고 시작"
 							}),
-							n === "done" && v < 0 && /* @__PURE__ */ (0, K.jsx)("button", {
+							n === "done" && b < 0 && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn welcome-btn--go",
 								type: "button",
-								onClick: () => void O(!1),
+								onClick: () => void j(!1),
 								disabled: !!i,
 								children: "시작하기"
 							})

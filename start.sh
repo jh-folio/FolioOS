@@ -48,10 +48,13 @@ open_browser() {
 ) &
 OPENER_PID=$!
 
-# Exit code 3 = restart signal from the in-app restart button.
+# Exit code 7 = restart signal from the in-app restart button (app.py RESTART_EXIT_CODE).
+# NOT 3: uvicorn exits 3 (STARTUP_FAILURE) on any startup failure, including a port
+# that is already in use, which made this loop forever.
 while true; do
   "$PYTHON" app.py
-  [ $? -eq 3 ] || break
+  status=$?
+  [ "$status" -eq 7 ] || break
   echo ""
   echo "Restarting..."
   echo ""

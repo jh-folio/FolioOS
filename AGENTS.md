@@ -337,8 +337,10 @@ features/company_analysis/financial_quality_prompt.md
 ### 서버 재시작
 
 - 웹 UI 상단의 `서버 재시작` 버튼은 `POST /api/server/restart`를 호출한다.
-- `schedule_server_restart()`는 0.5초 후 `os._exit(3)`으로 프로세스를 종료한다. **종료 코드 3이 재시작 신호**다.
-- `start.ps1`과 `start.sh`는 종료 코드 3이면 루프를 돌며 `py -3 app.py`(또는 Python 경로)를 재실행한다. 다른 종료 코드면 루프가 끝난다.
+- `schedule_server_restart()`는 0.5초 후 `os._exit(RESTART_EXIT_CODE)`로 프로세스를 종료한다. **재시작 신호는 7이다.**
+- **3을 쓰지 않는다.** `uvicorn.config.STARTUP_FAILURE`가 3이라, 포트 충돌을 비롯한 모든 uvicorn 시작 실패가 같은 코드로 끝난다. 예전에는 런처가 그것을 재시작 신호로 읽어 무한히 다시 띄웠다 — 시작 → 바인드 실패 → `Restarting...` → 시작 → … (실측: 서버가 이미 떠 있을 때 `py -3 app.py`가 exit 3). 사용자가 `.cmd`를 두 번 실행하면 바로 걸린다.
+- `main()`은 uvicorn을 부르기 전에 포트를 직접 잡아 본다(`_port_owner_message()`). 이미 우리 서버가 떠 있으면 그 주소를 안내하고, 다른 프로그램이면 `PORT`를 바꾸라고 말한 뒤 코드 1로 끝낸다. uvicorn의 영어 소켓 오류를 그대로 보여주지 않는다.
+- `start.ps1`과 `start.sh`는 종료 코드 7이면 루프를 돌며 `py -3 app.py`(또는 Python 경로)를 재실행한다. 0도 7도 아니면 `start.ps1`은 창을 붙잡아(`Read-Host`) 실패 이유가 사라지지 않게 한다.
 - `start-archive.cmd`나 `start.ps1` / `start.sh`로 실행 중일 때만 재시작이 자동으로 동작한다. 터미널에서 `py -3 app.py`를 직접 실행 중이면 서버가 종료만 된다.
 - `_RESTART_REQUESTED` 플래그로 동시에 여러 재시작 요청이 들어와도 한 번만 실행한다.
 - 재시작 후 `load_jobs()`는 `data/jobs.json`에서 `queued`/`running` 상태인 작업을 `failed`로 변환한다(좀비 잡 방지).
