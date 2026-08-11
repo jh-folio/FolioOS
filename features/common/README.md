@@ -85,8 +85,8 @@ py -3 -m features.common.market_data.nikkei225_universe
 
 - `MarketDataProvider`: 날짜별 시장 수치를 가져오는 인터페이스입니다.
 - `TossOpenApiKoreaMarketProvider`: 0.2 사용자 표면에서는 숨긴 내부 검증 adapter입니다. `FOLIO_ENABLE_TOSS_OPEN_API=1`이 켜진 경우에만 설정 상태를 확인하고, 공식 OpenAPI에서 KOSPI/KOSDAQ aggregate 지수·투자자 수급 endpoint가 확인되지 않으면 경고를 남기고 다음 provider로 넘깁니다.
-- `PyKrxKoreaMarketProvider`: `pykrx`가 설치되어 있으면 KOSPI/KOSDAQ/KOSPI200, 거래대금, 투자자별 수급, 주요 업종 등락률을 조회합니다.
-- `YFinanceKoreaMarketProvider`: pykrx 미지원·실패 시 KOSPI/KOSDAQ 등 지수 종가·등락률을 가능한 범위에서 보완합니다.
+- `YFinanceKoreaMarketProvider`: KOSPI/KOSDAQ/KOSPI200 지수 종가·등락률과 원·달러 환율을 조회합니다.
+- `PyKrxKoreaMarketProvider`는 2026-08-12에 제거했습니다. pykrx 1.2.x부터 지수 조회에 KRX 계정(`KRX_ID`/`KRX_PW`)이 필요해 자격증명 없는 설치에서는 항상 실패했고, 거래대금·투자자별 수급·업종 등락률은 그래서 실제로 채워진 적이 없습니다.
 - `fetch_korea_market_data(date)`: provider chain을 실행하고, 별도 FX 보조 경로로 원·달러 환율(`USDKRW=X`)을 붙입니다.
 
 provider가 실패해도 호출자는 빈 payload와 warning을 받아야 하며, 보고서 생성 경로는 수치를 추정하지 않고 한계를 명시해야 합니다.

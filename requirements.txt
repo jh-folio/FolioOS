@@ -1,6 +1,5 @@
 yfinance>=1.5.1
 beautifulsoup4>=4.15.0
-pykrx>=1.0.0
 jinja2>=3.1.6
 keyring>=25.7.0
 polars>=1.42.1

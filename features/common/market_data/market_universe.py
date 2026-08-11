@@ -565,23 +565,6 @@ def _kospi_static_fallback_snapshot(
     return payload
 
 
-def fetch_kospi_batch(date: str) -> list[dict]:
-    from pykrx import stock
-
-    ymd = str(date)[:10].replace("-", "")
-    prices = stock.get_market_ohlcv_by_ticker(ymd, market="KOSPI")
-    caps = stock.get_market_cap_by_ticker(ymd, market="KOSPI")
-    sectors = stock.get_market_sector_classifications(ymd, market="KOSPI")
-    try:
-        members = list(stock.get_index_portfolio_deposit_file(KOSPI200_INDEX_CODE, ymd))
-    except Exception:
-        try:
-            members = list(stock.get_index_portfolio_deposit_file(KOSPI200_INDEX_CODE))
-        except Exception:
-            members = None
-    return kospi_frames_to_rows(date, prices, caps, sectors, members=members)
-
-
 def build_kospi_heatmap_snapshot(
     date: str,
     *,
@@ -603,9 +586,13 @@ def build_kospi_heatmap_snapshot(
         save_last_good_snapshot(cache_path, primary)
         return primary
     try:
-        rows = (krx_fetcher or fetch_kospi_batch)(str(date)[:10])
+        # KRX 직접 조회는 주입된 fetcher가 있을 때만 한다. 기본 경로에서는 정적
+        # 구성종목 universe와 yfinance 시세가 먼저 성공하므로 여기까지 오지 않는다.
+        # pykrx 기반 기본 fetcher는 2026-08-12에 제거했다 — 1.2.x부터 KRX 계정
+        # 자격증명을 요구해 자격증명 없는 설치에서는 절대 성공할 수 없었다.
+        rows = krx_fetcher(str(date)[:10]) if krx_fetcher else []
         if rows:
-            payload = snapshot_payload("KR", date, "pykrx", rows, rows)
+            payload = snapshot_payload("KR", date, "krx_direct", rows, rows)
             save_last_good_snapshot(cache_path, payload)
             return payload
         cached = load_last_good_snapshot(cache_path)

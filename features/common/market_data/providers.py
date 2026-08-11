@@ -3,8 +3,15 @@ from __future__ import annotations
 """Market data provider interfaces and Korea market implementations.
 
 The provider boundary keeps briefing logic independent from the concrete data
-source.  pykrx is preferred for KRX-style Korean market data when installed;
-yfinance remains a best-effort fallback for index levels and USD/KRW.
+source.  yfinance supplies Korean index levels and USD/KRW.
+
+**pykrx was removed (2026-08-12).**  From 1.2.x its index endpoints require KRX
+account credentials (``KRX_ID`` / ``KRX_PW``), so every call failed and the chain
+silently fell back to yfinance — twelve of twelve cached payloads on this machine.
+Asking users for another set of credentials to restore it is not worth it, and the
+heatmap universe already made the same call for the same reason (see
+``kospi200_universe``).  The practical effect is honest rather than lossy: investor
+flows, sector index moves, and trading value were empty in every briefing already.
 """
 
 import datetime as dt
@@ -79,93 +86,6 @@ def _empty_payload(date: str, provider: str, error: str = "") -> dict:
     }
 
 
-class PyKrxKoreaMarketProvider(MarketDataProvider):
-    name = "pykrx"
-
-    INDEX_CODES = {
-        "KOSPI": "1001",
-        "KOSDAQ": "2001",
-        "KOSPI200": "1028",
-    }
-
-    SECTOR_TERMS = (
-        "전기전자", "반도체", "화학", "금융", "의약품", "운송장비",
-        "기계", "철강", "서비스", "건설", "보험", "증권",
-    )
-
-    def fetch_korea_market(self, date: str) -> dict:
-        try:
-            from pykrx import stock
-        except Exception:
-            return _empty_payload(date, self.name, "pykrx_unavailable")
-
-        target = _ymd(date)
-        payload = _empty_payload(date, self.name)
-        payload["ok"] = True
-
-        indices: dict[str, dict] = {}
-        for label, code in self.INDEX_CODES.items():
-            try:
-                df = stock.get_index_ohlcv_by_date(target, target, code)
-                if df is None or df.empty:
-                    continue
-                row = df.iloc[-1]
-                indices[label] = _index_payload(label, row, _iso_date(df.index[-1]))
-            except Exception:
-                payload["warnings"].append(f"{label}: market_data_unavailable")
-        payload["indices"] = indices
-
-        investor_flows: dict[str, dict] = {}
-        for market in ("KOSPI", "KOSDAQ"):
-            try:
-                df = stock.get_market_trading_value_by_date(target, target, market=market)
-                if df is None or df.empty:
-                    continue
-                row = df.iloc[-1]
-                investor_flows[market] = {
-                    "asOfDate": _iso_date(df.index[-1]),
-                    "foreign": _pick(row, ["외국인합계", "외국인"]),
-                    "institution": _pick(row, ["기관합계", "기관"]),
-                    "individual": _pick(row, ["개인"]),
-                }
-            except Exception:
-                payload["warnings"].append(f"{market}: investor_flow_unavailable")
-        payload["investorFlows"] = investor_flows
-
-        sectors = []
-        try:
-            tickers = stock.get_index_ticker_list(target, market="KOSPI")
-            for ticker in tickers[:120]:
-                try:
-                    name = stock.get_index_ticker_name(ticker)
-                except Exception:
-                    name = ticker
-                if not any(term in str(name) for term in self.SECTOR_TERMS):
-                    continue
-                try:
-                    df = stock.get_index_ohlcv_by_date(target, target, ticker)
-                    if df is None or df.empty:
-                        continue
-                    row = df.iloc[-1]
-                    item = _index_payload(str(name), row, _iso_date(df.index[-1]))
-                    item["market"] = "KOSPI"
-                    sectors.append(item)
-                except Exception:
-                    continue
-        except Exception:
-            payload["warnings"].append("sector_indices_unavailable")
-        payload["sectors"] = sorted(
-            sectors,
-            key=lambda x: (x.get("changePct") is not None, x.get("changePct") or 0),
-            reverse=True,
-        )[:8]
-
-        payload["ok"] = bool(payload["indices"] or payload["investorFlows"] or payload["sectors"])
-        if not payload["ok"] and not payload["warnings"]:
-            payload["warnings"].append("no KRX data returned")
-        return payload
-
-
 class YFinanceKoreaMarketProvider(MarketDataProvider):
     name = "yfinance"
 
@@ -226,9 +146,8 @@ class TossOpenApiKoreaMarketProvider(MarketDataProvider):
 
     Toss exposes stock/ETF prices and calendars for KR/US.  It does not expose
     a documented KOSPI/KOSDAQ index aggregate in the current OpenAPI contract,
-    so this provider contributes readiness/warnings and lets pykrx handle
-    Korean index/investor-flow aggregates.  Stock/ETF price snapshots use the
-    Toss client from the price-history and heatmap modules.
+    so this provider contributes readiness/warnings only.  Stock/ETF price
+    snapshots use the Toss client from the price-history and heatmap modules.
     """
 
     name = "toss_open_api"
@@ -241,7 +160,7 @@ class TossOpenApiKoreaMarketProvider(MarketDataProvider):
         return _empty_payload(
             date,
             self.name,
-            "Toss Open API configured; Korean aggregate index endpoint is not documented, falling back to pykrx/yfinance",
+            "Toss Open API configured; Korean aggregate index endpoint is not documented, falling back to yfinance",
         )
 
 
@@ -295,7 +214,7 @@ def _fetch_usdkrw(date: str) -> dict:
 def fetch_korea_market_data(date: str) -> dict:
     warnings: list[str] = []
     tried: list[str] = []
-    providers: list[MarketDataProvider] = [PyKrxKoreaMarketProvider(), YFinanceKoreaMarketProvider()]
+    providers: list[MarketDataProvider] = [YFinanceKoreaMarketProvider()]
     try:
         from features.llm_settings.client import toss_open_api_enabled
         if toss_open_api_enabled():

@@ -43,7 +43,7 @@
 6. **상세 카드(메인 3개만)** — 시장 상태(confidence 미터)·포트폴리오 영향·이번 주 체크포인트. 도넛과 중복되는 Thesis 변화/연결 노트는 홈에서 생략하고, 경고(`warnings`)는 있을 때만 노출.
 
 > 차트는 외부 라이브러리 없이 인라인 SVG/CSS로 그리며 색은 팔레트 토큰(`--folio-green/gold/burgundy/ink-muted` 등)을 쓴다.
-> `marketTape`는 `build_dashboard_tape()`가 계속 채운다 — US 지수/원자재는 yfinance 레벨(`^GSPC/^NDX/^DJI/^RUT/^TNX/^VIX/DX-Y.NYB/GC=F/CL=F`), 한국 수치(KOSPI·KOSDAQ·USD/KRW)는 `providers` 체인(pykrx 우선→yfinance). 현재 UI에서는 TradingView 위젯의 fallback으로만 사용하며, 위젯 데이터는 보고서 evidence나 snapshot에 저장하지 않는다.
+> `marketTape`는 `build_dashboard_tape()`가 계속 채운다 — US 지수/원자재는 yfinance 레벨(`^GSPC/^NDX/^DJI/^RUT/^TNX/^VIX/DX-Y.NYB/GC=F/CL=F`), 한국 수치(KOSPI·KOSDAQ·USD/KRW)는 `providers` 체인(yfinance). 현재 UI에서는 TradingView 위젯의 fallback으로만 사용하며, 위젯 데이터는 보고서 evidence나 snapshot에 저장하지 않는다.
 > 포트폴리오 영향에서 한국 종목(6자리 코드)은 코드 대신 종목명으로 표시한다.
 > 전역 hero(`header.hero`)는 기본 컴팩트 브랜드 바이며, 홈(대시보드)에서만 `.page.home-active`로 크게 키운다. 다른 화면은 섹션 제목이 소형 hero 역할을 한다.
 

@@ -424,7 +424,8 @@ features/company_analysis/financial_quality_prompt.md
 - **화면의 날짜 선택은 발행일이 아니라 그 시장의 세션 기준일이다.** 한 브리핑 안에서 미국장은 발행일 D의 D-1 정규장을, 한국장은 D 장을 다루므로 변환은 시장마다 다르다: 미국장·유럽장은 `세션일 다음 거래일`, 한국장·일본장은 `세션일 그대로`. 변환은 `publication_date_for_session()` 하나가 담당한다. 저장 키·아카이브 정렬·기존 보고서는 계속 발행일 기준이라 호환이 깨지지 않는다.
 - **발행일이 갈리면 실행을 나눈다**(`publication_date_groups()`, `POST /api/briefings`). 예전에는 여러 시장을 함께 고르면 밤샘 마감 시장 기준 발행일 하나로 합쳤는데, 그러면 나머지 시장이 그 발행일을 **자기 세션일로** 읽는다 — 금요일(08-07)을 고르고 미국장·한국장을 함께 만들면 한국장은 월요일(08-10) 장을 다뤘고, 고르지 않은 날의 브리핑이 아무 경고 없이 나왔다. 저장 파일이 이미 시장별(`{발행일}.{시장}.json`)이라 그룹마다 따로 만들면 둘 다 고른 세션을 다룬다. 그룹은 최대 둘이며(미국·유럽 / 한국·일본), 응답은 그룹이 둘일 때만 `jobs`(CLI) 또는 `reports`(규칙) 목록이 된다. 날짜를 주지 않은 오늘 생성은 그룹이 하나라 예전과 같다 — `marketScope=both`로 도는 시장 메모리 writeback도 그대로다.
 - **한국장 수치도 발행일이 아니라 세션일로 부른다**(`cached_korea_market_data(_scope_session_date("kr", windows))`). 차트는 세션일로 가는데 수치만 발행일로 가면 한 브리핑 안에서 날짜가 갈린다 — 월요일 08:03에 만든 금요일 브리핑에 지수는 금요일 종가가 들어갔는데(월요일 봉이 아직 없어 떨어졌다) 환율만 일요일 값이 들어갔다. 환율은 24시간 거래라 주말 봉이 잡힌다. 장이 열린 뒤 같은 요청을 하면 아직 마감도 안 한 당일 장중 값을 받는다. 규칙 생성과 Agent 생성 두 경로가 같다.
-- 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. `pykrx` 기반 KRX 수치를 우선하고 실패하면 yfinance/기사 기반 fallback을 사용하되, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.
+- 한국장 핵심 수치는 `features/common/market_data/providers.py`의 provider 체인을 사용한다. 지금 체인은 yfinance 하나이며, KOSPI/KOSDAQ 종가 등락률이 없으면 추정하지 말고 한계를 명시한다.
+- **pykrx는 2026-08-12에 제거했다.** 1.2.x부터 지수 조회에 KRX 계정(`KRX_ID`/`KRX_PW`)을 요구해, 자격증명이 없는 설치에서는 매번 실패하고 조용히 yfinance로 떨어졌다(이 PC의 캐시 12건이 모두 그랬다). 사용자에게 API 키를 하나 더 받아 되살릴 만한 가치가 없다고 봤다. 히트맵 universe가 같은 이유로 이미 같은 결정을 했다(`kospi200_universe`). 실제로 잃은 것은 없다 — 투자자 수급·업종 등락·거래대금은 이미 모든 브리핑에서 비어 있었고, 이제 그 사실이 문서와 일치한다.
 - LLM 실패 시 규칙 기반 브리핑이 필요하다. 참고자료 섹션은 유지한다.
 - `select_briefing_docs()`의 fallback 경로에서 `market_windows`는 브리핑 날짜 기준 원본을 유지한다. 문서 날짜로 재계산하면 공휴일/주말에 `krPreviousSessionDate`가 틀린 날짜를 가리키는 버그가 발생한다.
 
@@ -674,7 +675,7 @@ features/company_analysis/financial_quality_prompt.md
 - Windows와 macOS 모두 지원한다.
 - Python 3가 필요하다. Windows는 `py -3`, macOS/Linux는 `python3`을 사용한다.
 - 필수 Python 패키지는 [requirements.txt](requirements.txt)에 있다.
-- 시장 가격 스냅샷은 `yfinance`가 있으면 활성화된다. 한국장 KRX 기반 수치는 `pykrx`가 있으면 우선 활성화되고, 실패 시 yfinance fallback을 사용한다.
+- 시장 가격 스냅샷은 `yfinance`가 있으면 활성화된다. 한국장 수치도 yfinance를 쓴다(pykrx는 KRX 계정을 요구해 2026-08-12에 제거).
 - `polars`는 대량 문서 필터링, 점수 정렬, 재무/포트폴리오 집계 계산 엔진으로 사용한다.
 - Jinja2는 규칙 기반 기업분석 보고서에 필요하다.
 - Node.js는 React SPA 개발, typecheck/test/build, 그리고 bridge JS 문법 검사에 필요하다. 일반 0.2 사용자 패키지는 최신 `public/react/folio-react.js`가 포함되어 있으면 Node.js 없이 실행할 수 있다.

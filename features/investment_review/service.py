@@ -389,7 +389,7 @@ def _read_json(path: Path):
 
 # 대시보드 마켓 탭.
 # US 지수는 ETF가 아닌 지수 레벨(^GSPC/^NDX)을 쓰고, 한국 수치는 providers 체인
-# (pykrx 우선 → yfinance)으로 KOSPI·USD/KRW를 가져온다(CLAUDE.md 한국장 규칙).
+# (yfinance)으로 KOSPI·USD/KRW를 가져온다(CLAUDE.md 한국장 규칙).
 # size: 중요도 표시용("lg" 핵심 지표 → 큰 카드, "sm" 보조 지표 → 작은 카드).
 def _tape_item(label: str, value, change_pct, size: str = "sm") -> dict:
     has = isinstance(value, (int, float))

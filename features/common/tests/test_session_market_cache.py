@@ -30,7 +30,7 @@ DENIED_PAYLOAD = {
 GOOD_PAYLOAD = {
     "ok": True,
     "date": "2026-08-10",
-    "provider": "pykrx",
+    "provider": "yfinance",
     "indices": {
         "KOSPI": {"asOfDate": "2026-08-10", "close": 6299.66, "changePct": 0.65},
         "KOSDAQ": {"asOfDate": "2026-08-10", "close": 810.12},
