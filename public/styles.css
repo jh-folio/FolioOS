@@ -15139,89 +15139,25 @@ main.page {
 
 .welcome-body .welcome-path b { color: var(--folio-ink-muted); font-weight: var(--fw-normal); }
 
-/* 튜토리얼 — 자료의 흐름을 박스로 쌓는다. 큰 SVG는 375px에서 글자가 뭉개진다. */
-/* 안내 카드 안의 CLI 목록은 설정 탭의 테두리 목록 대신 안내의 면 언어를 쓴다.
-   컴포넌트는 하나이고 기하만 공유한다 — 색·배치는 host가 훅으로 준다. */
-.welcome-body .cli-provider-list {
-  border-block-start: 0;
-  padding-inline: var(--sp-4);
+.welcome-ask {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
   border-radius: var(--r-group);
   background: var(--wz-group);
-}
-
-.welcome-body .cli-provider-row:last-child { border-block-end: 0; }
-.welcome-body .cli-setup-note { color: var(--folio-ink-subtle); }
-
-.welcome-tour-open {
-  justify-self: start;
-  min-block-size: var(--touch-min);
-  padding: 10px 18px;
-  border: 0;
-  border-radius: var(--r-control);
-  background: var(--wz-deep);
-  color: var(--folio-ink-muted);
-  font: inherit;
-  font-size: var(--fs-body-sm);
-  font-weight: var(--fw-medium);
-  cursor: pointer;
-  transition: opacity var(--dur-fast) var(--ease);
-}
-
-.welcome-tour-open:hover { opacity: 0.78; }
-
-.welcome-body .welcome-tour-eyebrow {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  color: var(--folio-ink-subtle);
-  font-variant-numeric: tabular-nums;
-}
-
-.welcome-tour-flow {
-  display: grid;
-  /* 데스크톱은 가로 3칸 + 사이 화살표, 375px에서는 세로로 접힌다(아래 미디어 쿼리). */
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  gap: var(--sp-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: none;
   animation: welcome-up 0.44s 0.14s var(--wz-spring) both;
 }
 
-.welcome-tour-flow li {
-  position: relative;
-  display: grid;
-  gap: 4px;
-  align-content: start;
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--r-group);
-  background: var(--wz-group);
-}
-
-.welcome-tour-flow li b {
-  font-size: var(--fs-body-sm);
+.welcome-body .welcome-ask-q {
+  margin: 0;
+  font-size: var(--fs-body);
   font-weight: var(--fw-bold);
   color: var(--folio-ink);
-  letter-spacing: -0.01em;
+  animation: none;
 }
 
-.welcome-tour-flow li span {
-  font-size: var(--fs-meta);
-  line-height: 1.55;
-  color: var(--folio-ink-subtle);
-}
-
-/* 화살표는 장식이라 스크린리더가 읽지 않는 ::after로 둔다. 순서는 목록이 이미 말한다. */
-.welcome-tour-flow li + li::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: calc(var(--sp-3) * -1);
-  inline-size: var(--sp-3);
-  block-size: 1px;
-  background: var(--folio-border);
-}
+.welcome-ask .welcome-muted { margin: 0; animation: none; }
+.welcome-ask .welcome-choices { animation: none; }
 
 /* 하단은 한 줄이다. 전폭 CTA는 모바일 문법이라 860px 카드에서는 시선이 위아래로 꺾인다. */
 .welcome-actions {
@@ -15285,16 +15221,133 @@ main.page {
 
 .welcome-shell :focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
 
+/* ── 둘러보기 ──────────────────────────────────────────────────────────────
+   실제 화면 위에서 돈다. 조명은 오려내기(clip-path)가 아니라 **대상 크기의 빈 상자에
+   화면을 덮을 만큼 큰 box-shadow**다 — 오려내기는 브라우저마다 다르게 깨진다.
+   상자는 `pointer-events: none`이라 뒤 화면의 클릭을 막지 않는다.
+
+   색은 안내 화면과 같은 계약이다. 눌린 면과 CTA는 잉크이고 블루는 포커스 링뿐이다. */
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  pointer-events: none;
+}
+
+.tour-spot,
+.tour-scrim {
+  --tour-scrim: rgba(23, 34, 53, 0.55);
+  position: fixed;
+  border-radius: var(--r-group);
+  box-shadow: 0 0 0 9999px var(--tour-scrim);
+}
+
+/* **기하를 transition하지 않는다.** 9999px 그림자를 단 fixed 요소의 top/left/width/height
+   전환은 실측으로 시작값에 갇혀 움직이지 않았다 — 조명이 첫 장 자리에 그대로 남아
+   2·3장에서 엉뚱한 곳을 비췄다. 장이 넘어갈 때 바로 옮겨 붙는 편이 정확하다. */
+
+/* 대상을 못 찾았을 때. 화면 밖에 0크기 상자를 두어 그림자만 남긴다. */
+.tour-scrim {
+  top: -20px;
+  left: -20px;
+  width: 0;
+  height: 0;
+}
+
+:root[data-theme="dark"] .tour-spot,
+:root[data-theme="dark"] .tour-scrim { --tour-scrim: rgba(6, 8, 12, 0.66); }
+
+.tour-card {
+  position: fixed;
+  display: grid;
+  gap: var(--sp-2);
+  max-inline-size: calc(100vw - var(--sp-6));
+  padding: var(--sp-4);
+  border-radius: var(--r-panel);
+  background: var(--folio-surface-clean);
+  box-shadow: 0 2px 6px rgba(7, 17, 31, 0.06), 0 26px 60px -26px rgba(7, 17, 31, 0.42);
+  pointer-events: auto;
+}
+
+:root[data-theme="dark"] .tour-card {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 30px 70px -28px rgba(0, 0, 0, 0.9);
+}
+
+.tour-count {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--folio-ink-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-card h2 {
+  margin: 0;
+  font-family: var(--font-display, var(--font-en, system-ui, sans-serif));
+  font-size: var(--fs-title);
+  line-height: 1.25;
+  color: var(--folio-ink);
+}
+
+.tour-body {
+  margin: 0;
+  font-size: var(--fs-body-sm);
+  line-height: 1.65;
+  color: var(--folio-ink-muted);
+}
+
+.tour-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-2);
+}
+
+.tour-skip {
+  min-block-size: var(--touch-min);
+  padding: 9px var(--sp-2);
+  margin-inline-end: auto;
+  border: 0;
+  border-radius: var(--r-control);
+  background: none;
+  color: var(--folio-ink-subtle);
+  font: inherit;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.tour-skip:hover { color: var(--folio-ink-muted); }
+
+.tour-btn {
+  min-block-size: var(--touch-min);
+  padding: 10px var(--sp-4);
+  border: 0;
+  border-radius: var(--r-control);
+  background: var(--surface-control);
+  color: var(--folio-ink-muted);
+  font: inherit;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.tour-btn:hover { opacity: 0.82; }
+
+.tour-btn--go {
+  background: var(--folio-surface-dark);
+  color: var(--folio-ink-inverse);
+}
+
+.tour-btn--go:hover { background: var(--folio-surface-dark-2); opacity: 1; }
+
+.tour-card :focus-visible { outline: 2px solid var(--folio-focus); outline-offset: 2px; }
+
+
 @media (max-width: 700px) {
   .welcome-head, .welcome-body, .welcome-actions { padding-inline: var(--sp-5); }
-  /* 세로로 접고 화살표를 세로선으로 눕힌다. */
-  .welcome-tour-flow { grid-auto-flow: row; grid-auto-columns: auto; }
-  .welcome-tour-flow li + li::after {
-    inset-block-start: calc(var(--sp-3) * -1);
-    inset-inline-start: var(--sp-4);
-    inline-size: 1px;
-    block-size: var(--sp-3);
-  }
   .welcome-rule { margin-inline: var(--sp-5); }
   .welcome-body { padding-block-start: var(--sp-5); min-block-size: 0; }
   .welcome-body h1 { font-size: 24px; }

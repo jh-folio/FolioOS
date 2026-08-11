@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type Reac
 import { getJson, postJson, putJson } from "../api";
 import { AgentCliSetup, type AgentCliSettings } from "./AgentCliSetup";
 import { FolioWordmark } from "./FolioWordmark";
-import { TOUR_SLIDES, WelcomeTour } from "./WelcomeTour";
 import { useThemePreference, type ThemePreference } from "./themePreference";
 
 /** 첫 실행 안내.
@@ -86,7 +85,7 @@ function StepIcon({ step }: { step: StepId }) {
   );
 }
 
-export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
+export function WelcomeWizard({ onFinish }: { onFinish: (startTour: boolean) => void }) {
   const theme = useThemePreference();
   const [step, setStep] = useState<StepId>("welcome");
   const [busy, setBusy] = useState("");
@@ -94,7 +93,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
 
   // 단계를 넘기면 안내 문구를 지운다. 남겨두면 이전 단계의 "저장했습니다"가 다음
   // 단계 아래에 그대로 붙어, 아직 저장하지 않은 것을 저장했다고 읽힌다.
-  const goto = useCallback((next: StepId) => { setNote(""); setTour(-1); setStep(next); }, []);
+  const goto = useCallback((next: StepId) => { setNote(""); setStep(next); }, []);
 
   // **지금 설정에서 시작한다.** 늘 `none`으로 두면, 안내를 다시 열어 아무것도 고르지
   // 않고 다음만 눌러도 쓰던 사람의 AI가 꺼진다 — 저장이 `enabled: false`를 쓴다.
@@ -105,8 +104,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
   const [apiKey, setApiKey] = useState("");
   const [cli, setCli] = useState<AgentCliSettings | null>(null);
 
-  // 튜토리얼은 단계가 아니라 완료 화면 위에 얹히는 별도 흐름이다. -1이면 안 보고 있다.
-  const [tour, setTour] = useState(-1);
+  // 완료 화면에서 둘러보기를 하겠다고 답했는가. 둘러보기 자체는 앱 전체를 돌아야 하므로
+  // 이 카드가 아니라 App이 띄운다 — 카드를 덮어쓰면 정작 보여줄 화면이 가려진다.
+  const [wantsTour, setWantsTour] = useState<boolean | null>(null);
 
   const [scope, setScope] = useState<MarketScopeState | null>(null);
   const [markets, setMarkets] = useState<string[]>([]);
@@ -166,9 +166,10 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
       /* 기록에 실패해도 앱은 써야 한다. 다음 실행에 안내가 한 번 더 뜰 뿐이다. */
     } finally {
       setBusy("");
-      onFinish();
+      // 건너뛰면 둘러보기도 안 한다. 건너뛰기는 "지금은 됐다"는 뜻이다.
+      onFinish(!skipped && wantsTour === true);
     }
-  }, [onFinish]);
+  }, [onFinish, wantsTour]);
 
   const saveEngine = async () => {
     // 고르지 않고 지나가면 아무것도 쓰지 않는다. 지나가는 것은 선택이 아니다.
@@ -230,7 +231,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
     // 단계가 바뀌면 새 내용의 처음으로 포커스를 옮긴다. 그러지 않으면 이전 단계에서
     // 누른 버튼이 사라진 자리에 포커스가 남아 body로 떨어진다.
     shellRef.current?.querySelector<HTMLElement>("h1")?.focus();
-  }, [step, tour]);
+  }, [step]);
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape") {
@@ -285,7 +286,7 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
         <section className="welcome-body">
           {/* 튜토리얼은 자기 장 표시를 갖는다. 단계 eyebrow까지 남기면 `준비 완료` 위에
               `1 / 3`이 겹쳐 붙어 무엇을 세는 숫자인지 알 수 없다. */}
-          {tour < 0 && <p className="welcome-eyebrow"><StepIcon step={step} />{EYEBROWS[step]}</p>}
+          <p className="welcome-eyebrow"><StepIcon step={step} />{EYEBROWS[step]}</p>
 
           {step === "welcome" && (
             <>
@@ -439,16 +440,16 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
             </>
           )}
 
-          {step === "done" && tour >= 0 && <WelcomeTour index={tour} />}
-
-          {step === "done" && tour < 0 && (
+          {step === "done" && (
             <>
               <h1 id="welcomeTitle" tabIndex={-1}>이제 시작할 수 있습니다</h1>
               {collecting && <p>뉴스를 모으고 있습니다. 상단 진행 표시에서 상태를 볼 수 있습니다.</p>}
+              {/* 각 항목은 아이템 하나여야 한다. `<strong>`과 뒤 문장을 형제로 두면 둘 다
+                  grid 아이템이 되어 번호·굵은 글씨·문장이 세 칸으로 흩어진다. */}
               <ol className="welcome-next">
-                <li><strong>워치리스트</strong>에 관심 종목을 넣으면 그 종목 뉴스가 모입니다.</li>
-                <li><strong>브리핑</strong>에서 오늘의 시장을 정리합니다. 자료가 쌓일수록 좋아집니다.</li>
-                <li><strong>기업 분석</strong>에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다.</li>
+                <li><span><strong>워치리스트</strong>에 관심 종목을 넣으면 그 종목 뉴스가 모입니다.</span></li>
+                <li><span><strong>브리핑</strong>에서 오늘의 시장을 정리합니다. 자료가 쌓일수록 좋아집니다.</span></li>
+                <li><span><strong>기업 분석</strong>에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다.</span></li>
               </ol>
               {location && (
                 <>
@@ -461,9 +462,21 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                   )}
                 </>
               )}
-              <button className="welcome-tour-open" type="button" onClick={() => setTour(0)}>
-                Folio OS가 어떻게 도는지 보기 · 30초
-              </button>
+              <div className="welcome-ask">
+                <p className="welcome-ask-q">둘러보기를 진행할까요?</p>
+                <p className="welcome-muted">
+                  RSS 피드 · 시장 내러티브 · 브리핑을 차례로 열어, 자료가 어떻게 결과물이 되는지
+                  실제 화면에서 보여드립니다. 30초면 끝나고 언제든 멈출 수 있습니다.
+                </p>
+                <div className="welcome-choices" role="group" aria-label="둘러보기">
+                  <button type="button" aria-pressed={wantsTour === true} onClick={() => setWantsTour(true)}>
+                    둘러보기
+                  </button>
+                  <button type="button" aria-pressed={wantsTour === false} onClick={() => setWantsTour(false)}>
+                    바로 시작
+                  </button>
+                </div>
+              </div>
             </>
           )}
 
@@ -475,24 +488,6 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
             {step === "done" ? "닫기" : "건너뛰기"}
           </button>
           <div className="welcome-acts">
-            {/* 튜토리얼 안에서는 단계 이동이 아니라 장 이동이다. 마지막 장의 `이전`이
-                완료 화면으로 돌아가야 갇히지 않는다. */}
-            {step === "done" && tour >= 0 && (
-              <>
-                <button className="welcome-btn" type="button" onClick={() => setTour(tour - 1)}>
-                  {tour === 0 ? "돌아가기" : "이전"}
-                </button>
-                {tour < TOUR_SLIDES.length - 1 ? (
-                  <button className="welcome-btn welcome-btn--go" type="button" onClick={() => setTour(tour + 1)}>
-                    다음
-                  </button>
-                ) : (
-                  <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void finish(false)} disabled={!!busy}>
-                    시작하기
-                  </button>
-                )}
-              </>
-            )}
             {index > 0 && step !== "done" && (
               <button className="welcome-btn" type="button" onClick={() => goto(STEPS[index - 1])} disabled={!!busy}>
                 이전
@@ -514,9 +509,9 @@ export function WelcomeWizard({ onFinish }: { onFinish: () => void }) {
                 {busy === "markets" ? "저장 중" : "저장하고 시작"}
               </button>
             )}
-            {step === "done" && tour < 0 && (
+            {step === "done" && (
               <button className="welcome-btn welcome-btn--go" type="button" onClick={() => void finish(false)} disabled={!!busy}>
-                시작하기
+                {wantsTour ? "둘러보기 시작" : "시작하기"}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getJson } from "../api";
 import { AppShell } from "./AppShell";
+import { AppTour } from "./AppTour";
 import { WelcomeWizard } from "./WelcomeWizard";
 
 type OnboardingStatus = { readonly firstRun: boolean };
@@ -13,6 +14,9 @@ type OnboardingStatus = { readonly firstRun: boolean };
  */
 export function App() {
   const [welcome, setWelcome] = useState(false);
+  // 둘러보기는 안내 카드가 아니라 앱 위에서 돈다. 카드 안에서 돌면 정작
+  // 보여줄 화면이 카드에 가려진다.
+  const [tour, setTour] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,7 +43,12 @@ export function App() {
   return (
     <>
       <AppShell />
-      {welcome && <WelcomeWizard onFinish={() => setWelcome(false)} />}
+      {welcome && (
+        <WelcomeWizard
+          onFinish={(startTour) => { setWelcome(false); setTour(startTour); }}
+        />
+      )}
+      {tour && <AppTour onDone={() => setTour(false)} />}
     </>
   );
 }

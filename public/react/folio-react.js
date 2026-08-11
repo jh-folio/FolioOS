@@ -23777,6 +23777,7 @@ function Vu() {
 										type: "button",
 										"data-tooltip": a.label,
 										"data-qa": a.id === "deep-research" ? "nav-deep-research" : void 0,
+										"data-route": a.id,
 										className: "react-left-nav-item",
 										"aria-current": a.id === n.id ? "page" : void 0,
 										onClick: () => {
@@ -23824,101 +23825,163 @@ function Vu() {
 	});
 }
 //#endregion
-//#region src/app/WelcomeTour.tsx
+//#region src/app/AppTour.tsx
 var Hu = [
 	{
-		eyebrow: "1 / 3",
-		title: "자료가 들어옵니다",
-		lead: "뉴스와 공시, 직접 저장한 기사와 리포트가 이 컴퓨터의 자료 폴더에 모입니다. 모인 자료는 검색할 수 있게 정리됩니다.",
-		flow: [
-			{
-				label: "RSS 뉴스",
-				detail: "고른 시장의 매체에서 자동으로"
-			},
-			{
-				label: "내가 넣은 자료",
-				detail: "기사·리포트·공시 파일"
-			},
-			{
-				label: "자료 보관함",
-				detail: "찾아 쓸 수 있게 정리"
-			}
-		],
-		note: "관심 시장에서 끈 시장은 여기서부터 들어오지 않습니다."
+		route: "rss",
+		title: "여기로 자료가 들어옵니다",
+		body: "고른 시장의 매체에서 뉴스를 자동으로 모읍니다. 직접 저장한 기사·리포트·공시도 같은 곳에 쌓이고, 전부 검색할 수 있게 정리됩니다."
 	},
 	{
-		eyebrow: "2 / 3",
-		title: "자료가 이야기가 됩니다",
-		lead: "낱개 기사 대신 지금 시장을 움직이는 흐름으로 묶습니다. 흐름은 하루로 끝나지 않고 강해지거나 약해지는 상태로 이어집니다.",
-		flow: [
-			{
-				label: "자료 보관함",
-				detail: "쌓인 기사와 공시"
-			},
-			{
-				label: "이슈로 묶기",
-				detail: "여러 매체가 함께 다룬 것"
-			},
-			{
-				label: "시장 내러티브",
-				detail: "이어지는 흐름과 그 상태"
-			}
-		],
-		note: "한 매체만 쓴 이야기는 흐름으로 올라가지 않습니다."
+		route: "market-memory",
+		title: "모인 자료가 이야기가 됩니다",
+		body: "낱개 기사 대신 지금 시장을 움직이는 흐름으로 묶습니다. 여러 매체가 함께 다룬 것만 흐름이 되고, 그 흐름은 하루로 끝나지 않고 강해지거나 약해지는 상태로 이어집니다."
 	},
 	{
-		eyebrow: "3 / 3",
+		route: "briefing",
 		title: "이야기가 결과물이 됩니다",
-		lead: "모인 자료와 흐름을 바탕으로 브리핑과 보고서를 만듭니다. 결과물에는 어떤 자료를 근거로 삼았는지가 함께 남습니다.",
-		flow: [
-			{
-				label: "자료 · 흐름",
-				detail: "지금까지 모은 것"
-			},
-			{
-				label: "브리핑 · 기업 분석",
-				detail: "매일의 시장과 종목"
-			},
-			{
-				label: "내 노트",
-				detail: "내 생각을 최신 자료로 되짚기"
-			}
-		],
-		note: "내가 쓴 노트는 근거가 아니라 확인해야 할 생각으로 다룹니다."
+		body: "모인 자료와 흐름으로 매일의 브리핑을 만듭니다. 어떤 자료를 근거로 삼았는지가 함께 남고, 기업 분석과 테마 분석도 같은 자료를 씁니다."
 	}
-];
-function Uu({ index: e }) {
-	let t = Hu[Math.min(Math.max(e, 0), Hu.length - 1)];
-	return /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
-		/* @__PURE__ */ (0, K.jsx)("p", {
-			className: "welcome-eyebrow welcome-tour-eyebrow",
-			children: t.eyebrow
-		}),
-		/* @__PURE__ */ (0, K.jsx)("h1", {
-			id: "welcomeTitle",
-			tabIndex: -1,
-			children: t.title
-		}),
-		/* @__PURE__ */ (0, K.jsx)("p", { children: t.lead }),
-		/* @__PURE__ */ (0, K.jsx)("ol", {
-			className: "welcome-tour-flow",
-			children: t.flow.map((e) => /* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("b", { children: e.label }), /* @__PURE__ */ (0, K.jsx)("span", { children: e.detail })] }, e.label))
-		}),
-		/* @__PURE__ */ (0, K.jsx)("p", {
-			className: "welcome-muted",
-			children: t.note
-		})
-	] });
+], Uu = 340, Wu = 14, Gu = 12;
+function Ku(e) {
+	return document.querySelector(`.react-left-nav-item[data-route="${e}"]`);
+}
+function qu(e) {
+	if (!e) return null;
+	let t = e.getBoundingClientRect();
+	return t.width < 1 || t.height < 1 ? null : {
+		top: t.top,
+		left: t.left,
+		width: t.width,
+		height: t.height
+	};
+}
+function Ju(e) {
+	if (!e) return {
+		top: Math.max(Gu, window.innerHeight / 2 - 120),
+		left: Math.max(Gu, (window.innerWidth - Uu) / 2)
+	};
+	let t = window.innerWidth - (e.left + e.width) - Wu >= 352 ? e.left + e.width + Wu : Math.min(Math.max(Gu, e.left), window.innerWidth - Uu - Gu);
+	return {
+		top: Math.min(Math.max(Gu, e.top - 8), Math.max(Gu, window.innerHeight - 260)),
+		left: t
+	};
+}
+function Yu({ onDone: e }) {
+	let [t, n] = (0, l.useState)(0), [r, i] = (0, l.useState)(null), a = (0, l.useRef)(null), o = (0, l.useRef)(null), s = Hu[Math.min(t, Hu.length - 1)];
+	(0, l.useEffect)(() => {
+		let e = Oi(s.route);
+		window.location.hash !== e && (window.location.hash = e);
+	}, [s.route]), (0, l.useEffect)(() => {
+		let e = !0, t = () => {
+			e && i(qu(Ku(s.route)));
+		};
+		t();
+		let n = [
+			60,
+			180,
+			400
+		].map((e) => window.setTimeout(t, e)), r = () => t();
+		return window.addEventListener("resize", r), window.addEventListener("scroll", r, !0), () => {
+			e = !1, n.forEach((e) => window.clearTimeout(e)), window.removeEventListener("resize", r), window.removeEventListener("scroll", r, !0);
+		};
+	}, [s.route, t]), (0, l.useEffect)(() => {
+		o.current?.focus();
+	}, [t]);
+	let c = (0, l.useCallback)(() => {
+		e();
+	}, [e]), u = (e) => {
+		if (e.key === "Escape") {
+			e.preventDefault(), c();
+			return;
+		}
+		if (e.key !== "Tab") return;
+		let t = Array.from(a.current?.querySelectorAll("button:not([disabled])") ?? []);
+		if (!t.length) return;
+		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
+		e.shiftKey && (i === n || !a.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
+	}, d = Ju(r), f = t === Hu.length - 1;
+	return /* @__PURE__ */ (0, K.jsxs)("div", {
+		className: "tour-layer",
+		role: "dialog",
+		"aria-modal": "true",
+		"aria-labelledby": "tourTitle",
+		onKeyDown: u,
+		children: [r ? /* @__PURE__ */ (0, K.jsx)("div", {
+			className: "tour-spot",
+			"aria-hidden": "true",
+			style: {
+				top: r.top,
+				left: r.left,
+				width: r.width,
+				height: r.height
+			}
+		}, "spot") : /* @__PURE__ */ (0, K.jsx)("div", {
+			className: "tour-scrim",
+			"aria-hidden": "true"
+		}, "scrim"), /* @__PURE__ */ (0, K.jsxs)("div", {
+			className: "tour-card",
+			ref: a,
+			style: {
+				top: d.top,
+				left: d.left,
+				width: Uu
+			},
+			children: [
+				/* @__PURE__ */ (0, K.jsxs)("p", {
+					className: "tour-count",
+					children: [
+						t + 1,
+						" / ",
+						Hu.length
+					]
+				}),
+				/* @__PURE__ */ (0, K.jsx)("h2", {
+					id: "tourTitle",
+					tabIndex: -1,
+					ref: o,
+					children: s.title
+				}),
+				/* @__PURE__ */ (0, K.jsx)("p", {
+					className: "tour-body",
+					children: s.body
+				}),
+				/* @__PURE__ */ (0, K.jsxs)("div", {
+					className: "tour-acts",
+					children: [
+						/* @__PURE__ */ (0, K.jsx)("button", {
+							className: "tour-skip",
+							type: "button",
+							onClick: c,
+							children: "끝내기"
+						}),
+						t > 0 && /* @__PURE__ */ (0, K.jsx)("button", {
+							className: "tour-btn",
+							type: "button",
+							onClick: () => n(t - 1),
+							children: "이전"
+						}),
+						/* @__PURE__ */ (0, K.jsx)("button", {
+							className: "tour-btn tour-btn--go",
+							type: "button",
+							onClick: () => f ? c() : n(t + 1),
+							children: f ? "둘러보기 마치기" : "다음"
+						})
+					]
+				})
+			]
+		})]
+	});
 }
 //#endregion
 //#region src/app/WelcomeWizard.tsx
-var Wu = [
+var Xu = [
 	"welcome",
 	"theme",
 	"engine",
 	"markets",
 	"done"
-], Gu = [
+], Zu = [
 	{
 		id: "light",
 		label: "라이트"
@@ -23931,7 +23994,7 @@ var Wu = [
 		id: "system",
 		label: "시스템"
 	}
-], Ku = [
+], Qu = [
 	{
 		id: "openai",
 		label: "OpenAI",
@@ -23947,12 +24010,12 @@ var Wu = [
 		label: "Claude",
 		url: "https://console.anthropic.com/settings/keys"
 	}
-], qu = {
+], $u = {
 	US: "US",
 	KR: "KR",
 	EUROPE: "EU",
 	JP: "JP"
-}, Ju = {
+}, ed = {
 	welcome: /* @__PURE__ */ (0, K.jsx)("path", { d: "M3 7.5 12 3l9 4.5-9 4.5zM3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" }),
 	theme: /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("circle", {
 		cx: "12",
@@ -23974,24 +24037,24 @@ var Wu = [
 		r: "8.6"
 	}), /* @__PURE__ */ (0, K.jsx)("path", { d: "M3.4 12h17.2M12 3.4c2.5 2.6 3.8 5.5 3.8 8.6S14.5 18 12 20.6C9.5 18 8.2 15.1 8.2 12S9.5 6 12 3.4z" })] }),
 	done: /* @__PURE__ */ (0, K.jsx)("path", { d: "M5 12.6 9.6 17 19 7.6" })
-}, Yu = {
+}, td = {
 	welcome: "환영합니다",
 	theme: "화면",
 	engine: "선택 사항",
 	markets: "수집 범위",
 	done: "준비 완료"
 };
-function Xu({ step: e }) {
+function nd({ step: e }) {
 	return /* @__PURE__ */ (0, K.jsx)("svg", {
 		viewBox: "0 0 24 24",
 		"aria-hidden": "true",
-		children: Ju[e]
+		children: ed[e]
 	});
 }
-function Zu({ onFinish: e }) {
+function rd({ onFinish: e }) {
 	let t = Ml(), [n, r] = (0, l.useState)("welcome"), [i, a] = (0, l.useState)(""), [o, s] = (0, l.useState)(""), c = (0, l.useCallback)((e) => {
-		s(""), x(-1), r(e);
-	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)("openai"), [g, _] = (0, l.useState)(""), [v, y] = (0, l.useState)(null), [b, x] = (0, l.useState)(-1), [S, C] = (0, l.useState)(null), [w, T] = (0, l.useState)([]), [E, D] = (0, l.useState)(!1), [O, k] = (0, l.useState)(null);
+		s(""), r(e);
+	}, []), [u, d] = (0, l.useState)("none"), [f, p] = (0, l.useState)(!1), [m, h] = (0, l.useState)("openai"), [g, _] = (0, l.useState)(""), [v, y] = (0, l.useState)(null), [b, x] = (0, l.useState)(null), [S, C] = (0, l.useState)(null), [w, T] = (0, l.useState)([]), [E, D] = (0, l.useState)(!1), [O, k] = (0, l.useState)(null);
 	(0, l.useEffect)(() => {
 		let e = !1;
 		return (async () => {
@@ -24023,9 +24086,9 @@ function Zu({ onFinish: e }) {
 		try {
 			await V("/api/onboarding/complete", { skipped: t });
 		} catch {} finally {
-			a(""), e();
+			a(""), e(!t && b === !0);
 		}
-	}, [e]), M = async () => {
+	}, [e, b]), M = async () => {
 		if (!f) {
 			c("markets");
 			return;
@@ -24069,7 +24132,7 @@ function Zu({ onFinish: e }) {
 	}, F = (0, l.useRef)(null), I = () => Array.from(F.current?.querySelectorAll("button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])") ?? []);
 	(0, l.useEffect)(() => {
 		F.current?.querySelector("h1")?.focus();
-	}, [n, b]);
+	}, [n]);
 	let L = (e) => {
 		if (e.key === "Escape") {
 			e.preventDefault(), j(!0);
@@ -24080,7 +24143,7 @@ function Zu({ onFinish: e }) {
 		if (!t.length) return;
 		let [n, r] = [t[0], t[t.length - 1]], i = document.activeElement;
 		e.shiftKey && (i === n || !F.current?.contains(i)) ? (e.preventDefault(), r.focus()) : !e.shiftKey && i === r && (e.preventDefault(), n.focus());
-	}, R = Wu.indexOf(n), z = Ku.find((e) => e.id === m);
+	}, R = Xu.indexOf(n), z = Qu.find((e) => e.id === m);
 	return /* @__PURE__ */ (0, K.jsx)("div", {
 		className: "welcome-shell",
 		role: "dialog",
@@ -24099,7 +24162,7 @@ function Zu({ onFinish: e }) {
 							"단계 ",
 							/* @__PURE__ */ (0, K.jsx)("b", { children: R + 1 }),
 							" / ",
-							Wu.length
+							Xu.length
 						]
 					})]
 				}),
@@ -24108,16 +24171,16 @@ function Zu({ onFinish: e }) {
 					role: "progressbar",
 					"aria-label": "진행 단계",
 					"aria-valuemin": 1,
-					"aria-valuemax": Wu.length,
+					"aria-valuemax": Xu.length,
 					"aria-valuenow": R + 1,
-					style: { "--welcome-fill": `${(R + 1) / Wu.length * 100}%` }
+					style: { "--welcome-fill": `${(R + 1) / Xu.length * 100}%` }
 				}),
 				/* @__PURE__ */ (0, K.jsxs)("section", {
 					className: "welcome-body",
 					children: [
-						b < 0 && /* @__PURE__ */ (0, K.jsxs)("p", {
+						/* @__PURE__ */ (0, K.jsxs)("p", {
 							className: "welcome-eyebrow",
-							children: [/* @__PURE__ */ (0, K.jsx)(Xu, { step: n }), Yu[n]]
+							children: [/* @__PURE__ */ (0, K.jsx)(nd, { step: n }), td[n]]
 						}),
 						n === "welcome" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
 							/* @__PURE__ */ (0, K.jsx)("h1", {
@@ -24150,7 +24213,7 @@ function Zu({ onFinish: e }) {
 								className: "welcome-choices",
 								role: "group",
 								"aria-label": "화면 테마",
-								children: Gu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+								children: Zu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 									type: "button",
 									"aria-pressed": t.preference === e.id,
 									onClick: () => t.setPreference(e.id),
@@ -24212,7 +24275,7 @@ function Zu({ onFinish: e }) {
 									className: "welcome-choices",
 									role: "group",
 									"aria-label": "제공사",
-									children: Ku.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
+									children: Qu.map((e) => /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"aria-pressed": m === e.id,
 										onClick: () => h(e.id),
@@ -24270,7 +24333,7 @@ function Zu({ onFinish: e }) {
 								role: "group",
 								"aria-label": "수집·표시할 시장",
 								children: S.markets.map((e) => {
-									let t = qu[e.id] ?? e.id;
+									let t = $u[e.id] ?? e.id;
 									return /* @__PURE__ */ (0, K.jsx)("button", {
 										type: "button",
 										"data-code": t,
@@ -24289,8 +24352,7 @@ function Zu({ onFinish: e }) {
 								children: "저장하면 고른 시장의 뉴스를 바로 모으기 시작합니다. 몇 분 걸리고, 그동안에도 다른 화면을 쓸 수 있습니다."
 							})
 						] }),
-						n === "done" && b >= 0 && /* @__PURE__ */ (0, K.jsx)(Uu, { index: b }),
-						n === "done" && b < 0 && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+						n === "done" && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
 							/* @__PURE__ */ (0, K.jsx)("h1", {
 								id: "welcomeTitle",
 								tabIndex: -1,
@@ -24300,9 +24362,9 @@ function Zu({ onFinish: e }) {
 							/* @__PURE__ */ (0, K.jsxs)("ol", {
 								className: "welcome-next",
 								children: [
-									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "워치리스트" }), "에 관심 종목을 넣으면 그 종목 뉴스가 모입니다."] }),
-									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "브리핑" }), "에서 오늘의 시장을 정리합니다. 자료가 쌓일수록 좋아집니다."] }),
-									/* @__PURE__ */ (0, K.jsxs)("li", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "기업 분석" }), "에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다."] })
+									/* @__PURE__ */ (0, K.jsx)("li", { children: /* @__PURE__ */ (0, K.jsxs)("span", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "워치리스트" }), "에 관심 종목을 넣으면 그 종목 뉴스가 모입니다."] }) }),
+									/* @__PURE__ */ (0, K.jsx)("li", { children: /* @__PURE__ */ (0, K.jsxs)("span", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "브리핑" }), "에서 오늘의 시장을 정리합니다. 자료가 쌓일수록 좋아집니다."] }) }),
+									/* @__PURE__ */ (0, K.jsx)("li", { children: /* @__PURE__ */ (0, K.jsxs)("span", { children: [/* @__PURE__ */ (0, K.jsx)("strong", { children: "기업 분석" }), "에 티커를 넣으면 공시와 숫자로 보고서를 만듭니다."] }) })
 								]
 							}),
 							O && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsxs)("p", {
@@ -24316,11 +24378,34 @@ function Zu({ onFinish: e }) {
 								className: "welcome-muted",
 								children: "새 버전은 새 폴더로 풀립니다. 설정 > 자료 위치에서 옮겨두면 업데이트할 때 그대로 이어집니다."
 							})] }),
-							/* @__PURE__ */ (0, K.jsx)("button", {
-								className: "welcome-tour-open",
-								type: "button",
-								onClick: () => x(0),
-								children: "Folio OS가 어떻게 도는지 보기 · 30초"
+							/* @__PURE__ */ (0, K.jsxs)("div", {
+								className: "welcome-ask",
+								children: [
+									/* @__PURE__ */ (0, K.jsx)("p", {
+										className: "welcome-ask-q",
+										children: "둘러보기를 진행할까요?"
+									}),
+									/* @__PURE__ */ (0, K.jsx)("p", {
+										className: "welcome-muted",
+										children: "RSS 피드 · 시장 내러티브 · 브리핑을 차례로 열어, 자료가 어떻게 결과물이 되는지 실제 화면에서 보여드립니다. 30초면 끝나고 언제든 멈출 수 있습니다."
+									}),
+									/* @__PURE__ */ (0, K.jsxs)("div", {
+										className: "welcome-choices",
+										role: "group",
+										"aria-label": "둘러보기",
+										children: [/* @__PURE__ */ (0, K.jsx)("button", {
+											type: "button",
+											"aria-pressed": b === !0,
+											onClick: () => x(!0),
+											children: "둘러보기"
+										}), /* @__PURE__ */ (0, K.jsx)("button", {
+											type: "button",
+											"aria-pressed": b === !1,
+											onClick: () => x(!1),
+											children: "바로 시작"
+										})]
+									})
+								]
 							})
 						] }),
 						o && /* @__PURE__ */ (0, K.jsx)("p", {
@@ -24341,27 +24426,10 @@ function Zu({ onFinish: e }) {
 					}), /* @__PURE__ */ (0, K.jsxs)("div", {
 						className: "welcome-acts",
 						children: [
-							n === "done" && b >= 0 && /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)("button", {
-								className: "welcome-btn",
-								type: "button",
-								onClick: () => x(b - 1),
-								children: b === 0 ? "돌아가기" : "이전"
-							}), b < Hu.length - 1 ? /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "welcome-btn welcome-btn--go",
-								type: "button",
-								onClick: () => x(b + 1),
-								children: "다음"
-							}) : /* @__PURE__ */ (0, K.jsx)("button", {
-								className: "welcome-btn welcome-btn--go",
-								type: "button",
-								onClick: () => void j(!1),
-								disabled: !!i,
-								children: "시작하기"
-							})] }),
 							R > 0 && n !== "done" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn",
 								type: "button",
-								onClick: () => c(Wu[R - 1]),
+								onClick: () => c(Xu[R - 1]),
 								disabled: !!i,
 								children: "이전"
 							}),
@@ -24391,12 +24459,12 @@ function Zu({ onFinish: e }) {
 								disabled: !!i,
 								children: i === "markets" ? "저장 중" : "저장하고 시작"
 							}),
-							n === "done" && b < 0 && /* @__PURE__ */ (0, K.jsx)("button", {
+							n === "done" && /* @__PURE__ */ (0, K.jsx)("button", {
 								className: "welcome-btn welcome-btn--go",
 								type: "button",
 								onClick: () => void j(!1),
 								disabled: !!i,
-								children: "시작하기"
+								children: b ? "둘러보기 시작" : "시작하기"
 							})
 						]
 					})]
@@ -24407,8 +24475,8 @@ function Zu({ onFinish: e }) {
 }
 //#endregion
 //#region src/app/App.tsx
-function Qu() {
-	let [e, t] = (0, l.useState)(!1);
+function id() {
+	let [e, t] = (0, l.useState)(!1), [n, r] = (0, l.useState)(!1);
 	return (0, l.useEffect)(() => {
 		let e = !1;
 		return (async () => {
@@ -24422,23 +24490,29 @@ function Qu() {
 	}, []), (0, l.useEffect)(() => {
 		let e = () => t(!0);
 		return window.addEventListener("folio:show-welcome", e), () => window.removeEventListener("folio:show-welcome", e);
-	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [/* @__PURE__ */ (0, K.jsx)(Vu, {}), e && /* @__PURE__ */ (0, K.jsx)(Zu, { onFinish: () => t(!1) })] });
+	}, []), /* @__PURE__ */ (0, K.jsxs)(K.Fragment, { children: [
+		/* @__PURE__ */ (0, K.jsx)(Vu, {}),
+		e && /* @__PURE__ */ (0, K.jsx)(rd, { onFinish: (e) => {
+			t(!1), r(e);
+		} }),
+		n && /* @__PURE__ */ (0, K.jsx)(Yu, { onDone: () => r(!1) })
+	] });
 }
 //#endregion
 //#region src/main.tsx
-var $u = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
-function ed() {
+var ad = { "market-state": () => /* @__PURE__ */ (0, K.jsx)(As, {}) };
+function od() {
 	document.querySelectorAll("[data-react-island]").forEach((e) => {
-		let t = $u[e.dataset.reactIsland || ""];
+		let t = ad[e.dataset.reactIsland || ""];
 		!t || e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: t() })));
 	});
 }
-function td() {
+function sd() {
 	let e = document.getElementById("folioReactRoot");
-	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(Qu, {}) })), !0) : !1;
+	return e ? e.dataset.reactMounted === "1" || (e.dataset.reactMounted = "1", (0, u.createRoot)(e).render(/* @__PURE__ */ (0, K.jsx)(l.StrictMode, { children: /* @__PURE__ */ (0, K.jsx)(id, {}) })), !0) : !1;
 }
-function nd() {
-	td(), ed();
+function cd() {
+	sd(), od();
 }
-document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", nd) : nd();
+document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", cd) : cd();
 //#endregion

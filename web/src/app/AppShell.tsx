@@ -636,6 +636,9 @@ export function AppShell() {
                         type="button"
                         data-tooltip={route.label}
                         data-qa={route.id === "deep-research" ? "nav-deep-research" : undefined}
+                        // 둘러보기가 이 버튼을 찾아 조명하는 앵커다. 클래스는 여럿이
+                        // 공유하므로 화면 순서에 기대지 않을 이름이 필요하다.
+                        data-route={route.id}
                         className="react-left-nav-item"
                         aria-current={route.id === active.id ? "page" : undefined}
                         onClick={() => {

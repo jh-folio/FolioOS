@@ -64,21 +64,43 @@ test("API 제공사 행은 언제 확인한 값인지 밝히고 잔액을 아는
   assert.match(settings, /사용량과 잔액은 제공사 콘솔/);
 });
 
-test("튜토리얼은 선택이지 절차가 아니다", async () => {
+test("완료 화면은 둘러보기를 물어볼 뿐 카드 안에서 돌지 않는다", async () => {
   const source = await wizard();
-  const tour = await readFile(new URL("../src/app/WelcomeTour.tsx", import.meta.url), "utf8");
+  const app = await readFile(new URL("../src/app/App.tsx", import.meta.url), "utf8");
 
-  // 진행 막대의 단계로 세면 건너뛸 수 없는 것처럼 읽힌다.
-  assert.doesNotMatch(source, /"tour"/);
-  assert.match(source, /STEPS: ReadonlyArray<StepId> = \["welcome", "theme", "engine", "markets", "done"\]/);
-  assert.match(source, /tour < 0 && <p className="welcome-eyebrow"/);
-  assert.match(source, /welcome-tour-open/);
-  // 자료 → 이야기 → 결과물. 화면 사용법이 아니라 흐름을 말한다.
-  assert.match(tour, /자료가 들어옵니다/);
-  assert.match(tour, /자료가 이야기가 됩니다/);
-  assert.match(tour, /이야기가 결과물이 됩니다/);
-  // 큰 SVG는 375px에서 글자가 뭉개진다. 박스로 쌓아 세로로 접히게 한다.
-  assert.doesNotMatch(tour, /<svg/);
+  // 카드 안에서 돌면 정작 보여줄 화면이 카드에 가려진다. 카드는 묻기만 하고
+  // 둘러보기는 App이 앱 위에 띄운다.
+  assert.match(source, /둘러보기를 진행할까요\?/);
+  assert.doesNotMatch(source, /WelcomeTour/);
+  assert.match(source, /onFinish: \(startTour: boolean\) => void/);
+  // 건너뛰기는 "지금은 됐다"는 뜻이다. 건너뛰면 둘러보기도 하지 않는다.
+  assert.match(source, /onFinish\(!skipped && wantsTour === true\)/);
+  assert.match(app, /<AppTour onDone=/);
+});
+
+test("둘러보기는 실제 탭을 옮겨 다니며 그 자리를 조명한다", async () => {
+  const tour = await readFile(new URL("../src/app/AppTour.tsx", import.meta.url), "utf8");
+  const shell = await readFile(new URL("../src/app/AppShell.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../../public/styles.css", import.meta.url), "utf8");
+
+  // 들르는 곳 셋: 자료가 들어오고 → 이야기가 되고 → 결과물이 된다.
+  const routes = [...tour.matchAll(/route: "([a-z-]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(routes, ["rss", "market-memory", "briefing"]);
+  // 설명만 바뀌고 뒤가 그대로면 어디를 말하는지 알 수 없다.
+  assert.match(tour, /window\.location\.hash = next/);
+
+  // 조명이 붙을 앵커. 클래스는 여럿이 공유하므로 화면 순서에 기대지 않는다.
+  assert.match(shell, /data-route=\{route\.id\}/);
+  assert.match(tour, /\.react-left-nav-item\[data-route="\$\{route\}"\]/);
+
+  // 같은 div라 key가 없으면 React가 노드를 재사용해 트랜지션이 시작값에 갇힌다.
+  assert.match(tour, /key="spot"/);
+  assert.match(tour, /key="scrim"/);
+
+  // 9999px 그림자를 단 fixed 요소의 기하 전환은 실측으로 움직이지 않았다.
+  const block = css.slice(css.indexOf(".tour-spot,"), css.indexOf(".tour-card {"));
+  assert.doesNotMatch(block, /transition:/);
+  assert.match(block, /box-shadow: 0 0 0 9999px/);
 });
 
 test("안내 색은 앱 계약을 따른다 — 블루는 의미색이라 UI 액센트가 아니다", async () => {
