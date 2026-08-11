@@ -33,20 +33,42 @@ def test_every_market_heading_is_recognized_as_a_chart_subject(scope):
     """An unrecognized heading loses that company's chart with no warning."""
     markdown = f"## 3. {LABELS[scope]}을 주도한 기업 ① — 엔비디아"
     result = leading_company_subjects_from_markdown(markdown)
-    assert set(result) == {*SINGLE_MARKET_SCOPES, "warnings", "headingMentions"}
+    assert set(result) == {
+        *SINGLE_MARKET_SCOPES,
+        "warnings",
+        "headingMentions",
+        "headingMentionsByMarket",
+        "unresolvedByMarket",
+    }
     # 엔비디아는 미국 기업이라 다른 시장 제목에서는 해석 실패로 남는다.
     resolved = result[scope]
     if scope == "us":
         assert [row["ticker"] for row in resolved] == ["NVDA"]
     else:
         assert resolved == []
+        assert [row["label"] for row in result["unresolvedByMarket"][scope]] == ["엔비디아"]
         assert any(scope.upper() in text for text in result["warnings"])
 
 
 def test_an_unresolvable_company_is_reported_rather_than_dropped():
-    result = leading_company_subjects_from_markdown("## 3. 유럽장을 주도한 기업 ① — ASML")
+    """확정하지 못한 이름은 차트 대상에서 빠지되 자리와 이유가 남는다.
+
+    예전에는 이 자리에 ASML을 썼다. 옛 해석기가 유럽 상장을 못 찾았기 때문인데, 그건
+    바라던 동작이 아니라 커버리지 구멍이었다 — 유럽장 브리핑이 부른 ASML은 암스테르담
+    상장(ASML.AS)이고 지금은 그렇게 풀린다. 계약은 "못 찾으면 조용히 버리지 않는다"이지
+    "ASML을 못 찾는다"가 아니므로, 실제로 등록부에 없는 이름으로 바꾼다.
+    """
+    result = leading_company_subjects_from_markdown(
+        "## 3. 유럽장을 주도한 기업 ① — Completely Unknown Holdings"
+    )
     assert result["europe"] == []
-    assert any("ASML" in text for text in result["warnings"])
+    assert [row["ordinal"] for row in result["unresolvedByMarket"]["europe"]] == [1]
+    assert any("Completely Unknown Holdings" in text for text in result["warnings"])
+
+
+def test_a_european_company_resolves_to_its_home_listing():
+    result = leading_company_subjects_from_markdown("## 3. 유럽장을 주도한 기업 ① — ASML")
+    assert [row["ticker"] for row in result["europe"]] == ["ASML.AS"]
 
 
 # --- exports ------------------------------------------------------------

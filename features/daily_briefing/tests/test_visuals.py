@@ -157,6 +157,10 @@ def test_unknown_leading_company_is_not_replaced_with_another_ticker():
     )
     assert parsed["us"] == []
     assert parsed["warnings"]
+    # 자리는 남는다. 차트 대상은 아니지만 화면이 "못 그렸다"고 말할 근거가 된다.
+    assert [row["label"] for row in parsed["unresolvedByMarket"]["us"]] == [
+        "Completely Unknown Holdings"
+    ]
 
 
 def test_explicit_markdown_leaders_override_group_candidate_charts():

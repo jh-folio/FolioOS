@@ -32,7 +32,7 @@ from features.common.markets import (
     market_keys_for_scope,
     normalize_saved_market_scope,
 )
-from features.common.company_lookup import find_companies
+from features.common.company_resolution import resolve_company_query
 from features.common.utils import read_json, write_json
 from features.daily_briefing.schema import (
     SINGLE_MARKET_SCOPES,
@@ -134,6 +134,57 @@ LEADING_COMPANY_HEADING_RE = re.compile(
 )
 
 
+LEADING_COMPANY_MENTION_RE = re.compile(
+    r"(" + "|".join(_LEADING_MARKET_LABELS) + r")(?:을|를)?\s*주도한\s*기업"
+)
+
+
+def _leading_mentions_by_market(text):
+    """시장별로 본문이 주도 기업 절을 몇 번 불렀는지.
+
+    전체 언급 수 하나로는 부족하다. US와 KR을 함께 담은 보고서는 언급이 넷인데, 그 값을
+    시장별 해석 결과와 비교하면 US 둘이 다 풀려도 "모자라다"가 되어 폴백이 헛돈다.
+
+    제목 정규식이 아니라 느슨한 문구로 센다. 제목 형식이 어긋나 파싱에 실패한 경우를
+    잡는 것이 이 값의 존재 이유이므로, 파싱과 같은 엄격도로 세면 아무것도 못 잡는다.
+    """
+    counts = {key: 0 for key in SINGLE_MARKET_SCOPES}
+    for label in LEADING_COMPANY_MENTION_RE.findall(str(text or "")):
+        key = _LEADING_MARKET_LABELS.get(label)
+        if key in counts:
+            counts[key] += 1
+    return counts
+
+
+def _resolve_leading_company(company_text, market_key):
+    """본문이 부른 이름을 하나의 기업으로 확정한다. 확신이 없으면 확정하지 않는다.
+
+    해석기는 `company_resolution` 하나를 쓴다. 옛 `find_companies`는 SEC 이름 색인을
+    첫 단어 하나로만 만들고 그 단어가 7자 미만이거나 흔하면 통째로 버려서, Intel·Ford·
+    Visa·Nike·Western Digital이 영원히 안 잡혔다. 한국 종목은 수동 사전 8곳 밖이면
+    전부 실패했다(알테오젠). 여기만 옛 경로를 쓰고 있었다.
+
+    `prefer_home`은 제목의 시장이 정한다. 미국장 제목의 "Toyota"는 US 상장(TM)이고
+    일본장 제목의 "Toyota"는 자국 상장(7203.T)이다 — 통화도 시간대도 다른 증권이다.
+
+    확신 판정은 해석기가 갖는다(`CONFIDENT_GAP` 등). 여기서 다시 점수를 매기면 두 벌의
+    규칙이 서로 어긋난다. `ambiguous`는 후보가 있어도 고르지 않는다 — 빈 차트보다
+    나쁜 것은 틀린 회사의 차트다.
+    """
+    resolution = resolve_company_query(
+        company_text, prefer_home=market_key not in (None, "us")
+    )
+    match = resolution.get("match") or {}
+    resolved_market = str(match.get("market") or "").upper()
+    if resolution.get("status") != "confident":
+        return None, resolved_market, resolution.get("status") or "unknown"
+    if market_key is not None and resolved_market != MARKET_META[market_key]["market"]:
+        # 제목은 미국장인데 다른 시장 상장으로 풀렸다. 그 시장 차트에 얹으면 세션도
+        # 통화도 맞지 않는다.
+        return None, resolved_market, "market_mismatch"
+    return match, resolved_market, "confident"
+
+
 def leading_company_subjects_from_markdown(markdown):
     text = str(markdown or "")
     result = {key: [] for key in SINGLE_MARKET_SCOPES}
@@ -141,6 +192,10 @@ def leading_company_subjects_from_markdown(markdown):
     # 본문이 주도 기업 절을 몇 번 언급했는지. 파싱 결과가 이보다 적으면 제목
     # 형식이 어긋난 것이므로, 차트 수집이 조용히 0개로 끝나는 대신 fallback을 연다.
     result["headingMentions"] = len(re.findall(r"주도한\s*기업", text))
+    result["headingMentionsByMarket"] = _leading_mentions_by_market(text)
+    # 이름은 읽었지만 어느 기업인지 확정하지 못한 자리. 차트 대상과 섞지 않는다 —
+    # 여기 있는 자리는 그리는 것이 아니라 "못 그렸다"고 말하는 대상이다.
+    result["unresolvedByMarket"] = {key: [] for key in SINGLE_MARKET_SCOPES}
     seen = set()
     for match in LEADING_COMPANY_HEADING_RE.finditer(text):
         heading_market = match.group(1)
@@ -150,47 +205,41 @@ def leading_company_subjects_from_markdown(markdown):
             (key for label, key in _LEADING_MARKET_LABELS.items() if heading_market.startswith(label)),
             None,
         )
-        candidates = find_companies(company_text)
-        if market_key:
-            market = MARKET_META[market_key]["market"]
-            candidates = [
-                row for row in candidates
-                if str(row.get("market") or "").upper() == market
-            ]
-        else:
-            market_counts = {}
+        company, resolved_market, status = _resolve_leading_company(company_text, market_key)
+        if market_key is None:
             known = {key.upper() for key in SINGLE_MARKET_SCOPES}
-            for row in candidates:
-                market_value = str(row.get("market") or "").upper()
-                if market_value in known:
-                    market_counts[market_value] = market_counts.get(market_value, 0) + 1
-            if len(market_counts) == 1:
-                market = next(iter(market_counts))
-                market_key = market.lower()
-                candidates = [
-                    row for row in candidates
-                    if str(row.get("market") or "").upper() == market
-                ]
-            else:
+            if resolved_market not in known:
                 result["warnings"].append(
                     f"leading company {ordinal} market could not be inferred: {company_text}"
                 )
                 continue
-        if not candidates:
-            result["warnings"].append(
-                f"{MARKET_META[market_key]['market'] if market_key else 'BOTH'} leading company {ordinal} could not be resolved: {company_text}"
-            )
-            continue
-        company = candidates[0]
-        ticker = str(company.get("ticker") or "").strip().upper()
+            market_key = resolved_market.lower()
+        market = MARKET_META[market_key]["market"]
         key = (market_key, ordinal)
-        if not ticker or key in seen:
+        if key in seen:
             continue
         seen.add(key)
+        if company is None:
+            # 조용히 버리지 않되, 차트 대상 목록에는 넣지 않는다. 이 목록은 "그릴 수 있는
+            # 기업"이고, 여기에 넣으면 폴백이 그 자리를 다른 회사로 채워 본문이 부른 이름
+            # 아래에 엉뚱한 기업 차트가 걸린다. 빈 차트보다 나쁜 것이 틀린 차트다.
+            result["warnings"].append(
+                f"{market} leading company {ordinal} could not be resolved ({status}): {company_text}"
+            )
+            result["unresolvedByMarket"][market_key].append({
+                "ordinal": ordinal,
+                "ticker": "",
+                "label": company_text,
+                "sector": "Other",
+                "market": market,
+                "unresolved": True,
+                "resolutionStatus": status,
+            })
+            continue
         result[market_key].append({
             "ordinal": ordinal,
-            "ticker": ticker,
-            "label": company.get("name") or company_text or ticker,
+            "ticker": str(company.get("ticker") or "").strip().upper(),
+            "label": company.get("name") or company_text or company.get("ticker"),
             "sector": company.get("sector") or "Other",
             "market": market,
         })
@@ -220,6 +269,72 @@ def leading_company_subjects(scope_result, market, limit=2):
                 if len(selected) >= limit:
                     return selected
     return selected
+
+
+def _leader_slug(leader, ordinal):
+    """스냅샷 id의 기업 부분. 티커가 없어도 자리마다 고유해야 한다."""
+    ticker = str(leader.get("ticker") or "").strip().upper()
+    if ticker:
+        return ticker
+    return f"unresolved-{ordinal}"
+
+
+def _fill_missing_leaders(leaders, leader_subjects, scope_result, market_key, warnings):
+    """본문이 부른 만큼 자리가 찼는지 보고, 빈 ordinal만 ranked group에서 채운다.
+
+    예전 조건은 `not leaders`였다. ①만 풀리고 ②가 실패하면 목록이 비어 있지 않다는
+    이유로 폴백을 건너뛰어, ② 자리는 스냅샷도 추천도 없이 끝났다 — 화면에는 차트가
+    있어야 할 자리에 아무것도 없었고 경고는 보고서 JSON에만 남았다.
+
+    미해결로 자리만 잡은 ordinal도 채울 대상이다. 순서는 해석 → ranked group 폴백 →
+    unavailable 카드이며, 어느 단계에서 멈추든 자리는 남는다.
+    """
+    market = MARKET_META[market_key]["market"]
+    unresolved = list((leader_subjects.get("unresolvedByMarket") or {}).get(market_key) or [])
+    by_market = leader_subjects.get("headingMentionsByMarket") or {}
+    expected = int(by_market.get(market_key) or 0)
+    if not expected and not leaders and not unresolved:
+        # 제목에 시장 라벨조차 없다. 어느 시장 몫인지 셀 수 없으므로 본문 관례대로
+        # ①·② 두 자리를 연다 — 이 경로의 기존 동작이다.
+        expected = 2 if int(leader_subjects.get("headingMentions") or 0) > 0 else 0
+
+    # 이미 임자가 있는 자리. 미해결 자리도 포함한다 — 본문이 그 자리에 특정 회사를
+    # 지목했으므로, 다른 회사로 채우면 이름과 차트가 어긋난다. 그 자리는 채우는 대신
+    # unavailable로 남겨 왜 못 그렸는지 말한다.
+    taken_ordinals = {int(row.get("ordinal") or 0) for row in (*leaders, *unresolved)}
+    free = [o for o in range(1, max(expected, 2) + 1) if o not in taken_ordinals]
+    missing = max(0, expected - len(leaders) - len(unresolved))
+    if not free or not missing:
+        return [*leaders, *unresolved]
+
+    charted = {str(row.get("ticker") or "").upper() for row in leaders}
+    pool = [
+        row for row in leading_company_subjects(scope_result, market, limit=4)
+        if str(row.get("ticker") or "").upper() not in charted
+    ]
+    filled = []
+    for ordinal in free[:missing]:
+        if not pool:
+            break
+        candidate = pool.pop(0)
+        leaders.append({
+            "ordinal": ordinal,
+            "ticker": candidate["ticker"],
+            "label": candidate["label"],
+            "sector": candidate.get("sector") or "Other",
+            "market": market,
+            "chartedFromRankedGroup": True,
+        })
+        filled.append(candidate["ticker"])
+
+    if filled:
+        warnings.append(
+            f"{market_key}: leading company headings could not be parsed; "
+            f"charted ranked-group companies instead: {', '.join(filled)}"
+        )
+    merged = [*leaders, *unresolved]
+    merged.sort(key=lambda row: int(row.get("ordinal") or 0))
+    return merged
 
 
 def _session_date(scope_result, fallback_date):
@@ -504,23 +619,26 @@ def collect_briefing_visuals(
             ))
 
         if isinstance(leader_subjects, dict):
-            leaders = list(leader_subjects.get(market_key, []))
-            if not leaders and int(leader_subjects.get("headingMentions") or 0) > 0:
-                # 본문에 주도 기업 절이 있는데 제목 파싱이 실패했다. 차트를 조용히
-                # 빼는 대신 본문과 같은 ranked group에서 기업을 골라 채우고, 파싱
-                # 어긋남을 경고로 남긴다 — 본문 기업과 다를 수 있음이 보이도록.
-                leaders = leading_company_subjects(result, MARKET_META[market_key]["market"], limit=2)
-                if leaders:
-                    warnings.append(
-                        f"{market_key}: leading company headings could not be parsed; charted ranked-group companies instead"
-                    )
+            leaders = _fill_missing_leaders(
+                list(leader_subjects.get(market_key, [])),
+                leader_subjects,
+                result,
+                market_key,
+                warnings,
+            )
         else:
             leaders = leading_company_subjects(result, MARKET_META[market_key]["market"], limit=2)
         for position, leader in enumerate(leaders, start=1):
             ordinal = int(leader.get("ordinal") or position)
-            symbol = _provider_symbol(leader["ticker"], market_key)
-            history = subject_history(symbol, session_date)
-            available = bool(history["intraday"]["points"] or history["daily"]["points"])
+            unresolved = bool(leader.get("unresolved"))
+            # 해석에 실패한 자리도 스냅샷을 만든다. 만들지 않으면 프런트가 매칭되는
+            # 추천이 없는 슬롯을 조용히 지나가, 사용자에게는 차트가 있어야 할 자리가
+            # 그냥 비어 보인다. 발행 후에야 발견되는 형태였다.
+            symbol = "" if unresolved else _provider_symbol(leader["ticker"], market_key)
+            history = subject_history(symbol, session_date) if symbol else None
+            available = bool(
+                history and (history["intraday"]["points"] or history["daily"]["points"])
+            )
             series = [{
                 "ticker": leader["ticker"],
                 "providerSymbol": symbol,
@@ -528,8 +646,10 @@ def collect_briefing_visuals(
                 **history,
             }] if available else []
             snapshot = _price_snapshot(
-                f"price-series:{market_key}:company:{leader['ticker']}:{date}", market_key, "leading_company",
-                session_date, [leader], series, [] if available else [symbol], subject=leader,
+                f"price-series:{market_key}:company:{_leader_slug(leader, ordinal)}:{date}",
+                market_key, "leading_company",
+                session_date, [leader], series, [] if available else [symbol or leader["label"]],
+                subject=leader,
             )
             snapshots.append(snapshot)
             recommendations.append(_recommendation(

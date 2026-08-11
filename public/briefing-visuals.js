@@ -682,6 +682,14 @@
 
   function renderTrend(snapshot, title, variant, comparison) {
     if (!shouldRenderTrend(snapshot)) {
+      // 본문이 부른 이름을 어느 기업인지 확정하지 못한 경우와, 기업은 알지만 가격이
+      // 없는 경우는 원인이 다르다. 같은 문구로 덮으면 읽는 사람이 무엇을 확인해야
+      // 하는지 알 수 없다.
+      const subject = snapshot?.subject || {};
+      if (subject.unresolved) {
+        const name = subject.label ? `— ${subject.label}` : "";
+        return unavailableCard(snapshot, title, `본문이 언급한 기업을 특정하지 못해 차트를 그리지 못했습니다 ${name}`.trim());
+      }
       return unavailableCard(snapshot, title, "추세를 그리기에 저장된 데이터 포인트가 충분하지 않습니다.");
     }
     const LC = root.LightweightCharts;
