@@ -1,0 +1,108 @@
+"""날짜를 주고 여러 시장을 고르면 발행일이 갈린다. 그때 실행을 나눈다.
+
+예전에는 발행일 하나로 합쳐서, 금요일(2026-08-07)을 고르고 미국장·한국장을 함께
+만들면 미국장은 08-07 장을, 한국장은 08-10 장을 다뤘다. 한국장은 발행일을 곧 자기
+세션일로 읽기 때문이다. 사용자는 고르지 않은 날의 브리핑을 아무 경고 없이 받았고,
+제목만 보고 "한국장이 안 만들어졌다"고 읽었다.
+"""
+from __future__ import annotations
+
+import pytest
+
+
+@pytest.fixture
+def briefing_app(monkeypatch: pytest.MonkeyPatch):
+    import app
+
+    calls = []
+
+    def fake_build(date, **kwargs):
+        calls.append({"date": date, "markets": list(kwargs.get("markets") or [])})
+        return {"id": f"report-{date}", "date": date, "marketScope": kwargs.get("market_scope")}
+
+    monkeypatch.setattr(app, "read_automation_settings", lambda: {})
+    monkeypatch.setattr(app, "request_generation_mode", lambda _body: "rules")
+    monkeypatch.setattr(app, "build_briefing", fake_build)
+    return app, calls
+
+
+def test_one_market_runs_once_and_returns_the_report(briefing_app):
+    app, calls = briefing_app
+
+    result = app.api_create_briefing({"date": "2026-08-07", "markets": ["us"]})
+
+    assert calls == [{"date": "2026-08-10", "markets": ["us"]}]
+    assert result["id"] == "report-2026-08-10"
+    assert "reports" not in result
+
+
+def test_mixed_markets_run_once_per_publication_date(briefing_app):
+    app, calls = briefing_app
+
+    result = app.api_create_briefing({"date": "2026-08-07", "markets": ["us", "kr"]})
+
+    assert calls == [
+        {"date": "2026-08-07", "markets": ["kr"]},
+        {"date": "2026-08-10", "markets": ["us"]},
+    ]
+    assert [row["id"] for row in result["reports"]] == ["report-2026-08-07", "report-2026-08-10"]
+
+
+def test_markets_sharing_a_publication_date_stay_in_one_run(briefing_app):
+    """미국·유럽은 같은 규칙이라 나눌 이유가 없다."""
+    app, calls = briefing_app
+
+    app.api_create_briefing({"date": "2026-08-07", "markets": ["us", "europe"]})
+
+    assert calls == [{"date": "2026-08-10", "markets": ["us", "europe"]}]
+
+
+def test_a_dateless_request_is_unchanged(briefing_app):
+    """오늘 생성은 그룹이 하나다. marketScope=both로 도는 기존 동작을 건드리지 않는다."""
+    app, calls = briefing_app
+
+    result = app.api_create_briefing({"markets": ["us", "kr"]})
+
+    assert len(calls) == 1
+    assert calls[0]["markets"] == ["us", "kr"]
+    assert "reports" not in result
+
+
+def test_cli_mode_submits_one_job_per_publication_date(monkeypatch: pytest.MonkeyPatch):
+    import app
+
+    submitted = []
+
+    def fake_submit(kind, params, adapter=""):
+        submitted.append({"date": params["date"], "markets": list(params["markets"])})
+        return {"id": f"job-{params['date']}", "status": "queued"}
+
+    monkeypatch.setattr(app, "read_automation_settings", lambda: {})
+    monkeypatch.setattr(app, "request_generation_mode", lambda _body: "llm_cli")
+    monkeypatch.setattr(app, "submit_agent_task", fake_submit)
+
+    result = app.api_create_briefing({"date": "2026-08-07", "markets": ["us", "kr"]})
+
+    assert submitted == [
+        {"date": "2026-08-07", "markets": ["kr"]},
+        {"date": "2026-08-10", "markets": ["us"]},
+    ]
+    # 작업이 둘이라는 사실을 숨기지 않는다. 하나만 돌려주면 화면이 그것만 기다리다
+    # 나머지가 끝나기 전에 다 됐다고 말한다.
+    assert [job["id"] for job in result["jobs"]] == ["job-2026-08-07", "job-2026-08-10"]
+
+
+def test_cli_mode_with_one_group_still_returns_a_bare_job(monkeypatch: pytest.MonkeyPatch):
+    import app
+
+    monkeypatch.setattr(app, "read_automation_settings", lambda: {})
+    monkeypatch.setattr(app, "request_generation_mode", lambda _body: "llm_cli")
+    monkeypatch.setattr(
+        app, "submit_agent_task",
+        lambda kind, params, adapter="": {"id": "job-one", "status": "queued"},
+    )
+
+    result = app.api_create_briefing({"date": "2026-08-07", "markets": ["kr"]})
+
+    assert result["id"] == "job-one"
+    assert "jobs" not in result

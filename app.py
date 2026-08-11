@@ -551,42 +551,61 @@ def api_create_briefing(body: dict | None = Body(default=None)):
     requested_markets = list(
         normalize_market_selection(body.get("markets") or body.get("marketScope", "both"))
     )
-    market_scope = market_selection_scope(requested_markets)
     # 화면의 날짜 선택은 "시장 기준일"(그 시장의 세션일)이다. 저장 키와 아카이브
     # 정렬은 계속 발행일이므로 여기서 한 번 옮긴다. 한 브리핑 안에서 미국장은
-    # 전일 정규장을, 한국장은 당일 장을 다루므로 변환은 시장마다 다르다.
-    from features.common.market_calendar import publication_date_for_session
+    # 전일 정규장을, 한국장은 당일 장을 다루므로 변환은 시장마다 다르고, 그래서
+    # 발행일이 갈리면 그룹을 나눠 각각 만든다 — 하나로 합치면 나머지 시장이 고르지
+    # 않은 날의 브리핑을 받는다.
+    from features.common.market_calendar import publication_date_groups
 
     requested_date = str(body.get("date") or "").strip()
-    publication_date = (
-        publication_date_for_session(requested_date, requested_markets)
-        if requested_date else kst_date()
+    date_groups = (
+        publication_date_groups(requested_date, requested_markets)
+        if requested_date else [(kst_date(), requested_markets)]
     )
     if generation_mode == "llm_cli":
-        job = submit_agent_task("briefing", {
-            "date": publication_date,
-            "strict_date": body.get("strictDate", False),
-            "quality_mode": body.get("qualityMode", "diagnose_only"),
-            "market_scope": market_scope,
-            "markets": requested_markets,
-            "briefing_type": body.get("briefingType", "default"),
-        }, adapter=body.get("agentAdapter", ""))
-        if prerequisites and isinstance(job, dict):
-            job["prerequisites"] = prerequisites
-        return job
-    result = build_briefing(
-        publication_date,
-        strict_date=body.get("strictDate", False),
-        web_search_override=bool_override(body.get("webSearch")),
-        llm_override=llm_override_for_mode(generation_mode),
-        quality_mode=body.get("qualityMode", "diagnose_only"),
-        market_scope=market_scope,
-        markets=requested_markets,
-        briefing_type=body.get("briefingType", "default"),
-    )
-    if prerequisites and isinstance(result, dict):
-        result["prerequisites"] = prerequisites
-    return result
+        jobs = [
+            submit_agent_task("briefing", {
+                "date": date,
+                "strict_date": body.get("strictDate", False),
+                "quality_mode": body.get("qualityMode", "diagnose_only"),
+                "market_scope": market_selection_scope(markets),
+                "markets": markets,
+                "briefing_type": body.get("briefingType", "default"),
+            }, adapter=body.get("agentAdapter", ""))
+            for date, markets in date_groups
+        ]
+        if len(jobs) == 1:
+            if prerequisites and isinstance(jobs[0], dict):
+                jobs[0]["prerequisites"] = prerequisites
+            return jobs[0]
+        # 발행일이 갈렸다. 작업이 둘이라는 사실을 숨기지 않는다 — 하나만 돌려주면
+        # 화면이 그것만 기다리다 나머지가 끝나기 전에 다 됐다고 말한다.
+        payload = {"jobs": jobs}
+        if prerequisites:
+            payload["prerequisites"] = prerequisites
+        return payload
+    reports = [
+        build_briefing(
+            date,
+            strict_date=body.get("strictDate", False),
+            web_search_override=bool_override(body.get("webSearch")),
+            llm_override=llm_override_for_mode(generation_mode),
+            quality_mode=body.get("qualityMode", "diagnose_only"),
+            market_scope=market_selection_scope(markets),
+            markets=markets,
+            briefing_type=body.get("briefingType", "default"),
+        )
+        for date, markets in date_groups
+    ]
+    if len(reports) == 1:
+        if prerequisites and isinstance(reports[0], dict):
+            reports[0]["prerequisites"] = prerequisites
+        return reports[0]
+    payload = {"reports": reports}
+    if prerequisites:
+        payload["prerequisites"] = prerequisites
+    return payload
 
 
 @fastapi_app.get("/api/briefings/{date}")

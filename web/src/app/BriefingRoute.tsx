@@ -231,6 +231,18 @@ function isAgentJob(value: unknown): value is AgentJob {
   return Boolean(job?.id && isActiveJobStatus(job.status));
 }
 
+/** 고른 세션일에서 시장별 발행일이 갈리면 서버가 작업을 나눠 만든다.
+ *  (미국장 금요일 세션의 발행일은 월요일, 한국장은 금요일 그대로) */
+function splitJobs(value: unknown): AgentJob[] | null {
+  const jobs = (value as { jobs?: unknown })?.jobs;
+  return Array.isArray(jobs) && jobs.every(isAgentJob) ? (jobs as AgentJob[]) : null;
+}
+
+function splitReports(value: unknown): Briefing[] | null {
+  const reports = (value as { reports?: unknown })?.reports;
+  return Array.isArray(reports) && reports.length > 0 ? (reports as Briefing[]) : null;
+}
+
 async function pollAgentJob(job: AgentJob): Promise<AgentJob> {
   let current = job;
   while (isActiveJobStatus(current.status)) {
@@ -433,11 +445,28 @@ export function BriefingRoute() {
         markets: selectedMarkets,
         briefingType,
       });
+      const jobs = splitJobs(response);
+      if (jobs) {
+        // 둘 다 끝나야 끝난 것이다. 하나만 기다리면 아직 만들어지지 않은 시장을
+        // 아카이브에서 찾게 된다.
+        const finished = await Promise.all(jobs.map(pollAgentJob));
+        await loadArchive();
+        const date = finished[0]?.result?.date || finished[0]?.result?.artifactId || "";
+        if (date) setBriefingHash(date, marketScope);
+        return;
+      }
       if (isAgentJob(response)) {
         const done = await pollAgentJob(response);
         const date = done.result?.date || done.result?.artifactId || targetDate || "";
         await loadArchive();
         if (date) setBriefingHash(date, marketScope);
+        return;
+      }
+      const reports = splitReports(response);
+      if (reports) {
+        await loadArchive();
+        const first = reports[0];
+        if (first?.date) setBriefingHash(first.date, normalizedScope(first.marketScope || marketScope));
         return;
       }
       const date = response.date || targetDate || "";

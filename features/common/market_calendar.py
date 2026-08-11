@@ -397,6 +397,30 @@ def publication_date_for_session(session_date: str, market_scope: str) -> str:
     return next_trading_day(day, overnight[0].upper()).isoformat()
 
 
+def publication_date_groups(session_date: str, market_scope) -> list[tuple[str, list[str]]]:
+    """고른 세션일 하나를 시장별 발행일로 나눈다.
+
+    발행일 하나로 두 시장을 다 만족시킬 수 없다. 미국장 세션 S의 발행일은 S 다음
+    거래일이고, 한국장 세션 S의 발행일은 S다. 예전에는 함께 고르면 밤샘 마감 시장
+    기준 하나로 합쳤는데, 그러면 나머지 시장은 그 발행일을 **자기 세션일로** 읽는다 —
+    금요일(08-07)을 고르고 미국장·한국장을 함께 만들면 미국장은 08-07 장을, 한국장은
+    08-10 장을 다뤘다. 고르지 않은 날의 브리핑이 아무 경고 없이 나왔다.
+
+    저장 파일은 이미 시장별이므로(`{발행일}.{시장}.json`) 그룹을 나눠 각각 만들면 둘 다
+    사용자가 고른 세션을 다룬다. 미국·유럽은 한 그룹, 한국·일본은 다른 그룹이 되어
+    시장이 넷으로 늘어도 그룹은 최대 둘이다.
+
+    날짜를 읽을 수 없으면 나누지 않는다. 그 판단은 호출부(오늘 날짜 사용)가 갖는다.
+    """
+    from features.daily_briefing.schema import normalize_market_selection
+
+    markets = list(normalize_market_selection(market_scope))
+    groups: dict[str, list[str]] = {}
+    for market in markets:
+        groups.setdefault(publication_date_for_session(session_date, [market]), []).append(market)
+    return [(date, groups[date]) for date in sorted(groups)]
+
+
 def latest_trading_day_on_or_before(day, market, exchange_calendar_fetcher=None):
     status = market_open_status(day, market, exchange_calendar_fetcher)
     if status["isOpen"]:

@@ -5,7 +5,11 @@ ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from features.common.market_calendar import briefing_market_windows, publication_date_for_session
+from features.common.market_calendar import (
+    briefing_market_windows,
+    publication_date_for_session,
+    publication_date_groups,
+)
 
 
 def test_us_session_publishes_on_the_next_trading_day():
@@ -43,3 +47,43 @@ def test_invalid_input_is_returned_unchanged():
     """빈 값·형식 오류는 호출부가 기존대로 처리하도록 그대로 돌려준다."""
     assert publication_date_for_session("", "us") == ""
     assert publication_date_for_session("not-a-date", "us") == "not-a-date"
+
+
+def test_a_single_market_selection_makes_one_group():
+    assert publication_date_groups("2026-08-07", ["us"]) == [("2026-08-10", ["us"])]
+    assert publication_date_groups("2026-08-07", ["kr"]) == [("2026-08-07", ["kr"])]
+
+
+def test_mixing_overnight_and_same_day_markets_splits_the_run():
+    """발행일 하나로 두 시장을 다 만족시킬 수 없다.
+
+    예전에는 밤샘 마감 시장 기준 하나로 합쳤다. 그러면 나머지 시장은 그 발행일을
+    자기 세션일로 읽어서, 금요일(08-07)을 고르고 미국장·한국장을 함께 만들면 한국장은
+    월요일(08-10) 장을 다뤘다 — 고르지 않은 날의 브리핑이 경고 없이 나왔다.
+    """
+    assert publication_date_groups("2026-08-07", ["us", "kr"]) == [
+        ("2026-08-07", ["kr"]),
+        ("2026-08-10", ["us"]),
+    ]
+
+
+def test_four_markets_still_make_at_most_two_groups():
+    """유럽은 미국과, 일본은 한국과 같은 시간대 규칙을 쓴다."""
+    assert publication_date_groups("2026-08-07", ["us", "kr", "europe", "jp"]) == [
+        ("2026-08-07", ["kr", "jp"]),
+        ("2026-08-10", ["us", "europe"]),
+    ]
+
+
+def test_each_group_lands_on_the_requested_session():
+    """나눈 결과가 실제로 사용자가 고른 세션을 가리키는지 창으로 되짚는다."""
+    session = "2026-08-07"
+    windows = {
+        date: briefing_market_windows(date)
+        for date, _markets in publication_date_groups(session, ["us", "kr"])
+    }
+    us_date = next(d for d, m in publication_date_groups(session, ["us", "kr"]) if "us" in m)
+    kr_date = next(d for d, m in publication_date_groups(session, ["us", "kr"]) if "kr" in m)
+
+    assert windows[us_date]["usRegularSessionDate"] == session
+    assert windows[kr_date]["krCurrentSessionDate"] == session

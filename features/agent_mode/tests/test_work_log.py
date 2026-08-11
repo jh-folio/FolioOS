@@ -253,7 +253,10 @@ def test_synchronous_excluded_briefing_and_company_create_no_shared_job(monkeypa
     monkeypatch.setattr(app, "save_analysis_report", lambda report: report)
     request = Request({"type": "http", "method": "GET", "path": "/api/analyze", "query_string": b"q=ACME", "headers": []})
 
-    assert app.api_create_briefing({"date": "2026-07-22"})["id"] == "briefing-sync"
+    # 시장 하나로 부른다. 날짜를 주고 여러 시장을 고르면 발행일이 갈려 실행이 나뉘고
+    # 응답이 `reports` 목록이 된다(`test_session_publication_date`). 이 테스트가 보는
+    # 것은 동기 실행이 공유 job을 만들지 않는다는 것뿐이라 그 분기를 탈 이유가 없다.
+    assert app.api_create_briefing({"date": "2026-07-22", "markets": ["us"]})["id"] == "briefing-sync"
     assert app.api_analyze(request)["id"] == "company-sync"
 
     assert store.path.read_bytes() == before
