@@ -230,7 +230,10 @@ def test_persisted_us_generation_returns_us_view_while_storage_preserves_kr():
                 persist=True, market_scope="us",
             )
         legacy = builder.read_json(root / "2026-06-10.json", {})
-        saved_us = builder.read_json(root / "2026-06-10.us.json", {})
+        # 저장 키가 세션일이다. 발행 앵커 06-10(수)의 미국 세션은 직전 거래일 06-09이며,
+        # 브리핑이 다루는 것도 그 장이다. 예전에는 앵커 날짜로 저장해서 파일명이 본문보다
+        # 하루 앞섰다.
+        saved_us = builder.read_json(root / "2026-06-09.us.json", {})
         assert "# Korea Market Briefing" in legacy["briefings"]["kr"]["markdown"]
         assert "# US Market Briefing" in saved_us["markdown"]
         assert "# Korea Market Briefing" not in saved_us["markdown"]
@@ -258,7 +261,7 @@ def test_direct_persistence_commits_canonical_revision_to_disk():
                 persist=True, market_scope="us",
             )
 
-        persisted = builder.read_json(root / "2026-06-10.us.json", {})
+        persisted = builder.read_json(root / "2026-06-09.us.json", {})
         assert persisted["canonicalRevision"]["number"] == 1
         assert persisted["canonicalRevision"]["hash"] == canonical_content_hash(persisted)
         assert response["canonicalRevision"] == persisted["canonicalRevision"]
@@ -288,7 +291,9 @@ def test_persisted_visual_sidecar_uses_gzip_filename():
                 market_scope="us",
             )
 
-    assert write_sidecar.call_args.args[0].name == "2026-06-10.us.visuals.json.gz"
+    # 사이드카도 보고서와 같은 세션 키를 쓴다. 둘이 갈리면 저장은 됐는데 화면이
+    # 못 찾는 상태가 된다.
+    assert write_sidecar.call_args.args[0].name == "2026-06-09.us.visuals.json.gz"
 
 
 def _run_all():

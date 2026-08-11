@@ -72,6 +72,7 @@ from features.daily_briefing.service import (
     prioritized_source_refs,
     briefing_prompt_path_label,
     read_briefing_prompt,
+    resolve_briefing_by_session,
     select_briefing_docs,
     source_refs,
 )
@@ -596,8 +597,18 @@ def build_briefing(
         saved_reports = {}
         for scope in requested_scopes:
             scoped_briefing = _single_market_briefing(briefing, scope)
-            report_path = BRIEFINGS_DIR / briefing_file_name(date, scope)
+            # 저장 키는 그 시장이 다루는 **세션일**이다. 발행일이 아니다 — 발행일로
+            # 저장하면 같은 세션이 생성 시각에 따라 다른 이름으로 흩어진다(07:45 예약이
+            # 만든 08-10 세션이 08-11로 저장되던 것). `date`도 함께 옮겨야 change
+            # event의 artifactId(`report.date`에서 파생)와 파일명이 같은 값을 가리킨다.
+            session_key = _scope_session_date(scope, market_windows) or date
+            scoped_briefing["date"] = session_key
+            report_path = BRIEFINGS_DIR / briefing_file_name(session_key, scope)
             existing = read_json(report_path, None)
+            if existing is None:
+                # 옛 키로 저장된 같은 세션이 있으면 그것을 잇는다. personalOverlay처럼
+                # 사용자가 붙인 것이 이관 전에 사라지면 안 된다.
+                existing = resolve_briefing_by_session(session_key, scope)
             if existing is None:
                 existing = read_json(BRIEFINGS_DIR / briefing_file_name(date), None)
                 existing = briefing_scope_view(existing, scope) if isinstance(existing, dict) else None
@@ -610,7 +621,7 @@ def build_briefing(
                 sidecar = _sidecar_for_market(visual_result.get("sidecar") or {}, scope)
                 if sidecar.get("snapshots"):
                     write_visual_sidecar(
-                        BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date, scope),
+                        BRIEFINGS_DIR / visual_sidecar_gzip_file_name(session_key, scope),
                         sidecar,
                         scope,
                     )

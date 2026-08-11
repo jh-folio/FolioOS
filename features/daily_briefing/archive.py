@@ -117,7 +117,14 @@ class BriefingArchiveIndex:
 
     @staticmethod
     def _row_key(item):
-        return (item.get("reportDate", ""), item.get("marketScope", ""))
+        scope = item.get("marketScope", "")
+        if scope in SINGLE_MARKET_SCOPES:
+            # 정체성은 **세션**이다. 저장 키가 세션일로 넘어가는 동안 같은 세션이 옛
+            # 발행일 파일과 새 세션 파일 양쪽에 있을 수 있고, `reportDate`로 묶으면
+            # 같은 장이 카드 두 장으로 보인다.
+            return (item.get("sessionDate") or item.get("reportDate", ""), scope)
+        # 종합 카드에는 세션일이 하나로 정해지지 않는다.
+        return (item.get("reportDate", ""), scope)
 
     @staticmethod
     def _path_priority(path):
@@ -151,9 +158,16 @@ class BriefingArchiveIndex:
             self._scan(force=force_refresh)
             deduped = {}
             for path, entry in self._entries.items():
-                priority = self._path_priority(path)
+                base_priority = self._path_priority(path)
                 for pair in entry["rows"]:
-                    key = self._row_key(pair["item"])
+                    item = pair["item"]
+                    # 이미 세션 키로 저장된 파일이 이긴다. 이관 중 둘이 공존하면
+                    # 새 쪽이 권위이며, 옛 파일은 이관이 지울 때까지 조용히 가려진다.
+                    priority = base_priority
+                    session = str(item.get("sessionDate") or "")
+                    if base_priority and session and path.name.startswith(f"{session}."):
+                        priority += 1
+                    key = self._row_key(item)
                     current = deduped.get(key)
                     if current is None or priority >= current["priority"]:
                         deduped[key] = {"pair": pair, "priority": priority}

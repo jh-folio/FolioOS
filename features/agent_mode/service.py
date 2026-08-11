@@ -31,6 +31,7 @@ from features.common.quality_generation.quality_targets import render_quality_ta
 from features.common.quality_generation.schema import normalize_quality_mode
 from features.daily_briefing.source_window import scope_session_documents
 from features.daily_briefing.service import (
+    resolve_briefing_by_session,
     append_briefing_sources,
     briefing_sources_from_headlines,
     build_llm_context,
@@ -574,8 +575,15 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
     sidecar = (pack.get("internal") or {}).get("visualSidecar") or {}
     for scope in requested_scopes:
         scoped_briefing = _single_market_briefing(briefing, scope)
-        save_path = BRIEFINGS_DIR / briefing_file_name(date, scope)
+        # 저장 키는 그 시장의 세션일이다(§builder와 같은 규칙). 두 경로가 다른 키를 쓰면
+        # 같은 세션이 생성 엔진에 따라 다른 파일이 된다.
+        session_key = _scope_session_date(scope, draft.get("marketWindows")) or date
+        scoped_briefing["date"] = session_key
+        save_path = BRIEFINGS_DIR / briefing_file_name(session_key, scope)
         existing = read_json(save_path, None)
+        if existing is None:
+            # 옛 키로 저장된 같은 세션을 잇는다. personalOverlay가 사라지면 안 된다.
+            existing = resolve_briefing_by_session(session_key, scope)
         if existing is None:
             legacy = read_json(BRIEFINGS_DIR / briefing_file_name(date), None)
             existing = briefing_scope_view(legacy, scope) if isinstance(legacy, dict) else None
@@ -588,7 +596,7 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
                 visuals[scope] = scoped_sidecar
                 if persist:
                     write_visual_sidecar(
-                        BRIEFINGS_DIR / visual_sidecar_gzip_file_name(date, scope),
+                        BRIEFINGS_DIR / visual_sidecar_gzip_file_name(session_key, scope),
                         scoped_sidecar,
                         scope,
                     )
