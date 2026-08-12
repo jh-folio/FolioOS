@@ -1,5 +1,6 @@
 import datetime as dt
 import json as _json
+import re
 import urllib.parse
 import urllib.request
 
@@ -73,37 +74,106 @@ def fetch_fred_macro_events(api_key: str, *, start: str, end: str, timeout: floa
 
 _FRED_OBSERVATIONS = "https://api.stlouisfed.org/fred/series/observations"
 
+# `output_type=3` 응답의 열 이름. `GDPC1_20260625`처럼 시리즈와 vintage 날짜가 붙는다.
+_VINTAGE_KEY = re.compile(r".+_(\d{4})(\d{2})(\d{2})")
+
 
 def _attach_observations(rows: list[dict], api_key: str, *, timeout: float) -> None:
-    """Fill released figures for dates that have already passed.
+    """각 발표일에 **그 발표가 공표한** 수치를 붙인다.
 
-    예정만 보여주면 발표 뒤에 캘린더를 다시 열 이유가 없다. 아직 오지 않은 일정은
-    값이 없는 것이 정상이므로 건드리지 않는다.
+    예정만 보여주면 발표 뒤에 캘린더를 다시 열 이유가 없다. 다만 붙이는 값은 반드시
+    그 발표의 것이어야 한다.
+
+    **최신 관측치를 지나간 모든 발표일에 붙이면 안 된다.** 예전 구현이 그랬다
+    (`sort_order=desc, limit=2`). 그래서 7월 CPI를 발표하는 8월 12일 행에 6월 관측치가
+    붙었고, 6월 25일 GDP 행에는 7월 30일에야 공표된 값이 붙었다. 지난 발표가 전부
+    "오늘의 최신 숫자"를 말하고 있었다 — 캘린더를 되짚어 볼 수 없다는 뜻이다.
+
+    FRED는 vintage(실시간) 조회로 **어느 날 무엇이 처음 공표됐는지**를 알려준다.
+    `output_type=4`(초판만)를 쓰면 관측치마다 `realtime_start`가 최초 공표일이다:
+
+        관측월 2026-05-01  값 333.979  최초공표 2026-06-10
+        관측월 2026-06-01  값 332.568  최초공표 2026-07-14
+
+    발표일과 최초 공표일을 정확히 맞춰야 그 발표의 숫자가 된다. 시리즈마다 공표 지연이
+    다르므로(JOLTS는 두 달, GDP는 분기) "발표 달 - 1"* 같은 고정 오프셋으로는 맞출 수
+    없다. 이 방식은 시리즈를 가리지 않는다.
+
+    **그날 공표된 값이 없으면 아무것도 붙이지 않는다.** 발표일이 지났어도 FRED에 아직
+    안 들어왔을 수 있다(실측 2026-08-12 CPI). 그때 지난 값을 대신 보여주면 틀린 숫자를
+    오늘 발표라고 말하는 것이다 — 비워 두는 편이 맞다.
     """
     today = dt.date.today().isoformat()
-    cache: dict[str, list[dict]] = {}
-    for row in rows:
-        release_id = row.get("_releaseId")
-        series = FRED_HEADLINE_SERIES.get(release_id or 0)
-        if not series or str(row.get("startsAt") or "")[:10] > today:
-            continue
-        series_id, unit = series
+    dated = [
+        (row, str(row.get("startsAt") or "")[:10], FRED_HEADLINE_SERIES.get(row.get("_releaseId") or 0))
+        for row in rows
+    ]
+    pending = [(row, day, series) for row, day, series in dated if series and day and day <= today]
+    if not pending:
+        return
+
+    earliest = min(day for _row, day, _series in pending)
+    cache: dict[str, dict] = {}
+    for _row, _day, series in pending:
+        series_id = series[0]
         if series_id not in cache:
-            params = urllib.parse.urlencode({
-                "series_id": series_id, "api_key": api_key, "file_type": "json",
-                "sort_order": "desc", "limit": 2,
-            })
-            try:
-                with urllib.request.urlopen(f"{_FRED_OBSERVATIONS}?{params}", timeout=timeout) as response:
-                    payload = _json.loads(response.read().decode("utf-8"))
-                cache[series_id] = payload.get("observations") or []
-            except Exception:
-                cache[series_id] = []
-        points = [p for p in cache[series_id] if str(p.get("value") or ".") != "."]
-        if not points:
+            cache[series_id] = _first_releases(series_id, api_key, earliest, today, timeout=timeout)
+
+    for row, day, series in pending:
+        series_id, unit = series
+        published = cache.get(series_id) or {}
+        point = published.get(day)
+        if not point:
             continue
         row["status"] = "actual"
-        row["actualValue"] = points[0].get("value")
-        row["previousValue"] = points[1].get("value") if len(points) > 1 else ""
+        row["actualValue"] = point["value"]
         row["unit"] = unit
-        row["observedAt"] = points[0].get("date") or ""
+        row["observedAt"] = point["date"]
+        # 직전 값은 **그 이전 발표가 공표한 값**이다. 최신 관측치의 바로 앞이 아니다.
+        earlier = [d for d in published if d < day]
+        row["previousValue"] = published[max(earlier)]["value"] if earlier else ""
+
+
+def _first_releases(series_id: str, api_key: str, start: str, end: str, *, timeout: float) -> dict:
+    """`{공표일: {"date": 관측기간, "value": 값}}`.
+
+    `output_type=3`(신규·개정분)은 관측기간마다 **vintage 날짜별 값**을 한 줄로 준다:
+
+        {"date": "2026-01-01", "GDPC1_20260528": "24152.656", "GDPC1_20260625": "24180.419"}
+        {"date": "2026-04-01", "GDPC1_20260730": "24270.599"}
+
+    키의 `_YYYYMMDD`가 그 값이 공표된 날이다. **개정 발표까지 잡힌다** — GDP는 잠정·수정·
+    확정으로 세 번 발표하는데, 초판만 보는 `output_type=4`로는 6월 25일 확정치 발표가
+    빈칸으로 남았다.
+
+    한 시리즈에 한 번만 호출한다. 창을 앞으로 넉넉히 여는 이유는 범위 첫 발표에도
+    직전 비교값이 있어야 하기 때문이다.
+    """
+    try:
+        window_start = (dt.date.fromisoformat(start) - dt.timedelta(days=400)).isoformat()
+    except ValueError:
+        window_start = start
+    params = urllib.parse.urlencode({
+        "series_id": series_id, "api_key": api_key, "file_type": "json",
+        "output_type": 3, "realtime_start": window_start, "realtime_end": end,
+        "sort_order": "asc",
+    })
+    try:
+        with urllib.request.urlopen(f"{_FRED_OBSERVATIONS}?{params}", timeout=timeout) as response:
+            payload = _json.loads(response.read().decode("utf-8"))
+    except Exception:
+        return {}
+    published: dict[str, dict] = {}
+    for point in payload.get("observations") or []:
+        observed = str(point.get("date") or "")
+        for key, raw in point.items():
+            match = _VINTAGE_KEY.fullmatch(str(key))
+            value = str(raw or ".")
+            if not match or value == ".":
+                continue
+            day = f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
+            # 같은 날 여러 관측기간이 공표되면(개정 포함) 가장 최근 기간이 헤드라인이다.
+            current = published.get(day)
+            if not current or observed > current["date"]:
+                published[day] = {"date": observed, "value": value}
+    return published
