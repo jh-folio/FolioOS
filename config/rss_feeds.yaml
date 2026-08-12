@@ -141,6 +141,11 @@ feeds:
   # 아래 freshness는 HTTP 상태가 아니라 실제 최신 item 시각을 검증한 기록이다.
   - media: "Handelsblatt"
     url: "https://www.handelsblatt.com/contentexport/feed/finanzen"
+    # 섹션 피드는 실측으로 자기 섹션만 내놓는다(20/20). 그래도 규칙을 적어 두는 이유는
+    # 둘이다 — 매체가 피드 구성을 바꿔도 politik이 다시 들어오지 않고, 이미 쌓인 자료를
+    # 정리하는 쪽이 "지금 무엇을 수집하는가"를 피드 주소에서 추측하지 않는다.
+    url_sections:
+      allow: ["finanzen"]
     category: "europe_de"
     source_type: "news"
     enabled: true
@@ -154,6 +159,8 @@ feeds:
     freshness_item_count: 20
   - media: "Handelsblatt"
     url: "https://www.handelsblatt.com/contentexport/feed/unternehmen"
+    url_sections:
+      allow: ["unternehmen"]
     category: "europe_de"
     source_type: "news"
     enabled: true
@@ -167,6 +174,8 @@ feeds:
     freshness_item_count: 20
   - media: "manager magazin"
     url: "https://www.manager-magazin.de/finanzen/index.rss"
+    url_sections:
+      allow: ["finanzen"]
     category: "europe_de"
     source_type: "news"
     enabled: true
@@ -180,6 +189,8 @@ feeds:
     freshness_item_count: 20
   - media: "manager magazin"
     url: "https://www.manager-magazin.de/unternehmen/index.rss"
+    url_sections:
+      allow: ["unternehmen"]
     category: "europe_de"
     source_type: "news"
     enabled: true
