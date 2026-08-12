@@ -180,13 +180,20 @@ def briefing_contract_violations(markdown: str, contract: dict) -> list[str]:
             continue
         if contract.get("requireImmediateSectionZeroAfterTitle", True):
             next_line = _next_non_empty_line(value, match.end())
-            expected = "## 0. 오늘의 미국장 성격" if key == "us" else "## 0. 오늘의 한국장 성격"
+            # **라벨은 시장마다 다르다.** 예전에는 `us가 아니면 한국장`이라 일본장·유럽장
+            # 제목 뒤에 `0. 오늘의 한국장 성격`을 요구했다 — 같은 계약의 필수 섹션 목록은
+            # `0. 오늘의 일본장 성격`을 요구하므로 **계약이 자기 자신과 모순됐다.**
+            # 18:00 한국·일본 예약은 무엇을 써도 통과할 수 없었고, 위반 → 재작성 →
+            # 또 위반으로 CLI를 두 번 돌린 뒤 45분을 버리고 실패했다(실측).
+            expected = f"## 0. 오늘의 {MARKET_LABELS[key]} 성격"
             if not next_line.startswith(expected):
                 violations.append(f"제목 다음 프리앰블 금지: '# {title}' 다음은 바로 '{expected}'이어야 함")
 
     if contract.get("requireLeadingCompanyNames", True):
         for key in _market_keys_from_contract(contract):
-            prefix = "미국장" if key == "us" else "한국장"
+            # 위와 같은 이유로 라벨을 시장에서 가져온다. 이쪽은 문서 전체를 훑어서 다른
+            # 시장의 헤딩이 대신 걸리면 통과해 버렸다 — 조용히 검사를 건너뛴 셈이다.
+            prefix = MARKET_LABELS[key]
             for ordinal in ("①", "②"):
                 fragment = f"{3 if ordinal == '①' else 4}. {prefix}을 주도한 기업 {ordinal}"
                 if not _has_named_leading_company_heading(value, fragment):
