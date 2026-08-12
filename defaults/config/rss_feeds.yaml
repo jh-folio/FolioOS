@@ -140,7 +140,7 @@ feeds:
   # 필요하면 그때 Google News를 fallback으로 되살린다(매트릭스에 근거 기록).
   # 아래 freshness는 HTTP 상태가 아니라 실제 최신 item 시각을 검증한 기록이다.
   - media: "Handelsblatt"
-    url: "https://www.handelsblatt.com/contentexport/feed/schlagzeilen"
+    url: "https://www.handelsblatt.com/contentexport/feed/finanzen"
     category: "europe_de"
     source_type: "news"
     enabled: true
@@ -149,22 +149,48 @@ feeds:
     reliability_tier: 2
     default_market: "EUROPE"
     language: "de"
-    freshness_checked_at: "2026-08-04T12:03:02Z"
-    freshness_latest_at: "2026-08-04T11:46:53Z"
-    freshness_item_count: 50
-  - media: "manager magazin"
-    url: "https://www.manager-magazin.de/news/index.rss"
+    freshness_checked_at: "2026-08-12T15:30:57Z"
+    freshness_latest_at: "2026-08-12T14:51:41Z"
+    freshness_item_count: 20
+  - media: "Handelsblatt"
+    url: "https://www.handelsblatt.com/contentexport/feed/unternehmen"
     category: "europe_de"
     source_type: "news"
     enabled: true
-    priority: 4
+    priority: 5
     allow_full_text: true
     reliability_tier: 2
     default_market: "EUROPE"
     language: "de"
-    freshness_checked_at: "2026-08-04T12:03:02Z"
-    freshness_latest_at: "2026-08-04T11:30:00Z"
-    freshness_item_count: 30
+    freshness_checked_at: "2026-08-12T15:30:57Z"
+    freshness_latest_at: "2026-08-12T15:22:30Z"
+    freshness_item_count: 20
+  - media: "manager magazin"
+    url: "https://www.manager-magazin.de/finanzen/index.rss"
+    category: "europe_de"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    language: "de"
+    freshness_checked_at: "2026-08-12T15:30:57Z"
+    freshness_latest_at: "2026-08-12T14:52:00Z"
+    freshness_item_count: 20
+  - media: "manager magazin"
+    url: "https://www.manager-magazin.de/unternehmen/index.rss"
+    category: "europe_de"
+    source_type: "news"
+    enabled: true
+    priority: 5
+    allow_full_text: true
+    reliability_tier: 2
+    default_market: "EUROPE"
+    language: "de"
+    freshness_checked_at: "2026-08-12T15:30:57Z"
+    freshness_latest_at: "2026-08-12T13:53:00Z"
+    freshness_item_count: 20
   - media: "BFM Business"
     url: "https://www.bfmtv.com/rss/economie/"
     category: "europe_fr"
@@ -193,6 +219,11 @@ feeds:
     freshness_item_count: 20
   - media: "Het Financieele Dagblad"
     url: "https://fd.nl/?rss"
+    # 한 피드에 경제·시장·사회·정치·오피니언이 함께 온다. 매체가 섹션 피드를 제공하지
+    # 않으므로 기사 URL의 섹션으로 거른다(실측 57건: financiele-markten 13 · bedrijfsleven
+    # 12 · economie 12 · samenleving 7 · opinie 6 · politiek 4 · tech-en-innovatie 3).
+    url_sections:
+      allow: ["financiele-markten", "bedrijfsleven", "economie", "tech-en-innovatie"]
     category: "europe_nl"
     source_type: "news"
     enabled: true

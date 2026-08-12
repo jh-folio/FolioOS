@@ -150,6 +150,25 @@ def _target_metadata(row: dict, default_market: str) -> dict[str, object]:
     }
 
 
+def _url_sections(raw) -> dict:
+    """`{"allow": [...]}` 또는 `{"deny": [...]}`. 둘 다 없으면 거르지 않는다.
+
+    `allow`가 있으면 그 섹션만 받는다(가장 엄격). `deny`는 그 섹션만 뺀다. 둘 다 주면
+    `allow`를 먼저 보고 통과한 것에 `deny`를 적용한다.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    out = {}
+    for key in ("allow", "deny"):
+        values = raw.get(key)
+        if not isinstance(values, list):
+            continue
+        cleaned = [str(v).strip().strip("/").lower() for v in values if str(v or "").strip()]
+        if cleaned:
+            out[key] = cleaned
+    return out
+
+
 def normalize_feed(row: dict) -> dict | None:
     if not isinstance(row, dict):
         return None
@@ -175,6 +194,10 @@ def normalize_feed(row: dict) -> dict | None:
         raise FeedConfigError(f"invalid_reliability_tier:{reliability_tier}")
     # Aggregating feeds carry many outlets. When set, only items whose feed-declared
     # publisher matches are kept, and the item is re-tagged with that publisher name.
+    # 기사 URL의 섹션으로 거른다. 언어와 무관한 **구조적** 신호라, 키워드 표를 여섯 개
+    # 언어로 늘리지 않고도 종합 피드에서 투자와 무관한 면을 뺄 수 있다. 실측: Handelsblatt
+    # 1,260건 중 politik 421 · karriere 68 · video 31이었고 finanzen은 279뿐이었다.
+    url_sections = _url_sections(row.get("url_sections"))
     raw_publishers = row.get("only_publishers")
     only_publishers = [
         str(v).strip() for v in raw_publishers if str(v or "").strip()
@@ -189,6 +212,7 @@ def normalize_feed(row: dict) -> dict | None:
         "default_market": default_market,
         **target_metadata,
         "only_publishers": only_publishers,
+        "url_sections": url_sections,
         # "news"는 브리핑 입력에 포함되고, "press_release"는 기업 자료 전용으로 분리된다.
         "source_type": source_type,
     }

@@ -9,6 +9,7 @@ so the threshold and the hard exclusions can evolve independently.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlsplit
 
 from features.common.research_library.rss.article import normalize_text
 from features.common.research_library.rss.policy import keyword_gate_applies
@@ -119,6 +120,39 @@ def should_archive_item(title: str, description: str, link: str, feed: dict | No
         return False
     if _VENDOR_TICKER_RE.search(title or ""):
         return False
+    if not url_section_allowed(link, feed):
+        return False
     if not keyword_gate_applies(feed):
         return True
     return is_market_relevant_item(title, description, link)
+
+
+def url_section_allowed(link: str, feed: dict | None = None) -> bool:
+    """기사 URL의 섹션으로 거른다. 언어를 읽지 않는 **구조적** 필터다.
+
+    종합 헤드라인 피드는 투자와 무관한 면을 그대로 실어 온다. 실측으로 Handelsblatt
+    1,260건이 politik 421 · finanzen 279 · unternehmen 178 · technik 154 · karriere 68 ·
+    video 31이었고, 쾰른 아이스크림 창업자 기사와 우크라이나 전황이 브리핑 자료로
+    들어왔다. 그 기사들은 본문 장식에서 미국 대형주를 주워 `US` 시장으로까지 찍혔다.
+
+    키워드 표를 독일어·프랑스어·이탈리아어로 늘리는 것은 이 저장소가 이미 거부한 길이다
+    (§should_archive_item — "읽을 수 없는 언어에서 관련성을 추측하는 것"). 섹션 경로는
+    매체가 스스로 붙인 분류라 번역이 필요 없고 눈으로 확인할 수 있다.
+
+    섹션 피드가 따로 있으면 그쪽을 구독하는 것이 먼저다. 이 필터는 한 피드에 여러 면이
+    섞여 오는 매체(Het Financieele Dagblad 등)를 위한 것이다.
+    """
+    rules = (feed or {}).get("url_sections") or {}
+    if not rules:
+        return True
+    path = urlsplit(str(link or "")).path
+    segments = [segment for segment in path.split("/") if segment]
+    if not segments:
+        # 섹션을 읽을 수 없으면 거르지 않는다. 구조 신호가 없다고 기사를 버리면
+        # 경로 형태를 바꾼 매체의 자료가 통째로 사라진다.
+        return True
+    section = segments[0].lower()
+    allow = rules.get("allow")
+    if allow and section not in allow:
+        return False
+    return section not in (rules.get("deny") or [])
