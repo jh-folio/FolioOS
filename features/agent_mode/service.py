@@ -437,11 +437,14 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         artifact_type="briefing",
         artifact_id=date,
         title=draft["title"],
-        prompt=read_briefing_prompt(market_scope),
+        prompt=read_briefing_prompt(requested_markets),
         context=context,
         output_contract=briefing_output_contract(
             market_scope,
             briefing_type,
+            # 계약 대상은 실제 시장 목록이다. 범위 이름만 넘기면 `multi` 같은 조합에서
+            # 프롬프트와 검사가 서로 다른 시장을 본다.
+            markets=requested_markets,
             expected_titles=briefing_expected_titles(
                 date,
                 market_scope,

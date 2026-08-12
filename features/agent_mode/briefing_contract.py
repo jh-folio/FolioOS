@@ -42,14 +42,41 @@ def briefing_output_contract(
     briefing_type: str = "default",
     *,
     expected_titles: dict | None = None,
+    markets: "tuple[str, ...] | list[str] | None" = None,
 ) -> dict:
+    """생성 결과가 지켜야 할 계약. **시장 목록이 곧 계약 대상이다.**
+
+    예전에는 범위 이름(`market_scope`)만 받았고, 아는 이름이 아니면 조용히 `both`로
+    되돌아갔다. 시장이 넷으로 늘면서 `market_selection_scope(["kr","jp"])`가 `multi`를
+    돌려주는데 이 함수는 그 이름을 모른다. 그래서 한국장+일본장 예약이 **미국장 섹션을
+    요구하는 계약**으로 검사됐다 — 프롬프트는 `read_briefing_prompt(requested_markets)`로
+    올바르게 한국·일본을 시키는데 검사만 다른 것을 봤다.
+
+    결과는 매번 계약 위반 → 재작성 1회 → 또 위반 → `internal_error`였다. CLI를 두 번
+    돌리므로 45분을 쓰고 아무것도 남기지 못했다(2026-08-12 18:00 예약 실측).
+    """
     scope = str(market_scope or "both").strip().lower()
-    if scope not in {*SINGLE_MARKETS, *AGGREGATE_MARKETS}:
-        scope = "both"
     normalized_type = str(briefing_type or "default").strip().lower()
     if normalized_type not in {"default", "market_focused", "concise"}:
         normalized_type = "default"
-    markets = AGGREGATE_MARKETS.get(scope, (scope,))
+    if markets:
+        resolved = tuple(
+            key for key in (str(item or "").strip().lower() for item in markets)
+            if key in TITLE_REQUIREMENTS
+        )
+    else:
+        resolved = ()
+    if not resolved:
+        # 목록이 없으면 예전처럼 범위 이름에서 되짚는다. 다만 모르는 이름을 `both`로
+        # 바꾸지 않는다 — 그 조용한 대체가 이 결함의 원인이었다.
+        if scope in AGGREGATE_MARKETS:
+            resolved = AGGREGATE_MARKETS[scope]
+        elif scope in SINGLE_MARKETS:
+            resolved = (scope,)
+        else:
+            resolved = AGGREGATE_MARKETS["both"]
+    markets = resolved
+    scope = scope if scope in {*SINGLE_MARKETS, *AGGREGATE_MARKETS} else "multi"
     sections = [section for market in markets for section in required_sections(market)]
     market_count = len(markets)
     sections.append("Source & Data Notes")
