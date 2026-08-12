@@ -407,6 +407,14 @@ def company_term_matches(term, hay):
     return term_in_text(token, hay)
 
 
+def _term_occurrences(term, hay):
+    """`hay`에 이 표기가 몇 번 나오는가. 경계 규칙은 `company_term_matches`와 같다."""
+    token = str(term or "").strip().lower()
+    if not token:
+        return 0
+    return len(re.findall(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])", hay))
+
+
 def company_matches_query(company, query):
     hay = normalize(query).lower()
     if not hay:
@@ -419,13 +427,26 @@ def find_companies(text):
     found = []
     seen = set()
     # 1. company_master / hardcoded universe (highest priority — has sector, Korean market info, etc.)
+    #
+    # 본문 깊은 곳의 **한 번**은 그 기사가 그 회사를 다룬다는 뜻이 아니다. 페이지 장식이
+    # 회사 이름을 흘린다 — 실측으로 Handelsblatt 기사 150건 중 145건(97%)에 Alphabet이
+    # 붙었는데, 본문에 섞여 들어온 "Bei Google bevorzugen"(공유 위젯) 한 줄 때문이었다.
+    # 그 종목의 시장이 기사 시장까지 US로 바꿨다.
+    #
+    # 티커 스캔은 이미 같은 규칙을 쓴다("제목 밖이면 두 번"). 이름 매칭에도 같은 잣대를
+    # 적용한다. 진짜 그 회사 기사는 제목에 쓰거나 본문에서 여러 번 부른다.
+    head = hay[:400]
     for c in company_universe():
         names = company_terms(c)
-        if any(company_term_matches(n, hay) for n in names):
-            key = c.get("ticker") or c.get("name")
-            if key not in seen:
-                found.append(company_public(c))
-                seen.add(key)
+        if not any(company_term_matches(n, hay) for n in names):
+            continue
+        in_head = any(company_term_matches(n, head) for n in names)
+        if not in_head and sum(_term_occurrences(n, hay) for n in names) < 2:
+            continue
+        key = c.get("ticker") or c.get("name")
+        if key not in seen:
+            found.append(company_public(c))
+            seen.add(key)
     # 2. Explicit patterns (NYSE:X, Company (X), 6-digit.KS) — enriched with SEC data
     for c in extract_company_patterns(text):
         key = c.get("ticker") or c.get("name")

@@ -757,9 +757,9 @@ def _company_market_matchers():
                     # 두 글자 ASCII 티커(GM 등)는 일반 단어와 충돌 위험이 커서 제외.
                     continue
                 pattern = re.compile(rf"(?<![a-z0-9]){re.escape(token)}(?![a-z0-9])")
-                matchers.append((pattern.search, market))
+                matchers.append((lambda text, _p=pattern: len(_p.findall(text)), market))
             else:
-                matchers.append((lambda text, _t=token: _t in text, market))
+                matchers.append((lambda text, _t=token: text.count(_t), market))
     return tuple(matchers)
 
 
@@ -964,8 +964,15 @@ def infer_doc_markets(doc):
         " ".join(doc.get("sectors", []) or []),
         " ".join(doc.get("impactTags", []) or []),
     ])).lower()
+    # **본문 깊은 곳의 한 번은 신호가 아니다.** 페이지 장식이 회사 이름을 흘린다 —
+    # 실측으로 Handelsblatt 기사 본문에 섞여 들어온 "bei google bevorzugen"(공유 위젯)
+    # 한 줄이 Alphabet을 붙였고, 그 종목의 시장이 독일 기사를 `US`로 만들었다.
+    # 제목·요약에 나오거나 본문에서 두 번은 불려야 그 시장 신호로 본다.
+    head = text[:400]
     for matcher, market in _company_market_matchers():
-        if market not in company_markets and matcher(text):
+        if market in company_markets:
+            continue
+        if matcher(head) or matcher(text) >= 2:
             company_markets.add(market)
     if _KR_STOCK_CODE_RE.search(text):
         company_markets.add("KR")
