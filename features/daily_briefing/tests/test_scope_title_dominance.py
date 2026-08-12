@@ -73,9 +73,11 @@ def test_aggregate_scopes_keep_everything():
     (KR_WRAP, "US", True),
     (KR_WRAP, "KR", False),
     (KO_ABOUT_US, "US", False),
-    # "중동"이 GLOBAL 토큰이라 이 제목은 어느 시장도 배제하지 않는다. KR 풀 제외는
-    # 주시장(US) 판정이 이미 담당하므로 title 게이트까지 막을 필요가 없다.
-    (KO_ABOUT_US, "KR", False),
+    # 제목이 미국장을 지목했으므로 한국장 커버리지가 아니다. "중동"이 GLOBAL 토큰이라는
+    # 것은 배제를 면제해 주지 않는다 — 예전에는 GLOBAL이 통행증이었고, 그 근거가 "주시장
+    # 판정이 이미 거른다"였다. 주시장이 GLOBAL·BOTH로 나온 문서에는 그 판정이 걸리지
+    # 않아서, 한국장 제목의 기사가 유럽장·일본장 참고자료로 올라왔다(실측).
+    (KO_ABOUT_US, "KR", True),
     (GLOBAL_DOC, "US", False),
     ({"title": ""}, "US", False),
     # 제목이 미국 기업 하나만 내세우면 그 기사는 미국 커버리지다.

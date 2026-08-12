@@ -306,14 +306,35 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         doc["marketSessionDate"] = infer_market_session_date(doc, market_windows)
     scoped_docs = documents_for_scope(docs, market_scope)
     groups = prioritize_briefing_groups(group_docs(scoped_docs), market_windows, limit=6)
-    market_drivers = derive_market_drivers(scoped_docs, market_windows, limit=4)
     session_modes = session_modes_from_windows(market_windows)
+    # 시장별 문서를 한 번만 고른다. 아래 동인·참고자료·시각자료가 모두 이것을 쓴다.
+    market_docs = {
+        target: documents_for_scope(scope_docs.get(target) or docs, target)
+        for target in requested_markets
+    }
+    # **동인과 참고자료는 시장마다 다르다.** 예전에는 합쳐진 풀로 한 번만 만들어 네 시장
+    # 보고서가 같은 동인과 같은 참고자료를 실었다. 동인에는 시장을 붙여야 저장 시
+    # `_single_market_briefing`의 필터가 그 시장 것만 남긴다 — 시장이 비어 있으면
+    # 모든 시장을 통과한다.
+    market_drivers = []
     issue_coverage_raw = []
-    for target in (key.upper() for key in requested_markets):
-        issue_coverage_raw.extend(build_issue_coverage(scoped_docs, target, market_windows, limit=10))
+    sources_by_market = {}
+    for target in requested_markets:
+        target_docs = market_docs[target]
+        target_issues = build_issue_coverage(target_docs, target.upper(), market_windows, limit=10)
+        issue_coverage_raw.extend(target_issues)
+        for driver in derive_market_drivers(target_docs, market_windows, limit=4):
+            market_drivers.append({**driver, "market": target})
+        target_sources = prioritized_source_refs(
+            target_docs, market_windows, limit=14, issue_coverage=target_issues,
+        ) or briefing_sources_from_headlines(
+            _briefing_headlines(prioritize_briefing_groups(group_docs(target_docs), market_windows, limit=6)),
+            limit=14,
+        )
+        sources_by_market[target] = source_refs(target_sources, limit=14)
     visual_scope_results = {}
     for target in requested_markets:
-        target_docs = documents_for_scope(scope_docs.get(target) or docs, target)
+        target_docs = market_docs[target]
         visual_scope_results[target] = {
             # 세션 기준일은 빌더와 같은 규칙을 쓴다. 여기서 따로 고르면 Agent 경로만
             # 유럽·일본에 한국 세션일을 찍는다.
@@ -405,6 +426,10 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
         "marketDrivers": [
             {
                 "driver": d.get("driver", ""),
+                # 이 동인이 어느 시장 보고서 것인지. 저장 시 `_single_market_briefing`이
+                # 이 값으로 거른다 — 비어 있으면 모든 시장을 통과해 네 보고서가 같은
+                # 동인을 싣는다. `markets`는 그 동인이 건드리는 시장 목록이라 다른 값이다.
+                "market": str(d.get("market") or ""),
                 "score": round(float(d.get("score", 0)), 1),
                 "markets": d.get("markets", []),
                 "sources": d.get("sources", []),
@@ -461,6 +486,9 @@ def prepare_briefing_pack(date: str | None = None, *, strict_date=False, quality
             "groups": groups, "qualityMode": quality_mode, "qualityPreflight": quality_preflight,
             "marketScope": market_scope, "visualSidecar": visual_result.get("sidecar", {}),
             "visualScopeResults": visual_scope_results,
+            # 시장별 참고자료. 저장할 때 각 시장 섹션에 붙는다 — 하나로 합치면 네 시장
+            # 보고서가 같은 참고자료를 싣는다.
+            "sourcesByMarket": sources_by_market,
         },
     )
     return pack, _write_pack(pack, owner_job_id)
@@ -540,6 +568,12 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
         report_summary=draft.get("summary", ""),
         market_windows=draft.get("marketWindows"),
     )
+    # 시장별 참고자료를 그 시장 섹션에 붙인다. `briefing_scope_view`가 섹션의 것을
+    # 먼저 읽으므로, 없으면 합본 목록으로 떨어져 네 시장이 같은 자료를 싣게 된다.
+    sources_by_market = (pack.get("internal") or {}).get("sourcesByMarket") or {}
+    for scope_key, rows in sources_by_market.items():
+        if rows and isinstance(sections.get(scope_key), dict):
+            sections[scope_key]["sources"] = rows
     briefing = {
         **draft,
         "markdown": markdown,

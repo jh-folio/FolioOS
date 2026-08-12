@@ -388,9 +388,18 @@ def title_claims_other_market(doc, target: str) -> bool:
     if not title:
         return False
     title_markets = set(infer_doc_markets({"title": title}))
-    if target in title_markets or "GLOBAL" in title_markets:
+    named = title_markets & _TITLE_MARKET_PRODUCTS
+    if target in named:
         return False
-    return bool(title_markets & _TITLE_MARKET_PRODUCTS)
+    # **`GLOBAL`이 통행증이 되면 안 된다.** 예전에는 제목에 유가·중동 같은 GLOBAL 토큰이
+    # 하나라도 있으면 다른 시장을 명시한 제목도 통과시켰다. 그 근거는 "주시장 판정이 이미
+    # 거른다"였는데, 주시장이 `GLOBAL`이나 `BOTH`로 나온 문서에는 그 판정이 걸리지 않는다
+    # — `documents_for_scope`가 그런 문서를 **모든** 시장 풀에 넣기 때문이다.
+    #
+    # 그래서 "코스피, 美 CPI 경계·유가 상승에도 반도체 호조" 같은 제목이 유럽장·일본장
+    # 브리핑의 참고자료로 올라왔다(실측). 제목이 다른 시장을 지목했으면 이 시장 기사가
+    # 아니다. 시장 신호가 없거나 GLOBAL뿐인 제목은 여전히 아무것도 배제하지 않는다.
+    return bool(named)
 
 
 def documents_for_scope(docs, market_scope):
@@ -404,9 +413,20 @@ def documents_for_scope(docs, market_scope):
         return list(docs or [])
     target = scope.upper()
     # 유가·달러·공급망 기사는 특정 시장 소유가 아니라 어느 시장에도 근거가 된다.
+    #
+    # **`BOTH`는 "US+KR"이다.** `infer_doc_market`의 docstring이 그렇게 못박고 있는데,
+    # 이 필터가 그것을 모든 시장에 통과시켰다. 그래서 미국+한국 기사가 유럽장·일본장
+    # 풀을 채웠다 — 실측으로 일본장 풀 1,272건 중 825건(65%)이 `BOTH`였고, 그 결과
+    # 일본장 브리핑 참고자료가 한국 기사로 찼다.
+    #
+    # 복수형(`infer_doc_markets`)으로 바꾸는 것은 답이 아니다. 그 값은 문서가 **스치듯
+    # 언급한** 시장까지 담아서 오히려 풀이 넓어진다(실측 일본장 1,272 -> 2,054).
+    allowed = {target, "GLOBAL"}
+    if target in {"US", "KR"}:
+        allowed.add("BOTH")
     return [
         doc for doc in docs or []
-        if infer_doc_market(doc) in {target, "BOTH", "GLOBAL"}
+        if infer_doc_market(doc) in allowed
         and not title_claims_other_market(doc, target)
     ]
 
