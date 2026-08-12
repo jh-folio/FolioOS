@@ -23,7 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 # 남기고 Diamond Online·Toyo Keizai·Kyodo News를 뺐다 — 앞의 둘은 사이트 전체 피드라
 # 라이프·커리어 기사가 대부분이고, `kyodo.co.jp/feed/`는 뉴스 와이어가 아니라
 # 共同通信PRワイヤー였다. 대신 日経 헤드라인을 받는 Google News 검색을 넣었다.
-BASE_COMMIT = "1fc20596f5c7e8fc5e5ed3f2f546e3dadfc87a09"
+# 2026-08-12 검토하고 옮김: Handelsblatt와 manager magazin이 사이트 전체 헤드라인
+# 피드를 받고 있어서 politik·karriere·video가 섞여 들어왔다(Handelsblatt 1,260건 중
+# politik 421, finanzen 279). 그 기사들이 본문 장식에서 미국 대형주를 주워 1,247건이
+# `US` 시장으로 찍혔다. 두 매체의 finanzen·unternehmen 섹션 피드로 바꾸고, 섹션이
+# 섞여 오는 Het Financieele Dagblad에는 `url_sections` 필터를 걸었다.
+BASE_COMMIT = "d8593d0998fa00806b765550348f9eae5a645d61"
 sys.path.insert(0, str(ROOT))
 from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 
