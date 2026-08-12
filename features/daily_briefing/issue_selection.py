@@ -141,23 +141,44 @@ def _tokens(text):
     }
 
 
-def _similarity(a, b):
-    a_concepts = concepts_for_doc(a)
-    b_concepts = concepts_for_doc(b)
-    shared = a_concepts & b_concepts
+def _doc_features(doc):
+    """비교에 쓰는 값 중 **문서 하나만으로 정해지는 것**을 미리 계산한다.
+
+    예전에는 `_similarity`가 쌍마다 이것을 전부 다시 만들었다 — concepts, event date,
+    제목 토큰, 그리고 **임베딩까지**. 비교는 O(n²)이므로 문서 900건이면 임베딩을 900번이
+    아니라 80만 번 계산했고, 브리핑 생성이 15분 타임아웃을 넘겨 `internal_error`로 끝났다.
+    수집량이 늘면서 드러난 문제다(실측 15,041건 색인, 2일 창에 1,831건).
+
+    값 자체는 그대로이므로 클러스터 결과는 바뀌지 않는다.
+    """
+    tokens = _tokens(doc.get("title") or "")
+    return {
+        "concepts": concepts_for_doc(doc),
+        "eventDate": _event_date(doc),
+        "tokens": tokens,
+        "embedding": embed_text(" ".join(sorted(tokens))),
+    }
+
+
+def _similarity_features(a, b):
+    shared = a["concepts"] & b["concepts"]
     shared_events = shared & EVENT_CONCEPTS
     shared_subjects = shared - EVENT_CONCEPTS
-    if _event_date(a) != _event_date(b) and "unknown" not in {_event_date(a), _event_date(b)}:
+    if a["eventDate"] != b["eventDate"] and "unknown" not in {a["eventDate"], b["eventDate"]}:
         return 0.0
     if shared_events and shared_subjects:
         return min(0.98, 0.72 + 0.08 * len(shared))
-    at = _tokens(a.get("title") or "")
-    bt = _tokens(b.get("title") or "")
+    at, bt = a["tokens"], b["tokens"]
     jaccard = len(at & bt) / max(1, len(at | bt))
-    embedding = cosine(embed_text(" ".join(sorted(at))), embed_text(" ".join(sorted(bt))))
+    embedding = cosine(a["embedding"], b["embedding"])
     if jaccard >= 0.62 and embedding >= 0.68:
         return min(0.9, (jaccard + embedding) / 2)
     return 0.0
+
+
+def _similarity(a, b):
+    """문서 두 개의 유사도. 호출부가 하나뿐이면 이 경로를 쓴다."""
+    return _similarity_features(_doc_features(a), _doc_features(b))
 
 
 def cluster_documents(docs):
@@ -182,9 +203,28 @@ def cluster_documents(docs):
         confidence[lroot].append(score)
         confidence[lroot].extend(confidence.pop(rroot, []))
 
-    for left in range(len(docs)):
-        for right in range(left + 1, len(docs)):
-            score = _similarity(docs[left], docs[right])
+    # 문서별 값을 먼저 만든다. 쌍마다 다시 만들면 임베딩 계산이 O(n²)로 붙는다.
+    features = [_doc_features(doc) for doc in docs]
+    # 서로 다른 확정 이벤트 날짜는 항상 0점이다(`_similarity_features` 첫 규칙). 그
+    # 문서들을 애초에 비교하지 않으면 결과를 바꾸지 않고 비교 수를 줄인다.
+    unknown_dates = [i for i, row in enumerate(features) if row["eventDate"] == "unknown"]
+    by_date = defaultdict(list)
+    for index, row in enumerate(features):
+        if row["eventDate"] != "unknown":
+            by_date[row["eventDate"]].append(index)
+    blocks = [*by_date.values(), unknown_dates]
+    for block in blocks:
+        for position, left in enumerate(block):
+            for right in block[position + 1:]:
+                score = _similarity_features(features[left], features[right])
+                if score >= 0.72:
+                    union(left, right, score)
+    # `unknown`은 어느 날짜와도 비교 대상이다. 위 블록에서 빠진 조합만 추가로 본다.
+    for left in unknown_dates:
+        for right in range(len(features)):
+            if right == left or features[right]["eventDate"] == "unknown":
+                continue
+            score = _similarity_features(features[left], features[right])
             if score >= 0.72:
                 union(left, right, score)
 
