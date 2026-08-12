@@ -28,7 +28,10 @@ ROOT = Path(__file__).resolve().parents[1]
 # politik 421, finanzen 279). 그 기사들이 본문 장식에서 미국 대형주를 주워 1,247건이
 # `US` 시장으로 찍혔다. 두 매체의 finanzen·unternehmen 섹션 피드로 바꾸고, 섹션이
 # 섞여 오는 Het Financieele Dagblad에는 `url_sections` 필터를 걸었다.
-BASE_COMMIT = "d8593d0998fa00806b765550348f9eae5a645d61"
+# 2026-08-13 검토하고 옮김: 섹션 피드 4개에도 `url_sections`를 명시했다. 실측으로
+# 자기 섹션만 내놓지만(20/20), 규칙이 설정에 있어야 이미 쌓인 자료를 정리하는 쪽이
+# "지금 무엇을 수집하는가"를 피드 주소에서 추측하지 않는다.
+BASE_COMMIT = "27f1012f529b06b0bdfe3cf7db0d977bb5a943d4"
 sys.path.insert(0, str(ROOT))
 from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 
