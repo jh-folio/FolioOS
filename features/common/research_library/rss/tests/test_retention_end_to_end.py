@@ -62,7 +62,10 @@ def write_article(rss_dir: Path, stamp: dt.date, slug: str) -> None:
             "",
             "## Summary",
             "",
-            f"The Federal Reserve and the stock market moved on {slug}. " * 40,
+            # 실제로 시장 관련 기사여야 색인된다. 예전에는 회사 이름이 없는 문장이었는데,
+            # 회사 매칭이 흔한 명사에 헛걸리던 시절이라 그 점수로 문턱을 넘고 있었다.
+            # 오탐을 고치자 이 fixture가 색인되지 않아 테스트가 드러났다.
+            f"Nvidia shares and the Federal Reserve outlook moved the stock market on {slug}. " * 40,
         ]),
         encoding="utf-8",
     )

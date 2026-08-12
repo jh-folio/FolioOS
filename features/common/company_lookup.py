@@ -56,6 +56,15 @@ _GENERIC_NAME_WORDS = frozenset({
     "allied", "applied", "central", "federal", "liberty", "online",
     "universal", "western", "eastern", "pacific", "atlantic", "community",
     "state", "city", "open", "net", "data", "cloud",
+    # 실측으로 오탐을 만든 단어들. 이름이 접미사를 떼면 흔한 명사 하나만 남는 회사가 있고
+    # (Research Solutions -> "research", Private Bancorp of America -> "private"),
+    # 그 단어가 본문 아무 데나 나오면 그 종목이 붙었다. 색인 15,926건 기준 `private`
+    # 2,620건 · `research` 1,002건 · `business` 937건 · `innovation` 889건이었다.
+    # 진짜 그 회사를 다루는 기사는 두 단어를 함께 쓰므로(예: "Pioneer Natural") 잃지 않는다.
+    "research", "business", "private", "innovation", "alternative", "restaurant",
+    "america", "reliability", "solutions", "holdings", "industries", "resources",
+    "ventures", "partners", "premier", "heritage", "pioneer", "horizon", "summit",
+    "freedom", "sunrise", "cornerstone", "frontier", "sentinel", "guardian",
 })
 
 _SEC_SUFFIX_RE = re.compile(
@@ -195,11 +204,24 @@ def _load_sec_indexes():
         ticker_idx[ticker] = entry
         # Index first distinctive word of company name for text scanning
         clean = _SEC_SUFFIX_RE.sub("", title).strip()
+        # 토큰을 걸러내면 단어 수가 바뀐다. "H2O AMERICA"에서 `h2o`를 빼면 한 단어짜리
+        # `america`가 되어 다시 흔한 명사가 회사를 식별하게 된다.
         parts = clean.lower().split()
         first = parts[0] if parts else ""
-        if len(first) >= 7 and first not in _GENERIC_NAME_WORDS and first.isalpha():
-            if first not in name_idx:
-                name_idx[first] = entry
+        # 흔한 명사 배제는 **한 단어 이름에만** 적용한다. 두 단어를 함께 요구하면 구
+        # 자체가 이미 distinctive해서 첫 단어가 흔해도 상관없다 — 여기까지 막으면
+        # "Restaurant Brands"나 "Pioneer Natural" 같은 진짜 회사를 잃는다(실측으로 잃었다).
+        distinctive = first not in _GENERIC_NAME_WORDS or len(parts) >= 2
+        if len(first) >= 7 and distinctive and first.isalpha():
+            # 이름이 두 단어 이상이면 **두 단어를 함께** 요구한다. 첫 단어 하나로 회사를
+            # 식별하면 흔한 명사가 그대로 종목이 된다 — 실측으로 `private`가 Private
+            # Bancorp of America(2,620건), `research`가 Research Alliance Corp(1,002건),
+            # `business`가 Business First Bancshares(937건), `innovation`이 Innovation
+            # Beverage Group(889건)을 붙였다. 독일어 기사의 "ein Business sind"나 내비게이션
+            # 의 "Forschung + Innovation"이 종목이 됐고, 그 종목의 시장(US)이 기사 시장까지
+            # 바꿨다.
+            phrase = " ".join(parts[:2]) if len(parts) >= 2 else first
+            name_idx.setdefault(phrase, entry)
     _SEC_TICKER_IDX = ticker_idx
     _SEC_NAME_IDX = name_idx
 
@@ -282,14 +304,16 @@ def _find_sec_companies_in_text(text):
 
     # --- Name scan: match first distinctive word of company names ---
     hay = normalized.lower()
-    for word, entry in _SEC_NAME_IDX.items():
+    for phrase, entry in _SEC_NAME_IDX.items():
         if entry.get("ticker") in seen:
             continue
-        if word not in hay:
+        if phrase not in hay:
             continue
-        if re.search(rf"(?<![a-z]){re.escape(word)}(?![a-z])", hay):
+        # 구는 공백 하나로 색인돼 있지만 본문에서는 줄바꿈·연속 공백으로 갈릴 수 있다.
+        pattern = r"\s+".join(re.escape(part) for part in phrase.split())
+        if re.search(rf"(?<![a-z]){pattern}(?![a-z])", hay):
             found.append(normalize_company_entry(entry))
-            seen.add(entry.get("ticker", word))
+            seen.add(entry.get("ticker", phrase))
 
     return found
 
