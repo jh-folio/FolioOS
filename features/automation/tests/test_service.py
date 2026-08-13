@@ -67,4 +67,7 @@ def test_briefing_prerequisites_run_stale_market_memory(monkeypatch):
     result = service.run_briefing_prerequisites(now=service.dt.datetime(2026, 7, 2, 12, 0, 0), memory_max_age_hours=12)
 
     assert calls == ["rss", "memory", "record:marketMemory"]
-    assert result["marketMemory"] == {"ok": True}
+    # 규칙 기반 갱신에 더해 화면용 스냅샷까지 만든다. 규칙 기반만으로는 시장 내러티브
+    # 탭이 읽는 `market_state_snapshots`가 바뀌지 않는다.
+    assert result["marketMemory"]["ok"] is True
+    assert "stateSnapshot" in result["marketMemory"]

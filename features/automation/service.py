@@ -241,9 +241,46 @@ def market_memory_recently_run(*, now: dt.datetime | None = None, max_age_hours:
     return _elapsed(now, finished) < dt.timedelta(hours=max(1, int(max_age_hours or 12)))
 
 
-def run_briefing_prerequisites(*, now: dt.datetime | None = None, memory_max_age_hours: int = 12) -> dict:
+def _refresh_market_state_snapshot() -> dict:
+    """화면용 시장 상태 스냅샷을 다시 만든다.
+
+    **실패해도 올리지 않는다.** 브리핑이 오늘의 결과물이고 스냅샷은 그 앞의 준비다.
+    스냅샷을 못 만들었다고 브리핑까지 없어지면 손해가 더 크다 — 왜 못 만들었는지만
+    남기고 넘어간다.
+
+    엔진이 없으면(규칙 모드) 만들 수 없다. LLM이 시장 해석 문장을 쓰는 산출물이라
+    규칙으로 대신할 수 있는 것이 아니다.
+    """
+    mode = default_generation_mode()
+    if mode == "rules":
+        return {"ok": False, "skipped": True, "reason": "rules_mode"}
+    try:
+        if mode == "llm_cli":
+            # 버튼이 쓰는 것과 같은 2단계 작업(중기 메모리 → 화면 스냅샷)이다.
+            # job_id 없이 부르면 동기로 돈다 — 사전작업은 브리핑보다 먼저 끝나야 한다.
+            from features.agent_mode.bridge import run_market_memory_update_task
+
+            result = run_market_memory_update_task({"date": kst_date()})
+        else:
+            from features.market_memory.service import run_llm_market_state_snapshot
+
+            result = run_llm_market_state_snapshot(kst_date())
+        snapshot_id = str((result or {}).get("snapshotId") or "")
+        return {"ok": True, "mode": mode, "snapshotId": snapshot_id}
+    except Exception as exc:  # noqa: BLE001 - 브리핑을 막지 않는다
+        return {"ok": False, "mode": mode, "errorType": type(exc).__name__}
+
+
+def run_briefing_prerequisites(
+    *,
+    now: dt.datetime | None = None,
+    memory_max_age_hours: int = 12,
+    force: bool = False,
+) -> dict:
     prerequisites = {"rss": import_rssarchive(run_collection=True)}
-    if market_memory_recently_run(now=now, max_age_hours=memory_max_age_hours):
+    # `force`는 사용자가 직접 "지금 실행"을 누른 경우다. 신선도 때문에 건너뛰면
+    # 눌러도 아무 일이 없는 버튼이 된다. 예약 경로는 계속 신선도를 본다.
+    if not force and market_memory_recently_run(now=now, max_age_hours=memory_max_age_hours):
         prerequisites["marketMemory"] = {
             "ok": True,
             "skipped": True,
@@ -255,6 +292,14 @@ def run_briefing_prerequisites(*, now: dt.datetime | None = None, memory_max_age
         try:
             memory = run_rss_market_memory_update()
             status = "failed" if isinstance(memory, dict) and memory.get("ok") is False else "done"
+            # 규칙 기반 갱신만으로는 **화면이 보여주는 내러티브가 바뀌지 않는다.**
+            # 시장 내러티브 탭은 `market_state_snapshots`를 읽는데 위 함수는 그것을
+            # 만들지 않는다 — `market_memory` 행과 regime 카운트만 갱신한다. 그래서
+            # 사전작업이 도는 날에도 화면은 며칠 전 해석 그대로였다(실측: 스냅샷 이력이
+            # 08-12, 08-07, 08-06으로 띄엄띄엄하고 그 시각에 자동화 기록이 없다 —
+            # 전부 사용자가 버튼을 누른 것이었다).
+            snapshot = _refresh_market_state_snapshot()
+            memory = {**memory, "stateSnapshot": snapshot} if isinstance(memory, dict) else memory
             _append_run({
                 "kind": "marketMemory",
                 "status": status,
@@ -369,9 +414,10 @@ def run_automation_once(kind: str, schedule: dict | None = None) -> dict:
         elif kind == "marketMemory":
             result = run_rss_market_memory_update()
         elif kind == "briefingPrerequisites":
-            rss = import_rssarchive(run_collection=True)
-            memory = run_rss_market_memory_update()
-            result = {"rss": rss, "marketMemory": memory}
+            # 사전작업의 정의는 한 곳이다. 여기서 따로 조립하면 예약 경로만 화면
+            # 스냅샷을 만들고 이 경로는 안 만드는 식으로 갈라진다. 다만 이쪽은 사용자가
+            # 직접 부르는 경로라 신선도로 건너뛰지 않는다.
+            result = run_briefing_prerequisites(force=True)
         elif kind == "briefing":
             result = _run_briefing(schedule=schedule)
         else:
