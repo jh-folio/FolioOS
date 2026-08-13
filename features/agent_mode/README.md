@@ -82,6 +82,16 @@ CLI 선택은 **범위가 둘**이다. 자리도 둘이고, 화면이 어느 쪽
 
 설정 탭의 `AI Agent 설정`에서는 Agent 생성 ON/OFF와 CLI/API 모드를 토글하고, CLI 모드에서는 Codex CLI, Claude Code CLI, Antigravity CLI 중 하나를 선택해 모델을 지정합니다. 모델 목록은 마지막으로 갱신한 캐시를 기본으로 사용하고, 사용자가 새로고침을 누를 때만 CLI 모델 조회 명령을 실행합니다. 설치 명령은 실행 전에 사용자 확인을 받습니다.
 
+### 예약이 고른 시장만 만든다
+
+**범위 이름으로는 임의 조합을 담지 못한다.** 이름은 `us`/`kr`/`europe`/`jp`/`both`/`all` 뿐이라, 한국+일본은 `market_selection_scope(["kr","jp"]) == "multi"`가 되고 `multi`는 `normalize_market_selection()`에서 **네 시장 전부**로 풀린다.
+
+`_run_briefing()`은 `markets` 목록을 함께 넘기는데 **`prepare_pack()` 디스패처가 그것을 버렸다.** 그래서 `prepare_briefing_pack()`이 `market_scope="multi"`로 되짚어 네 시장을 만들었다 — 실측 2026-08-13 18:18에 한국·일본 예약 하나가 파일 넷(`us`/`kr`/`jp`/`europe`)을 한꺼번에 썼고, 저장된 `generationMarkets`가 전부 `['us','kr','europe','jp']`였다.
+
+- 디스패처가 `markets=kwargs.get("markets")`를 그대로 넘긴다. `prepare_briefing_pack()`은 원래 이 인자를 받고 있었고 목록이 있으면 범위 이름보다 우선한다.
+- **`expectedTitles`도 계약이 자기 시장으로 좁힌다.** `_agent_prompt()`와 `_briefing_correction_prompt()`가 이 표를 **전부 펼쳐** "H1은 정확히 이것들이어야 한다"고 지시하므로, 넓은 표가 들어오면 모델에게 네 시장을 쓰라고 시키는 셈이다. 호출자가 범위 이름으로 만든 표를 넘겨도 `briefing_output_contract()`가 걸러 낸다.
+- 규칙 기반 경로(`build_briefing(markets=...)`)는 목록을 직접 받으므로 영향이 없었다. 어긋난 것은 Agent 경로뿐이다.
+
 ### 브리핑 출력 계약은 시장마다 라벨이 다르다
 
 `briefing_contract_violations()`의 검사 둘이 `us`가 아니면 전부 `한국장`으로 취급했다.

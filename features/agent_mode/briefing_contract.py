@@ -84,7 +84,13 @@ def briefing_output_contract(
         "format": "markdown",
         "marketScope": scope,
         "requiredMarketTitles": [TITLE_REQUIREMENTS[key] for key in markets],
-        "expectedTitles": dict(expected_titles or {}),
+        # **만들 시장의 제목만 남긴다.** 프롬프트가 이 값을 전부 펼쳐 "H1은 정확히
+        # 이것들이어야 한다"고 지시하므로, 여기 미국·유럽이 섞여 있으면 한국·일본
+        # 예약이 네 시장을 다 쓴다. 호출자가 범위 이름으로 만든 넓은 표를 넘겨도
+        # 계약이 자기 시장으로 좁힌다.
+        "expectedTitles": {
+            key: value for key, value in (expected_titles or {}).items() if key in markets
+        },
         "titleDatePattern": "YYYY.MM.DD 마감|장중",
         "requireImmediateSectionZeroAfterTitle": True,
         "requireLeadingCompanyNames": True,

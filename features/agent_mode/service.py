@@ -1395,6 +1395,12 @@ def prepare_pack(task_type: str, **kwargs) -> tuple[dict, Path]:
             quality_mode=kwargs.get("quality_mode", "diagnose_only"),
             market_scope=kwargs.get("market_scope", "both"),
             briefing_type=kwargs.get("briefing_type", "default"),
+            # **시장 목록을 그대로 넘긴다.** 여기서 버리면 `prepare_briefing_pack`이
+            # 범위 이름으로 되짚는데, 임의 조합은 그 이름으로 표현되지 않는다 —
+            # `market_selection_scope(["kr","jp"])`는 `multi`이고 `multi`는 네 시장
+            # 전부로 풀린다. 그래서 한국·일본 예약이 미국장·유럽장까지 만들었다
+            # (실측 2026-08-13 18:18에 파일 넷이 한꺼번에 쓰였다).
+            markets=kwargs.get("markets"),
             owner_job_id=owner_job_id,
         )
     if task_type == "company_analysis":
