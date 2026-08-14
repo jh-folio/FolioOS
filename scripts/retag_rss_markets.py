@@ -60,6 +60,25 @@ def recomputed_markets(meta: dict, body: str) -> list[str]:
     )
 
 
+def resolved_markets(meta: dict, body: str, stored: list[str]) -> list[str]:
+    """다시 계산한 값을 쓰되, **구체적인 태그를 `UNKNOWN`으로 덮지 않는다.**
+
+    `UNKNOWN`은 "이 기사는 어느 시장도 아니다"가 아니라 "우리 표가 못 읽었다"이다. 실측으로
+    Reuters `summary_only` 121건이 그렇게 걸렸다 — "American Airlines shakes up leadership",
+    "Fitch keeps United States at 'AA+'"처럼 명백한 미국 기사인데, `company_master.json`에
+    American Airlines가 없고 `US_TOKENS`에 `united states`·`u.s.`가 없어 신호가 잡히지 않는다.
+    표의 한계를 자료의 결론으로 바꾸면 그 기사들이 모든 브리핑에서 사라진다.
+
+    예외는 `GLOBAL` 단독이다. 그건 시장이 아니라 네 시장 브리핑이 모두 근거로 쓴다는
+    통행권이고, 신호가 하나도 없는 자료가 그걸 가진 유일한 이유가 피드 선언이었다
+    (§`markets_with_feed_fallback`). 그 경우만 `UNKNOWN`으로 내린다.
+    """
+    after = [m.upper() for m in recomputed_markets(meta, body)]
+    if after == ["UNKNOWN"] and stored and stored != ["GLOBAL"]:
+        return list(stored)
+    return after
+
+
 def _stored_markets(meta: dict) -> list[str]:
     raw = meta.get("markets")
     if isinstance(raw, list):
@@ -106,7 +125,7 @@ def run(rss_dir: Path, *, apply: bool, limit: int) -> dict:
             skipped_no_tag += 1
             continue
         before = _stored_markets(meta)
-        after = [m.upper() for m in recomputed_markets(meta, body)]
+        after = resolved_markets(meta, body, before)
         if before == after:
             continue
         changes[f"{','.join(before) or '-'} -> {','.join(after) or '-'}"] += 1

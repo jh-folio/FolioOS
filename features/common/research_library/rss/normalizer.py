@@ -9,9 +9,20 @@ from features.common.markets import PRODUCT_MARKETS
 from features.common.research_library.rss.policy import normalize_url
 
 
-# feed가 선언한 기본 시장. 시장 계약에서 파생한다 — {US, KR, GLOBAL}로 적어두면
-# 유럽·일본 피드가 본문 신호를 못 찾았을 때 UNKNOWN으로 남는다.
-EXPLICIT_FEED_MARKETS = frozenset({market.value for market in PRODUCT_MARKETS} | {"GLOBAL"})
+# feed 힌트가 시장 태그로 물려줄 수 있는 값. 시장 계약에서 파생한다 — {US, KR}로만
+# 적어두면 유럽·일본 피드가 본문 신호를 못 찾았을 때 UNKNOWN으로 남는다.
+#
+# **`GLOBAL`은 여기 없다.** 그건 시장이 아니라 "네 시장 브리핑이 모두 근거로 쓴다"는
+# 통행권이다(`documents_for_scope`가 모든 scope에 GLOBAL을 허용한다). 이 fallback은
+# 신호가 **하나도** 없을 때만 도는 가장 약한 단계인데, 거기서 가장 센 라벨을 내주면
+# "분류 못 하겠음"이 "어디에나 해당"이 된다. 실측으로 GLOBAL 단독 문서 1,149건이 네
+# 브리핑의 공용 근거였고 그중 148건이 이 경로였다 — Aston Martin·Wizz Air 같은 유럽
+# 종목 기사가 미국·한국·일본 브리핑 근거로 올라왔다.
+#
+# 피드의 `default_market: GLOBAL` 선언 자체는 그대로 둔다. 그 값은 수집 범위도
+# 지배해서(`feed_in_scope` — GLOBAL 피드는 어떤 범위에서도 수집), 다른 값으로 바꾸면
+# 그 시장을 끈 사용자에게서 FT·Reuters가 통째로 사라진다.
+FALLBACK_FEED_MARKETS = frozenset(market.value for market in PRODUCT_MARKETS)
 
 
 def markets_with_feed_fallback(markets, default_market) -> list:
@@ -23,13 +34,17 @@ def markets_with_feed_fallback(markets, default_market) -> list:
     남아 있는 것이 그 덕이다. 그래서 이 값을 `infer_doc_markets()`의 입력 dict에 넣으면 안
     된다. 거기서는 사다리 3단계로 걸려 키워드 추론을 통째로 덮는다.
 
+    `GLOBAL` 선언은 태그로 물려주지 않는다(§`FALLBACK_FEED_MARKETS`). 그 자료는
+    `UNKNOWN`으로 남아 어느 브리핑의 근거도 되지 않지만, RSS 화면에서는 그대로 보인다
+    — `market_tags_visible`이 `UNKNOWN`을 어느 범위에서나 통과시킨다.
+
     수집·캐시 재구성·아카이브 쓰기 세 경로가 같은 규칙을 쓰도록 여기 한 곳에 둔다.
     예전에는 수집 경로에만 있어서, 표를 고쳐도 저장된 자료가 따라오지 않았다.
     """
     if list(markets or []) != ["UNKNOWN"]:
         return list(markets or [])
     hint = str(default_market or "").strip().upper()
-    return [hint] if hint in EXPLICIT_FEED_MARKETS else ["UNKNOWN"]
+    return [hint] if hint in FALLBACK_FEED_MARKETS else ["UNKNOWN"]
 
 
 def stable_evidence_id(*parts: str) -> str:
