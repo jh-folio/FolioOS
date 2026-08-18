@@ -24,6 +24,7 @@ Agent 응답은 `[대화]`(짧은 대화 답변)와 `[투자 노트]`(완성 노
 
 - 노트 본문은 `data/investment-notes/{id}.json`에 저장합니다.
 - 검색·연결용 인덱스는 `data/market-memory.sqlite3`의 `native_note_index` 테이블에 저장합니다.
+- 목록 조회는 읽기 경로입니다. 인덱스를 파일에서 다시 맞출 때 파일에 저장된 `updatedAt`을 그대로 씁니다 — 조회 시각으로 덮으면 `ORDER BY updated_at DESC`가 사실상 파일명순이 되어 방금 수정한 노트가 위로 오지 않습니다.
 - `body`는 정리된 투자 노트 본문입니다.
 - `rawThoughts`는 사용자가 자유 작성 칸에 남긴 원문 생각 기록입니다.
 - `interactionLog`는 Agent가 어떤 정리를 했는지 남기는 상호작용 기록입니다.
@@ -66,6 +67,9 @@ Obsidian workflow는 계속 유지하되, 기본 저장 경로는 Folio native n
   `invalidatedAt`을 controlled field로 정규화한다.
 - 상태는 `open | checked | invalidated`, 계산된 due 상태는
   `overdue | due | upcoming | unscheduled | checked | invalidated`만 허용한다.
+- due 판정의 "오늘"은 **KST 날짜**다(시계는 계속 주입받고 시간대만 서울로 옮긴다).
+  UTC 날짜로 비교하면 KST 00~09시(장 시작 전)에 overdue/due가 하루 이르게 나오고
+  워치리스트의 `dueCount`/`overdueCount`도 함께 틀린다.
 - 워치리스트용 projection은 ticker로 범위를 제한하고 label/state/date만 반환하며
   note body와 사용자 원문을 포함하지 않는다.
 - checkpoint 생성·확인은 native note 저장소만 갱신한다. 워치리스트, 포트폴리오,

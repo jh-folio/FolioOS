@@ -22,11 +22,30 @@ def test_aggregate_from_thesis_and_regime():
     assert len(cps) == 3
 
 
-def test_dedup_same_checkpoint_text():
-    deltas = [{"ticker": "NVDA", "nextCheckpoints": ["같은 체크포인트"]}]
-    states = [{"id": "s1", "stateLabel": "x", "nextCheckpoints": ["같은 체크포인트"]}]
-    cps = S.aggregate_checkpoints(deltas, states)
+def test_dedup_same_checkpoint_text_in_same_scope():
+    states = [
+        {"id": "s1", "stateLabel": "x", "nextCheckpoints": ["같은 체크포인트"]},
+        {"id": "s2", "stateLabel": "y", "nextCheckpoints": ["같은 체크포인트"]},
+    ]
+    cps = S.aggregate_checkpoints([], states)
     assert len(cps) == 1
+
+
+def test_same_default_text_survives_for_each_ticker():
+    """thesis delta 기본 문구는 종목 공통이라 문구만으로 접으면 한 종목만 남는다."""
+    from features.investment_review import context_links as CL
+
+    text = "해당 변수의 안정 또는 thesis를 뒷받침하는 후속 신호 확인"
+    deltas = [
+        {"ticker": "NVDA", "nextCheckpoints": [text]},
+        {"ticker": "AMD", "nextCheckpoints": [text]},
+    ]
+    cps = S.aggregate_checkpoints(deltas, [])
+    assert {c["ticker"] for c in cps} == {"NVDA", "AMD"}
+    assert len(cps) == 2
+    # 티커별 필터(투자 맥락 projection)를 거쳐도 각 종목이 자기 체크포인트를 갖는다.
+    assert len(CL._due_checkpoints(cps, "NVDA")) == 1
+    assert len(CL._due_checkpoints(cps, "AMD")) == 1
 
 
 def test_limit_applied():

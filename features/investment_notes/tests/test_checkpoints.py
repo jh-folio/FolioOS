@@ -54,6 +54,24 @@ def test_due_state_is_deterministic_with_injected_clock() -> None:
     )["dueState"] == CheckpointDueState.INVALIDATED
 
 
+def test_due_state_uses_korean_calendar_day() -> None:
+    """UTC 22:00 = KST 다음날 07:00. 장 시작 전에 마감일이 하루 이르면 안 된다."""
+    before_market_open = datetime(2026, 8, 14, 22, 0, tzinfo=UTC)
+
+    assert checkpoint_projection(
+        {"noteType": "checkpoint", "checkpointState": "open", "dueDate": "2026-08-15"},
+        clock=lambda: before_market_open,
+    )["dueState"] == CheckpointDueState.DUE
+    assert checkpoint_projection(
+        {"noteType": "checkpoint", "checkpointState": "open", "dueDate": "2026-08-14"},
+        clock=lambda: before_market_open,
+    )["dueState"] == CheckpointDueState.OVERDUE
+    assert checkpoint_projection(
+        {"noteType": "checkpoint", "checkpointState": "open", "dueDate": "2026-08-16"},
+        clock=lambda: before_market_open,
+    )["dueState"] == CheckpointDueState.UPCOMING
+
+
 def test_checkpoint_fields_are_controlled_and_bounded() -> None:
     fields = normalize_checkpoint_fields(
         {
