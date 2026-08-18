@@ -164,13 +164,27 @@ class TossOpenApiKoreaMarketProvider(MarketDataProvider):
         )
 
 
+def _fx_not_after_session(payload: dict, session_date: str) -> bool:
+    """세션일보다 미래인 환율은 그 세션의 값이 아니다(폴백 대상).
+
+    asOfDate가 비어 있으면 판정할 수 없으므로 그대로 쓴다.
+    """
+    if not session_date:
+        return True
+    as_of = str((payload.get("USDKRW") or {}).get("asOfDate") or "")[:10]
+    return not as_of or as_of <= session_date
+
+
 def _fetch_usdkrw(date: str) -> dict:
+    session_date = str(date or "")[:10]
     try:
         from features.llm_settings.client import toss_open_api_enabled
         from features.common.market_data.toss_open_api import fetch_usdkrw_exchange_rate
         if toss_open_api_enabled():
-            toss_rate = fetch_usdkrw_exchange_rate()
-            if toss_rate:
+            # 환율도 지수와 같은 세션일로 부른다. 무인자 호출은 현재 시점 값이라
+            # 지난 세션 브리핑에 오늘 환율이 섞인다(yfinance 경로는 as_of <= date로 자른다).
+            toss_rate = fetch_usdkrw_exchange_rate(date_time=session_date or None)
+            if toss_rate and _fx_not_after_session(toss_rate, session_date):
                 return toss_rate
     except Exception:
         pass
