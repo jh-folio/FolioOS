@@ -248,7 +248,7 @@ export function WatchlistRoute() {
 
   // 워치리스트는 회사를 따라다니는 화면이라 도쿄에 상장된 도요타를 봐야 한다.
   // 미국 ADR(TM)은 통화도 시간대도 가격도 다른 별개의 증권이다.
-  const { resolution, pending: resolvePending, picked, setPicked } = useCompanyResolution(keyword, { preferHome: true });
+  const { resolution, pending: resolvePending, picked, pick } = useCompanyResolution(keyword, { preferHome: true });
   // 입력 전체가 한 회사로 확정됐는가. 확정됐으면 그 이름 안의 쉼표는 구분자가 아니다.
   const resolvedWholeInput = Boolean(picked) || resolution?.status === "confident";
   const watchlistResolutionMessage = (() => {
@@ -394,7 +394,9 @@ export function WatchlistRoute() {
                   role="option"
                   aria-selected={false}
                   key={`${candidate.market}:${candidate.ticker}`}
-                  onClick={() => { setPicked(candidate); setKeyword(candidate.name); }}
+                  // 선택과 입력칸 변경을 훅에 함께 알린다. 따로 하면 훅이 그 변경을
+                  // 새 타이핑으로 읽어 방금 고른 후보를 지운다.
+                  onClick={() => { pick(candidate, candidate.name); setKeyword(candidate.name); }}
                 >
                   <strong>{candidate.ticker}</strong>
                   <span>{candidate.name}</span>

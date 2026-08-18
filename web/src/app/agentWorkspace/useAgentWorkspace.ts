@@ -55,12 +55,15 @@ async function encodeBytes(file: File): Promise<string> {
   return btoa(binary);
 }
 
+function isImageFile(file: File) {
+  return file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name);
+}
+
 async function readAttachment(file: File): Promise<Attachment> {
   // 이미지는 본문 텍스트가 없다. 예전에는 빈 문자열이 되어 프롬프트에 파일명만
   // 실렸고, 이미지를 읽을 수 있는 Agent CLI에 파일이 닿지 못했다. 바이트를 보내면
   // 서버가 임시 파일로 내리고 CLI가 그 경로를 직접 연다.
-  const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name);
-  if (isImage) {
+  if (isImageFile(file)) {
     return {
       name: file.name.slice(0, 120),
       size: file.size,
@@ -337,8 +340,13 @@ export function useAgentWorkspace(surface = "agent_home") {
         setError(`첨부는 최대 ${ATTACHMENT_LIMIT}개까지 가능합니다.`);
         break;
       }
-      if (file.size > ATTACHMENT_MAX_BYTES) {
-        setError(`${file.name}은 200KB를 초과해 제외했습니다.`);
+      // 200KB는 프롬프트에 싣는 **텍스트 본문**용 상한이다. 이미지는 본문이 아니라
+      // 바이트로 서버에 넘겨 CLI가 파일을 직접 읽으므로 이미지 상한(12MB)을 탄다 —
+      // 텍스트 게이트를 그대로 씌우면 포트폴리오 스크린샷(300KB~2MB)이 전부 걸려
+      // 12MB 경로에 닿지 못했다(features/agent_mode/README.md: 이미지 1건 12MB).
+      const image = isImageFile(file);
+      if (file.size > (image ? MAX_IMAGE_BYTES : ATTACHMENT_MAX_BYTES)) {
+        setError(`${file.name}은 ${image ? "12MB" : "200KB"}를 초과해 제외했습니다.`);
         continue;
       }
       next.push(await readAttachment(file));

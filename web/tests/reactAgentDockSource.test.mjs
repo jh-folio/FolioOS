@@ -148,3 +148,32 @@ test("React Agent Dock uses provider logos with mono watermarks", async () => {
   assert.match(styles, /\.react-agent-watermark[\s\S]*right:\s*20px/);
   assert.match(styles, /\.react-agent-watermark[\s\S]*bottom:\s*18px/);
 });
+
+test("resuming a still-running job reads the reply from the thread, not the job result", async () => {
+  const dockSource = (await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8")).replace(/\r\n/g, "\n");
+  const resume = dockSource.match(/async function resumeAgentJob\([\s\S]*?\n  \}\n\n/)?.[0];
+  assert.ok(resume, "resumeAgentJob not found");
+
+  // 스레드 메시지 잡은 {sessionId, messageId, status, proposalId}만 돌려준다. 잡 결과에서
+  // 답변을 읽으면 `상태 다시 확인` 후 답변 자리에 `작업이 완료되었습니다.`가 들어간다.
+  // 계약: features/agent_mode/README.md — 답변 본문은 잡 결과가 아니라 스레드에서 읽는다.
+  assert.match(resume, /threads\.latestReply\(threads\.threadId\)/);
+  assert.doesNotMatch(resume, /const result\s*(:[^=]*)?=\s*done\.result \|\| \{\}/);
+  assert.match(resume, /\.\.\.\(done\.result \|\| \{\}\)/);
+  assert.match(resume, /threads\.bumpList\(\)/);
+  assert.match(resume, /result\.reply \|\| done\.message/);
+});
+
+test("submitAgentMessage tracks thread state in its dependencies (no stale threadId)", async () => {
+  const dockSource = await readFile(new URL("../src/app/ReactAgentDock.tsx", import.meta.url), "utf8");
+
+  // threads.threadId/pending이 의존성에서 빠지면 `새 대화`·`짚어보기`·대화 전환 직후의
+  // 첫 질문이 낡은 threadId로 이전 대화에 저장된다.
+  const depsMatch = dockSource.match(/setBusy\(false\);\s*\}\s*[\s\S]*?\}, \[([^\]]*)\]\);/);
+  assert.ok(depsMatch, "submitAgentMessage dependency array not found");
+  const deps = depsMatch[1];
+  assert.match(deps, /threads\.threadId/);
+  assert.match(deps, /threads\.pending/);
+  assert.match(deps, /threads\.createThread/);
+  assert.match(deps, /threads\.latestReply/);
+});

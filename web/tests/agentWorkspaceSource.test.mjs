@@ -19,6 +19,18 @@ test("Agent workspace centralizes storage and API orchestration", () => {
   assert.match(hookSource, /\/api\/agent-bridge\/settings/);
 });
 
+test("Image attachments are gated by the image limit, not the text limit", () => {
+  const handleFiles = hookSource.replace(/\r\n/g, "\n").match(/ {2}async function handleFiles\([\s\S]*?\n {2}\}\n/)?.[0];
+  assert.ok(handleFiles, "handleFiles not found");
+
+  // 200KB는 프롬프트에 싣는 텍스트 본문용이다. 이미지에 그대로 씌우면 readAttachment의
+  // 12MB 경로에 닿지 못해 스크린샷 첨부가 통째로 무효화된다.
+  assert.match(handleFiles, /isImageFile\(file\)/);
+  assert.match(handleFiles, /MAX_IMAGE_BYTES : ATTACHMENT_MAX_BYTES/);
+  assert.doesNotMatch(handleFiles, /file\.size > ATTACHMENT_MAX_BYTES/);
+  assert.match(hookSource, /function isImageFile\(/);
+});
+
 test("Agent Home consumes reusable workspace presentation components", () => {
   assert.match(homeSource, /useAgentWorkspace/);
   assert.match(homeSource, /<AgentComposer/);

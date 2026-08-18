@@ -88,6 +88,18 @@ function dateKey(value: Date): string {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 }
 
+/** 지금의 **KST 달력 날짜**를 로컬 자정 Date로 만든다.
+ *
+ *  일정은 KST로 묶이는데(`eventDateKeyKST`) 격자·`오늘` 표시·선택일은 브라우저
+ *  로컬 달력을 썼다. 두 축이 갈리면 서울 밖에서 일정이 옆 칸에 붙고 `오늘`이
+ *  엉뚱한 날을 가리킨다. 격자는 시각이 아니라 달력 산술만 하므로 KST 날짜
+ *  성분을 로컬 Date에 담아 두면 `dateKey()`가 곧 일정 키가 된다. */
+function kstToday(): Date {
+  const text = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const [year, month, day] = text.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function eventDateKeyKST(event: Event): string {
   if (event.allDay || /^\d{4}-\d{2}-\d{2}$/.test(event.startsAt)) return event.startsAt.slice(0, 10);
   const date = new Date(event.startsAt);
@@ -108,10 +120,15 @@ export function timeLabelKST(event: Pick<Event, "allDay" | "startsAt" | "kind">)
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 }
 
+// 날짜 이동은 밀리초가 아니라 달력 성분으로 한다. `+24h` 누적은 DST 되돌림 주에
+// 같은 날짜를 두 번 만들어(격자 중복 + React 중복 key) 한 칸을 통째로 잃는다.
+function addDays(value: Date, days: number): Date {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate() + days);
+}
+
 function mondayOf(value: Date): Date {
   const date = new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  const offset = (date.getDay() + 6) % 7;
-  return new Date(date.getTime() - offset * DAY_MS);
+  return addDays(date, -((date.getDay() + 6) % 7));
 }
 
 function shortChip(event: Event): string {
@@ -135,8 +152,8 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   // 관심 시장 범위 밖의 일정은 칩에서도 목록에서도 뺀다.
   const { isSelected: marketInScope } = useMarketScope();
   const [watchOnly, setWatchOnly] = useState(false);
-  const [anchor, setAnchor] = useState(() => new Date());
-  const [selectedDay, setSelectedDay] = useState(() => dateKey(new Date()));
+  const [anchor, setAnchor] = useState(() => kstToday());
+  const [selectedDay, setSelectedDay] = useState(() => dateKey(kstToday()));
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
@@ -198,16 +215,16 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   }, [filtered]);
 
   const weekStart = mondayOf(anchor);
-  const weekDays = Array.from({ length: 7 }, (_, index) => new Date(weekStart.getTime() + index * DAY_MS));
+  const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   const monthStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const monthCells = useMemo(() => {
     const first = mondayOf(monthStart);
     const cells: Date[] = [];
-    for (let index = 0; index < 42; index += 1) cells.push(new Date(first.getTime() + index * DAY_MS));
+    for (let index = 0; index < 42; index += 1) cells.push(addDays(first, index));
     while (cells.length > 7 && cells[cells.length - 7].getMonth() !== anchor.getMonth()) cells.splice(-7, 7);
     return cells;
   }, [anchor, monthStart]);
-  const todayKey = dateKey(new Date());
+  const todayKey = dateKey(kstToday());
   const dayEvents = byDay.get(selectedDay) || [];
   const selectedLabel = new Date(`${selectedDay}T00:00:00`).toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
   const dayKindCounts = useMemo(() => {
@@ -217,8 +234,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
   }, [dayEvents]);
 
   function move(step: number) {
-    const unit = view === "week" ? 7 * DAY_MS : 0;
-    if (view === "week") setAnchor((prev) => new Date(prev.getTime() + step * unit));
+    if (view === "week") setAnchor((prev) => addDays(prev, step * 7));
     else setAnchor((prev) => new Date(prev.getFullYear(), prev.getMonth() + step, 1));
   }
 
@@ -244,7 +260,7 @@ export function MarketCalendar({ focusSymbols }: { focusSymbols: FocusSymbol[] }
             <button type="button" aria-pressed={view === "month"} onClick={() => { setView("month"); persist({ calendarView: "month" }); }}>월간</button>
           </div></div>
           <button className="btn btn--icon" type="button" aria-label={view === "week" ? "이전 주" : "이전 달"} onClick={() => move(-1)}>◀</button>
-          <button className="btn" type="button" onClick={() => { const now = new Date(); setAnchor(now); setSelectedDay(dateKey(now)); }}>오늘</button>
+          <button className="btn" type="button" onClick={() => { const now = kstToday(); setAnchor(now); setSelectedDay(dateKey(now)); }}>오늘</button>
           <button className="btn btn--icon" type="button" aria-label={view === "week" ? "다음 주" : "다음 달"} onClick={() => move(1)}>▶</button>
           <button className="btn btn--primary" type="button" onClick={refresh} disabled={busy}>{busy ? "수집 중" : "일정 수집"}</button>
         </div>

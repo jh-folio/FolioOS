@@ -165,8 +165,11 @@ function normalizedScope(value?: string): MarketScope {
   return ALL_SCOPES.includes(value as MarketScope) ? (value as MarketScope) : "both";
 }
 
+// 해시를 쓰는 쪽(setBriefingHash)과 읽는 쪽이 같은 scope 집합을 써야 한다. `multi`가
+// 빠져 있어 미국+일본 같은 조합으로 생성하면 주소만 바뀌고 리더가 열리지 않았다 —
+// 서버는 `multi`를 정식 scope로 저장·조회한다(features/daily_briefing/schema.py::MARKET_SCOPES).
 function readBriefingDetailRoute(): BriefingDetailRoute | null {
-  const match = window.location.hash.match(/^#\/?briefing\/(\d{4}-\d{2}-\d{2})(?:\/(us|kr|europe|jp|all|both))?$/);
+  const match = window.location.hash.match(/^#\/?briefing\/(\d{4}-\d{2}-\d{2})(?:\/(us|kr|europe|jp|all|both|multi))?$/);
   if (!match) return null;
   return { date: match[1], scope: normalizedScope(match[2]) };
 }
@@ -199,8 +202,15 @@ function displayScope(item: BriefingArchiveItem): MarketScope {
   return normalizedScope(item.marketScope || item.scope);
 }
 
-function normalizeText(value?: string) {
-  return String(value || "").trim().toLowerCase();
+/** 기간 판정은 서버와 같은 규칙이다 — 발행일과 세션일 중 **하나라도** 범위에 들면 통과한다
+ *  (features/daily_briefing/archive.py::query의 `searchable_dates`).
+ *
+ *  발행일만 보면 카드에 `2026.08.07 마감`이라 적힌 미국장 브리핑(발행일 08-10 저장)이
+ *  08-07로 기간을 잡은 순간 사라진다. 미국장·유럽장은 세션일과 발행일이 다른 날이다. */
+export function archiveDateInRange(item: BriefingArchiveItem, start: string, end: string) {
+  if (!start && !end) return true;
+  const dates = [displayDate(item), item.sessionDate || ""].filter(Boolean);
+  return dates.some((value) => (!start || value >= start) && (!end || value <= end));
 }
 
 function stableNoteKey(prefix: string, text: string) {
@@ -423,9 +433,13 @@ export function BriefingRoute() {
     setActionBusy(`delete-${date}-${scope}`);
     try {
       // 통합 범위 삭제는 그 날짜 전체를 지운다. 시장 하나만 지울 때만 market을 붙인다.
-      const isAggregate = scope === "both" || scope === "all";
+      // `multi`도 통합이다 — 서버가 아는 단일 시장(us/kr/europe/jp)이 아니라서
+      // `?market=multi`를 붙이면 400으로 되돌아왔다.
+      const isAggregate = scope === "both" || scope === "all" || scope === "multi";
       const query = isAggregate ? "" : `?market=${encodeURIComponent(scope)}`;
-      await fetch(`/api/briefings/${encodeURIComponent(date)}${query}`, { method: "DELETE" });
+      const res = await fetch(`/api/briefings/${encodeURIComponent(date)}${query}`, { method: "DELETE" });
+      // 응답을 보지 않으면 400·404가 성공처럼 보이고 목록만 그대로 다시 그려진다.
+      if (!res.ok) throw new Error(res.status === 404 ? "삭제할 브리핑을 찾지 못했습니다." : "브리핑 삭제에 실패했습니다.");
       await loadArchive();
     } catch (err) {
       setError(err instanceof Error ? err.message : "브리핑 삭제에 실패했습니다.");
@@ -480,31 +494,22 @@ export function BriefingRoute() {
   }
 
   const items = archive?.items || [];
+  // 검색어는 다시 거르지 않는다. 서버가 제목·요약·**본문**까지 합친 문자열로 이미
+  // 필터링하는데(archive.py::_scan의 `searchText`), 화면이 제목·날짜·태그만으로 다시
+  // 좁히면 본문이나 요약에서만 일치한 브리핑이 통째로 사라진다 — 안내 문구는
+  // `제목·요약·본문 검색`인데 실측으로 내용 검색이 전부 0건이었다.
   const filteredItems = useMemo(() => {
-    const q = normalizeText(archiveQuery);
     return items.filter((item) => {
-      const date = displayDate(item);
       const scope = displayScope(item);
       const type = item.briefingType || "default";
       // `aggregate`는 시장 하나가 아니라 다중 시장 카드 전체를 고른다.
       if (archiveMarket === "aggregate") {
-        if (scope !== "all" && scope !== "both") return false;
+        if (scope !== "all" && scope !== "both" && scope !== "multi") return false;
       } else if (archiveMarket !== "all" && scope !== archiveMarket) return false;
       if (archiveType !== "all" && type !== archiveType) return false;
-      if (archiveStart && date && date < archiveStart) return false;
-      if (archiveEnd && date && date > archiveEnd) return false;
-      if (!q) return true;
-      const haystack = normalizeText([
-        item.title,
-        date,
-        item.sessionDate,
-        item.generatedAt,
-        type,
-        ...(item.tags || []),
-      ].filter(Boolean).join(" "));
-      return haystack.includes(q);
+      return archiveDateInRange(item, archiveStart, archiveEnd);
     });
-  }, [archiveEnd, archiveMarket, archiveQuery, archiveStart, archiveType, items]);
+  }, [archiveEnd, archiveMarket, archiveStart, archiveType, items]);
   const visibleGroups = useMemo(() => {
     const sorted = [...filteredItems].sort((a, b) => String(displayDate(b) || b.generatedAt || "").localeCompare(String(displayDate(a) || a.generatedAt || "")));
     if (archiveView === "recent") {

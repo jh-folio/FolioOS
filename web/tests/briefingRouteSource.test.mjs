@@ -49,6 +49,24 @@ test("Briefing route mirrors the legacy generation and archive controls", async 
   assert.match(source, /strictDate/);
 });
 
+test("Briefing archive list does not re-filter what the server already filtered", async () => {
+  const source = await readFile(new URL("../src/app/BriefingRoute.tsx", import.meta.url), "utf8");
+  const filter = source.match(/const filteredItems = useMemo\(\(\) => \{[\s\S]*?\}, \[[^\]]*\]\);/)?.[0];
+  assert.ok(filter, "filteredItems memo not found");
+
+  // 서버가 제목·요약·**본문**으로 이미 거른다. 화면이 제목·태그만으로 다시 좁히면
+  // 본문에서만 일치한 브리핑이 통째로 사라지고 목록이 `0건`으로 보인다.
+  assert.doesNotMatch(filter, /haystack/);
+  assert.doesNotMatch(filter, /archiveQuery/);
+  // 기간은 서버와 같은 규칙(발행일 또는 세션일)을 쓴다. 발행일 단독 비교가 남으면
+  // 카드에 적힌 세션일로 기간을 잡은 순간 그 브리핑이 사라진다.
+  assert.doesNotMatch(filter, /date < archiveStart/);
+  assert.doesNotMatch(filter, /date > archiveEnd/);
+  assert.match(filter, /archiveDateInRange\(item, archiveStart, archiveEnd\)/);
+  assert.match(source, /export function archiveDateInRange\(/);
+  assert.match(source, /item\.sessionDate/);
+});
+
 test("Briefing route owns reader actions and native note persistence", async () => {
   const source = await readFile(new URL("../src/app/BriefingRoute.tsx", import.meta.url), "utf8");
   const shellSource = await readFile(new URL("../src/app/reportReader/ReportReaderShell.tsx", import.meta.url), "utf8");
@@ -107,4 +125,15 @@ test("Report Reader foundation mirrors the legacy inline reader contract", async
   assert.match(bodySource, /참고\\s\*자료/);
   assert.match(bodySource, /Sources Used/);
   assert.match(bodySource, /sourcePanelHtml/);
+});
+
+test("브리핑 삭제는 응답을 확인하고 multi를 날짜 전체로 지운다", async () => {
+  const source = await readFile(new URL("../src/app/BriefingRoute.tsx", import.meta.url), "utf8");
+  const body = source.slice(source.indexOf("async function deleteBriefing"), source.indexOf("async function generateBriefing"));
+
+  // 응답을 안 보면 400·404가 성공처럼 보이고 목록만 그대로 다시 그려진다.
+  assert.match(body, /if \(!res\.ok\)/);
+  // `multi`는 서버가 아는 단일 시장이 아니라 `?market=multi`가 400이었다.
+  // 통합 범위이므로 그 날짜 전체를 지운다.
+  assert.match(body, /scope === "both" \|\| scope === "all" \|\| scope === "multi"/);
 });

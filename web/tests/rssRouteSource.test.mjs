@@ -44,3 +44,20 @@ test("market options cover the 0.5 markets", async () => {
     assert.ok(source.includes(`value: "${value}"`), `${value} 시장 옵션이 있어야 합니다`);
   }
 });
+
+test("검색 결과에는 페이지네이션과 쪽수를 붙이지 않는다", async () => {
+  const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");
+
+  // 검색은 한 번에 다 받은 목록을 payload에 통째로 덮어써 total이 결과 수가 된다.
+  // 그 값으로 페이지를 계산하면 없는 페이지 버튼이 뜨고, 누르면 검색 결과가 아니라
+  // 일반 피드(loadItems)로 되돌아간다.
+  assert.match(source, /const \[searchMode, setSearchMode\] = useState\(false\)/);
+  assert.match(source, /\{!searchMode && totalPages > 1 && \(/);
+  // 쪽수 표기도 검색 모드에서는 빠진다.
+  assert.match(source, /searchMode \? `\$\{total\}개` :/);
+  // 일반 피드 로드는 검색 모드를 해제한다 — 필터를 바꾸면 다시 페이지가 있다.
+  const loadBody = source.slice(source.indexOf("const loadItems"), source.indexOf("const refreshIndexedCount"));
+  assert.match(loadBody, /setSearchMode\(false\)/);
+  const searchBody = source.slice(source.indexOf("async function searchNews"), source.indexOf("async function importRss"));
+  assert.match(searchBody, /setSearchMode\(true\)/);
+});

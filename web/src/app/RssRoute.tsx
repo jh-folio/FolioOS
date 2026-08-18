@@ -183,6 +183,10 @@ export function RssRoute() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  // 검색 결과는 한 번에 다 받은 목록이라 페이지가 없다. 그런데 payload를 통째로
+  // 갈아끼우다 보니 `total`이 결과 수로 바뀌어도 페이지 계산은 그대로 돌았고,
+  // 페이지 버튼을 누르면 검색 결과가 아니라 일반 피드로 되돌아갔다.
+  const [searchMode, setSearchMode] = useState(false);
 
   const items = payload?.items || [];
   const total = payload?.total ?? items.length;
@@ -197,6 +201,7 @@ export function RssRoute() {
       const params = buildParams(nextPage, nextFilters);
       const nextPayload = await getJson<RssPayload>(`/api/rss/items?${params.toString()}`);
       setPayload(nextPayload);
+      setSearchMode(false);
       setPage(nextPage);
       setFilters(nextFilters);
       setDraftFilters(nextFilters);
@@ -281,6 +286,7 @@ export function RssRoute() {
         has_more: false,
         sources,
       });
+      setSearchMode(true);
       setPage(1);
       setStatus(`뉴스 검색 결과 ${rows.length}개`);
       setReactAgentContextScope("rss", { surface: "rss", viewId: "rssfeed", reportKind: "news_search", reportId: query });
@@ -313,6 +319,8 @@ export function RssRoute() {
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const pageStart = Math.max(1, currentPage - 2);
   const pageEnd = Math.min(totalPages, currentPage + 2);
+  // 검색 결과에는 `1/N` 쪽수를 붙이지 않는다. 넘길 페이지가 없다.
+  const countLabel = total > 0 ? (searchMode ? `${total}개` : `${total}개 · ${currentPage}/${totalPages}`) : "0개";
 
   return (
     <div className="react-rss-route" data-rss-route>
@@ -324,7 +332,7 @@ export function RssRoute() {
           <div className="react-rss-hero-actions">
             <span className="react-rss-stat-pill">
               <strong>LOADED</strong>
-              {total > 0 ? `${total}개 · ${currentPage}/${totalPages}` : "0개"}
+              {countLabel}
             </span>
             <span className="react-rss-stat-pill">
               <strong>INDEXED</strong>
@@ -397,8 +405,8 @@ export function RssRoute() {
       </section>
 
       <div className="react-rss-summary">
-        <strong>{filterLabel(filters)}</strong>
-        <span>{total > 0 ? `${total}개 · ${currentPage}/${totalPages}` : "0개"}</span>
+        <strong>{searchMode ? `"${searchQuery.trim()}" 검색 결과` : filterLabel(filters)}</strong>
+        <span>{countLabel}</span>
       </div>
 
       {error && <p className="react-dashboard-error">{error}</p>}
@@ -439,7 +447,7 @@ export function RssRoute() {
         )}
       </section>
 
-      {totalPages > 1 && (
+      {!searchMode && totalPages > 1 && (
         <nav className="react-rss-pagination" aria-label="RSS pagination">
           <button className="btn" type="button" disabled={currentPage === 1 || loading} onClick={() => loadItems(currentPage - 1, filters)}>
             이전

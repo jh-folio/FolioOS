@@ -118,3 +118,13 @@ test("안내 색은 앱 계약을 따른다 — 블루는 의미색이라 UI 액
   // 포커스 링만 계속 블루다 — 그건 앱 전역 계약(--folio-focus)이다.
   assert.match(sheet, /\.welcome-shell :focus-visible \{ outline: 2px solid var\(--folio-focus\)/);
 });
+
+test("역방향 Tab이 카드 밖으로 나가지 않는다", async () => {
+  const source = await wizard();
+
+  // 단계 제목 h1은 `tabIndex={-1}`이라 focusables() 선택자에 잡히지 않는데, 카드가
+  // 열린 직후와 단계 전환 직후에는 포커스가 바로 거기 있고 그 앞에는 포커스 가능한
+  // 요소가 없다. 첫 요소로 쳐 주지 않으면 Shift+Tab이 aria-modal 밖으로 빠진다.
+  assert.match(source, /const title = shellRef\.current\?\.querySelector<HTMLElement>\("h1"\) \?\? null;/);
+  assert.match(source, /event\.shiftKey && \(active === first \|\| active === title \|\| !shellRef\.current\?\.contains\(active\)\)/);
+});
