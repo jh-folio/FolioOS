@@ -57,6 +57,31 @@ def test_an_llm_plan_with_no_usable_query_falls_back_to_the_rules(monkeypatch):
     assert plan["searchQueries"] == rule_plan["searchQueries"][:4]
 
 
+def test_an_llm_title_is_cut_to_the_subject_by_code(monkeypatch):
+    """제목에도 게이트가 필요하다.
+
+    검색어에는 `_clean_queries()`가 있는데 topicLabel은 200자 절단뿐이라, LLM이
+    배경 문단을 통째로 넣으면 그 문단이 보고서 제목이자 저장 라벨이 됐다.
+    """
+    long_label = "메모리 반도체의 방향성: " + "배경이 아주 길게 이어지는 문장입니다. " * 8
+    _llm_returning({
+        "topic": LONG,
+        "topicLabel": long_label,
+        "reportType": "industry_theme",
+        "searchQueries": ["메모리 반도체 가격"],
+        "analysisAxes": [{"key": "demand", "label": "수요", "questions": ["수요는?"], "searchQueries": ["메모리 수요"]}],
+    }, monkeypatch)
+
+    plan, mode = planner.refine_plan_with_llm(planner.build_rule_plan(LONG), LONG)
+
+    assert mode == "llm"
+    assert len(plan["topicLabel"]) <= 40
+    assert plan["topicLabel"] == "메모리 반도체의 방향성"
+    # 원문 질문은 `topic`에 그대로 남는다. 짧은 이름은 표시용이지 기록의 대체가 아니다.
+    assert plan["topic"].startswith("메모리 반도체의 방향성: 피크 아웃인가 - 배경 설명이")
+    assert len(plan["topic"]) > 40
+
+
 def test_a_broken_llm_reply_keeps_the_rule_plan(monkeypatch):
     import features.llm_settings.client as client
 

@@ -77,6 +77,16 @@ def test_deep_rule_fallback_includes_subquestions_and_falsification():
     assert "심층 질문 일부 근거 부족" in md
 
 
+def test_rule_report_title_uses_the_report_date_not_the_run_clock():
+    """자정을 넘겨 끝난 생성에서 본문 H1만 하루 어긋났다.
+
+    JSON `date`/`title`은 호출자가 정한 기준일인데 H1만 실행 시각을 다시 읽었다.
+    """
+    topic = get_topic_config("weekly_market")
+    md = build_rule_report(topic, {"tickers": {}}, {}, [], [], as_of="2026-07-16")
+    assert md.splitlines()[0].endswith("— 2026-07-16")
+
+
 def test_rule_fallback_backward_compatible_without_plan():
     topic = get_topic_config("weekly_market")
     md = build_rule_report(topic, {"tickers": {}}, {}, [], [])

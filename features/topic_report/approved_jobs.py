@@ -204,10 +204,16 @@ class ApprovedTopicJobs:
             if self._cancelled(job_id):
                 return
             report = dict(outcome.report)
+            # topicKey는 승인 경로에서 늘 "custom"이고 topicLabel은 40자 주제어라,
+            # 같은 날 같은 주제로 시작하는 다른 질문이 같은 id가 되어 서로 덮어썼다.
+            # planHash는 계획 payload에서 나오므로 같은 계획 재실행만 같은 id가 된다.
+            provenance = report.get("executionProvenance")
+            plan_hash = str(provenance.get("planHash") or "") if isinstance(provenance, dict) else ""
             report_id = _stable_topic_id(
                 str(report["date"]),
                 str(report["topicKey"]),
                 str(report["topicLabel"]),
+                discriminator=plan_hash,
             )
             report["id"] = report_id
             terminal = {

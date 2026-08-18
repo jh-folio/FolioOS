@@ -121,6 +121,19 @@ def normalize_axis(value, index: int = 0) -> dict | None:
     }
 
 
+def _normalized_label(value: str) -> str:
+    """주제 라벨은 40자 주제어다. 코드가 정한다 — 프롬프트는 부탁이지 제한이 아니다.
+
+    LLM이 배경 문단을 통째로 topicLabel에 넣어도 여기서 첫 구획으로 끊는다.
+    검색어에는 `_clean_queries()` 게이트가 있는데 제목에는 없어 200자가 그대로
+    보고서 제목·저장 라벨이 됐다.
+    """
+    # planner가 topic_schema를 import하므로 순환을 피해 호출 시점에 가져온다.
+    from features.topic_report.planner import topic_subject
+
+    return topic_subject(value)
+
+
 def normalize_topic_plan(plan: dict | None, *, topic: str = "", topic_label: str = "") -> dict:
     """TopicPlan을 스키마에 맞게 강제 정규화한다. 누락 필드는 빈 값으로 보장."""
     plan = plan if isinstance(plan, dict) else {}
@@ -133,7 +146,7 @@ def normalize_topic_plan(plan: dict | None, *, topic: str = "", topic_label: str
             break
     return {
         "topic": str(plan.get("topic") or topic or "").strip()[:300],
-        "topicLabel": str(plan.get("topicLabel") or topic_label or topic or "").strip()[:200],
+        "topicLabel": _normalized_label(str(plan.get("topicLabel") or topic_label or topic or "").strip()),
         "reportType": normalize_report_type(plan.get("reportType")),
         "regions": _str_list(plan.get("regions"), limit=6),
         "assetClasses": _str_list(plan.get("assetClasses"), limit=6),

@@ -30,6 +30,10 @@ from features.smart_collections.snapshot_store import (
 )
 from features.smart_collections.change_detection import calculate_change
 
+# 스냅샷·변화 감지의 canonical 해석 범위. 스냅샷을 이보다 좁게 기록하면
+# 이후 비교에서 그 차이가 전부 '변화'로 계산된다.
+SNAPSHOT_RESOLUTION_LIMIT = 120
+
 
 @dataclass(frozen=True, slots=True)
 class SmartCollectionRuntime:
@@ -266,37 +270,37 @@ class SmartCollectionService:
             return {"storeRevision": written.storeRevision, "deletedId": collection_id}
 
     def preview(self, collection_id: str, request: PreviewRequest) -> dict[str, JsonValue]:
-        from features.smart_collections.resolution import ResolutionRequest, resolve_collection
-
+        # 스냅샷은 항상 canonical 범위(SNAPSHOT_RESOLUTION_LIMIT)로 해석해 기록한다.
+        # 요청 limit은 표시 절단일 뿐이다 — 화면 preview(limit=10) 스냅샷을 그대로 저장하면
+        # workspace/changes의 120개 해석과 비교되어 자료 변화 없이 added 110건이 나온다.
         state = self.store.load()
         collection = self._find(state, collection_id)
         self._check_revision(state, collection, request.expectedRevision)
-        resolved = resolve_collection(
-            ResolutionRequest(self.runtime.dataDir, collection, request.limit, True, self.runtime.clock)
-        )
+        resolved = self._current_resolution(collection)
         self.snapshots.append(resolved, definition_hash=definition_hash(collection))
         return {
-            key: resolved[key]
-            for key in ("collectionId", "revision", "total", "limit", "items")
+            "collectionId": resolved["collectionId"],
+            "revision": resolved["revision"],
+            "total": resolved["total"],
+            "limit": request.limit,
+            "items": list(resolved["items"])[: request.limit],
         }
 
     def resolve(self, collection_id: str, request: ResolveRequest) -> dict[str, JsonValue]:
-        from features.smart_collections.resolution import ResolutionRequest, resolve_collection
-
         state = self.store.load()
         collection = self._find(state, collection_id)
         self._check_revision(state, collection, request.expectedRevision)
-        resolved = resolve_collection(
-            ResolutionRequest(self.runtime.dataDir, collection, request.limit, True, self.runtime.clock)
-        )
+        resolved = self._current_resolution(collection)
         self.snapshots.append(resolved, definition_hash=definition_hash(collection))
-        return resolved
+        if request.limit >= SNAPSHOT_RESOLUTION_LIMIT:
+            return resolved
+        return {**resolved, "limit": request.limit, "items": list(resolved["items"])[: request.limit]}
 
     def _current_resolution(
         self,
         collection: Collection,
         *,
-        limit: int = 120,
+        limit: int = SNAPSHOT_RESOLUTION_LIMIT,
     ) -> dict[str, JsonValue]:
         from features.smart_collections.resolution import ResolutionRequest, resolve_collection
 
