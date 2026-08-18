@@ -21,7 +21,7 @@ from features.company_analysis.service import (
     read_company_analysis_prompt,
 )
 from features.company_analysis.style import analysis_prompt_path, normalize_analysis_style
-from features.llm_settings.client import selected_llm_config
+from features.llm_settings.client import selected_llm_config, use_web_search_for_analysis
 
 
 def analyze_company(query, web_search_override=None, llm_override=None, analysis_style="beginner", *, runtime: dict | None = None):
@@ -35,6 +35,7 @@ def analyze_company(query, web_search_override=None, llm_override=None, analysis
     rule_fn = runtime.get("build_rule_report", build_rule_report)
     sources_fn = runtime.get("company_analysis_sources", company_analysis_sources)
     llm_config_fn = runtime.get("selected_llm_config", selected_llm_config)
+    web_search_setting_fn = runtime.get("use_web_search_for_analysis", use_web_search_for_analysis)
     analysis_style = normalize_analysis_style(analysis_style)
     index = load_index_fn()
     # 회사를 먼저 해석하고 그 회사의 표기들로 찾는다. 원문 문자열 하나로 찾으면
@@ -47,7 +48,10 @@ def analyze_company(query, web_search_override=None, llm_override=None, analysis
     top_tags = sorted(set(tags), key=tags.count, reverse=True)[:6]
     recent = " ".join(doc.get("summary", "") for doc in selected[:5]) or "선별된 보조 뉴스/리포트 자료가 없습니다."
     charts = charts_fn(materials)
-    gaps = resolve_company_analysis_gaps(materials, web_search_allowed=bool(web_search_override))
+    # 실제 사용 판정과 같은 식을 쓴다. override가 None인 기본 UI 경로에서
+    # bool(None)=False로 굳히면 웹 검색을 쓰고도 dataGaps는 안 썼다고 기록한다.
+    web_search_allowed = bool(web_search_setting_fn()) if web_search_override is None else bool(web_search_override)
+    gaps = resolve_company_analysis_gaps(materials, web_search_allowed=web_search_allowed)
     preflight = preflight_from_context("company_analysis", {}, {
         "sourceCount": len(selected) or len(docs), "documentCount": len(docs),
         "analysisInputs": {

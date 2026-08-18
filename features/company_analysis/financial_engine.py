@@ -64,10 +64,28 @@ def annual_values(sec_summary: dict, metric: str, limit: int = 5) -> list[float]
     return [r["value"] for r in sorted([r for r in frame if r["metric"] == metric], key=lambda r: (r["end"], r["year"]), reverse=True)[:limit]]
 
 
+def annual_year_values(sec_summary: dict, metric: str) -> dict[str, float]:
+    """연도 → 값. 같은 해끼리 빼려면 값에 연도가 붙어 있어야 한다."""
+    frame = annual_metric_frame(sec_summary)
+    if pl is not None:
+        rows = frame.filter(pl.col("metric") == metric).sort(["end", "year"], descending=True).to_dicts()
+    else:
+        rows = sorted([r for r in frame if r["metric"] == metric], key=lambda r: (r["end"], r["year"]), reverse=True)
+    out: dict[str, float] = {}
+    for row in rows:
+        year = str(row.get("year") or "")
+        if year and year not in out:
+            out[year] = float(row["value"])
+    return out
+
+
 def fcf_series(sec_summary: dict, limit: int = 5) -> list[float]:
-    cfo = annual_values(sec_summary, "Operating Cash Flow", limit)
-    capex = annual_values(sec_summary, "Capital Expenditure", limit)
-    return [a - b for a, b in zip(cfo, capex)]
+    # 연도 키를 버리고 순서대로 빼면 2025년 CFO에서 2022년 CapEx를 빼는 일이
+    # 생긴다. 두 지표의 보고 연도가 갈리는 제출사에서 실제로 발생한다.
+    cfo = annual_year_values(sec_summary, "Operating Cash Flow")
+    capex = annual_year_values(sec_summary, "Capital Expenditure")
+    years = sorted(set(cfo) & set(capex), reverse=True)[:limit]
+    return [cfo[year] - capex[year] for year in years]
 
 
 def derived_financials(sec_summary: dict) -> dict:

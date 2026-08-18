@@ -42,6 +42,43 @@ ACCOUNT_PATTERNS = {
     "EPS Diluted": ["희석주당이익", "diluted earnings per share"],
 }
 
+# 표준계정코드 정확 일치 표. SEC 경로(sec_companyfacts)가 개념명을 정확 일치로 고르는 것과
+# 같은 원칙이다 — account_id를 부분문자열로 이름 패턴에 섞으면 ProfitLossBeforeTax(세전이익)·
+# ShareOfProfitLoss...(지분법이익)가 "profit loss" 패턴에 걸려 손익계산서에서 먼저 나오는
+# 그 행이 Net Income 슬롯을 차지한다(실측: 삼성전자 순이익 15.49T가 887.55B로 저장).
+ACCOUNT_ID_METRICS = {
+    "ifrs-full_revenue": "Revenue",
+    "ifrs_revenue": "Revenue",
+    "ifrs-full_grossprofit": "Gross Profit",
+    "ifrs_grossprofit": "Gross Profit",
+    "dart_operatingincomeloss": "Operating Income",
+    "ifrs-full_profitloss": "Net Income",
+    "ifrs_profitloss": "Net Income",
+    "ifrs-full_cashflowsfromusedinoperatingactivities": "Operating Cash Flow",
+    "ifrs_cashflowsfromusedinoperatingactivities": "Operating Cash Flow",
+    "ifrs-full_cashandcashequivalents": "Cash & Equivalents",
+    "ifrs_cashandcashequivalents": "Cash & Equivalents",
+    "ifrs-full_assets": "Total Assets",
+    "ifrs_assets": "Total Assets",
+    "ifrs-full_liabilities": "Total Liabilities",
+    "ifrs_liabilities": "Total Liabilities",
+    "ifrs-full_currentassets": "Current Assets",
+    "ifrs_currentassets": "Current Assets",
+    "ifrs-full_currentliabilities": "Current Liabilities",
+    "ifrs_currentliabilities": "Current Liabilities",
+    "ifrs-full_inventories": "Inventory",
+    "ifrs_inventories": "Inventory",
+    "ifrs-full_dilutedearningslosspershare": "EPS Diluted",
+    "ifrs_dilutedearningslosspershare": "EPS Diluted",
+}
+
+# 이름 패턴 부분 매칭의 오염 차단. "계속영업이익"은 "영업이익"을, "계속영업당기순이익"은
+# "당기순이익"을 부분문자열로 포함해 진짜 행보다 먼저 슬롯을 차지한다.
+ACCOUNT_EXCLUDES = {
+    "Net Income": ["세전", "법인세비용차감전", "차감전", "지분법", "계속영업", "중단영업", "before tax", "share of", "continuing", "discontinued"],
+    "Operating Income": ["계속영업", "중단영업", "영업외", "continuing", "discontinued", "non-operating"],
+}
+
 
 def dart_api_key() -> str:
     return os.environ.get("DART_API_KEY", "").strip()
@@ -171,10 +208,18 @@ def _account_matches(account: str, patterns: list[str]) -> bool:
 
 
 def _metric_for_account(account_name: str, account_id: str = "") -> str | None:
-    hay = f"{account_name} {account_id}"
+    norm_id = re.sub(r"\s+", "", str(account_id or "")).lower()
+    exact = ACCOUNT_ID_METRICS.get(norm_id)
+    if exact:
+        return exact
+    # 표준계정코드가 있는데 정확 일치 표에 없으면 다른 계정이다(세전이익·지분법이익 등).
+    # 이름 매칭은 코드가 없거나("-표준계정코드 미사용-" 등) 비표준일 때만 대체 경로로 쓴다.
     for metric, patterns in ACCOUNT_PATTERNS.items():
-        if _account_matches(hay, patterns):
-            return metric
+        if not _account_matches(account_name, patterns):
+            continue
+        if _account_matches(account_name, ACCOUNT_EXCLUDES.get(metric, [])):
+            continue
+        return metric
     return None
 
 
@@ -269,15 +314,18 @@ def dart_summary_to_markdown(summary: dict) -> str:
 
 def build_dart_summary(company: dict, cache_dir: Path, api_key: str | None = None) -> dict:
     api_key = (api_key or dart_api_key()).strip()
+    # DART fnlttSinglAcntAll의 thstrm_amount는 원화다. currency가 비면 _reporting_currency()가
+    # USD로 떨어져 국내 기업 재무 전액이 $로 표기되고 mixed_currency 오탐 경고까지 붙는다.
+    # 실패 반환에도 넣는다 — is_kr_company면 이 dict이 그대로 sec_facts가 되기 때문이다.
     if not api_key:
-        return {"ok": False, "reason": "missing_dart_api_key", "company": company, "markdown": "DART: API 키가 설정되지 않았습니다."}
+        return {"ok": False, "reason": "missing_dart_api_key", "company": company, "currency": "KRW", "markdown": "DART: API 키가 설정되지 않았습니다."}
     corp_code = str(company.get("corpCode") or "").strip()
     resolved = None
     if not corp_code:
         resolved = resolve_dart_company(company.get("ticker") or company.get("name"), cache_dir, api_key)
         corp_code = str((resolved or {}).get("corpCode") or "").strip()
     if not corp_code:
-        return {"ok": False, "reason": "no_corp_code", "company": company, "markdown": "DART: corp_code를 찾지 못했습니다."}
+        return {"ok": False, "reason": "no_corp_code", "company": company, "currency": "KRW", "markdown": "DART: corp_code를 찾지 못했습니다."}
     fiscal_year = dt.datetime.now().year - 1
     years = [fiscal_year - offset for offset in range(3)]
     rows, warnings = fetch_financial_rows(corp_code, cache_dir, api_key, years)
@@ -293,6 +341,7 @@ def build_dart_summary(company: dict, cache_dir: Path, api_key: str | None = Non
         "disclosures": disclosures,
         "warning": "; ".join(dict.fromkeys([w for w in warnings if w]))[:800],
         "source": "DART Open API",
+        "currency": "KRW",
     }
     if not rows:
         summary["reason"] = "no_financial_rows"

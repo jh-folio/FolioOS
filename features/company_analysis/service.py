@@ -448,7 +448,11 @@ def build_filing_item_context(filing_docs, max_filings=2):
     lines = []
     used = []
     paragraphs = []
-    for doc in sorted(filing_docs, key=lambda d: (_filing_sort_rank(d), d.get("date", "")))[:max_filings]:
+    # 같은 form 등급 안에서는 최신 공시가 먼저다. 오래된 것이 앞서면 max_filings에
+    # 잘려 최신 공시가 통째로 빠지고 metadata.filingDate도 옛 공시를 가리킨다.
+    # 날짜 없는 문서는 reverse 정렬에서 뒤로 밀린다.
+    by_recent = sorted(filing_docs, key=lambda d: str(d.get("date", "")), reverse=True)
+    for doc in sorted(by_recent, key=_filing_sort_rank)[:max_filings]:
         form_type = filing_form_type(doc)
         wanted = ["1", "1A", "7", "7A", "8"] if form_type in {"10-K", "20-F", "S-1", "F-1", "Securities Registration"} else ["1A", "7", "8"]
         context_text = _doc_context_text(doc)
@@ -843,10 +847,27 @@ def analysis_status_message(generation):
 # Analysis report management
 # ---------------------------------------------------------------------------
 
+def _report_date_key(generated_at):
+    """생성 시각의 KST 날짜.
+
+    `generated_at`은 UTC(`now_iso()`)라 앞 10자를 그대로 쓰면 KST 00~09시에 만든
+    보고서가 전날로 묶인다. 그 시간대의 재분석은 덮어쓰기가 아니라 파일 하나를
+    더 만든다. 앱의 사용자 노출 날짜 기준은 KST다.
+    """
+    text = str(generated_at or "")
+    try:
+        parsed = dt.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except Exception:
+        return text[:10]
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt.timezone.utc)
+    return parsed.astimezone(dt.timezone(dt.timedelta(hours=9))).strftime("%Y-%m-%d")
+
+
 def analysis_report_id(company, generated_at):
     # 날짜 단위로 id를 안정화한다 — 같은 기업을 같은 날 재분석하면 최신본으로 덮어쓰고,
     # 자동 저장이 파일을 무한정 쌓지 않게 한다(시간 단위 timestamp 대신 날짜).
-    key = f"{company.get('ticker') or company.get('name')}:{str(generated_at)[:10]}"
+    key = f"{company.get('ticker') or company.get('name')}:{_report_date_key(generated_at)}"
     return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
 
 
@@ -1230,6 +1251,9 @@ def build_company_analysis_charts(materials):
                     "netMargin": _ratio_series(q_net, q_revenue),
                     "currency": reporting_currency,
                     # 분기는 계절성이 있어 직전 분기가 아니라 전년 동기와 비교한다.
+                    # 화면은 라벨(`2026 Q2`→`2025 Q2`)로 전년 동기를 찾는다 — 10-Q에는
+                    # Q4가 없어 고정 오프셋 4는 전년 동기가 아니다. 이 값은 옛 저장
+                    # 페이로드와의 호환으로만 남는다.
                     "compareOffset": 4,
                 })
 

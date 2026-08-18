@@ -47,6 +47,40 @@ def test_s1_local_filing_gets_keyword_excerpts_without_item_headings():
     assert any(row.get("item") in {"risk", "regulation"} for row in paragraphs)
 
 
+def test_same_form_local_filings_prefer_the_most_recent_disclosure():
+    def make_doc(year: str) -> dict:
+        body = " ".join(["business customers revenue segment platform"] * 30)
+        risk = " ".join(["risk factors regulation liquidity competition legal"] * 30)
+        growth = " ".join(["growth strategy investment margin cash flow ai"] * 30)
+        spacer = " ".join(["neutral disclosure text"] * 450)
+        return {
+            "title": f"Example Corp - 10-K {year}",
+            "path": f"research-inbox/filings/EX_10-K_{year}.html",
+            "type": "filing",
+            "date": f"{year}-02-10",
+            "wordCount": 900,
+            "content": f"""
+                <html><body>
+                <type>10-K</type>
+                <title>Example Corp Annual Report {year}</title>
+                <p>{body}</p>
+                <p>{spacer}</p>
+                <p>{risk}</p>
+                <p>{spacer}</p>
+                <p>{growth}</p>
+                </body></html>
+            """,
+        }
+
+    docs = [make_doc("2021"), make_doc("2025"), make_doc("2023")]
+    assert {filing_form_type(d) for d in docs} == {"10-K"}
+
+    _context, used, paragraphs = build_filing_item_context(docs, max_filings=2)
+
+    assert [d["date"] for d in used] == ["2025-02-10", "2023-02-10"]
+    assert paragraphs[0]["source"].endswith("EX_10-K_2025.html")
+
+
 def test_company_analysis_materials_include_market_memory_as_context_not_evidence():
     with TemporaryDirectory() as tmp:
         original_db = svc.MARKET_MEMORY_DB_PATH

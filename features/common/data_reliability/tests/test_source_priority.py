@@ -24,6 +24,20 @@ def test_official_sources_rank_before_news():
     assert rows[0]["sourceReliability"] == "high"
 
 
+def test_same_priority_group_keeps_newest_first_and_undated_last():
+    rows = annotate_source_priority(
+        [
+            {"title": "구 기사", "type": "news", "source": "Reuters", "date": "2026-05-20"},
+            {"title": "신 기사", "type": "news", "source": "Reuters", "date": "2026-08-13"},
+            {"title": "날짜 없는 기사", "type": "news", "source": "Reuters", "date": ""},
+            {"title": "중간 기사", "type": "news", "source": "Reuters", "date": "2026-07-05"},
+        ],
+        artifact_type="thesis_delta",
+    )
+
+    assert [r["title"] for r in rows] == ["신 기사", "중간 기사", "구 기사", "날짜 없는 기사"]
+
+
 def test_user_note_stays_unknown_reliability():
     item = {"type": "user_note", "title": "내 생각"}
     assert classify_source_kind(item) == "user_note"

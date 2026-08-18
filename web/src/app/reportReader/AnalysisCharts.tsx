@@ -175,6 +175,25 @@ export function labelStride(labels: string[], slot: number) {
   return Math.max(1, Math.ceil((widest + 6) / Math.max(1, slot)));
 }
 
+/** 비교 대상 기간의 인덱스. 없으면 -1.
+ *
+ *  분기는 계절성이 있어 직전 분기가 아니라 전년 동기와 비교한다. 고정 오프셋
+ *  4로는 그 자리를 못 짚는다 — 10-Q에는 Q4가 없어 라벨이 `2025 Q1·Q2·Q3·2026 Q1`처럼
+ *  건너뛰기 때문이다. 라벨의 분기 번호로 전년 같은 분기를 직접 찾는다.
+ *  연도 라벨(`2025`)에는 분기 규칙이 걸리지 않아 기존 오프셋 동작이 그대로 남고,
+ *  compareOffset이 없는 옛 저장 페이로드도 직전 기간과 비교한다.
+ */
+export function compareIndex(labels: string[], index: number, compareOffset?: unknown): number {
+  const quarter = /^(\d{4})\s+Q([1-4])$/.exec(String(labels[index] ?? "").trim());
+  if (quarter) {
+    const target = `${Number(quarter[1]) - 1} Q${quarter[2]}`;
+    return labels.findIndex((label) => String(label ?? "").trim() === target);
+  }
+  const offset = Number(compareOffset) > 0 ? Number(compareOffset) : 1;
+  const previous = index - offset;
+  return previous >= 0 ? previous : -1;
+}
+
 function niceTicks(min: number, max: number, count = 4): number[] {
   if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return [min, max];
   const step = (max - min) / count;
@@ -512,8 +531,7 @@ function PeriodPanel({
 }) {
   const labels = Array.isArray(chart.years) ? chart.years : [];
   // 분기는 계절성이 있어 직전 분기가 아니라 전년 동기와 비교한다.
-  const offset = Number(chart.compareOffset) > 0 ? Number(chart.compareOffset) : 1;
-  const previous = index - offset;
+  const previous = compareIndex(labels, index, chart.compareOffset);
   const compareLabel = previous >= 0 ? labels[previous] : "";
 
   return (
