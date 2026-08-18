@@ -128,6 +128,96 @@ def test_terminalize_forwards_explicit_startup_recovery_transition(tmp_path: Pat
     assert lifecycle.has_private(job.id) is False
 
 
+def test_a_briefly_locked_pack_folder_is_retried_not_abandoned(tmp_path: Path, monkeypatch) -> None:
+    """백신이 pack을 잠깐 잡은 것은 실패가 아니라 기다릴 일이다(§파일 저장).
+
+    쓰기는 물러났다 다시 쓰는데 삭제만 한 번에 포기하면, 그 수십 밀리초 때문에
+    잡이 종료되지 못하고 잡 조회가 프로세스 끝날 때까지 503으로 닫힌다.
+    """
+    from features.common import shared_jobs_private
+
+    store = jobs.SharedJobStore(tmp_path / "jobs-v2.json", tmp_path / "jobs.json", clock=lambda: NOW)
+    lifecycle = jobs.JobPrivateLifecycle(tmp_path / "job-context", clock=lambda: NOW)
+    job = _queued(lambda: NOW)
+    store.add(job)
+    store.transition(job.id, jobs.JobStatus.RUNNING)
+    lifecycle.write_pack(job.id, "pack_1", {"prompt": "PACK_CANARY"})
+    real_rmtree = shared_jobs_private.shutil.rmtree
+    calls = {"n": 0}
+
+    def flaky(path):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise PermissionError(32, "The process cannot access the file")
+        return real_rmtree(path)
+
+    monkeypatch.setattr(shared_jobs_private.shutil, "rmtree", flaky)
+    monkeypatch.setattr(shared_jobs_private.time, "sleep", lambda _seconds: None)
+
+    lifecycle.terminalize(store, job.id, jobs.JobStatus.FAILED, error_code="internal_error")
+
+    assert calls["n"] == 3, "재시도 없이 한 번에 포기하면 안 된다"
+    assert not (tmp_path / "job-context" / job.id).exists()
+    assert store.get(job.id).status is jobs.JobStatus.FAILED
+    lifecycle.assert_readable()
+
+
+def test_startup_recovery_finishes_every_job_even_when_one_pack_stays_locked(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """한 잡의 pack 삭제가 막혀도 나머지 좀비 잡은 그 회차에 정리된다.
+
+    예전에는 첫 실패에서 raise해 뒤의 잡이 running으로 남았고, 그 예외가
+    `load_jobs()`를 타고 올라가 서버가 아예 켜지지 않았다.
+    """
+    current = NOW
+    store = jobs.SharedJobStore(tmp_path / "jobs-v2.json", tmp_path / "jobs.json", clock=lambda: current)
+    lifecycle = jobs.JobPrivateLifecycle(tmp_path / "job-context", clock=lambda: current)
+    blocked, recoverable = _queued(lambda: current), _queued(lambda: current)
+    for job in (blocked, recoverable):
+        store.add(job)
+        lifecycle.write_pack(job.id, "pack_1", {"prompt": "CANARY"})
+    real_cleanup = lifecycle.cleanup_owner
+    monkeypatch.setattr(
+        lifecycle,
+        "cleanup_owner",
+        lambda job_id: False if job_id == blocked.id else real_cleanup(job_id),
+    )
+
+    with pytest.raises(jobs.PrivateCleanupError):
+        lifecycle.recover_startup(store)
+
+    assert store.get(recoverable.id).status is jobs.JobStatus.FAILED_RESTART
+    assert store.get(blocked.id).status is jobs.JobStatus.QUEUED
+    assert store.get(blocked.id).errorCode is jobs.ErrorCode.PRIVATE_CLEANUP_FAILED
+    assert (tmp_path / "job-context" / blocked.id).exists(), "지우지 못한 pack을 지웠다고 하면 안 된다"
+    with pytest.raises(jobs.JobsStoreUnavailableError):
+        lifecycle.assert_readable()
+
+
+def test_a_locked_orphan_folder_does_not_break_startup_recovery(tmp_path: Path, monkeypatch) -> None:
+    """orphan 정리는 위생 작업이다. 지금 잠겨 있으면 다음 시작에서 지운다."""
+    from features.common import shared_jobs_private
+
+    current = NOW
+    lifecycle = jobs.JobPrivateLifecycle(tmp_path / "job-context", clock=lambda: current)
+    orphan = "job_22222222-2222-4222-8222-222222222222"
+    lifecycle.write_pack(orphan, "p", {"x": "y"})
+    timestamp = (current - timedelta(hours=48)).timestamp()
+    import os
+
+    os.utime(tmp_path / "job-context" / orphan, (timestamp, timestamp))
+    monkeypatch.setattr(
+        shared_jobs_private.shutil,
+        "rmtree",
+        lambda _path: (_ for _ in ()).throw(PermissionError(5, "denied")),
+    )
+    monkeypatch.setattr(shared_jobs_private.time, "sleep", lambda _seconds: None)
+
+    assert lifecycle.cleanup_orphans(set()) == []
+    assert (tmp_path / "job-context" / orphan).exists()
+
+
 def test_orphan_cleanup_obeys_strict_id_and_24_hour_boundary(tmp_path: Path) -> None:
     # Given: strict orphan directories immediately below and at the age boundary
     current = NOW

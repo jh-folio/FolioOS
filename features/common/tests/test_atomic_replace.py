@@ -11,7 +11,9 @@
 """
 from __future__ import annotations
 
+import json
 import os
+import threading
 from pathlib import Path
 
 import pytest
@@ -86,7 +88,7 @@ def test_a_failed_write_leaves_no_stray_temporary(tmp_path: Path, monkeypatch) -
     with pytest.raises(PermissionError):
         write_bytes_atomic(target, b"payload", sleep=lambda _seconds: None)
 
-    assert not (target.parent / "store.json.tmp").exists()
+    assert list(target.parent.iterdir()) == [], "잔여 임시 파일이 남았다"
     assert not target.exists()
 
 
@@ -94,6 +96,59 @@ def test_the_happy_path_writes_through(tmp_path: Path) -> None:
     target = tmp_path / "deep" / "store.json"
     write_bytes_atomic(target, b'{"ok": true}')
     assert target.read_bytes() == b'{"ok": true}'
+
+
+def test_two_writers_to_one_target_do_not_share_a_temporary(tmp_path: Path, monkeypatch) -> None:
+    """임시 이름이 고정이면 겹친 두 쓰기가 서로의 임시 파일을 덮는다."""
+    target = tmp_path / "watchlist.json"
+    real_replace = os.replace
+    sources: list[str] = []
+
+    def watched(src, dst):
+        sources.append(Path(src).name)
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", watched)
+    write_bytes_atomic(target, b"a")
+    write_bytes_atomic(target, b"b")
+
+    assert len(set(sources)) == 2, f"임시 이름이 호출마다 달라야 한다: {sources}"
+    assert all(name.startswith("watchlist.json") and name.endswith(".tmp") for name in sources)
+
+
+def test_concurrent_writes_to_one_target_never_fail_or_truncate(tmp_path: Path) -> None:
+    """워치리스트 저장 두 건이 겹쳐도 500이 나지 않는다.
+
+    같은 임시 파일을 공유하면 나중 내용이 먼저 제자리로 가고, 뒤이은 교체는 임시
+    파일이 이미 사라져 `FileNotFoundError`로 죽는다(실측 6,000회 중 1,260회).
+    FastAPI가 sync 엔드포인트를 스레드풀에서 병렬 실행하므로 한 프로세스 안에서 난다.
+    """
+    target = tmp_path / "watchlist.json"
+    payloads = [
+        json.dumps({"rows": ["added"] * 40}, ensure_ascii=False).encode("utf-8"),
+        json.dumps({"rows": ["removed"]}, ensure_ascii=False).encode("utf-8"),
+    ]
+    failures: list[BaseException] = []
+    start = threading.Barrier(len(payloads))
+
+    def writer(data: bytes) -> None:
+        start.wait()
+        for _ in range(150):
+            try:
+                write_bytes_atomic(target, data)
+            except OSError as error:  # noqa: PERF203
+                failures.append(error)
+                return
+
+    threads = [threading.Thread(target=writer, args=(data,)) for data in payloads]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert failures == [], f"동시 저장이 실패했다: {failures[:1]}"
+    assert target.read_bytes() in payloads, "교체된 파일이 어느 쪽 요청의 내용도 아니다"
+    assert [path.name for path in tmp_path.iterdir()] == ["watchlist.json"]
 
 
 def test_no_runtime_code_calls_os_replace_directly() -> None:

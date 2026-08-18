@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 import threading
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -36,6 +37,7 @@ from features.common.shared_jobs_store import (
     LegacyJobCollisionError,
     SharedJobStore,
 )
+from features.common.atomic_replace import write_bytes_atomic
 from features.common.workspace import data_dir
 
 
@@ -140,22 +142,59 @@ def _refresh_cache() -> None:
     JOBS = {job.id: _compat(job, detail=False) for job in merged}
 
 
+LEGACY_INTERRUPTED_STATUSES = frozenset({"queued", "running", "cancel_requested"})
+
+
+def _fail_legacy_interrupted_jobs() -> None:
+    """legacy `data/jobs.json`에 남은 queued/running 행을 failed_restart로 못박는다.
+
+    API는 `JOBS` 캐시가 아니라 매 요청 `_store().merged()`를 다시 읽고, merged()는
+    legacy 행을 그대로 싣는다. 복구 경로(`recover_startup`)는 jobs-v2.json만 순회하므로
+    이 파일을 고치지 않으면 구버전에서 남은 running 행이 영원히 실행 중으로 보이고
+    화면은 끝나지 않는 작업을 계속 폴링한다(§서버 재시작의 좀비 잡 방지).
+
+    상태만 바꾸고 나머지 필드와 다른 행은 그대로 둔다. 파일을 못 읽거나 못 쓰면
+    조용히 넘어간다 — 좀비 한 줄이 남는 쪽이 서버가 안 켜지는 쪽보다 낫다.
+    """
+    try:
+        raw = json.loads(JOBS_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError):
+        return
+    if not isinstance(raw, dict):
+        return
+    changed = False
+    for row in raw.values():
+        if not isinstance(row, dict) or row.get("status") not in LEGACY_INTERRUPTED_STATUSES:
+            continue
+        row["status"] = JobStatus.FAILED_RESTART.value
+        row["message"] = MESSAGES[JobStatus.FAILED_RESTART.value]
+        changed = True
+    if not changed:
+        return
+    try:
+        write_bytes_atomic(JOBS_PATH, json.dumps(raw, ensure_ascii=False, indent=2).encode("utf-8"))
+    except OSError:
+        return
+
+
 def load_jobs() -> None:
     store = _store()
     lifecycle = _lifecycle()
-    recover_json_jobs_startup(JOBS_PATH.parent, store, lifecycle, clock=_clock)
-    _recover_sql_jobs_startup(store, lifecycle)
-    lifecycle.recover_startup(store)
+    steps: tuple[Callable[[], None], ...] = (
+        lambda: recover_json_jobs_startup(JOBS_PATH.parent, store, lifecycle, clock=_clock),
+        lambda: _recover_sql_jobs_startup(store, lifecycle),
+        lambda: lifecycle.recover_startup(store),
+    )
+    for step in steps:
+        try:
+            step()
+        except PrivateCleanupError:
+            # 비공개 pack 삭제가 끝내 막혀도 기동은 막지 않는다. 차단 사실은
+            # lifecycle.cleanup_blocked에 남아 잡 조회가 503으로 닫히고(fail-closed),
+            # 잠금이 풀린 다음 시작에서 같은 복구를 다시 시도한다.
+            continue
+    _fail_legacy_interrupted_jobs()
     _refresh_cache()
-    for job_id, row in tuple(JOBS.items()):
-        if row["status"] in {"queued", "running", "cancel_requested"}:
-            JOBS[job_id] = {
-                **row,
-                "status": "failed",
-                "message": MESSAGES[JobStatus.FAILED_RESTART.value],
-                "finishedAt": row["updatedAt"],
-                "error": ErrorCode.RESTART_INTERRUPTED.value,
-            }
 
 
 def persist_jobs() -> None:
