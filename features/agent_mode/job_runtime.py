@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from features.agent_mode import service as agent_service
 from features.common import jobs
-from features.common.canonical_identity import ReportKind
+from features.common.canonical_identity import BRIEFING_MARKETS, ReportKind
 from features.common.canonical_json import JsonValue
 from features.common.job_json_producer_types import (
     BriefingJobRequest,
@@ -78,14 +78,29 @@ def _report_kind(value: str) -> ReportKind:
 
 
 def _identity(kind: ReportKind, report_id: str, path: str) -> tuple[str, str | None]:
+    """Split a briefing target into ``(date, market)``.
+
+    시장 접미사는 `canonical_identity.BRIEFING_MARKETS`에서 읽는다. 여기에 시장을 다시
+    적어 두는 동안 유럽장·일본장 브리핑의 overlay·quality repair가 CLI 실행을 다 마친
+    **커밋 단계**에서 예외로 버려졌다.
+
+    `quality_repair`의 saveTarget은 `briefing:{id}` 형태다. 접두를 벗기지 않으면
+    `briefing:2026-08-14`가 report id가 되어 경로 해석이 거부한다.
+
+    접미사가 없는 옛 브리핑(`2026-06-18.json`)은 scope 없이 돌려준다 — 하류
+    `_briefing_identity`가 그 형태를 명시적으로 지원한다.
+    """
     if kind is not ReportKind.BRIEFING:
         return report_id, None
     stem = path.rsplit("/", 1)[-1].rsplit("\\", 1)[-1].removesuffix(".json")
-    if stem.endswith((".us", ".kr")):
-        return stem[:-3], stem[-2:]
-    if report_id.endswith((".us", ".kr")):
-        return report_id[:-3], report_id[-2:]
-    raise ValueError("briefing producer requires an exact us or kr scope")
+    candidates = [value.rsplit(":", 1)[-1] for value in (stem, str(report_id or "")) if value]
+    for value in candidates:
+        for market in BRIEFING_MARKETS:
+            if value.endswith(f".{market}"):
+                return value[: -len(market) - 1], market
+    if not candidates:
+        raise ValueError("briefing producer requires a report id or path")
+    return candidates[0], None
 
 
 def _json_summary(task_type: TaskType, pack: dict, candidate: dict) -> dict[str, str | int | bool | None]:
@@ -232,6 +247,7 @@ def run_consultation_job(data_dir: Path, session_id: str, user_message_id: str, 
     from features.agent_mode.consultation_context import assemble_consultation_context
     from features.agent_mode.consultation_prompt import rules_fallback
     from features.agent_mode.consultation_store import append_assistant_message, get_session
+    from features.smart_collections.routes import create_smart_collection_service
 
     session = get_session(data_dir, session_id)
     user_message = next((row for row in session.get("messages") or [] if row.get("id") == user_message_id and row.get("role") == "user"), None)
@@ -253,9 +269,14 @@ def run_consultation_job(data_dir: Path, session_id: str, user_message_id: str, 
     proposal_id = ""
     try:
         progress("Agent가 답변을 작성하고 있습니다.", 50)
+        # 컬렉션 서비스를 넘기지 않으면 `prepare_agent_context()`가 화면이 실어 보낸
+        # `collectionId`를 풀지 못해 예외를 던지고, 아래 광범위 except가 그것을 삼켜
+        # 대화 전체가 규칙 fallback으로 떨어진다 — CLI는 한 번도 불리지 않는다.
+        # Deep Research에서 컬렉션을 고른 상태의 도크 질문이 전부 그랬다.
         result = run_agent_chat(
             question, screen, options or {},
             progress=progress, job_id=job_id, conversation=context["serialized"],
+            collection_service=create_smart_collection_service(data_dir),
         )
         answer = str(result.get("reply") or "").strip()
         if answer:

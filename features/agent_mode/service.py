@@ -33,6 +33,7 @@ from features.daily_briefing.source_window import scope_session_documents
 from features.daily_briefing.service import (
     resolve_briefing_by_session,
     append_briefing_sources,
+    briefing_checkpoint_headings,
     briefing_sources_from_headlines,
     build_llm_context,
     briefing_prompt_path_label,
@@ -532,14 +533,26 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
         len(sources),
         message="LLM CLI 브리핑 생성 완료: Agent CLI / context pack 기반",
     )
-    checkpoints = checkpoints_from_markdown(
-        markdown,
-        artifact_type="briefing",
-        artifact_id=date,
-        headings=["내일 확인할 체크포인트", "오늘의 투자 체크리스트", "다음 체크포인트"],
-        scope="market",
-        topic="Daily Market Briefing",
+    # 시장별 markdown에서 그 시장 라벨로 따로 뽑는다(§builder와 같은 규칙). 예전의
+    # 일반 라벨 목록("내일 확인할 체크포인트" 등)은 네 시장 프롬프트 어디에도 없어
+    # Agent 생성 브리핑은 체크포인트가 항상 0건이었고, 통합 본문에 한 번 부르면
+    # 시장별 파일이 남의 체크포인트를 갖는다.
+    checkpoint_scopes = list(
+        normalize_market_selection(draft.get("generationMarkets") or market_scope)
     )
+    market_markdowns = split_market_markdown(markdown, market_scope)
+    scope_checkpoints = {
+        scope: checkpoints_from_markdown(
+            (market_markdowns.get(scope) or {}).get("markdown", ""),
+            artifact_type="briefing",
+            artifact_id=date,
+            headings=briefing_checkpoint_headings([scope]),
+            scope="market",
+            topic="Daily Market Briefing",
+        )
+        for scope in checkpoint_scopes
+    }
+    checkpoints = [row for scope in checkpoint_scopes for row in scope_checkpoints[scope]]
     gaps = []
     if not checkpoints:
         gaps.append("브리핑에서 구조화 가능한 체크포인트 섹션을 찾지 못했습니다.")
@@ -612,6 +625,9 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
     sidecar = (pack.get("internal") or {}).get("visualSidecar") or {}
     for scope in requested_scopes:
         scoped_briefing = _single_market_briefing(briefing, scope)
+        # 체크포인트는 시장별 추출본으로 교체한다. 합본을 그대로 두면 시장별 파일이
+        # 남의 시장 체크포인트를 갖는다(§builder와 같은 규칙).
+        scoped_briefing["checkpoints"] = scope_checkpoints.get(scope, [])
         # 저장 키는 그 시장의 세션일이다(§builder와 같은 규칙). 두 경로가 다른 키를 쓰면
         # 같은 세션이 생성 엔진에 따라 다른 파일이 된다.
         session_key = _scope_session_date(scope, draft.get("marketWindows")) or date
@@ -1356,8 +1372,11 @@ def write_investment_review_from_markdown(pack: dict, markdown: str, *, persist:
     review["mode"] = "agent"
     review["generation"] = A.agent_generation(0)
     if persist:
+        from features.common.canonical_report_io import safe_child_path
+
         REVIEW_DIR.mkdir(parents=True, exist_ok=True)
-        write_json(REVIEW_DIR / f"{date}.json", review)
+        # date는 저장된 pack에서도 올 수 있어 경로 조립 전에 봉쇄한다(리뷰 캐시 경로 조작 방지).
+        write_json(safe_child_path(REVIEW_DIR, f"{date}.json"), review)
     return review
 
 

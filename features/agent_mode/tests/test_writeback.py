@@ -254,3 +254,61 @@ def test_cli_writeback_replaces_candidate_chart_with_final_heading_company():
 
 if __name__ == "__main__":
     test_briefing_writeback_uses_agent_generation_without_touching_real_store()
+
+
+def test_agent_briefing_checkpoints_are_extracted_per_market():
+    """Agent 경로도 시장별 markdown에서 자기 라벨로 체크포인트를 뽑는다(§builder와 같은 규칙).
+
+    예전 라벨 목록("내일 확인할 체크포인트" 등)은 어느 시장 프롬프트에도 없어 Agent 생성
+    브리핑은 체크포인트가 항상 0건이었고, 저장 파일이 남의 시장 체크포인트를 가질 수 있었다.
+    """
+    with TemporaryDirectory() as tmp:
+        original_dir = service.BRIEFINGS_DIR
+        original_memory = service.MARKET_MEMORY_DB_PATH
+        service.BRIEFINGS_DIR = Path(tmp) / "briefings"
+        service.MARKET_MEMORY_DB_PATH = Path(tmp) / "market-memory.sqlite3"
+        try:
+            pack = {
+                "taskType": "briefing",
+                "artifactId": "2099-12-31",
+                "draftArtifact": {
+                    "date": "2099-12-31",
+                    "title": "Daily Market Briefing - 2099.12.31",
+                    "marketScope": "both",
+                    "briefingType": "concise",
+                    "generatedAt": "2099-12-31T08:00:00+09:00",
+                    "stats": {"documents": 1},
+                    "marketSnapshot": {"ok": True},
+                    "koreaMarketData": {"ok": True},
+                },
+                "sources": [{"title": "Source", "source": "Test", "date": "2099-12-31"}],
+                "marketTape": {"date": "2099-12-31"},
+                "internal": {"qualityMode": "diagnose_only", "qualityPreflight": {}},
+            }
+            markdown = _valid_briefing_markdown("both")
+            markdown = markdown.replace(
+                "## 6. 다음 미국장 체크포인트",
+                "## 6. 다음 미국장 체크포인트\n- 미국 CPI 발표 확인\n- 국채 금리 반응 확인",
+            )
+            markdown = markdown.replace(
+                "## 6. 다음 한국장 체크포인트",
+                "## 6. 다음 한국장 체크포인트\n- 원·달러 환율 확인",
+            )
+            with (
+                patch.object(service, "build_memory_from_briefing", return_value=[]),
+                patch.object(service, "upsert_memory", side_effect=lambda _path, entry: entry),
+            ):
+                report = service.write_briefing_from_markdown(pack, markdown)
+
+            assert report["checkpoints"], "통합 결과에 체크포인트가 있어야 한다"
+            us_saved = read_json(service.BRIEFINGS_DIR / "2099-12-31.us.json", {})
+            kr_saved = read_json(service.BRIEFINGS_DIR / "2099-12-31.kr.json", {})
+            us_texts = [c.get("checkpoint", "") for c in us_saved.get("checkpoints", [])]
+            kr_texts = [c.get("checkpoint", "") for c in kr_saved.get("checkpoints", [])]
+            assert us_texts and all("미국" in t or "국채" in t for t in us_texts)
+            assert kr_texts and all("환율" in t for t in kr_texts)
+            assert not any("환율" in t for t in us_texts)
+            assert not any("미국 CPI" in t for t in kr_texts)
+        finally:
+            service.BRIEFINGS_DIR = original_dir
+            service.MARKET_MEMORY_DB_PATH = original_memory

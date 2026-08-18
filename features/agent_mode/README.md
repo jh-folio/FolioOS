@@ -239,6 +239,7 @@ py -3 -m features.agent_mode.cli personal_overlay --pack data\agent-context\pers
 - 상담 안에서는 bounded memory와 최근 turn으로 문맥을 이어가지만 `layer=hypothesis`, `sourceLayer=user_consultation`, `reuseAsEvidence=false`를 고정한다.
 - research index, source ledger, Canonical 보고서, Market Memory, Change Intelligence에는 상담 transcript를 넣지 않는다.
 - user turn을 Agent 실행 전에 먼저 저장하므로 재시작 뒤 `retryMessageId`로 이어갈 수 있다. 500-message/2-MiB 경계에서는 연결된 continuation session을 만든다.
+- **continuation은 스레드당 하나다.** `operationId` 멱등 검사와 `retryMessageId` 처리는 상한 검사보다 앞서고, 이미 `continuedBy`가 가리키는 active 스레드가 있으면 그것을 재사용한다. 뒤에 두면 같은 요청의 HTTP 재시도마다 continuation이 새로 생기고 `continuedBy`가 덮여 앞선 continuation이 고아가 된다.
 - Agent job과 Work Log에는 transcript·memory·Portfolio 상세를 남기지 않고 session/message ID와 terminal status만 남긴다.
 - 보고서 proposal/writeback을 사용하지 않는다. 별도 `노트로 정리` preview를 명시적으로 확정할 때만 Native Note snapshot을 만든다.
 

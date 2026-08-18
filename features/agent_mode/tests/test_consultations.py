@@ -79,6 +79,26 @@ def test_message_limit_creates_linked_continuation(tmp_path):
     assert store.get_session(tmp_path, session["id"])["continuedBy"] == appended["session"]["id"]
 
 
+def test_retried_operation_at_message_limit_reuses_one_continuation(tmp_path):
+    """같은 operationId 재시도가 continuation을 또 만들면 앞선 것이 고아가 된다."""
+    session = store.create_session(tmp_path, {"title": "Long session"})
+    path = store.sessions_dir(tmp_path) / f"{session['id']}.json"
+    private = json.loads(path.read_text(encoding="utf-8"))
+    private["messages"] = [{"id": f"msg-{index}", "role": "user", "content": "x", "createdAt": "2026-08-01T00:00:00Z", "status": "answered"} for index in range(500)]
+    private["messageCount"] = 500
+    store._atomic_write(path, private)
+
+    first = store.append_user_message(tmp_path, session["id"], "continue", operation_id="op-retry")
+    second = store.append_user_message(tmp_path, session["id"], "continue", operation_id="op-retry")
+
+    assert second["session"]["id"] == first["session"]["id"]
+    assert second["message"]["id"] == first["message"]["id"]
+    assert second["idempotent"] is True
+    # 원본 + continuation 하나뿐이어야 한다.
+    assert len(list(store.sessions_dir(tmp_path).glob("*.json"))) == 2
+    assert store.get_session(tmp_path, session["id"])["continuedBy"] == first["session"]["id"]
+
+
 def test_message_limit_reserves_room_for_paired_assistant_reply(tmp_path):
     session = store.create_session(tmp_path, {"title": "Almost full"})
     path = store.sessions_dir(tmp_path) / f"{session['id']}.json"

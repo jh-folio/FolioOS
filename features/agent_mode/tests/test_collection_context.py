@@ -222,3 +222,49 @@ def test_chat_boundary_resolves_once_and_submits_prepared_server_context(
     assert captured["kwargs"]["prepared_context"] is True
     assert captured["context"]["collection"]["target"] == "collection_change_summary"
     assert "CLIENT_OVERRIDE" not in json.dumps(captured, ensure_ascii=False, default=str)
+
+
+def test_a_thread_reply_with_a_collection_selected_still_reaches_the_cli(tmp_path, monkeypatch) -> None:
+    """도크 대화가 컬렉션이 선택된 화면에서 규칙 fallback으로 떨어지던 자리.
+
+    스레드 러너가 `run_agent_chat`에 컬렉션 서비스를 넘기지 않아
+    `resolve_collection_projection()`이 `CollectionStoreUnavailableError`를 던졌고,
+    러너의 광범위 `except Exception`이 그것을 삼켜 CLI를 한 번도 부르지 않은 채
+    `engine="rules"`를 저장했다. 도크는 `engine`을 화면에 그리지 않아 사용자는
+    Agent가 답한 것으로 읽는다.
+    """
+    from features.agent_mode import bridge, job_runtime
+    from features.agent_mode.consultation_store import append_user_message, create_session, get_session
+
+    service = _service(tmp_path)
+    payloads = iter((_resolved("previous"), _resolved("current")))
+    monkeypatch.setattr(resolution, "resolve_collection", lambda _request: next(payloads))
+    service.refresh(COLLECTION_ID, RefreshRequest(expectedRevision=1))
+
+    prompts = []
+    monkeypatch.setattr(bridge, "bridge_status", lambda *_a, **_k: {"available": True, "adapter": "codex"})
+
+    def fake_prompt(prompt, **kwargs):
+        prompts.append(prompt)
+        return {"adapter": "codex", "output": "컬렉션 변화를 확인했습니다."}
+
+    monkeypatch.setattr(bridge, "run_agent_prompt", fake_prompt)
+
+    session = create_session(tmp_path, {"title": "컬렉션", "scope": {"kind": "general"}})
+    appended = append_user_message(tmp_path, session["id"], "무엇이 바뀌었나?", operation_id="op-collection")
+
+    job_runtime.run_consultation_job(
+        tmp_path,
+        session["id"],
+        appended["message"]["id"],
+        screen_context={
+            "surface": "agent_dock",
+            "viewId": "deep-research",
+            "collectionId": COLLECTION_ID,
+            "collectionRevision": 1,
+        },
+    )
+
+    reply = [row for row in get_session(tmp_path, session["id"])["messages"] if row["role"] == "assistant"][-1]
+    assert len(prompts) == 1, "컬렉션이 선택돼 있으면 CLI가 아예 불리지 않았다"
+    assert reply["engine"] != "rules"
