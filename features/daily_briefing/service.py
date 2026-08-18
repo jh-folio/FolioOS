@@ -67,6 +67,25 @@ BRIEFING_PROMPT_PATHS = {
     "jp": BRIEFING_PROMPT_JP_PATH,
 }
 MARKET_LABELS = {"us": "미국장", "kr": "한국장", "europe": "유럽장", "jp": "일본장"}
+# 구조화 체크포인트를 뽑을 섹션 제목. 규칙 경로(`## 6. 다음 {market_label} 체크포인트`)와
+# 시장별 프롬프트가 같은 라벨을 쓴다.
+_LEGACY_CHECKPOINT_HEADING = "내일 확인할 체크포인트"
+
+
+def briefing_checkpoint_headings(scopes=None):
+    """체크포인트 섹션 제목을 시장 라벨에서 파생한다.
+
+    손으로 나열하면 시장이 늘 때 새 시장만 조용히 0건이 된다 — 실제로 유럽·일본은
+    본문에 섹션이 멀쩡히 있는데도 저장 JSON의 `checkpoints`가 매번 비었고 없는
+    데이터 갭까지 붙었다.
+    """
+    keys = [str(scope).lower() for scope in (scopes if scopes is not None else MARKET_LABELS)]
+    return [
+        *(f"다음 {MARKET_LABELS[key]} 체크포인트" for key in keys if key in MARKET_LABELS),
+        _LEGACY_CHECKPOINT_HEADING,
+    ]
+
+
 # 단독 시장 범위에서 다른 시장 자료를 어떻게 쓸지의 계약. 시장마다 옆 시장과의
 # 시간 관계가 달라 문장이 하나로 합쳐지지 않는다.
 _SCOPE_OUTPUT_INSTRUCTIONS = {
@@ -1336,7 +1355,11 @@ def extract_prev_checklist(markdown):
 
 
 BRIEFING_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-BRIEFING_REPORT_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:\.(?:us|kr))?\.json$")
+# 시장 접미사는 계약에서 파생한다. 손으로 `us|kr`이라 적어 둔 동안 유럽·일본
+# 브리핑이 저장은 되면서 `GET /api/briefings`와 전일 체크포인트 조회에서만 빠졌다.
+BRIEFING_REPORT_FILE_RE = re.compile(
+    rf"^\d{{4}}-\d{{2}}-\d{{2}}(?:\.(?:{'|'.join(SINGLE_MARKET_SCOPES)}))?\.json$"
+)
 
 
 def _briefing_report_paths():

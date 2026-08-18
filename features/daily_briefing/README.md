@@ -99,7 +99,13 @@ features/daily_briefing/prompt_jp.md
 | 미국 | `usRegularSessionDate` (D-1) | 한국시간 자정 이후 마감 |
 | 유럽 | `marketSessions.europe.sessionDate` (D-1) | 런던 16:30 = KST 다음날 00:30 |
 | 한국 | `krCurrentSessionDate` 또는 직전 | 생성 시각으로 장중/마감 판정 |
-| 일본 | `marketSessions.jp.sessionDate` | JST가 KST와 같아 한국과 나란히 흐름 |
+| 일본 | `marketSessions.jp.sessionDate`, 장중이면 브리핑일 | JST가 KST와 같아 한국과 나란히 흐름 |
+
+일본은 장중 예외가 하나 있습니다. `marketSessions.jp.sessionDate`는 장중일 때 직전
+**완료** 세션을 담으므로 그 값을 그대로 쓰면 장중 생성분이 전날 세션 키로 저장돼 이미
+저장된 그 세션의 마감 브리핑을 덮어씁니다(제목도 이미 끝난 세션을 `장중`이라고 말합니다).
+한국장의 `krCurrentSessionDate`가 이미 "장중이면 당일"이므로 일본도 같이 흐릅니다.
+유럽은 한국시간 자정 이후 마감이라 `phase` 키 자체가 없고 이 예외에 걸리지 않습니다.
 
 유럽·일본이 한국의 window 키로 흘러가면 유럽 브리핑에 한국 세션일이 찍힙니다.
 
@@ -290,6 +296,13 @@ support           # 나머지 보조 자료
 
 저장된 브리핑 JSON의 `stats`에는 `driverCount`, `topDrivers`, `sourceCount`가 기록됩니다.
 Step 6 Data Foundation Lite 이후 저장 JSON에는 공통 구조화 필드 `checkpoints`, `dataGaps`, `marketTape`도 포함됩니다. 이 필드는 대시보드/품질 평가가 markdown 파싱 없이 읽기 위한 별도 필드이며, 기본 브리핑 markdown은 변경하지 않습니다.
+
+**`checkpoints`는 시장별로 뽑습니다.** 각 시장의 markdown에서 그 시장의 섹션 제목
+(`## 6. 다음 {시장 라벨} 체크포인트`)으로 따로 추출하며, 제목 목록은 `MARKET_LABELS`에서
+파생합니다(`service.py::briefing_checkpoint_headings`). 통합 markdown에서 한 번에 뽑으면
+어느 항목이 어느 시장 것인지 남지 않아 미국 보고서에 한국장 확인 조건이 저장되고, 목록을
+손으로 나열하면 새 시장만 조용히 0건이 됩니다 — 유럽·일본이 실제로 그랬고 그 자리에
+"체크포인트 섹션을 찾지 못했습니다"라는 없는 갭까지 붙었습니다.
 Step 7 Research Quality 이후 저장 JSON에는 규칙 기반 `quality` 필드도 포함됩니다. 기존 저장 브리핑은 조회 시 `quality`가 없으면 자동 평가해 백필합니다. 평가는 sourceLedger가 없는 브리핑의 한계를 warning으로 남기며, markdown 본문은 변경하지 않습니다.
 Step 11 Quality Generation 이후 생성 API는 `qualityMode`(`diagnose_only` 기본, `llm_section_improve`, `strict`)를 받을 수 있습니다. 생성 전에는 브리핑용 품질 목표(articles/rss 우선, 미국장/한국장 기준일, marketTape, 반론, 체크포인트, Source & Data Notes)와 evidence coverage preflight를 LLM 컨텍스트에 주입합니다. `llm_section_improve`는 품질 평가에서 약한 섹션만 기존 근거 범위 안에서 LLM으로 최대 1회 재작성하고, `strict`는 A-/85점 기준의 엄격 검토 경고를 추가합니다. `qualityGeneration`에는 preflight, weakSections, token/evidence telemetry, 보강 전후 점수를 저장합니다.
 0.4.x Change Intelligence 연동으로 저장 JSON의 `marketDrivers`에는 동인별 `topDocs`(상위 3건 제목/출처/URL/날짜)와 상한 자르기 전 실제 문서 수 `docCount`가, `issueCoverage`에는 대표 `title`과 `topDocs`가 남습니다. 이 값이 변화 비교의 의미 분류(직전/현재 대표 기사 대조)와 대시보드 변화 상세의 입력 재료입니다. 본문 원문은 저장하지 않습니다. 브리핑 reader 상단에는 저장된 `changeSummary`만 읽는 "이 브리핑에서 달라진 것" 스트립이 표시됩니다(백엔드 추가 호출 없음).

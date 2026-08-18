@@ -61,6 +61,7 @@ from features.daily_briefing.selection import (
 )
 from features.daily_briefing.service import (
     append_briefing_sources,
+    briefing_checkpoint_headings,
     briefing_sources_from_headlines,
     build_prompt_markdown,
     extract_prev_checklist,
@@ -209,6 +210,12 @@ def _scope_session_date(scope, market_windows):
     if scope == "kr":
         return windows.get("krCurrentSessionDate") or windows.get("krPreviousSessionDate")
     session = (windows.get("marketSessions") or {}).get(scope) or {}
+    # 장중이면 진행 중인 세션이 곧 이 브리핑의 세션이다. 창의 `sessionDate`는 직전
+    # **완료** 세션이라 그대로 쓰면 일본장 장중 생성분이 전날 세션 파일로 커밋되어
+    # 이미 저장된 그 세션의 마감 브리핑을 덮어쓴다. 한국장은 `krCurrentSessionDate`가
+    # 이미 이 규칙이며(장중이면 당일), 일본은 한국과 같은 시간대라 같이 흘러야 한다.
+    if session.get("phase") == "intraday" and windows.get("briefingDate"):
+        return windows.get("briefingDate")
     return session.get("sessionDate") or windows.get("briefingDate")
 
 
@@ -342,9 +349,14 @@ def _sidecar_for_market(sidecar, scope):
     return out
 
 
-def _single_market_briefing(briefing, scope):
+def _single_market_briefing(briefing, scope, checkpoints=None):
     scoped = briefing_scope_view(briefing, scope)
     scoped["marketScope"] = scope
+    # 체크포인트는 통합 markdown에서 한 번에 뽑으면 시장을 구분할 수 없다. 그대로
+    # 두면 미국 보고서에 한국장 확인 조건이 저장된다 — `/api/research-data/checkpoints`와
+    # 도크 대화가 그 값을 그대로 내보낸다.
+    if checkpoints is not None:
+        scoped["checkpoints"] = deepcopy(checkpoints)
     # Record the original generation scope so the archive can collapse a 종합(both)
     # generation's per-market files into a single combined card. `briefing` still
     # carries the request-level marketScope here (scope_view returns a copy).
@@ -490,14 +502,20 @@ def build_briefing(
         }
 
     session_counts = session_doc_counts(docs, market_windows)
-    checkpoints = checkpoints_from_markdown(
-        markdown,
-        artifact_type="briefing",
-        artifact_id=date,
-        headings=["다음 미국장 체크포인트", "다음 한국장 체크포인트", "내일 확인할 체크포인트"],
-        scope="market",
-        topic="Daily Market Briefing",
-    )
+    # 시장별 markdown에서 그 시장의 라벨로 따로 뽑는다. 통합 본문에 한 번 부르면
+    # 어느 항목이 어느 시장 것인지 남지 않아 시장별 파일이 남의 체크포인트를 갖는다.
+    scope_checkpoints = {
+        scope: checkpoints_from_markdown(
+            results[scope]["markdown"],
+            artifact_type="briefing",
+            artifact_id=date,
+            headings=briefing_checkpoint_headings([scope]),
+            scope="market",
+            topic="Daily Market Briefing",
+        )
+        for scope in requested_scopes
+    }
+    checkpoints = [row for scope in requested_scopes for row in scope_checkpoints[scope]]
     gaps = []
     if not checkpoints:
         gaps.append("브리핑에서 구조화 가능한 체크포인트 섹션을 찾지 못했습니다.")
@@ -596,7 +614,7 @@ def build_briefing(
     if persist:
         saved_reports = {}
         for scope in requested_scopes:
-            scoped_briefing = _single_market_briefing(briefing, scope)
+            scoped_briefing = _single_market_briefing(briefing, scope, scope_checkpoints.get(scope))
             # 저장 키는 그 시장이 다루는 **세션일**이다. 발행일이 아니다 — 발행일로
             # 저장하면 같은 세션이 생성 시각에 따라 다른 이름으로 흩어진다(07:45 예약이
             # 만든 08-10 세션이 08-11로 저장되던 것). `date`도 함께 옮겨야 change

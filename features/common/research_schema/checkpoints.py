@@ -122,20 +122,31 @@ def _heading_pattern(headings: list[str]) -> re.Pattern:
     return re.compile(rf"(?im)^#{{1,3}}\s*(?:\d+\.\s*)?(?:{labels})\s*$")
 
 
-def extract_section(markdown: str, headings: list[str]) -> tuple[str, str]:
+def extract_sections(markdown: str, headings: list[str]) -> list[tuple[str, str]]:
+    """Every matching section, in document order.
+
+    브리핑은 시장별 markdown을 하나로 이어 붙이므로 같은 라벨의 섹션이 시장 수만큼
+    있다. 한 섹션만 고르면 앞선 시장의 내용이 통째로 사라지고, 남은 섹션이 모든
+    시장의 것으로 저장된다.
+    """
     text = str(markdown or "")
     if not text or not headings:
-        return "", ""
+        return []
     pattern = _heading_pattern(headings)
-    matches = list(pattern.finditer(text))
-    if not matches:
-        return "", ""
-    match = matches[-1]
-    heading = re.sub(r"^#+\s*", "", match.group(0)).strip()
-    tail = text[match.end():]
-    next_heading = re.search(r"(?m)^#{1,3}\s+", tail)
-    body = tail[: next_heading.start()] if next_heading else tail
-    return heading, body.strip()
+    sections: list[tuple[str, str]] = []
+    for match in pattern.finditer(text):
+        heading = re.sub(r"^#+\s*", "", match.group(0)).strip()
+        tail = text[match.end():]
+        next_heading = re.search(r"(?m)^#{1,3}\s+", tail)
+        body = tail[: next_heading.start()] if next_heading else tail
+        sections.append((heading, body.strip()))
+    return sections
+
+
+def extract_section(markdown: str, headings: list[str]) -> tuple[str, str]:
+    """The first matching section. 여러 섹션이 있으면 ``extract_sections()``를 쓴다."""
+    sections = extract_sections(markdown, headings)
+    return sections[0] if sections else ("", "")
 
 
 def _bullet_texts(section_body: str) -> list[str]:
@@ -167,20 +178,22 @@ def checkpoints_from_markdown(
     limit: int = 8,
 ) -> list[dict]:
     headings = headings or ["앞으로 확인할 체크포인트", "내일 확인할 체크포인트", "다음 체크포인트", "체크포인트"]
-    heading, body = extract_section(markdown, headings)
-    if not body:
-        return []
-    return checkpoints_from_list(
-        _bullet_texts(body),
-        artifact_type=artifact_type,
-        artifact_id=artifact_id,
-        scope=scope,
-        ticker=ticker,
-        topic=topic,
-        source_section=heading,
-        confidence=confidence,
-        limit=limit,
-    )
+    rows: list[dict] = []
+    for heading, body in extract_sections(markdown, headings):
+        if not body or len(rows) >= limit:
+            continue
+        rows.extend(checkpoints_from_list(
+            _bullet_texts(body),
+            artifact_type=artifact_type,
+            artifact_id=artifact_id,
+            scope=scope,
+            ticker=ticker,
+            topic=topic,
+            source_section=heading,
+            confidence=confidence,
+            limit=limit - len(rows),
+        ))
+    return rows[:limit]
 
 
 def checkpoints_from_thesis_delta(delta: dict, *, artifact_id: str = "") -> list[dict]:
