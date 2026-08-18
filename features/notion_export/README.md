@@ -38,7 +38,9 @@ Notion 통합(Integration)을 만들 때 대상 페이지나 데이터베이스�
   - `_notion_request()`: Notion REST API 호출
   - `create_page()`: 데이터베이스에 새 페이지 생성 및 블록 추가 (100블록 초과 시 PATCH 분할 처리)
   - `parse_inline()`: 인라인 Markdown → Notion rich_text 변환 (bold, italic, code, link)
-  - `markdown_to_blocks()`: Markdown 전체 → Notion 블록 목록 변환 (heading, bullet, numbered, divider, paragraph)
+  - `markdown_to_blocks()`: Markdown 전체 → Notion 블록 목록 변환 (heading, bullet, numbered, divider, table, image, paragraph)
+    - **표는 표로 보냅니다.** 연속한 `| ... |` 행은 `table` 블록 하나와 `table_row` 자식으로 변환하고 구분 행(`|---|`)은 건너뜁니다. 예전에는 표 행이 어떤 구조 규칙에도 걸리지 않아 문단 수집 루프가 표 전체를 한 문단으로 이어 붙였습니다. 셀 수가 모자란 행은 가장 넓은 행 기준으로 빈 셀을 채웁니다(Notion은 모든 행의 셀 수가 `table_width`와 같아야 합니다).
+    - rich_text 한 조각은 `RICH_TEXT_LIMIT`(2,000자)에서 절단합니다. 초과하면 Notion이 400을 내어 내보내기 전체가 실패합니다.
 - `features/notion_export/service.py`: 내보내기 비즈니스 로직
   - `notion_config()`: `.env`에서 NOTION_TOKEN, NOTION_DB_ID 읽기
   - `public_notion_settings()`: 설정 UI용 마스킹된 값 반환

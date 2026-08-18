@@ -7,6 +7,9 @@ import urllib.request
 
 NOTION_API_BASE = "https://api.notion.com/v1"
 NOTION_API_VERSION = "2022-06-28"
+# Notion API 상한: rich_text 한 조각 2,000자, 한 요청의 자식 블록 100개.
+RICH_TEXT_LIMIT = 2000
+MAX_CHILDREN_PER_REQUEST = 100
 
 
 def _notion_request(token, method, path, body=None):
@@ -86,7 +89,8 @@ _INLINE_RE = re.compile(
 def _text_piece(content, bold=False, italic=False, code=False):
     return {
         "type": "text",
-        "text": {"content": content, "link": None},
+        # Notion rich_text 한 조각은 2,000자를 넘으면 400이다.
+        "text": {"content": str(content or "")[:RICH_TEXT_LIMIT], "link": None},
         "annotations": {
             "bold": bold, "italic": italic,
             "strikethrough": False, "underline": False,
@@ -98,7 +102,7 @@ def _text_piece(content, bold=False, italic=False, code=False):
 def _link_piece(content, url):
     return {
         "type": "text",
-        "text": {"content": content, "link": {"url": url}},
+        "text": {"content": str(content or "")[:RICH_TEXT_LIMIT], "link": {"url": url}},
         "annotations": {
             "bold": False, "italic": False,
             "strikethrough": False, "underline": False,
@@ -134,6 +138,54 @@ def _block(block_type, rich_text):
     return {"type": block_type, block_type: {"rich_text": rich_text}}
 
 
+# ── Markdown table → Notion table block ───────────────────────────────────────
+
+_TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
+_TABLE_SEPARATOR_CELL_RE = re.compile(r"^:?-{1,}:?$")
+
+
+def _table_cells(line):
+    text = line.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|"):
+        text = text[:-1]
+    return [cell.strip() for cell in text.split("|")]
+
+
+def _is_separator_row(cells):
+    return bool(cells) and all(_TABLE_SEPARATOR_CELL_RE.fullmatch(cell.replace(" ", "")) for cell in cells)
+
+
+def _table_block(table_lines):
+    """Convert consecutive Markdown table lines into one Notion table block."""
+    rows = []
+    has_header = False
+    for line in table_lines:
+        cells = _table_cells(line)
+        if _is_separator_row(cells):
+            has_header = len(rows) == 1
+            continue
+        rows.append(cells)
+    if not rows:
+        return None
+    width = max(len(cells) for cells in rows)
+    children = []
+    # Notion은 모든 행의 셀 수가 table_width와 같아야 하고, 한 요청의 자식은 100개까지다.
+    for cells in rows[:MAX_CHILDREN_PER_REQUEST]:
+        padded = list(cells[:width]) + [""] * (width - len(cells))
+        children.append({"type": "table_row", "table_row": {"cells": [parse_inline(cell) for cell in padded]}})
+    return {
+        "type": "table",
+        "table": {
+            "table_width": width,
+            "has_column_header": has_header,
+            "has_row_header": False,
+            "children": children,
+        },
+    }
+
+
 def markdown_to_blocks(markdown):
     """Convert a Markdown string to a list of Notion block dicts."""
     blocks = []
@@ -167,6 +219,21 @@ def markdown_to_blocks(markdown):
             i += 1
             continue
 
+        # Table — 연속한 `| ... |` 행을 하나의 table 블록으로 묶는다.
+        # (묶지 않으면 문단 수집 루프가 표 전체를 한 줄로 이어 붙인다)
+        if _TABLE_ROW_RE.match(s):
+            table_lines = []
+            while i < len(lines):
+                candidate = lines[i].rstrip()
+                if not _TABLE_ROW_RE.match(candidate):
+                    break
+                table_lines.append(candidate)
+                i += 1
+            table = _table_block(table_lines)
+            if table:
+                blocks.append(table)
+            continue
+
         # Bulleted list
         if re.match(r"^[-*]\s", s):
             blocks.append(_block("bulleted_list_item", parse_inline(s[2:])))
@@ -191,7 +258,7 @@ def markdown_to_blocks(markdown):
             l = lines[i].rstrip()
             if not l:
                 break
-            if re.match(r"^#{1,6}\s|^[-*]\s|\d+\.\s|^[-*_]{3,}$", l):
+            if re.match(r"^#{1,6}\s|^[-*]\s|\d+\.\s|^[-*_]{3,}$", l) or _TABLE_ROW_RE.match(l):
                 break
             para_lines.append(l)
             i += 1

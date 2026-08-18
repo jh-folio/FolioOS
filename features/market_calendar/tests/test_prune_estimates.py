@@ -77,6 +77,35 @@ def test_official_and_confirmed_rows_are_never_touched(tmp_path):
     assert _rows(db) == before
 
 
+def test_a_kind_whose_provider_call_failed_keeps_its_rows(tmp_path):
+    """실적은 `Ticker.calendar`, 배당은 `get_info()`라 한쪽만 실패하는 일이 흔하다.
+
+    두 집합을 합쳐 넘기면 물어보지도 못한 종류의 멀쩡한 행이 지워진다.
+    """
+    db = tmp_path / "memory.sqlite3"
+    _seed(db, [
+        _estimate("AAPL", "2026-08-20T12:00:00+00:00"),
+        _estimate("AAPL", "2026-08-22T12:00:00+00:00", kind="dividend"),
+    ])
+    # earnings만 답했고 dividend 호출은 rate limit으로 실패했다.
+    fresh = [_estimate("AAPL", "2026-08-28T12:00:00+00:00")]
+    upsert_events(db, fresh)
+
+    removed = prune_stale_estimates(db, fresh, {"earnings": {"AAPL"}, "dividend": set()})
+
+    assert removed == 1  # 옛 실적 행만
+    with sqlite3.connect(str(db)) as conn:
+        kinds = sorted(r[0] for r in conn.execute("SELECT kind FROM market_calendar_events").fetchall())
+    assert kinds == ["dividend", "earnings"], "조회하지 못한 종류의 행이 지워졌다"
+
+
+def test_per_kind_sets_still_prune_the_kind_that_answered(tmp_path):
+    db = tmp_path / "memory.sqlite3"
+    _seed(db, [_estimate("AAPL", "2026-08-22T12:00:00+00:00", kind="dividend")])
+    assert prune_stale_estimates(db, [], {"earnings": set(), "dividend": {"AAPL"}}) == 1
+    assert _rows(db) == set()
+
+
 def test_a_similar_ticker_is_not_swept_up(tmp_path):
     """`MU`를 물었다고 `MUFG` 행을 지우면 안 된다 — LIKE 매칭의 함정."""
     db = tmp_path / "memory.sqlite3"

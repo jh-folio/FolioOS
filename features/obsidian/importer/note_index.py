@@ -129,6 +129,26 @@ def list_notes(conn, *, note_type=None, importable=None, ticker=None, layer=None
     return [_row_to_dict(r) for r in conn.execute(q, args).fetchall()]
 
 
+def prune_missing_notes(conn, seen_ids) -> int:
+    """이번 스캔에서 보이지 않은 노트 행을 지우고 삭제 건수를 반환한다.
+
+    note_id가 `sha1(rel_path)`라 파일을 지우거나 이름·폴더를 바꾸면 옛 행이 그대로
+    남는다. 남기면 없는 파일이 계속 hypothesis로 조회되고(이름변경은 같은 노트가 두
+    건으로 집계된다), 정리 수단이 없어 무한히 쌓인다.
+    """
+    keep = {str(note_id) for note_id in (seen_ids or ()) if note_id}
+    doomed = [
+        row["note_id"]
+        for row in conn.execute("SELECT note_id FROM obsidian_note_index").fetchall()
+        if row["note_id"] not in keep
+    ]
+    if not doomed:
+        return 0
+    conn.executemany("DELETE FROM obsidian_note_index WHERE note_id=?", [(note_id,) for note_id in doomed])
+    conn.commit()
+    return len(doomed)
+
+
 def get_note(conn, note_id: str):
     row = conn.execute("SELECT * FROM obsidian_note_index WHERE note_id=?", (note_id,)).fetchone()
     return _row_to_dict(row) if row else None
