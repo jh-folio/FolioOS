@@ -235,6 +235,7 @@ from features.topic_report.service import (
 from features.topic_report.routes import ApprovedRequestBoundary
 from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
 from features.investment_notes.intelligence_routes import create_intelligence_router
+from features.common.research_quality.evaluator import evaluate_artifact as evaluate_research_artifact
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
     get_quality as get_research_quality,
@@ -251,6 +252,7 @@ from features.common.quality_generation.schema import normalize_quality_mode
 from features.investment_review.service import (
     get_review as get_investment_review,
     generate_review as generate_investment_review,
+    normalize_review_date,
 )
 from features.investment_review.context_routes import create_investment_context_router
 from features.common.workspace import config_dir, data_dir, research_inbox_dir
@@ -784,9 +786,11 @@ def api_get_analysis_report(report_id: str, includePersonal: bool = False):
     if not report:
         raise HTTPException(status_code=404, detail="Analysis report not found")
     if not report.get("quality") or "sourceGrounding" not in report.get("quality", {}):
+        # 열람은 저장물을 바꾸지 않는다 — 배지는 응답에만 계산해 싣는다. 예전에는 여기서
+        # recheck가 파일을 직접 덮어써 canonicalRevision 지문을 깨뜨렸다. 영구 backfill은
+        # POST /api/research-quality/recheck(정식 커밋 배관)만 한다.
         try:
-            result = recheck_research_quality("company_analysis", report_id)
-            report["quality"] = result.get("quality")
+            report["quality"] = evaluate_research_artifact("company_analysis", report)
         except Exception:
             report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(report, includePersonal)
@@ -1249,6 +1253,11 @@ def api_investment_review():
 @fastapi_app.post("/api/investment-review/generate")
 def api_investment_review_generate(body: dict | None = Body(default=None)):
     body = body or {}
+    try:
+        # date는 캐시 파일 경로가 되므로 두 분기(CLI/규칙) 모두 여기서 먼저 형식을 막는다.
+        body["date"] = normalize_review_date(body.get("date"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid_review_date")
     generation_mode = request_generation_mode(body)
     if generation_mode == "llm_cli":
         return submit_agent_task("investment_review", {
@@ -1263,7 +1272,10 @@ def api_investment_review_generate(body: dict | None = Body(default=None)):
 
 @fastapi_app.get("/api/investment-review/{date}")
 def api_investment_review_by_date(date: str):
-    return get_investment_review(date)
+    try:
+        return get_investment_review(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid_review_date")
 
 
 @fastapi_app.get("/api/agent-bridge/status")
@@ -1645,9 +1657,9 @@ def api_get_topic_report(report_id: str, includePersonal: bool = False):
     if not report:
         raise HTTPException(status_code=404, detail="Topic report not found")
     if not report.get("quality") or "sourceGrounding" not in report.get("quality", {}):
+        # 열람은 저장물을 바꾸지 않는다 — 배지는 응답에만 계산해 싣는다(위 기업분석 GET과 동일).
         try:
-            result = recheck_research_quality("topic_report", report_id)
-            report["quality"] = result.get("quality")
+            report["quality"] = evaluate_research_artifact("topic_report", report)
         except Exception:
             report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(report, includePersonal)
