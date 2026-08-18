@@ -74,6 +74,8 @@
 - LLM 출력은 JSON으로 파싱하고 허용된 enum과 필드 길이를 코드에서 다시 정규화한 뒤 저장합니다.
 - Regime v2의 최종 `momentum`과 evidence `role`은 코드 enum으로 검증합니다. LLM 자유 텍스트로 결론을 확정하지 않습니다.
 - Thesis/Obsidian 노트는 hypothesis입니다. Regime v2는 `linked_regimes`, ticker overlap 등을 연결 정보로만 쓰며 외부 evidence처럼 취급하지 않습니다.
+- `method='manual'`로 저장된 Regime↔thesis 링크의 `relationship`은 자동 추론 갱신(`refresh_thesis_links`)이 덮어쓰지 않습니다. 이 갱신은 서버 시작과 자동화마다 돌기 때문에, 보호하지 않으면 사용자가 지정한 값이 예고 없이 사라집니다.
+- 메모리 재저장은 Regime 갱신이 계산한 `confidence`를 되돌리지 않습니다. 같은 날 같은 `state_key`는 같은 행이라 재저장이 흔한 경로이고, `momentum`·근거 카운트는 남는데 `confidence`만 기본값으로 돌아가면 행이 서로 모순됩니다.
 - 기본 브리핑 markdown은 추세 갱신으로 변경하지 않습니다.
 - 기업 분석의 공식자료 우선순위와 섞지 않습니다.
 
@@ -94,6 +96,7 @@ Market/macro context extension:
 - `marketTape`: yfinance 기반 가격 흐름. 미국장은 S&P 500, Nasdaq, Dow, VIX, 10Y proxy, WTI, 달러 proxy를 우선하고, 한국장은 KOSPI, KOSDAQ, USD/KRW, MSCI Korea ETF를 우선한다.
 - `macroSnapshot`: 공식 거시 데이터. 미국장은 FRED, 한국장은 BOK/ECOS를 주요 입력원으로 삼아 금리, 물가, 환율, 수출, 경기 흐름을 구조화한다. API key가 없거나 조회 실패 시에는 결측 사유를 context에 남긴다.
 - yfinance/FRED/BOK 값은 LLM이 시장 판단을 작성하기 위한 structured evidence다. 코드는 freshness/staleness, provider, window, 단위, 결측 여부를 정리하고 검증하지만 시장 결론을 규칙으로 확정하지 않는다.
+- `market_scope`가 `overall`이 아니면 `rssCandidates`와 `shortTermDigest`는 그 시장 태그와 `GLOBAL`만 남긴다. 비교는 시장 계약(`PRODUCT_MARKETS`) 파생이라 US/KR뿐 아니라 EUROPE/JP에도 같은 필터가 걸린다 — instruction이 모델에게 "이 목록은 이 marketScope로 이미 걸러졌다"고 보증하기 때문이다.
 - `build_market_state_context()`는 `rssCandidates`, `shortTermDigest`, `existingStates`와 함께 `marketTape`, `macroSnapshot`을 LLM에 넘긴다. LLM은 이 값을 뉴스 기반 내러티브를 확인하거나 약화시키는 보조 근거로 사용한다.
 
 ## Market State Dashboard v3 (기본 화면)

@@ -130,7 +130,7 @@ def scrub_inline_refs(value, lookup: dict[str, dict] | None = None):
 
         text = _INLINE_REF_GROUP.sub(replace_group, value)
         text = _INLINE_REF_BARE.sub("", text)
-        text = re.sub(r"\s+([,.;:!?%)\]])", r"", text)
+        text = re.sub(r"\s+([,.;:!?%)\]])", r"\1", text)
         text = re.sub(r"\(\s*\)", "", text)
         return re.sub(r"\s{2,}", " ", text).strip()
     if isinstance(value, list):
@@ -750,11 +750,10 @@ def _candidate_matches_scope(candidate: dict, market_scope: str) -> bool:
     markets = {str(item or "").upper() for item in (candidate.get("markets") or [])}
     if market_scope == "overall":
         return True
-    if market_scope == "us":
-        return "US" in markets or "GLOBAL" in markets
-    if market_scope == "kr":
-        return "KR" in markets or "GLOBAL" in markets
-    return True
+    # 시장 키(MARKET_VIEW_KEYS)는 PRODUCT_MARKETS 파생이므로 비교도 파생으로 한다.
+    # 리터럴 분기로 두면 새로 열린 시장(europe/jp)이 조용히 전부 통과해,
+    # "이 목록은 이 marketScope로 이미 걸러졌다"는 instruction이 거짓이 된다.
+    return market_scope.upper() in markets or "GLOBAL" in markets
 
 
 def _filter_candidates_for_scope(candidates: list[dict], market_scope: str) -> list[dict]:

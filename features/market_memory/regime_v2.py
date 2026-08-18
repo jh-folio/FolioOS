@@ -621,7 +621,7 @@ def refresh_thesis_links(conn: sqlite3.Connection, state_id: str) -> dict:
             VALUES (?, ?, ?, ?, ?, ?, 'auto', ?, ?, ?)
             ON CONFLICT(state_id, thesis_ticker) DO UPDATE SET
                 ticker=excluded.ticker,
-                relationship=excluded.relationship,
+                relationship=CASE WHEN market_regime_thesis_links.method='manual' THEN market_regime_thesis_links.relationship ELSE excluded.relationship END,
                 strength=MAX(market_regime_thesis_links.strength, excluded.strength),
                 note_path=CASE WHEN market_regime_thesis_links.note_path='' THEN excluded.note_path ELSE market_regime_thesis_links.note_path END,
                 updated_at=excluded.updated_at
