@@ -507,16 +507,26 @@ def build_index(incremental=True, progress=None):
         }
         if progress:
             progress("SQLite/FTS 검색 인덱스를 동기화하는 중입니다.", progress=82)
+        sqlite_synced = False
         try:
             index["sqlite"] = sync_index(RESEARCH_DB_PATH, index)
+            sqlite_synced = True
         except Exception:
             index["sqlite"] = {"error": "sqlite_index_failed"}
         # 우리가 방금 문서를 바꿨다. 서명 확인(5초)을 기다리지 않고 바로 버린다.
         invalidate_index_cache()
-        try:
-            write_manifest(RESEARCH_DB_PATH, file_manifest)
-        except Exception:
-            index.setdefault("sqlite", {})["manifestError"] = "manifest_update_failed"
+        # sync가 실패하면 매니페스트를 갱신하지 않는다. sync_index는 단일 트랜잭션이라
+        # 실패 시 documents/chunks가 통째로 롤백되는데, 매니페스트만 새 서명으로 남으면
+        # 다음 증분 실행이 그 파일들을 "이미 처리됨"으로 건너뛰어 파일이 다시 바뀌기
+        # 전까지 색인에서 영구히 빠진다(전체 재색인만이 복구 경로였다). 옛 매니페스트를
+        # 그대로 두면 다음 실행이 같은 파일을 다시 읽어 스스로 복구한다.
+        if sqlite_synced:
+            try:
+                write_manifest(RESEARCH_DB_PATH, file_manifest)
+            except Exception:
+                index.setdefault("sqlite", {})["manifestError"] = "manifest_update_failed"
+        else:
+            index.setdefault("sqlite", {})["manifestError"] = "manifest_skipped_after_sync_failure"
         # Write slim status JSON — no documents or fileManifest
         write_json(DATA_DIR / "index.json", {
             "generatedAt": index["generatedAt"],

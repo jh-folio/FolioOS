@@ -135,8 +135,30 @@ def workspace_root() -> Path:
     return APP_ROOT
 
 
+# 옮기기가 성공한 순간부터 재시작 전까지 True.
+#
+# 표지는 이미 디스크에 있으므로 지금 새로 뜨는 프로세스(수집 서브프로세스)는 **새** 폴더를
+# 판정하는데, 이 프로세스의 모듈 상수 수십 곳은 import 시점의 **옛** 폴더를 그대로 들고
+# 있다. 그 사이에 수집을 돌리면 Markdown은 옛 폴더에, evidence 행은 새 DB에 갈려 들어가고
+# 재시작 뒤에는 파일 없는 행만 남아 그 기사가 조용히 사라진다(§6 절대 규칙 2). 정리도
+# 마찬가지로 방금 복사한 사본을 지운다. 그래서 자료를 쓰는 작업은 재시작 전까지 쉰다.
+_MOVED_PENDING_RESTART = False
+
+
+def mark_moved_pending_restart() -> None:
+    """옮기기가 표지를 쓴 직후 호출한다. 되돌리는 것은 재시작뿐이다."""
+    global _MOVED_PENDING_RESTART
+    _MOVED_PENDING_RESTART = True
+
+
+def moved_pending_restart() -> bool:
+    return _MOVED_PENDING_RESTART
+
+
 def reset_cache() -> None:
     """테스트에서 환경을 바꾼 뒤 다시 판정하게 한다."""
+    global _MOVED_PENDING_RESTART
+    _MOVED_PENDING_RESTART = False
     workspace_root.cache_clear()
 
 

@@ -121,7 +121,7 @@ def feed_item_allowed(feed: dict, item: dict) -> bool:
 
 def build_manifest_item(task):
     """Enrich one accepted raw item into a manifest entry with its EvidenceItem."""
-    feed, item, existing_path = task
+    feed, item, existing_path, baseline = task
     body = collect_article_body(item["link"], item["description"])
     # On a publisher-filtered aggregating feed the item belongs to the originating
     # outlet, so it is stored under that outlet rather than the aggregator.
@@ -129,7 +129,10 @@ def build_manifest_item(task):
     media = canonical_media(matched_publisher or feed["media"], item.get("link", ""), item.get("title", ""))
     combined = {**item, **body, "media": media, "existing_path": str(existing_path) if existing_path else ""}
     combined["normalized_url"] = normalize_url(combined.get("link", ""))
-    combined["relevance_score"] = calculate_relevance_score(combined)
+    # 저장 점수는 게이트와 같은 인자로 매긴다. feed·baseline 없이 다시 계산하면 키워드 표가
+    # 읽지 못하는 언어(de·ja 등)의 바닥 처리가 빠져, 게이트를 baseline으로 통과한 항목이
+    # 0점으로 저장된다 — `evidence_items.relevance_score`가 통과 이유와 어긋난다.
+    combined["relevance_score"] = calculate_relevance_score(combined, feed, baseline=baseline)
     combined["evidence"] = rss_item_to_evidence(item=combined, source=media, feed=feed)
     return combined
 
@@ -261,7 +264,7 @@ def main():
             ):
                 skipped_existing_no_retry += 1
                 continue
-            article_tasks.append((feed, item, existing_path))
+            article_tasks.append((feed, item, existing_path, args.min_relevance_score))
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.article_workers)) as pool:
         futures = [pool.submit(build_manifest_item, task) for task in article_tasks]

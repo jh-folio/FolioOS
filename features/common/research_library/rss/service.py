@@ -31,7 +31,7 @@ from features.common.research_library.indexing.service import (
     rss_item_is_market_relevant,
     build_index,
 )
-from features.common.workspace import data_dir, research_inbox_dir
+from features.common.workspace import data_dir, moved_pending_restart, research_inbox_dir
 
 ROOT = Path(__file__).resolve().parents[4]
 RSS_INBOX_DIR = research_inbox_dir() / "rss"
@@ -687,6 +687,12 @@ def rss_feed_payload(qs):
             f"SELECT DISTINCT media FROM {RSS_CACHE_TABLE} "
             f"WHERE visible = 1 AND media != '' AND {_HIDE_PRESS_RELEASE_SQL} ORDER BY media"
         ).fetchall()
+        # 선택지는 출처처럼 필터를 타지 않은 질의에서 만든다. 필터 결과에서 뽑으면
+        # de를 고른 순간 목록이 de 하나가 되어 다른 언어로 되돌아갈 방법이 사라진다.
+        language_rows = conn.execute(
+            f"SELECT DISTINCT language FROM {RSS_CACHE_TABLE} "
+            f"WHERE visible = 1 AND language != '' AND {_HIDE_PRESS_RELEASE_SQL} ORDER BY language"
+        ).fetchall()
     deduped_rows = _dedupe_rss_rows(rows)
     total = len(deduped_rows)
     page_rows = deduped_rows[offset:offset + limit]
@@ -700,7 +706,7 @@ def rss_feed_payload(qs):
         "market": market,
         "language": language,
         "markets": ["US", "KR", "EUROPE", "JP", "GLOBAL", "UNKNOWN"],
-        "languages": sorted({str(row["language"]) for row in deduped_rows if str(row["language"] or "")}),
+        "languages": sorted({str(row["language"]) for row in language_rows if str(row["language"] or "")}),
         "has_more": offset + limit < total,
         "cache": cache_stats,
     }
@@ -763,7 +769,35 @@ def rss_retention_days():
     return normalize_days(rss_cfg.get("retentionDays"))
 
 
+# 옮기기 직후(재시작 전)에 수집·정리가 하는 일을 사용자에게 그대로 말한다. 조용히
+# 건너뛰면 자동 수집이 도는 줄 알고 며칠을 보낸다.
+WORKSPACE_MOVED_MESSAGE = (
+    "자료 위치를 옮겼습니다. 서버를 재시작하기 전까지는 RSS 수집과 보관 기간 정리를 "
+    "실행하지 않습니다 — 지금 수집하면 새 자료가 옛 폴더와 새 폴더로 갈립니다."
+)
+
+
+def _workspace_moved_skip():
+    return {
+        "output": WORKSPACE_MOVED_MESSAGE,
+        "added": 0,
+        "total": len(list(RSS_INBOX_DIR.glob("*.md"))) if RSS_INBOX_DIR.exists() else 0,
+        "skipped": "workspace_moved",
+        "cache": {},
+        "retention": {"deleted": 0, "skipped": "workspace_moved"},
+        "index": {},
+    }
+
+
 def _import_rssarchive_locked(run_collection=True, progress=None, extra_args=None):
+    if moved_pending_restart():
+        # 수집 서브프로세스는 표지를 읽어 **새** 폴더의 evidence DB에 쓰는데, 여기서
+        # 넘기는 `--archive-dir`(RSS_INBOX_DIR)은 import 시점에 굳은 **옛** 폴더다.
+        # 재시작 후에는 새 폴더만 읽으므로 이 창에서 모은 기사는 파일 없는 행으로만
+        # 남아 색인·브리핑에서 사라진다.
+        if progress:
+            progress(WORKSPACE_MOVED_MESSAGE, progress=100)
+        return _workspace_moved_skip()
     output = []
     before = len(list(RSS_INBOX_DIR.glob("*.md")))
     collector_created = None
@@ -868,6 +902,17 @@ def run_retention_now(progress=None):
     사용자가 부를 때 한다.
     """
     with _RSS_IMPORT_LOCK:
+        if moved_pending_restart():
+            # 정리 대상은 호출 시점에 판정한 **새** 폴더(방금 복사한 사본)인데, 이
+            # 프로세스의 색인과 피드 캐시는 옛 폴더를 본다. 그대로 지우면 옮겨 놓은
+            # 자료가 줄어든다.
+            if progress:
+                progress(WORKSPACE_MOVED_MESSAGE, progress=100)
+            return {
+                "retention": {"deleted": 0, "skipped": "workspace_moved"},
+                "skipped": "workspace_moved",
+                "output": WORKSPACE_MOVED_MESSAGE,
+            }
         days = rss_retention_days()
         if progress:
             progress("보관 기간이 지난 RSS 자료를 확인하는 중입니다.", progress=5)

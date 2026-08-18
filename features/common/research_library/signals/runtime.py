@@ -49,6 +49,11 @@ def promote_kr_rss_leads(data_dir: Path, *, max_age_hours: int = 24) -> int:
     db_path = default_db_path(data_dir)
     if not db_path.exists():
         return 0
+    # 보존 기간(일반 3일·워치리스트 14일·확인 30일)을 집행하는 유일한 실행 경로다.
+    # 0.5에서 signals 자동화 kind를 없애며 `collect_signals_once`가 호출부를 잃었고,
+    # 승격만 남아 lead가 무기한 쌓였다. lead 행은 `markdown_path`가 비어 있어
+    # `prune_orphan_evidence`도 걷어내지 못한다.
+    purge_expired(db_path)
     cutoff = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=max_age_hours)).isoformat()
     with sqlite3.connect(str(db_path)) as conn:
         conn.row_factory = sqlite3.Row
@@ -63,6 +68,9 @@ def promote_kr_rss_leads(data_dir: Path, *, max_age_hours: int = 24) -> int:
     for row in rows:
         try:
             tickers = json.loads(row["related_tickers"] or "[]")
+            # 보존 기간은 `normalize_signal`이 정한다. 여기서 안 넘기면 14일 계약이
+            # 3일로 굳고, 뒤이은 `upsert_signal(..., watchlist_related=)`는 이미 만들어진
+            # FastOriginSignal 입력이라 그 인자를 버린다.
             signal = normalize_signal({
                 "id": "sig_kr_" + str(row["id"]),
                 "provider": "kr_existing",
@@ -76,7 +84,7 @@ def promote_kr_rss_leads(data_dir: Path, *, max_age_hours: int = 24) -> int:
                 "related_tickers": tickers,
                 "reliability_tier": row["reliability_tier"],
                 "source_status": "active",
-            })
+            }, watchlist_related=bool(tickers))
             upsert_signal(db_path, signal, watchlist_related=bool(tickers))
             count += 1
         except (ValueError, TypeError, json.JSONDecodeError):

@@ -60,9 +60,11 @@ def test_cursor_query_pages_and_hides_body(tmp_path):
     db = tmp_path / "research-index.sqlite3"
     upsert_signal(db, normalize_signal(row()))
     upsert_signal(db, normalize_signal(row(url="https://example.test/b")))
-    page = query_signals(db, ticker="NVDA", market="US", limit=1)
+    # NOW 기준으로 묻는다. 조회가 보존 기간을 적용하므로 실제 시계로 물으면 이
+    # 고정 시각 lead는 이미 만료다.
+    page = query_signals(db, ticker="NVDA", market="US", limit=1, now=NOW)
     assert page["count"] == 1 and page["nextCursor"]
-    next_page = query_signals(db, ticker="NVDA", cursor=page["nextCursor"], limit=1)
+    next_page = query_signals(db, ticker="NVDA", cursor=page["nextCursor"], limit=1, now=NOW)
     assert next_page["count"] == 1
     assert "body" not in page["items"][0] and "summary" not in page["items"][0]
 
@@ -80,6 +82,101 @@ def test_retention_purge_is_lead_only(tmp_path):
     assert purge_expired(db, now=NOW) == 1
     with sqlite3.connect(db) as conn:
         assert conn.execute("SELECT count(*) FROM evidence_items WHERE id='ev'").fetchone()[0] == 1
+
+
+def test_the_rss_collection_enforces_the_retention_window(tmp_path):
+    """purge를 부르는 곳이 없어 보존 기간(3/14/30일)이 한 번도 집행되지 않았다.
+
+    0.5에서 signals 자동화 kind를 없애며 `collect_signals_once`가 호출부를 잃었고,
+    RSS 수집과 함께 도는 것은 승격뿐이었다. lead 행은 `markdown_path`가 비어 있어
+    `prune_orphan_evidence`도 걷어내지 못하므로 무기한 쌓인다.
+    """
+    from features.common.research_library.rss.store import save_evidence_item
+    from features.common.research_library.signals.runtime import promote_kr_rss_leads
+
+    db = tmp_path / "research-index.sqlite3"
+    stale = normalize_signal({
+        **row(received=NOW - dt.timedelta(days=200)),
+        "expires_at": NOW - dt.timedelta(days=190),
+    })
+    upsert_signal(db, stale)
+    fresh = dt.datetime.now(dt.timezone.utc).isoformat()
+    save_evidence_item(db, {
+        "id": "yna-1",
+        "collector": "rss",
+        "source_type": "news",
+        "source": "연합뉴스",
+        "title": "속보 헤드라인",
+        "url": "https://yna.test/1",
+        "normalized_url": "https://yna.test/1",
+        "published_at_utc": fresh,
+        "collected_at_utc": fresh,
+        "related_tickers": [],
+        "reliability_tier": 2,
+    }, "research-inbox/rss/2026-08-15 09-00-00 - 연합뉴스 - 속보.md")
+
+    assert promote_kr_rss_leads(tmp_path) == 1
+
+    with sqlite3.connect(db) as conn:
+        leads = [r[0] for r in conn.execute("SELECT id FROM evidence_items WHERE intake_stage='lead'")]
+        kept = conn.execute("SELECT count(*) FROM evidence_items WHERE id='yna-1'").fetchone()[0]
+    assert stale.id not in leads, "만료된 lead가 남았습니다"
+    assert "sig_kr_yna-1" in leads
+    assert kept == 1, "승격 대상 evidence 행은 건드리지 않는다"
+
+
+def test_a_lead_with_tickers_keeps_the_fourteen_day_window(tmp_path):
+    """보존 기간은 `normalize_signal`이 정한다 — 승격이 그 인자를 넘겨야 한다.
+
+    `upsert_signal(..., watchlist_related=True)`만 넘기면 소용이 없다. 이미 만들어진
+    FastOriginSignal 입력에서는 그 인자를 버리므로, 워치리스트 종목이 붙은 lead도
+    일반 lead와 같은 3일 만에 사라졌다.
+    """
+    from features.common.research_library.rss.store import save_evidence_item
+    from features.common.research_library.signals.runtime import promote_kr_rss_leads
+    from features.common.research_library.signals.schema import parse_time
+
+    db = tmp_path / "research-index.sqlite3"
+    fresh_dt = dt.datetime.now(dt.timezone.utc)
+    fresh = fresh_dt.isoformat()
+    for suffix, tickers in (("tagged", ["005930.KS"]), ("plain", [])):
+        save_evidence_item(db, {
+            "id": f"yna-{suffix}",
+            "collector": "rss",
+            "source_type": "news",
+            "source": "연합인포맥스",
+            "title": f"속보 헤드라인 {suffix}",
+            "url": f"https://einfomax.test/{suffix}",
+            "normalized_url": f"https://einfomax.test/{suffix}",
+            "published_at_utc": fresh,
+            "collected_at_utc": fresh,
+            "related_tickers": tickers,
+            "reliability_tier": 2,
+        }, f"research-inbox/rss/2026-08-15 09-00-00 - 연합인포맥스 - {suffix}.md")
+
+    assert promote_kr_rss_leads(tmp_path) == 2
+
+    with sqlite3.connect(db) as conn:
+        expiry = dict(conn.execute(
+            "SELECT id, expires_at_utc FROM evidence_items WHERE intake_stage='lead'"
+        ).fetchall())
+    assert parse_time(expiry["sig_kr_yna-tagged"]) - fresh_dt == dt.timedelta(days=14), "워치리스트 관련 lead는 14일을 유지한다"
+    assert parse_time(expiry["sig_kr_yna-plain"]) - fresh_dt == dt.timedelta(days=3), "일반 lead의 3일 기본값은 그대로다"
+
+
+def test_an_expired_lead_never_reaches_a_conversation(tmp_path):
+    """purge는 RSS 수집이 돌 때만 돈다. 그 사이 조회는 만료 lead를 돌려주면 안 된다 —
+    상담 context가 수개월 전 headline을 최신 신호로 싣는다."""
+    db = tmp_path / "research-index.sqlite3"
+    upsert_signal(db, normalize_signal({
+        **row(received=NOW - dt.timedelta(days=40), url="https://example.test/old"),
+        "expires_at": NOW - dt.timedelta(days=30),
+    }))
+    upsert_signal(db, normalize_signal(row(url="https://example.test/fresh")))
+
+    page = query_signals(db, ticker="NVDA", limit=50, now=NOW)
+
+    assert [item["url"] for item in page["items"]] == ["https://example.test/fresh"]
 
 
 def test_latency_rejects_clock_skew():
@@ -138,7 +235,7 @@ def test_signal_cursor_query_p95_is_below_150ms_for_100_rows(tmp_path):
     durations = []
     for _ in range(30):
         started = time.perf_counter()
-        page = query_signals(db, ticker="NVDA", market="US", limit=100)
+        page = query_signals(db, ticker="NVDA", market="US", limit=100, now=NOW)
         durations.append((time.perf_counter() - started) * 1000)
         assert page["count"] == 100
 

@@ -1150,6 +1150,89 @@ def test_target_feed_score_floors_at_the_archive_threshold():
     assert calculate_relevance_score(rich) == calculate_relevance_score(rich, {"media": "CNBC", "language": "en"})
 
 
+def test_stored_relevance_score_matches_the_gate_score(monkeypatch: pytest.MonkeyPatch):
+    """저장 점수는 게이트가 통과시킨 그 점수여야 한다.
+
+    feed·baseline 없이 다시 매기면 키워드 표가 읽지 못하는 언어(de·ja)의 바닥 처리가
+    빠진다. baseline으로 통과한 독일어 항목이 `evidence_items.relevance_score` 0점으로
+    저장되어, 저장된 값이 그 항목을 들인 이유와 어긋났다.
+    """
+    monkeypatch.setattr(
+        rss_archive, "collect_article_body",
+        lambda link, description: {"status": "summary_only", "summary": description, "full_text": ""},
+    )
+    feed = {
+        "media": "Handelsblatt", "default_market": "EUROPE", "language": "de",
+        "url": "https://handelsblatt.test/rss.xml", "reliability_tier": 2,
+    }
+    item = {
+        "title": "SAP hebt Prognose nach starkem Cloud-Wachstum an",
+        "description": "Der Softwarekonzern rechnet mit hoeherem Wachstum.",
+        "link": "https://handelsblatt.test/a",
+        "published_at_utc": None,
+    }
+    gate = calculate_relevance_score(item, feed, baseline=1.0)
+    assert gate == 1.0, "게이트는 바닥값으로 통과시킨다"
+
+    built = rss_archive.build_manifest_item((feed, item, None, 1.0))
+    assert built["relevance_score"] == gate
+    assert built["evidence"]["relevance_score"] == gate
+
+    # 한국어·영어 피드는 바닥 처리가 없으므로 기존 동작 그대로다.
+    kr_feed = {"media": "한국경제", "default_market": "KR", "language": "ko", "url": "https://hankyung.test/rss.xml"}
+    kr_item = {"title": "삼성전자 영업이익 10조 돌파", "description": "", "link": "https://hankyung.test/a", "published_at_utc": None}
+    kr_built = rss_archive.build_manifest_item((kr_feed, kr_item, None, 1.0))
+    assert kr_built["relevance_score"] == calculate_relevance_score(kr_item, kr_feed, baseline=1.0) > 1.0
+
+
+def test_language_options_do_not_shrink_to_the_active_filter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """언어 선택지는 출처처럼 필터를 타지 않은 질의에서 만든다.
+
+    필터 결과에서 뽑으면 de를 고른 순간 목록이 de 하나가 되어, 화면에서 다른 언어로
+    돌아갈 방법이 사라진다.
+    """
+    inbox = tmp_path / "rss"
+    inbox.mkdir()
+    for idx, (language, source, title) in enumerate((
+        ("de", "Handelsblatt", "SAP hebt Prognose an"),
+        ("ja", "Nikkei", "日経平均、半導体株高で反発"),
+    )):
+        md = evidence_markdown({
+            "id": f"rss_lang_{language}",
+            "collector": "rss",
+            "source_type": "news",
+            "source": source,
+            "title": title,
+            "url": f"https://example.com/{language}",
+            "normalized_url": f"https://example.com/{language}",
+            "published_at_utc": None,
+            "collected_at_utc": None,
+            "query": f"https://example.com/{language}.xml",
+            "query_source": "rss_feed",
+            "language": language,
+            "summary": title,
+            "collection_status": "summary_only",
+            "relevance_score": 3,
+            "related_tickers": [],
+            "related_themes": [],
+            "markets": ["GLOBAL"],
+            "narrative_ids": [],
+            "reliability_tier": 2,
+        })
+        (inbox / f"2026-08-04 2{idx}-00-00 - {source} - x.md").write_text(md, encoding="utf-8")
+    monkeypatch.setattr(rss_service, "RSS_INBOX_DIR", inbox)
+    monkeypatch.setattr(rss_service, "RESEARCH_DB_PATH", tmp_path / "research-index.sqlite3")
+    monkeypatch.setattr(rss_service, "_RSS_CACHE_LAST_REFRESH", 0.0)
+    monkeypatch.setattr(rss_service, "_RSS_CACHE_MEDIA_REPAIRED", False)
+
+    unfiltered = rss_service.rss_feed_payload({"limit": ["20"], "offset": ["0"]})
+    assert unfiltered["languages"] == ["de", "ja"]
+
+    filtered = rss_service.rss_feed_payload({"limit": ["20"], "offset": ["0"], "language": ["de"]})
+    assert [item["language"] for item in filtered["items"]] == ["de"], "목록은 고른 언어만 보여준다"
+    assert filtered["languages"] == ["de", "ja"], "선택지는 좁아지지 않는다"
+
+
 def test_rss_feed_payload_filters_by_language():
     """국가 필터는 없앴다. 언어는 원문을 읽을 수 있는 항목만 추릴 때 쓴다."""
     from features.common.research_library.rss.service import _cache_where
