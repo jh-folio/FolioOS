@@ -556,8 +556,13 @@ def build_financial_quality_analysis(sec_summary: dict, market_data: dict | None
     dividends = _latest_number(sec_summary, "Dividends Paid")
 
     fcf = _latest_metric_value(sec_summary, market_data, "Free Cash Flow")
-    if fcf is None and cfo is not None and capex is not None:
-        fcf = cfo - capex
+    if fcf is None:
+        # 같은 해일 때만 뺀다. 연도가 갈리면 FCF를 만들지 않고 결측으로 남긴다.
+        # 밸류에이션 표는 "확인 필요"인데 품질 표만 연도 섞인 FCF로 판단을 내면 안 된다.
+        cfo_value, cfo_year = _latest_metric_entry(sec_summary, market_data, "Operating Cash Flow")
+        capex_value, capex_year = _latest_metric_entry(sec_summary, market_data, "Capital Expenditure")
+        if cfo_value is not None and capex_value is not None and cfo_year and cfo_year == capex_year:
+            fcf = cfo_value - capex_value
     fcf_margin = _ratio(fcf, revenue)
     cfo_to_operating_income = _ratio(cfo, operating_income)
     cfo_to_net_income = _ratio(cfo, net_income)

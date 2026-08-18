@@ -32,7 +32,7 @@ Wall St Engine, First Squawk, TradingView 뉴스, scraping, 제3자 RSS 변환�
 
 ## 저장 경계
 
-`data/research-index.sqlite3::evidence_items`에 `intake_stage=lead`로 metadata만 저장합니다. 기사 본문, HTML, 이미지, provider raw payload, 인증 URL·token은 저장하지 않습니다. 일반 lead는 72시간, Watchlist/Portfolio 관련 lead는 14일, 확인된 lead는 30일 보존합니다.
+`data/research-index.sqlite3::evidence_items`에 `intake_stage=lead`로 metadata만 저장합니다. 기사 본문, HTML, 이미지, provider raw payload, 인증 URL·token은 저장하지 않습니다. 일반 lead는 72시간, 티커가 연결된 lead는 14일, 확인된 lead는 30일 보존합니다(연결된 티커가 워치리스트·포트폴리오에 있는지는 따로 보지 않습니다).
 
 보존 기간은 두 곳에서 집행합니다. `promote_kr_rss_leads()`가 승격 전에 `purge_expired()`로 기간이 지난 lead 행을 지우고(RSS 수집과 함께 돕니다), `query_signals()`는 아직 지워지지 않은 만료 lead도 결과에서 뺍니다 — purge는 수집이 돌 때만 도는데 대화 context(`sourceContext.fastSignals`)는 그 사이에도 조회하므로, 수개월 전 headline이 최신 신호처럼 실리면 안 됩니다. lead 행은 `markdown_path`가 비어 있어 `retention.prune_orphan_evidence()`가 걷어내지 못합니다.
 

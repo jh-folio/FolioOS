@@ -89,9 +89,9 @@ def test_single_market_briefing_replaces_the_combined_checkpoints():
     ]
 
 
-def _scope_result(scope):
+def _scope_result(scope, *, with_section=True):
     return {
-        "markdown": _section(scope),
+        "markdown": _section(scope) if with_section else f"# {scope} briefing body\n\n본문만 있다\n",
         "sessionMode": f"{scope}_close",
         "marketSessionDate": "2026-06-19",
         "sources": [],
@@ -106,10 +106,11 @@ def _scope_result(scope):
     }
 
 
-def _patches():
+def _patches(missing=()):
     """`checkpoints_from_markdown`과 `data_gaps_from_messages`는 일부러 두지 않는다.
 
     기존 저장 테스트는 둘 다 stub해서 이 경로를 한 번도 밟지 않았다.
+    `missing`에 든 시장은 체크포인트 섹션이 없는 본문을 낸다.
     """
     return [
         patch.object(builder, "build_index"),
@@ -124,7 +125,10 @@ def _patches():
         patch.object(builder, "preflight_from_context", return_value={}),
         patch.object(builder, "list_briefing_memories", return_value=[]),
         patch.object(builder, "load_prev_briefing", return_value=None),
-        patch.object(builder, "_scope_result", side_effect=lambda scope, *a, **k: _scope_result(scope)),
+        patch.object(
+            builder, "_scope_result",
+            side_effect=lambda scope, *a, **k: _scope_result(scope, with_section=scope not in missing),
+        ),
         patch.object(builder, "leading_company_subjects_from_markdown", return_value=[]),
         patch.object(
             builder, "collect_briefing_visuals",
@@ -137,19 +141,30 @@ def _patches():
     ]
 
 
+def _build_all_markets(root, missing=()):
+    patches = [patch.object(builder, "BRIEFINGS_DIR", root), *_patches(missing)]
+    for item in patches:
+        item.start()
+    try:
+        return builder.build_briefing(
+            "2026-06-20", persist=True, markets=list(SINGLE_MARKET_SCOPES), llm_override=False,
+        )
+    finally:
+        for item in reversed(patches):
+            item.stop()
+
+
+def _gap_messages(saved):
+    return [
+        str(gap.get("message") or gap.get("description") or gap)
+        for gap in saved.get("dataGaps") or []
+    ]
+
+
 def test_each_saved_market_file_carries_only_its_own_checkpoints():
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
-        patches = [patch.object(builder, "BRIEFINGS_DIR", root), *_patches()]
-        for item in patches:
-            item.start()
-        try:
-            builder.build_briefing(
-                "2026-06-20", persist=True, markets=list(SINGLE_MARKET_SCOPES), llm_override=False,
-            )
-        finally:
-            for item in reversed(patches):
-                item.stop()
+        _build_all_markets(root)
 
         for scope in SINGLE_MARKET_SCOPES:
             saved = json.loads(
@@ -159,7 +174,29 @@ def test_each_saved_market_file_carries_only_its_own_checkpoints():
             assert sections == {f"6. 다음 {MARKET_LABELS[scope]} 체크포인트"}, scope
             assert len(saved["checkpoints"]) == 2, scope
             # 섹션을 찾았으므로 없는 갭이 붙으면 안 된다.
+            assert not any("체크포인트 섹션" in text for text in _gap_messages(saved)), scope
+
+
+# --- 시장별 갭 --------------------------------------------------------------
+
+
+def test_one_market_without_a_section_leaves_its_own_gap():
+    """갭이 합본 기준이면 한 시장만 비었을 때 그 사실이 어디에도 남지 않는다."""
+    with TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _build_all_markets(root, missing=("jp",))
+
+        missing_saved = json.loads(next(root.glob("*.jp.json")).read_text(encoding="utf-8"))
+        assert missing_saved["checkpoints"] == []
+        assert f"{MARKET_LABELS['jp']}: 체크포인트 섹션을 찾지 못했습니다." in _gap_messages(missing_saved)
+        # 합본에는 체크포인트가 남아 있으므로 예전 전체 갭 문구는 붙지 않는다.
+        assert not any(
+            text.startswith("브리핑에서 구조화 가능한") for text in _gap_messages(missing_saved)
+        )
+
+        for scope in ("us", "kr", "europe"):
+            saved = json.loads(next(root.glob(f"*.{scope}.json")).read_text(encoding="utf-8"))
+            assert len(saved["checkpoints"]) == 2, scope
             assert not any(
-                "체크포인트 섹션" in str(gap.get("description") or gap.get("message") or gap)
-                for gap in saved.get("dataGaps") or []
+                text.startswith(f"{MARKET_LABELS[scope]}: 체크포인트") for text in _gap_messages(saved)
             ), scope

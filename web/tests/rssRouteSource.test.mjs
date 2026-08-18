@@ -45,6 +45,19 @@ test("market options cover the 0.5 markets", async () => {
   }
 });
 
+test("건너뛴 수집은 '신규 0개'가 아니라 건너뛴 이유를 말한다", async () => {
+  const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");
+
+  // 자료 위치를 옮긴 뒤 재시작 전까지 수집은 쉰다. 그 사실을 말하지 않으면 화면이
+  // "RSS 수집 완료. 신규 0개"로 그려 자동 수집이 도는 줄 알고 며칠을 보낸다.
+  const body = source.slice(source.indexOf("async function importRss"), source.indexOf("const currentPage"));
+  assert.match(body, /done\.result\?\.skipped === "workspace_moved"/);
+  assert.match(body, /setStatus\(WORKSPACE_MOVED_NOTICE\)/);
+  // 안내는 건너뛴 분기가 완료 문구보다 먼저 와야 한다.
+  assert.ok(body.indexOf("workspace_moved") < body.indexOf("RSS 수집 완료."));
+  assert.match(source, /WORKSPACE_MOVED_NOTICE =[\s\S]{0,200}재시작/);
+});
+
 test("검색 결과에는 페이지네이션과 쪽수를 붙이지 않는다", async () => {
   const source = await readFile(new URL("../src/app/RssRoute.tsx", import.meta.url), "utf8");
 

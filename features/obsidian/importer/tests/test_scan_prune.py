@@ -52,6 +52,27 @@ def test_renamed_note_is_not_counted_twice(tmp_path):
 
 
 def test_deleted_note_leaves_no_hypothesis_row(tmp_path):
+    """Vault에 다른 노트가 남아 있으면 지운 노트의 행은 정리된다."""
+    vault, db = tmp_path / "vault", tmp_path / "memory.sqlite3"
+    note = _write(vault, "Thesis/NVDA Company Thesis.md")
+    _write(vault, "Memo/시장 메모.md", THESIS.replace("NVDA", "AMD").replace("NVIDIA", "AMD"))
+    S.scan_vault(db_path=db, vault=vault)
+
+    note.unlink()
+    summary = S.scan_vault(db_path=db, vault=vault)
+
+    assert summary["scanned"] == 1
+    assert summary["removed"] == 1
+    assert summary["pruneSkipped"] == ""
+    assert _hypotheses(db) == []
+
+
+def test_empty_scan_does_not_prune_the_index(tmp_path):
+    """rglob 0건은 삭제가 아니다.
+
+    동기화 placeholder·마운트 직후 Vault가 비어 보이면 예전에는 note_index 전 행이
+    지워졌고, 호출자가 예외를 삼켜 overlay가 조용히 "연결된 노트 없음"으로 성공했다.
+    """
     vault, db = tmp_path / "vault", tmp_path / "memory.sqlite3"
     note = _write(vault, "Thesis/NVDA Company Thesis.md")
     S.scan_vault(db_path=db, vault=vault)
@@ -60,8 +81,9 @@ def test_deleted_note_leaves_no_hypothesis_row(tmp_path):
     summary = S.scan_vault(db_path=db, vault=vault)
 
     assert summary["scanned"] == 0
-    assert summary["removed"] == 1
-    assert _hypotheses(db) == []
+    assert summary["removed"] == 0
+    assert summary["pruneSkipped"] == "vault_empty"
+    assert len(_hypotheses(db)) == 1
 
 
 def test_unreadable_file_still_counts_as_seen(tmp_path, monkeypatch):

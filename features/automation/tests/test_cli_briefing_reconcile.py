@@ -71,6 +71,34 @@ def test_submitted_row_blocks_duplicate_submission_while_job_runs(tmp_path, monk
     assert service.schedule_due(_schedule(), settings=normalize_settings({}), now=now, runs=runs) is False
 
 
+def test_committing_job_is_still_in_flight(tmp_path, monkeypatch):
+    """커밋 중은 종료가 아니다.
+
+    JobStatus에는 committing이 있는데 reconcile의 in-flight 집합에는 없어서, 저장
+    구간(시장 4개면 수 초)에 주기가 걸리면 행이 failed로 못박혔다. 그 뒤 job이
+    done이 되어도 행은 submitted를 이미 벗어나 영원히 실패로 남고, 30분 뒤 같은
+    브리핑이 한 번 더 만들어진다.
+    """
+    monkeypatch.setattr(service, "RUNS_PATH", tmp_path / "automation-runs.json")
+    service.write_json(service.RUNS_PATH, [_submitted_row()])
+    monkeypatch.setattr(service, "get_job", lambda job_id: {"status": "committing"})
+
+    service._reconcile_submitted_briefings()
+
+    runs = service.list_runs(100)
+    assert runs[0]["status"] == "submitted"
+    assert "error" not in runs[0]
+    now = dt.datetime(2026, 8, 14, 8, 40)
+    assert service.schedule_due(_schedule(), settings=normalize_settings({}), now=now, runs=runs) is False
+
+    # 커밋이 끝나면 그때 done으로 확정된다 — 결과가 사라지지 않는다.
+    monkeypatch.setattr(
+        service, "get_job", lambda job_id: {"status": "done", "finishedAt": "2026-08-14T08:05:00"}
+    )
+    service._reconcile_submitted_briefings()
+    assert service.list_runs(1)[0]["status"] == "done"
+
+
 def test_failed_job_revives_retry_and_marks_run_failed(tmp_path, monkeypatch):
     monkeypatch.setattr(service, "RUNS_PATH", tmp_path / "automation-runs.json")
     service.write_json(service.RUNS_PATH, [_submitted_row()])

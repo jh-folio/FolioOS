@@ -67,6 +67,9 @@ def worker_projection(result) -> dict[str, str | int | bool | None]:
         "artifactId",
         "savedCount",
         "snapshotId",
+        # 건너뛴 이유는 결과에 남아야 한다. 떨어뜨리면 화면이 "수집 완료. 신규 0개"로
+        # 그려서 조용한 건너뛰기가 된다(§6 절대 규칙 2).
+        "skipped",
     }
     projected = {
         key: value

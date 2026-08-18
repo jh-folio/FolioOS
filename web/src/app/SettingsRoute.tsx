@@ -331,6 +331,9 @@ function runOutcome(run: AutomationRun | undefined) {
     const reason = run.errorReason || "";
     return { tone: "is-failed", text: `${when} 실패${reason ? ` — ${reason}` : ""}` };
   }
+  // CLI 제출은 완료가 아니라 제출이다. 아직 도는 job을 완료로 그리면, 뒤이어 실패로
+  // 바뀌는 행이 화면에서는 성공으로 남는다.
+  if (run.status === "submitted") return { tone: "", text: `${when} 제출됨 — 생성 중` };
   return { tone: "is-done", text: `${when} 완료` };
 }
 
@@ -691,7 +694,10 @@ function WorkspacePanel() {
       setNote(
         `자료 ${result.fileCount}개를 ${result.path}(으)로 복사했습니다. ` +
         `서버를 재시작해야 새 위치를 사용합니다. 원본은 ${result.previousPath}에 그대로 있으니 ` +
-        "새 위치에서 자료가 잘 보이는지 확인한 뒤 지우세요.",
+        "새 위치에서 자료가 잘 보이는지 확인한 뒤 지우세요. " +
+        // 서버가 collectionPausedUntilRestart로 알리는 사실이다. 말하지 않으면 그 창에서
+        // 수집 버튼이 아무것도 모으지 않는 이유를 알 길이 없다.
+        "재시작 전까지는 RSS 수집과 보관 기간 정리가 일시정지됩니다.",
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "옮기지 못했습니다.";

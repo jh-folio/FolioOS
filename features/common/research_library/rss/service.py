@@ -851,6 +851,15 @@ def _import_rssarchive_locked(run_collection=True, progress=None, extra_args=Non
         # 인덱서도 피드 캐시도 evidence 표는 건드리지 않는다. 재색인 뒤에 정리해야
         # 파일이 사라진 행만 정확히 남는다.
         retention["evidencePruned"] = prune_orphan_evidence()
+    # 한국 lead 승격은 이미 수집한 evidence 행을 다시 읽을 뿐 네트워크도 자격증명도
+    # 쓰지 않는다. 이 호출이 lead 보존 기간(3/14/30일)을 집행하는 유일한 경로이므로
+    # automation kind rss에만 두면 수동 수집·시장 재개 수집에서는 lead가 무기한 쌓인다.
+    try:
+        from features.common.research_library.signals.runtime import promote_kr_rss_leads
+
+        promote_kr_rss_leads(data_dir())
+    except Exception:
+        pass
     try:
         from features.dashboard.story_share import invalidate_story_share_cache
 

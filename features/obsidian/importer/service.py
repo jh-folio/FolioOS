@@ -33,7 +33,7 @@ def scan_vault(db_path=None, vault=None) -> dict:
     conn = idx.connect(db_path)
     summary = {
         "scanned": 0, "hypotheses": 0, "self_generated": 0, "unknown": 0, "removed": 0,
-        "vault": str(vault),
+        "pruneSkipped": "", "vault": str(vault),
     }
     seen: set[str] = set()
     try:
@@ -63,7 +63,15 @@ def scan_vault(db_path=None, vault=None) -> dict:
                 summary["unknown"] += 1
         # 재스캔은 Vault의 현재 상태를 반영해야 한다. 생성만 반영하고 삭제·이름변경을
         # 두면 없는 노트가 hypothesis로 남는다.
-        summary["removed"] = idx.prune_missing_notes(conn, seen)
+        #
+        # 단 파일이 **하나도** 안 보이면 삭제로 보지 않는다. 클라우드 동기화 placeholder,
+        # 마운트 직후, 경로가 잠깐 비는 상황이 모두 rglob 0건으로 나타나고, 그때 정리하면
+        # note_index 전 행이 지워진다. 호출자 4곳이 예외를 조용히 삼키므로 사용자에게는
+        # 오류 없이 "연결된 노트 없음"으로만 보인다(§6 절대 규칙 2).
+        if seen:
+            summary["removed"] = idx.prune_missing_notes(conn, seen)
+        else:
+            summary["pruneSkipped"] = "vault_empty"
         return summary
     finally:
         conn.close()

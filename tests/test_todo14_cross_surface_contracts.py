@@ -73,8 +73,11 @@ NON_ARTIFACT_CASES = {
         {"status": "done", "count": 7, "generatedAt": "2026-07-22T03:04:05Z", "incremental": True, "sqlite": "fixture.sqlite3"},
     ),
     TaskType.RSS: (
+        # `skipped`는 건너뛴 이유(코드)다. 정상 수집에서는 비어 있고, 워크스페이스를
+        # 옮긴 직후처럼 건너뛴 실행에서만 채워진다 — 없으면 화면이 그 실행을
+        # "수집 완료. 신규 0개"로 그린다.
         {"added": 2, "total": 5, "failed": 1},
-        {"status": "done", "added": 2, "total": 5, "failed": 1},
+        {"status": "done", "added": 2, "total": 5, "failed": 1, "skipped": None},
     ),
     TaskType.SETUP: (
         {"ok": False, "adapter": "antigravity"},

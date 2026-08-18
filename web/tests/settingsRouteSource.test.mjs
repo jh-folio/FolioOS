@@ -76,6 +76,27 @@ test("each settings panel reports its own outcome next to its own button", async
   assert.doesNotMatch(source, /setStatus\(/);
 });
 
+test("제출된 실행은 완료가 아니라 생성 중으로 보인다", async () => {
+  const source = await readFile(new URL("../src/app/SettingsRoute.tsx", import.meta.url), "utf8");
+
+  // CLI 브리핑은 job을 띄우고 바로 돌아온다. 그 행을 완료로 그리면, 뒤이어 실패로
+  // 바뀌는 실행이 화면에서는 계속 성공으로 남는다.
+  const body = source.slice(source.indexOf("function runOutcome"), source.indexOf("/** 브리핑 예약 목록."));
+  assert.match(body, /run\.status === "submitted"/);
+  assert.match(body, /제출됨 — 생성 중/);
+  // 중립 tone이다 — 아직 성공도 실패도 아니다.
+  assert.match(body, /run\.status === "submitted"\) return \{ tone: "",/);
+});
+
+test("자료를 옮긴 뒤 수집·정리가 쉰다는 사실을 안내에 남긴다", async () => {
+  const source = await readFile(new URL("../src/app/SettingsRoute.tsx", import.meta.url), "utf8");
+
+  // 서버는 collectionPausedUntilRestart로 알리는데 소비자가 없었다. 말하지 않으면
+  // 그 창에서 수집 버튼이 아무것도 모으지 않는 이유를 알 길이 없다.
+  const body = source.slice(source.indexOf("const move = async"), source.indexOf("const reveal = async"));
+  assert.match(body, /재시작 전까지는 RSS 수집과 보관 기간 정리가 일시정지됩니다/);
+});
+
 test("AppShell renders SettingsRoute on the settings route", async () => {
   const source = await readFile(new URL("../src/app/AppShell.tsx", import.meta.url), "utf8");
 

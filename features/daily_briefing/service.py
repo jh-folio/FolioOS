@@ -1339,18 +1339,31 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
     return reader_facing_briefing_markdown(markdown)
 
 
+# 옛 브리핑에만 남아 있는 제목. 시장 라벨에서 파생되지 않으므로 따로 적는다.
+_PREV_CHECKLIST_LEGACY_HEADINGS = ("다음 시장 체크포인트", "오늘의 투자 체크리스트")
+# 제목 목록을 손으로 나열하면 새 시장만 조용히 빈다. 실제로 `미국장|한국장|시장`만
+# 적혀 있는 동안, 유럽·일본 파일이 그날 최신이면 `load_prev_briefing()`이 시장 무관
+# 최신 파일을 돌려주므로 **미국장·한국장 생성에서도** 전일 체크포인트 블록이 비었다.
+_PREV_CHECKLIST_RE = re.compile(
+    r"#{1,3}\s*(?:\d+\.\s*)?(?:"
+    + "|".join(
+        re.escape(heading)
+        for heading in (*briefing_checkpoint_headings(), *_PREV_CHECKLIST_LEGACY_HEADINGS)
+    )
+    + r")\s*\n([\s\S]*?)(?=\n#{1,3}\s|\Z)",
+    re.IGNORECASE,
+)
+
+
 def extract_prev_checklist(markdown):
     """브리핑 Markdown에서 다음 거래일 확인 항목 섹션을 추출한다.
 
-    개선된 브리핑은 '내일 확인할 체크포인트'를, 기존 브리핑은 '오늘의 투자
-    체크리스트'를 사용하므로 두 제목을 모두 인식한다. 섹션 번호(예: '6. ')가
-    붙어도 매칭되고, 다음 H1~H3 제목 직전까지 본문을 가져온다.
+    제목은 `briefing_checkpoint_headings()`(MARKET_LABELS 파생)에서 조립해 네 시장을
+    모두 커버하고, 옛 브리핑의 '오늘의 투자 체크리스트'·'다음 시장 체크포인트'도
+    함께 인식한다. 섹션 번호(예: '6. ')가 붙어도 매칭되고, 다음 H1~H3 제목 직전까지
+    본문을 가져온다.
     """
-    m = re.search(
-        r"#{1,3}\s*(?:\d+\.\s*)?(?:내일 확인할 체크포인트|다음 (?:미국장|한국장|시장) 체크포인트|오늘의 투자 체크리스트)\s*\n([\s\S]*?)(?=\n#{1,3}\s|\Z)",
-        str(markdown or ""),
-        re.IGNORECASE,
-    )
+    m = _PREV_CHECKLIST_RE.search(str(markdown or ""))
     return m.group(1).strip() if m else ""
 
 

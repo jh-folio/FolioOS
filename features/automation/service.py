@@ -501,7 +501,10 @@ def _reconcile_submitted_briefings_locked() -> None:
             changed = True
             continue
         job_status = str(job.get("status") or "").strip()
-        if job_status in {"queued", "running", "cancel_requested"}:
+        # committing도 아직 도는 상태다(JobStatus에 있다). 커밋 구간에 reconcile 주기가
+        # 걸리면 여기서 failed로 못박혀 뒤이은 done이 영원히 반영되지 않고, 30분 뒤
+        # 같은 브리핑이 한 번 더 만들어진다.
+        if job_status in {"queued", "running", "cancel_requested", "committing"}:
             continue
         row["status"] = "done" if job_status == "done" else "failed"
         if row["status"] == "failed":

@@ -5,6 +5,11 @@ evidenceRole은 코드에서 검증한다. 자유 텍스트 분류를 그대로 
 """
 from __future__ import annotations
 
+import re
+
+# 주제 라벨 상한. planner._SUBJECT_MAX와 같은 값이며, 넘을 때만 주제어 추출로 줄인다.
+_TOPIC_LABEL_MAX = 40
+
 REPORT_TYPE_CHOICES = {
     "macro_analysis",
     "cross_asset_analysis",
@@ -127,11 +132,20 @@ def _normalized_label(value: str) -> str:
     LLM이 배경 문단을 통째로 topicLabel에 넣어도 여기서 첫 구획으로 끊는다.
     검색어에는 `_clean_queries()` 게이트가 있는데 제목에는 없어 200자가 그대로
     보고서 제목·저장 라벨이 됐다.
+
+    이 게이트는 **상한이지 무조건 절단이 아니다**. 40자 이내면 그대로 둔다 —
+    `AI 데이터센터: 전력 병목`처럼 짧고 변별력 있는 라벨까지 첫 구획에서 자르면
+    planHash로 파일이 갈린 같은 날 두 보고서가 화면에서 글자까지 같은 카드가 된다.
     """
     # planner가 topic_schema를 import하므로 순환을 피해 호출 시점에 가져온다.
     from features.topic_report.planner import topic_subject
 
-    return topic_subject(value)
+    # 라벨은 한 줄이다. 예전에는 topic_subject()가 줄바꿈에서 끊어 주었으므로,
+    # 짧은 라벨을 그대로 두는 지금은 여기서 공백을 접어야 제목이 여러 줄이 되지 않는다.
+    value = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(value) <= _TOPIC_LABEL_MAX:
+        return value
+    return topic_subject(value) or value[:_TOPIC_LABEL_MAX]
 
 
 def normalize_topic_plan(plan: dict | None, *, topic: str = "", topic_label: str = "") -> dict:

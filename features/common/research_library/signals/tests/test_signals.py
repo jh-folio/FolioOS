@@ -160,8 +160,46 @@ def test_a_lead_with_tickers_keeps_the_fourteen_day_window(tmp_path):
         expiry = dict(conn.execute(
             "SELECT id, expires_at_utc FROM evidence_items WHERE intake_stage='lead'"
         ).fetchall())
-    assert parse_time(expiry["sig_kr_yna-tagged"]) - fresh_dt == dt.timedelta(days=14), "워치리스트 관련 lead는 14일을 유지한다"
+    # 14일 기준은 "티커가 붙었는가"다. 워치리스트·포트폴리오 보유 여부는 보지 않는다.
+    assert parse_time(expiry["sig_kr_yna-tagged"]) - fresh_dt == dt.timedelta(days=14), "티커가 연결된 lead는 14일을 유지한다"
     assert parse_time(expiry["sig_kr_yna-plain"]) - fresh_dt == dt.timedelta(days=3), "일반 lead의 3일 기본값은 그대로다"
+
+
+def test_the_manual_collection_button_enforces_the_lead_window_too(monkeypatch):
+    """승격·purge는 automation kind rss에서만 돌고 있었다.
+
+    RSS 자동 수집을 끄고 `RSS 수집` 버튼만 쓰는 구성에서는 보존 계약이 한 번도
+    집행되지 않는다 — lead 행은 `markdown_path`가 비어 있어 `prune_orphan_evidence`도
+    걷어내지 못하므로 무기한 쌓인다. 수집 경로가 하나이므로 승격도 거기에 둔다.
+    """
+    from features.common.research_library.rss import service
+    from features.common.research_library.signals import runtime
+
+    called: list = []
+    monkeypatch.setattr(runtime, "promote_kr_rss_leads", lambda data_dir, **_kw: called.append(data_dir) or 0)
+    monkeypatch.setattr(service, "delete_expired_rss", lambda *_a, **_k: {"deleted": 0})
+    monkeypatch.setattr(service, "refresh_rss_feed_cache", lambda **_k: {})
+    monkeypatch.setattr(service, "build_index", lambda **_k: {})
+
+    service.import_rssarchive(run_collection=False)
+
+    assert called, "수동 수집 경로가 lead 승격·purge를 부르지 않았다"
+
+
+def test_a_failing_promotion_never_fails_the_collection(monkeypatch):
+    """lead는 evidence 이전 단계다. 승격이 넘어져도 수집 결과를 버리지 않는다."""
+    from features.common.research_library.rss import service
+    from features.common.research_library.signals import runtime
+
+    def _boom(*_a, **_k):
+        raise RuntimeError("db locked")
+
+    monkeypatch.setattr(runtime, "promote_kr_rss_leads", _boom)
+    monkeypatch.setattr(service, "delete_expired_rss", lambda *_a, **_k: {"deleted": 0})
+    monkeypatch.setattr(service, "refresh_rss_feed_cache", lambda **_k: {})
+    monkeypatch.setattr(service, "build_index", lambda **_k: {})
+
+    assert "added" in service.import_rssarchive(run_collection=False)
 
 
 def test_an_expired_lead_never_reaches_a_conversation(tmp_path):

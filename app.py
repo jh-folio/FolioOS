@@ -214,6 +214,8 @@ from features.obsidian.workflow.service import (
     read_workflow_note,
     validate_workflow_notes,
 )
+from features.common.canonical_identity import CanonicalIdentityError
+from features.common.canonical_reports import CanonicalConflictError, CanonicalValidationError
 from features.personal_overlay.service import (
     attach_overlay_to_briefing,
     attach_overlay_to_report,
@@ -417,6 +419,19 @@ def query_lists(request: Request):
 
 def request_generation_mode(_payload: dict | None) -> str:
     return default_generation_mode()
+
+
+def canonical_write_http_error(exc: Exception) -> HTTPException:
+    """Canonical 커밋 예외를 HTTP로 옮긴다.
+
+    동시 커밋(제안 승인·예약 생성)이나 정체성 불일치는 서버 고장이 아니라 충돌이다.
+    500으로 나가면 화면이 "다시 시도"밖에 말할 수 없다. 포트폴리오 409와 같은 모양으로
+    `{"code": ...}`를 실어 화면이 무엇이 어긋났는지 말할 수 있게 한다.
+    """
+    return HTTPException(
+        status_code=409,
+        detail={"code": getattr(exc, "code", "canonical_write_failed"), "message": str(exc)},
+    )
 
 
 _RESTART_REQUESTED = False
@@ -706,6 +721,8 @@ def api_briefing_personal_overlay(date: str, marketScope: str = "both", body: di
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Briefing not found")
+    except (CanonicalConflictError, CanonicalValidationError, CanonicalIdentityError) as exc:
+        raise canonical_write_http_error(exc) from exc
 
 
 @fastapi_app.get("/api/content-revisions")
@@ -813,6 +830,8 @@ def api_analysis_personal_overlay(report_id: str, body: dict | None = Body(defau
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Analysis report not found")
+    except (CanonicalConflictError, CanonicalValidationError, CanonicalIdentityError) as exc:
+        raise canonical_write_http_error(exc) from exc
 
 
 @fastapi_app.get("/api/theses")
@@ -1219,6 +1238,8 @@ def api_research_quality_recheck(artifact_type: str, artifact_id: str):
         return recheck_research_quality(artifact_type, artifact_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Artifact not found")
+    except (CanonicalConflictError, CanonicalValidationError, CanonicalIdentityError) as exc:
+        raise canonical_write_http_error(exc) from exc
 
 
 @fastapi_app.post("/api/quality-generation/preflight")

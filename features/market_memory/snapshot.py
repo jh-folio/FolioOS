@@ -73,6 +73,8 @@ MAX_SOURCE_REFS = 60
 # 시장별 뷰 키. 시장 계약에서 파생해 새 시장이 자동으로 포함된다.
 MARKET_VIEW_KEYS = tuple(market.value.lower() for market in PRODUCT_MARKETS)
 RSS_CONTEXT_LIMIT = 120
+# 이 아래로는 시장 판단을 뒷받침할 근거가 부족하다고 보고 컨텍스트에 경고를 남긴다.
+RSS_CANDIDATE_MIN = 8
 
 
 def _text(value, limit: int = 500) -> str:
@@ -659,16 +661,13 @@ def build_market_state_context(
     market_scope: str = "overall",
     db_path: str | Path = MARKET_MEMORY_DB_PATH,
 ) -> dict:
-    if rss_items is None:
-        from features.common.research_library.rss.service import rss_feed_payload
-
-        payload = rss_feed_payload({"limit": [str(RSS_CONTEXT_LIMIT)], "offset": ["0"]})
-        rss_items = payload.get("items", [])
-    if states is None:
-        states = list_states(db_path, status="current", limit=12)
     market_scope = str(market_scope or "overall").strip().lower()
     if market_scope not in {"overall", *MARKET_VIEW_KEYS}:
         market_scope = "overall"
+    if rss_items is None:
+        rss_items = _fetch_scoped_rss_items(market_scope)
+    if states is None:
+        states = list_states(db_path, status="current", limit=12)
     all_candidates = [
         candidate
         for index, item in enumerate((rss_items or [])[:RSS_CONTEXT_LIMIT], 1)
@@ -691,6 +690,9 @@ def build_market_state_context(
         macro_snapshot=macro_snapshot,
         fetch_live=include_market_macro and market_tape is None and macro_snapshot is None,
     ) if include_market_macro else {"marketTape": {}, "macroSnapshot": {}}
+    evidence_coverage = _evidence_coverage(rss_candidates, market_scope)
+    # 경고는 컨텍스트 어딘가가 아니라 instruction 안에 있어야 모델이 먼저 읽는다.
+    sparse_note = (" " + " ".join(evidence_coverage["warnings"])) if evidence_coverage["warnings"] else ""
     return {
         "instruction": (
             "Synthesize one medium-term MarketStateSnapshot for Folio OS. "
@@ -702,8 +704,10 @@ def build_market_state_context(
             "Financial market data is supporting evidence only; if marketTape or macroSnapshot is missing, stale, sparse, or hard to match, do not turn that into user-facing uncertainties. "
             "Each rssCandidate has markets tags (US/KR/GLOBAL/UNKNOWN). The list is already filtered for this marketScope, except overall keeps the broad pool. "
             "LLM should choose the important drivers from rssCandidates, marketTape, macroSnapshot, and existingStates, invalidate existingStates when new evidence contradicts them, then return judgment with evidence, counter-evidence, uncertainty, watch items, and marketViews for overall/us/kr/europe/jp when supported."
+            + sparse_note
         ),
         "marketScope": market_scope,
+        "evidenceCoverage": evidence_coverage,
         "marketDataPolicy": {
             "role": "supporting evidence only",
             "use": "Use marketTape and macroSnapshot to confirm, weaken, or qualify news-driven market interpretation.",
@@ -744,6 +748,75 @@ def build_market_state_context(
         "sourceRefs": source_refs,
         "inputWatermarks": capture_input_watermarks(Path(db_path).parent / "research-index.sqlite3"),
     }
+
+
+def _rss_item_key(item: dict) -> str:
+    """같은 기사를 두 창에서 한 번씩 받으므로 합칠 때 쓸 열쇠."""
+    for field in ("filename", "normalizedUrl", "url"):
+        value = str(item.get(field) or "").strip().lower()
+        if value:
+            return f"{field}:{value}"
+    title = _text(item.get("title"), 220).lower()
+    source = _text(item.get("media") or item.get("source"), 80).lower()
+    return f"title:{title}|{source}"
+
+
+def _fetch_scoped_rss_items(market_scope: str) -> list[dict]:
+    """시장별 스냅샷은 그 시장의 근거 창을 따로 받는다.
+
+    시장 무관 최신 120건을 받아 뒤에서 거르면 남는 것은 피드 분포다. JP 피드는 3개뿐이라
+    EUROPE/JP는 GLOBAL만 남아 근거 없는 시장 판단이 조용히 나갔다.
+    `rss_feed_payload`의 market 필터(`_normalize_market_filter`)는 US/KR/EUROPE/JP/
+    GLOBAL/UNKNOWN 중 **하나**만 받으므로 두 태그를 한 질의로 OR 할 수 없다. 시장 창과
+    GLOBAL 창을 따로 받아 합치며, 이 합집합은 `_candidate_matches_scope`(시장 태그 또는
+    GLOBAL)와 같은 범위다.
+    """
+    from features.common.research_library.rss.service import rss_feed_payload
+
+    if market_scope == "overall":
+        payload = rss_feed_payload({"limit": [str(RSS_CONTEXT_LIMIT)], "offset": ["0"]})
+        return list(payload.get("items") or [])
+    merged: list[dict] = []
+    seen: set[str] = set()
+    for market in (market_scope.upper(), "GLOBAL"):
+        payload = rss_feed_payload({
+            "limit": [str(RSS_CONTEXT_LIMIT)],
+            "offset": ["0"],
+            "market": [market],
+        })
+        for item in payload.get("items") or []:
+            key = _rss_item_key(item)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+    # 두 창을 이어 붙이면 GLOBAL이 통째로 뒤로 밀린다. 목록 계약(최신순)을 유지한다.
+    merged.sort(key=lambda item: str(item.get("timestampSort") or item.get("timestamp") or ""), reverse=True)
+    return merged[:RSS_CONTEXT_LIMIT]
+
+
+def _evidence_coverage(candidates: list[dict], market_scope: str) -> dict:
+    """근거가 얼마나 얇은지 프롬프트가 알게 한다.
+
+    풀이 비어도 모델은 그 사실을 모른 채 시장 판단을 쓴다. 부족하면 컨텍스트에
+    남겨 "근거가 얇다"가 판단의 일부가 되게 한다.
+    """
+    count = len(candidates)
+    sparse = count < RSS_CANDIDATE_MIN
+    coverage = {
+        "marketScope": market_scope,
+        "rssCandidateCount": count,
+        "minimumExpected": RSS_CANDIDATE_MIN,
+        "status": "sparse" if sparse else "sufficient",
+        "warnings": [],
+    }
+    if sparse:
+        coverage["warnings"].append(
+            f"marketScope={market_scope}: rssCandidates {count} items "
+            f"(below {RSS_CANDIDATE_MIN}). Evidence for this market is thin; "
+            "state that limitation instead of writing a confident market judgment."
+        )
+    return coverage
 
 
 def _candidate_matches_scope(candidate: dict, market_scope: str) -> bool:

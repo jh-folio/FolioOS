@@ -31,6 +31,7 @@ from features.common.quality_generation.quality_targets import render_quality_ta
 from features.common.quality_generation.schema import normalize_quality_mode
 from features.daily_briefing.source_window import scope_session_documents
 from features.daily_briefing.service import (
+    MARKET_LABELS,
     resolve_briefing_by_session,
     append_briefing_sources,
     briefing_checkpoint_headings,
@@ -554,6 +555,11 @@ def write_briefing_from_markdown(pack: dict, markdown: str, *, persist: bool = T
     }
     checkpoints = [row for scope in checkpoint_scopes for row in scope_checkpoints[scope]]
     gaps = []
+    # 갭도 시장별로 남긴다(§builder와 같은 규칙). 합본 기준으로만 보면 네 시장 중
+    # 하나만 섹션이 없을 때 그 사실이 어디에도 남지 않는다.
+    for scope in checkpoint_scopes:
+        if not scope_checkpoints[scope]:
+            gaps.append(f"{MARKET_LABELS.get(scope, scope)}: 체크포인트 섹션을 찾지 못했습니다.")
     if not checkpoints:
         gaps.append("브리핑에서 구조화 가능한 체크포인트 섹션을 찾지 못했습니다.")
     if not draft.get("stats", {}).get("documents"):

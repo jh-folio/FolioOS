@@ -64,6 +64,11 @@ type AgentJob = {
   result?: Record<string, unknown>;
 };
 
+// 서버가 돌려주는 것은 코드(`workspace_moved`)뿐이다. 안내문에는 원본·목적지 경로가
+// 실릴 수 있어 결과에 담지 않고 화면이 갖는다.
+const WORKSPACE_MOVED_NOTICE =
+  "자료 위치를 옮겼습니다. 서버를 재시작하기 전까지는 RSS 수집과 보관 기간 정리를 실행하지 않습니다 — 지금 수집하면 새 자료가 옛 폴더와 새 폴더로 갈립니다.";
+
 const EMPTY_FILTERS: RssFilters = { start: "", end: "", source: "", market: "", language: "" };
 const pageSize = 20;
 const MARKET_OPTIONS = [
@@ -304,6 +309,12 @@ export function RssRoute() {
     try {
       const job = await postJson<AgentJob>("/api/rssarchive/import", {});
       const done = await pollJob(job);
+      // 자료 위치를 옮긴 뒤 재시작 전까지는 수집이 쉰다. 그 사실을 말하지 않으면
+      // "신규 0개"로 보여서, 수집이 도는 줄 알고 며칠을 보낸다.
+      if (done.result?.skipped === "workspace_moved") {
+        setStatus(WORKSPACE_MOVED_NOTICE);
+        return;
+      }
       const added = Number.isFinite(Number(done.result?.added)) ? ` 신규 ${done.result?.added}개` : "";
       setStatus(`RSS 수집 완료.${added}`);
       await loadItems(1, filters);

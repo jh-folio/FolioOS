@@ -176,26 +176,41 @@ def aggregate_checkpoints(thesis_deltas: list, regime_states: list, *, limit: in
         checkpoints_from_regime_state,
         checkpoints_from_thesis_delta,
     )
-    collected = []
+    thesis_rows = []
     for d in thesis_deltas or []:
-        collected.extend(checkpoints_from_thesis_delta(d, artifact_id=str(d.get("ticker") or d.get("deltaId") or "")) or [])
+        thesis_rows.extend(checkpoints_from_thesis_delta(d, artifact_id=str(d.get("ticker") or d.get("deltaId") or "")) or [])
+    regime_rows = []
     for s in regime_states or []:
-        collected.extend(checkpoints_from_regime_state(s, artifact_id=str(s.get("id") or s.get("stateKey") or "")) or [])
+        regime_rows.extend(checkpoints_from_regime_state(s, artifact_id=str(s.get("id") or s.get("stateKey") or "")) or [])
+
     # 같은 문구라도 종목이 다르면 다른 체크포인트다. thesis delta의 기본 문구는 모든
     # 종목이 같아서 문구만으로 접으면 첫 종목만 살아남고, 티커별 필터를 거친 나머지
     # 종목은 근거 없이 "확인할 체크포인트 없음"이 된다.
     seen: set[tuple[str, str]] = set()
-    out = []
-    for c in collected:
-        text = str(c.get("checkpoint") or "").strip()
-        key = (str(c.get("ticker") or "").strip().upper(), text)
-        if not text or key in seen:
-            continue
-        seen.add(key)
-        out.append(c)
-        if len(out) >= limit:
-            break
-    return out
+
+    def _dedup(rows: list) -> list:
+        out = []
+        for c in rows:
+            text = str(c.get("checkpoint") or "").strip()
+            key = (str(c.get("ticker") or "").strip().upper(), text)
+            if not text or key in seen:
+                continue
+            seen.add(key)
+            out.append(c)
+        return out
+
+    thesis_rows = _dedup(thesis_rows)
+    regime_rows = _dedup(regime_rows)
+
+    # 소스별 정원. thesis가 먼저 수집되므로 정원 없이 자르면 종목이 6개만 넘어도
+    # 시장(regime) 체크포인트가 0건이 되어, 리뷰가 시장 쪽 확인 사항을 통째로 잃는다.
+    # 한쪽이 정원을 못 채우면 다른 쪽이 남은 자리를 흡수한다.
+    limit = max(0, int(limit))
+    thesis_quota = limit * 2 // 3
+    regime_quota = limit - thesis_quota
+    thesis_take = min(len(thesis_rows), max(thesis_quota, limit - min(len(regime_rows), regime_quota)))
+    regime_take = min(len(regime_rows), limit - thesis_take)
+    return thesis_rows[:thesis_take] + regime_rows[:regime_take]
 
 
 def build_linked_notes(notes: list, *, limit: int = 12) -> list:
@@ -307,8 +322,11 @@ def render_markdown(review: dict) -> str:
     kc = review.get("keyCheckpoints") or []
     lines.append("## 이번 주 체크포인트")
     if kc:
+        # thesis 체크포인트의 기본 문구는 종목이 달라도 같다. 티커를 빼면 같은 줄이
+        # 종목 수만큼 반복되어 어느 종목을 확인하라는 것인지 알 수 없다.
         for c in kc[:12]:
-            lines.append(f"- {c.get('checkpoint')}")
+            ticker = str(c.get("ticker") or "").strip().upper()
+            lines.append(f"- **{ticker}** {c.get('checkpoint')}" if ticker else f"- {c.get('checkpoint')}")
     else:
         lines.append("- 구조화된 체크포인트가 없습니다.")
     lines.append("")

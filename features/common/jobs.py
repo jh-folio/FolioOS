@@ -168,6 +168,9 @@ def _fail_legacy_interrupted_jobs() -> None:
             continue
         row["status"] = JobStatus.FAILED_RESTART.value
         row["message"] = MESSAGES[JobStatus.FAILED_RESTART.value]
+        # 끝난 잡은 막대도 끝나야 한다. 멈춘 시점의 진행률(예: 40%)을 그대로 두면
+        # 화면에 40%짜리 실패 잡이 남아 아직 도는 것처럼 보인다.
+        row["progress"] = 100
         changed = True
     if not changed:
         return

@@ -60,6 +60,7 @@ from features.daily_briefing.selection import (
     session_doc_counts,
 )
 from features.daily_briefing.service import (
+    MARKET_LABELS,
     append_briefing_sources,
     briefing_checkpoint_headings,
     briefing_sources_from_headlines,
@@ -517,6 +518,12 @@ def build_briefing(
     }
     checkpoints = [row for scope in requested_scopes for row in scope_checkpoints[scope]]
     gaps = []
+    # 갭도 시장별로 남긴다. 합본 기준으로만 보면 네 시장 중 하나만 섹션이 없을 때
+    # 그 사실이 어디에도 남지 않는다 — 저장 파일은 시장별인데 갭은 "전부 비었을 때"만
+    # 붙어서, 체크포인트가 0건인 보고서가 아무 표시 없이 나갔다.
+    for scope in requested_scopes:
+        if not scope_checkpoints[scope]:
+            gaps.append(f"{MARKET_LABELS.get(scope, scope)}: 체크포인트 섹션을 찾지 못했습니다.")
     if not checkpoints:
         gaps.append("브리핑에서 구조화 가능한 체크포인트 섹션을 찾지 못했습니다.")
     if not docs:

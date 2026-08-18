@@ -48,6 +48,29 @@ def test_a_substitute_holiday_is_not_described_as_a_closing_session():
     assert windows["krPreviousSessionDate"] == "2026-10-02"
 
 
+def test_the_2026_local_election_is_a_krx_closure():
+    """제9회 전국동시지방선거(2026-06-03 수).
+
+    공직선거법 제34조의 임기만료 지방선거일이자 `관공서의 공휴일에 관한 규정`
+    제2조 제10호의 법정 공휴일이라 KRX가 휴장한다(2025-06-03 대선과 같은 근거).
+    표에 없으면 열리지 않은 장이 정규 거래일로 판정되어, 브리핑이 없는 마감을
+    서술하고 세션일과 어긋난 yfinance 수치를 싣는다.
+    """
+    day = dt.date(2026, 6, 3)
+    assert day.weekday() == 2  # 수요일 — 주말 때문에 닫히는 것이 아니다
+    assert day in kr_market_holidays(2026)
+    assert market_open_status(day, "KR")["isOpen"] is False
+    # 직전 한국 거래일은 6/2(화)다.
+    assert previous_trading_day(dt.date(2026, 6, 4), "KR") == dt.date(2026, 6, 2)
+
+
+def test_the_same_closure_is_in_the_calendar_adapter_table():
+    """두 표가 갈라지면 세션 판정과 캘린더 화면이 다른 말을 한다."""
+    from features.market_calendar.adapters.exchange import KRX_HOLIDAYS
+
+    assert "2026-06-03" in {text for text, _label in KRX_HOLIDAYS[2026]}
+
+
 def test_regular_korean_trading_days_stay_open():
     """대체휴일을 넣다가 정상 거래일을 닫아버리지 않았는지 확인한다."""
     for text in ("2026-10-06", "2026-09-29", "2027-08-17", "2027-12-28"):
@@ -72,6 +95,21 @@ def test_new_year_only_observes_forward():
     assert market_open_status(dt.date(2021, 12, 31), "US")["isOpen"] is True
     assert dt.date(2023, 1, 2) in us_market_holidays(2023)  # 01-01 일 → 월 휴장
     assert market_open_status(dt.date(2023, 1, 2), "US")["isOpen"] is False
+
+
+def test_juneteenth_only_closes_the_nyse_from_2022():
+    """연방 공휴일 지정(2021-06-17)이 NYSE 휴장으로 이어진 것은 2022년부터다.
+
+    2021-06-18(금)은 실제 정규 거래일이었다. 그 날을 휴장으로 내면 과거 백테스트의
+    거래일과 세션일 판정이 하루씩 틀린다.
+    출처: NYSE Holidays & Trading Hours https://www.nyse.com/markets/hours-calendars
+    """
+    assert dt.date(2021, 6, 18) not in us_market_holidays(2021)
+    assert market_open_status(dt.date(2021, 6, 18), "US")["isOpen"] is True
+    # 2022-06-19는 일요일이라 06-20(월)이 첫 준수 휴장일이었다.
+    assert dt.date(2022, 6, 20) in us_market_holidays(2022)
+    assert market_open_status(dt.date(2022, 6, 20), "US")["isOpen"] is False
+    assert dt.date(2026, 6, 19) in us_market_holidays(2026)
 
 
 def test_a_christmas_substitute_does_not_shift_the_us_session_date():

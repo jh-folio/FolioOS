@@ -39,6 +39,30 @@ def test_load_jobs_marks_queued_and_running_jobs_failed_after_restart(monkeypatc
     assert jobs.get_job("running-job")["status"] == "failed_restart"
 
 
+def test_restart_zombie_reports_restart_interrupted_and_a_finished_bar(monkeypatch, tmp_path):
+    """재시작으로 끊긴 잡은 원인이 알려진 종료다.
+
+    INTERNAL_ERROR로 적으면 화면이 "알 수 없는 오류"라 말해 다시 실행하면 되는 잡이
+    고장으로 읽히고, 멈춘 시점의 진행률을 남기면 40%짜리 실패 잡이 아직 도는 것처럼
+    보인다.
+    """
+    jobs_path = tmp_path / "jobs.json"
+    jobs_path.write_text(json.dumps({
+        "running-job": {"id": "running-job", "status": "running", "kind": "rss", "progress": 40},
+    }), encoding="utf-8")
+    monkeypatch.setattr(jobs, "JOBS_PATH", jobs_path)
+    monkeypatch.setattr(jobs, "JOBS", {})
+    jobs._LIFECYCLES.clear()
+
+    jobs.load_jobs()
+
+    row = jobs.get_job("running-job")
+    assert row["status"] == "failed_restart"
+    assert row["error"] == "restart_interrupted"
+    assert row["progress"] == 100
+    assert json.loads(jobs_path.read_text(encoding="utf-8"))["running-job"]["progress"] == 100
+
+
 def test_load_jobs_leaves_unrelated_legacy_rows_untouched(monkeypatch, tmp_path):
     """좀비만 종료시킨다. 다른 행과 다른 필드는 사용자 기록이라 그대로 둔다."""
     jobs_path = tmp_path / "jobs.json"
@@ -133,6 +157,66 @@ def test_queued_job_that_never_started_still_ends_terminal(monkeypatch, tmp_path
     assert not jobs.private_lifecycle().cleanup_blocked
     assert jobs.get_job(job.id)["status"] == "failed"
     assert [row["id"] for row in jobs.recent_jobs()] == [job.id]
+
+
+def test_rss_job_result_keeps_the_reason_it_skipped(monkeypatch, tmp_path):
+    """건너뛴 이유는 잡 결과까지 살아 있어야 한다.
+
+    `worker_projection`이 `skipped`를 떨어뜨리면 워크스페이스를 옮긴 직후의 수집이
+    화면에서 "RSS 수집 완료. 신규 0개"로 보인다 — CLAUDE.md가 금지한 조용한
+    건너뛰기다.
+    """
+    from features.common.shared_jobs_compat import worker_projection
+
+    assert worker_projection({"added": 0, "total": 3, "skipped": "workspace_moved"})["skipped"] == "workspace_moved"
+
+    monkeypatch.setattr(jobs, "JOBS_PATH", tmp_path / "jobs.json")
+    jobs._LIFECYCLES.clear()
+    job = jobs.new_shared_job(
+        kind="rss",
+        task_type="rss",
+        generation_mode="none",
+        adapter="none",
+        requested_mode=None,
+        mode="collect",
+        attempted_engine=None,
+        clock=jobs._clock,
+    )
+    jobs.shared_store().add(job)
+    jobs.private_lifecycle().set_private(job.id, {})
+
+    jobs.run_job(
+        job.id,
+        lambda *, progress: {"added": 0, "total": 3, "skipped": "workspace_moved", "output": "경로가 담긴 안내문"},
+    )
+
+    result = jobs.get_job(job.id)["result"]
+    assert result["skipped"] == "workspace_moved"
+    assert result["added"] == 0
+    # 안내문에는 원본·목적지 경로가 실릴 수 있다. 코드만 내보내고 문구는 화면이 갖는다.
+    assert "output" not in result
+
+
+def test_rss_job_without_a_skip_reason_keeps_the_field_empty(monkeypatch, tmp_path):
+    monkeypatch.setattr(jobs, "JOBS_PATH", tmp_path / "jobs.json")
+    jobs._LIFECYCLES.clear()
+    job = jobs.new_shared_job(
+        kind="rss",
+        task_type="rss",
+        generation_mode="none",
+        adapter="none",
+        requested_mode=None,
+        mode="collect",
+        attempted_engine=None,
+        clock=jobs._clock,
+    )
+    jobs.shared_store().add(job)
+    jobs.private_lifecycle().set_private(job.id, {})
+
+    # `지금 정리`는 이유가 아니라 bool을 돌려준다. 이유 칸에 True를 넣지 않는다.
+    jobs.run_job(job.id, lambda *, progress: {"added": 2, "total": 5, "skipped": True})
+
+    assert jobs.get_job(job.id)["result"]["skipped"] is None
 
 
 def test_progress_only_update_preserves_non_nullable_job_identity(monkeypatch, tmp_path):
