@@ -59,14 +59,27 @@ def test_initial_cockpit_route_handler_p95_is_below_500ms(tmp_path):
 
 
 def test_cockpit_hides_noise_statuses_and_counts_them(tmp_path, monkeypatch):
+    """**날짜를 박아 두지 않는다.** 변화 피드는 최근 14일만 보여주므로(`CHANGE_FEED_WINDOW_DAYS`),
+    고정 날짜를 쓰면 그날로부터 2주 뒤 이 테스트가 스스로 실패한다 — 실제로 2026-08-01로
+    적힌 행들이 08-15부터 창 밖으로 밀려 `changes`가 통째로 비었다. 코드가 아니라
+    달력이 바꾼 결과다.
+    """
+    import datetime as dt
+
     from features.dashboard import service
 
+    recent = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)
+
+    def at(minutes: int) -> str:
+        return (recent - dt.timedelta(minutes=minutes)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    day = recent.strftime("%Y-%m-%d")
     rows = [
-        {"status": "major_change", "artifactKind": "briefing", "artifactId": "2026-08-01.us", "lineageId": "briefing:us", "generatedAt": "2026-08-01T01:00:00Z", "invalidationToken": "t1"},
-        {"status": "developing_signal", "artifactKind": "topic_report", "artifactId": "abc", "lineageId": "topic:abc", "generatedAt": "2026-08-01T00:50:00Z"},
-        {"status": "baseline_created", "artifactKind": "briefing", "artifactId": "2026-06-10", "lineageId": "briefing:us", "generatedAt": "2026-08-01T00:40:00Z"},
-        {"status": "insufficient_basis", "artifactKind": "topic_report", "artifactId": "def", "lineageId": "topic:def", "generatedAt": "2026-08-01T00:30:00Z"},
-        {"status": "no_material_change", "artifactKind": "briefing", "artifactId": "2026-07-30.us", "lineageId": "briefing:us", "generatedAt": "2026-08-01T00:20:00Z"},
+        {"status": "major_change", "artifactKind": "briefing", "artifactId": f"{day}.us", "lineageId": "briefing:us", "generatedAt": at(0), "invalidationToken": "t1"},
+        {"status": "developing_signal", "artifactKind": "topic_report", "artifactId": "abc", "lineageId": "topic:abc", "generatedAt": at(10)},
+        {"status": "baseline_created", "artifactKind": "briefing", "artifactId": "2026-06-10", "lineageId": "briefing:us", "generatedAt": at(20)},
+        {"status": "insufficient_basis", "artifactKind": "topic_report", "artifactId": "def", "lineageId": "topic:def", "generatedAt": at(30)},
+        {"status": "no_material_change", "artifactKind": "briefing", "artifactId": "2026-07-30.us", "lineageId": "briefing:us", "generatedAt": at(40)},
     ]
     monkeypatch.setattr(service, "list_change_events", lambda *_args, **_kwargs: rows)
     payload = service.build_cockpit_payload(tmp_path)
