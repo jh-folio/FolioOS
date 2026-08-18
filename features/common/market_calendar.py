@@ -147,6 +147,16 @@ def observed_date(day):
     return day
 
 
+def sunday_observed_date(day):
+    """일요일이면 다음 월요일. 토요일 보정은 하지 않는다.
+
+    NYSE Rule 7.2는 토요일에 걸친 휴일을 직전 금요일로 당기되 **신정만은 예외**로
+    두어 전년 12/31을 휴장하지 않는다(2021-12-31 실제 개장). 신정에 양방향 보정을
+    쓰면 있지도 않은 휴장일을 만들고, 반환값이 그 해 집합을 벗어나기까지 한다.
+    """
+    return day + dt.timedelta(days=1) if day.weekday() == 6 else day
+
+
 def nth_weekday(year, month, weekday, n):
     day = dt.date(year, month, 1)
     offset = (weekday - day.weekday()) % 7
@@ -180,11 +190,14 @@ def easter_date(year):
 
 
 def us_market_holidays(year):
+    # 달력일이 주말에 걸리면 NYSE는 인접 평일에 휴장한다. 신정만 토요일 보정이
+    # 없다(sunday_observed_date 참고). 성탄절은 양방향이다 — 2021-12-24(토→금),
+    # 2022-12-26(일→월) 모두 실제 휴장일이었다.
     fixed = [
-        dt.date(year, 1, 1),
+        sunday_observed_date(dt.date(year, 1, 1)),
         observed_date(dt.date(year, 6, 19)),
         observed_date(dt.date(year, 7, 4)),
-        dt.date(year, 12, 25),
+        observed_date(dt.date(year, 12, 25)),
     ]
     return set(fixed + [
         nth_weekday(year, 1, 0, 3),
@@ -196,11 +209,25 @@ def us_market_holidays(year):
     ])
 
 
+# 음력 공휴일과 **대체공휴일**. 고정 공휴일이 주말에 걸리면 다음 첫 비공휴일이
+# 휴장일이 되므로(2023년 개정으로 성탄절·부처님오신날까지 적용) 그 날짜도 여기 적는다.
+# 대체공휴일이 빠지면 열리지 않은 장이 정규 거래일로 판정되어, 브리핑이 없는 마감을
+# 서술하고 세션일과 어긋난 yfinance 수치가 통째로 폐기된다.
+# 출처: KRX 연간 휴장일 안내 https://open.krx.co.kr
+# 같은 표가 features/market_calendar/adapters/exchange.py::KRX_HOLIDAYS에도 있다.
+# 한쪽만 고치면 갈라진다 — 실제로 2026-09-28·2026-10-05가 그렇게 갈라져 있었다.
 KR_LUNAR_MARKET_HOLIDAYS = {
     2024: ["2024-02-09", "2024-02-12", "2024-04-10", "2024-05-15", "2024-09-16", "2024-09-17", "2024-09-18"],
     2025: ["2025-01-28", "2025-01-29", "2025-01-30", "2025-03-03", "2025-05-06", "2025-06-03", "2025-10-06", "2025-10-07", "2025-10-08"],
-    2026: ["2026-02-16", "2026-02-17", "2026-02-18", "2026-03-02", "2026-05-25", "2026-08-17", "2026-09-24", "2026-09-25"],
-    2027: ["2027-02-08", "2027-02-09", "2027-02-10", "2027-05-13", "2027-09-14", "2027-09-15", "2027-09-16"],
+    2026: [
+        "2026-02-16", "2026-02-17", "2026-02-18", "2026-03-02", "2026-05-25", "2026-08-17",
+        "2026-09-24", "2026-09-25", "2026-09-28", "2026-10-05",
+    ],
+    2027: [
+        "2027-02-08", "2027-02-09", "2027-02-10", "2027-05-13",
+        "2027-08-16", "2027-09-14", "2027-09-15", "2027-09-16",
+        "2027-10-04", "2027-10-11", "2027-12-27",
+    ],
 }
 
 
@@ -343,6 +370,21 @@ def _business_day_from_status(status, field, *, before=None, after=None):
     return value
 
 
+# 휴장일 표가 없는 연도(coverage_expired)에서는 어떤 날도 개장으로 판정되지 않아
+# 아래 두 함수의 최종 폴백이 매번 도달한다. 그때 달력상 하루를 그대로 돌려주면
+# 세션일이 토·일이 된다 — 실측으로 2027-03-08 브리핑의 유럽·일본 세션일이 일요일
+# 2027-03-07이었다. 개장 여부는 계속 모른다고 보고하되(provider=coverage_expired),
+# **주말은 표 없이도 아는 사실**이므로 세션일 후보에서 뺀다. 공휴일까지 맞히려는
+# 추측은 하지 않는다.
+def _nearest_weekday(day, step):
+    cursor = day
+    for _ in range(7):
+        cursor += dt.timedelta(days=step)
+        if cursor.weekday() < 5:
+            return cursor
+    return day + dt.timedelta(days=step)
+
+
 def previous_trading_day(day, market, exchange_calendar_fetcher=None):
     status = market_open_status(day, market, exchange_calendar_fetcher)
     if status.get("source") == "exchange_api":
@@ -354,7 +396,7 @@ def previous_trading_day(day, market, exchange_calendar_fetcher=None):
         if is_market_open(cursor, market, exchange_calendar_fetcher):
             return cursor
         cursor -= dt.timedelta(days=1)
-    return day - dt.timedelta(days=1)
+    return _nearest_weekday(day, -1)
 
 
 def next_trading_day(day, market, exchange_calendar_fetcher=None):
@@ -363,7 +405,7 @@ def next_trading_day(day, market, exchange_calendar_fetcher=None):
         if is_market_open(cursor, market, exchange_calendar_fetcher):
             return cursor
         cursor += dt.timedelta(days=1)
-    return day + dt.timedelta(days=1)
+    return _nearest_weekday(day, 1)
 
 
 def publication_date_for_session(session_date: str, market_scope: str) -> str:
