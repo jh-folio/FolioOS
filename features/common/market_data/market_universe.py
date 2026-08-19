@@ -8,6 +8,8 @@ import re
 from typing import Any, Callable
 import urllib.request
 
+from features.common.atomic_replace import write_bytes_atomic
+
 
 NASDAQ_SCREENER_URL = (
     "https://api.nasdaq.com/api/screener/stocks"
@@ -183,13 +185,23 @@ def unavailable_snapshot(market: str, date: str, provider: str, error: str) -> d
     }
 
 
-def save_last_good_snapshot(path: Path | str, payload: dict) -> None:
-    target = Path(path)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(target.suffix + ".tmp")
-    with gzip.open(temporary, "wt", encoding="utf-8", compresslevel=6) as stream:
-        json.dump(payload, stream, ensure_ascii=False, separators=(",", ":"))
-    temporary.replace(target)
+def save_last_good_snapshot(path: Path | str, payload: dict) -> bool:
+    """마지막 정상 스냅샷을 저장한다. 저장 실패는 스냅샷 생성을 죽이지 않는다.
+
+    이 캐시는 부가물이다. 여기 오면 시세를 이미 다 받아 rows를 만든 뒤라, 캐시
+    저장 하나 때문에 예외를 올리면 그 시장 히트맵이 통째로 비고 브리핑 사이드카는
+    immutable이라 영구히 unavailable로 남는다.
+
+    교체는 `atomic_replace`를 거친다 — Windows에서 백신·색인기가 대상 파일을 잠깐
+    잡으면 원자적 교체가 거부되는데, 붙잡는 시간이 보통 수십 밀리초라 잠깐
+    물러났다 다시 시도하면 풀린다.
+    """
+    try:
+        body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        write_bytes_atomic(Path(path), gzip.compress(body, 6))
+        return True
+    except OSError:
+        return False
 
 
 def load_last_good_snapshot(path: Path | str) -> dict | None:

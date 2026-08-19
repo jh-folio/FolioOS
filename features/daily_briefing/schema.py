@@ -290,6 +290,11 @@ def _session_date_from_windows(scope, windows, session_mode=""):
         return str(windows.get("krPreviousSessionDate") or "")[:10]
     if scope in {"europe", "jp"}:
         session = (windows.get("marketSessions") or {}).get(scope) or {}
+        # 장중이면 진행 중인 세션이 이 브리핑의 세션이다. 창의 `sessionDate`는 직전
+        # 완료 세션이라 그대로 읽으면 제목이 이미 끝난 세션을 `장중`이라고 말한다.
+        # (유럽은 `phase` 키 자체가 없어 이 분기에 걸리지 않는다.)
+        if session.get("phase") == "intraday" and windows.get("briefingDate"):
+            return str(windows.get("briefingDate"))[:10]
         return str(session.get("sessionDate") or "")[:10]
     return ""
 

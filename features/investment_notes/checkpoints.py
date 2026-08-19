@@ -6,13 +6,14 @@ and never turns note content into evidence or mutates a source document.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta, timezone
 from enum import StrEnum
 import re
 
 from features.investment_notes.intelligence_schema import CheckpointState
 
 
+_KST = timezone(timedelta(hours=9))
 _REFERENCE_ID = re.compile(r"^[A-Za-z0-9:._-]{1,200}$")
 _DUE_ORDER = {
     "overdue": 0,
@@ -98,11 +99,17 @@ def normalize_checkpoint_fields(
 
 
 def _clock_date(clock: Callable[[], datetime | date]) -> date:
+    """오늘 날짜는 KST 기준이다.
+
+    사용자에게 보이는 마감일은 한국 날짜이므로 UTC 날짜로 비교하면 KST 00~09시
+    (장 시작 전)에 overdue/due가 하루 이르게 판정된다. 시계는 계속 주입받고
+    시간대만 서울로 옮긴다(naive 시계는 예전처럼 UTC로 읽는다).
+    """
     observed = clock()
     if isinstance(observed, datetime):
         if observed.utcoffset() is None:
             observed = observed.replace(tzinfo=UTC)
-        return observed.astimezone(UTC).date()
+        return observed.astimezone(_KST).date()
     return observed
 
 

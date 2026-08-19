@@ -13,7 +13,10 @@ import datetime as dt
 import json
 from pathlib import Path
 
-from features.common.utils import read_json, write_json
+from features.common.canonical_identity import ReportKind
+from features.common.canonical_report_types import WriteKind
+from features.common.canonical_reports import commit_sync, prepare
+from features.common.utils import read_json
 from features.daily_briefing.schema import (
     SINGLE_MARKET_SCOPES,
     briefing_file_name,
@@ -229,7 +232,16 @@ def attach_overlay_to_briefing(date: str, *, market_scope="both", llm_override=N
     overlay, status = generate_overlay(canonical, hyps, kind="briefing",
                                        llm_override=llm_override, web_search_override=web_search_override)
     updated = with_overlay(canonical, overlay, status=status)
-    write_json(path, updated)
+    # 통째 write_json으로 되쓰지 않는다. generate_overlay(LLM 수십 초) 사이에 예약 생성·
+    # 제안 승인이 같은 파일을 새 canonicalRevision으로 커밋할 수 있는데, 읽어 둔 dict을
+    # 그대로 쓰면 그 커밋이 조용히 옛 본문으로 되돌아간다. prepare()가 잠금 안에서 현재
+    # 파일을 다시 읽어 personalOverlay만 얹는다(CLI 잡 경로의 overlay_spec과 같은 배관).
+    commit_sync(prepare(
+        report_kind=ReportKind.BRIEFING,
+        exact_path=path,
+        write_kind=WriteKind.OVERLAY,
+        candidate={"personalOverlay": updated["personalOverlay"]},
+    ))
     return {"ok": True, "status": status, "personalOverlay": updated["personalOverlay"]}
 
 
@@ -242,5 +254,10 @@ def attach_overlay_to_report(report_id: str, *, llm_override=None, web_search_ov
     overlay, status = generate_overlay(canonical, hyps, kind="analysis",
                                        llm_override=llm_override, web_search_override=web_search_override)
     updated = with_overlay(canonical, overlay, status=status)
-    write_json(ANALYSIS_REPORTS_DIR / f"{canonical.get('id') or report_id}.json", updated)
+    commit_sync(prepare(
+        report_kind=ReportKind.COMPANY_ANALYSIS,
+        exact_path=ANALYSIS_REPORTS_DIR / f"{canonical.get('id') or report_id}.json",
+        write_kind=WriteKind.OVERLAY,
+        candidate={"personalOverlay": updated["personalOverlay"]},
+    ))
     return {"ok": True, "status": status, "personalOverlay": updated["personalOverlay"]}

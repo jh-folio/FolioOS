@@ -593,3 +593,47 @@ def test_current_market_clock_uses_previous_completed_session_before_open():
     assert clock["state"] == "closed"
     assert clock["reason"] == "before_regular_session"
     assert clock["latestSessionDate"] == "2026-06-18"
+
+
+def test_europe_and_japan_use_their_own_exchange_calendar_not_koreas():
+    """`US가 아니면 KR`이던 자리.
+
+    KRX 설 연휴 2026-02-16~18에 유럽·도쿄는 정상 개장했다. 그동안 유럽·일본 스냅샷은
+    KRX 달력에 갇혀 본문보다 5거래일 이른 세션을 요청하면서도 `close_snapshot`으로
+    표시돼 어긋난 사실이 드러나지 않았다.
+    """
+    after_the_korean_holiday = dt.datetime(2026, 2, 18, 22, 30, tzinfo=dt.timezone.utc)  # 02-19 07:30 KST
+
+    europe = _market_clock("EUROPE", after_the_korean_holiday)
+    japan = _market_clock("JP", after_the_korean_holiday)
+    korea = _market_clock("KR", after_the_korean_holiday)
+
+    assert europe["market"] == "EUROPE" and europe["timezone"] == "Europe/London"
+    assert japan["market"] == "JP" and japan["timezone"] == "Asia/Tokyo"
+    assert europe["latestSessionDate"] == "2026-02-18"
+    assert japan["latestSessionDate"] == "2026-02-18"
+    # 한국만 쉬었으므로 KR 달력은 실제로 뒤처져 있다.
+    assert korea["latestSessionDate"] == "2026-02-13"
+
+
+def test_the_snapshot_session_no_longer_rewinds_a_european_briefing():
+    from features.daily_briefing.visuals import _snapshot_session_date
+
+    now = dt.datetime(2026, 2, 18, 22, 30, tzinfo=dt.timezone.utc)  # 02-19 07:30 KST
+
+    assert _snapshot_session_date(
+        {"marketSessionDate": "2026-02-18"}, "2026-02-19", "EUROPE", now=now,
+    ) == "2026-02-18"
+    # 한국장 개장 전 보정은 그대로 남는다.
+    assert _snapshot_session_date(
+        {"marketSessionDate": "2026-02-19"}, "2026-02-19", "KR", now=now,
+    ) == "2026-02-13"
+
+
+def test_the_regular_session_window_follows_the_market():
+    """유럽 정규장은 런던 08:00~16:30이다. 서울 09:00~15:30을 씌우면 개장 판정이 어긋난다."""
+    london_open = dt.datetime(2026, 6, 22, 8, 30, tzinfo=dt.timezone.utc)  # 09:30 London (BST)
+
+    assert _market_clock("EUROPE", london_open)["state"] == "open"
+    # 같은 순간 도쿄는 17:30이라 이미 마감이다.
+    assert _market_clock("JP", london_open)["state"] == "closed"

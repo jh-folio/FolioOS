@@ -97,7 +97,10 @@ def calculate_change(
         if reasons:
             health = CollectionHealth.NOISY
         else:
-            resolved_at = _parse_utc(current.resolvedAt)
+            # 만료·시계 판정은 마지막 저장 스냅샷(previous) 기준이다. current는 호출
+            # 직전에 만든 해석이라 나이가 항상 ~0이고, 그 값을 보면 snapshot_expired
+            # /clock_skew/invalid_resolved_at가 한 번도 성립하지 않는다.
+            resolved_at = _parse_utc(previous.resolvedAt)
             if resolved_at is None:
                 reasons.append("invalid_resolved_at")
             elif resolved_at > observed_now + CLOCK_SKEW_TOLERANCE:

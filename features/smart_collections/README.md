@@ -24,6 +24,8 @@ Smart Collections는 0.2 Deep Research 안에서 로컬 Research Library의 외�
 
 `change_detection.py`는 최신 저장 스냅샷과 현재 provider read를 stable evidence identity로 비교해 added/removed/unchanged를 계산합니다. 정의 변경, 빈 결과, 높은 사용 불가 비율, 높은 churn, 시계 오류, 만료, provider generation/watermark reset, 결과 truncation을 명명된 reason code로 반환합니다. 이 계산은 LLM 없이 결정적으로 동작합니다.
 
+`snapshot_expired`·`clock_skew`·`invalid_resolved_at`는 **마지막 저장 스냅샷(previous)의 `resolvedAt`** 으로 판정합니다. 호출자는 모두 방금 만든 해석을 current로 넘기므로 current의 나이는 언제나 ~0이고, 그 값을 보던 동안 세 reason code와 화면의 `최근 스냅샷 만료` 라벨은 한 번도 성립하지 않았습니다. 만료는 원래 마지막으로 기록한 비교 기준에만 있는 개념입니다.
+
 Deep Research 내부 상세 주소는 `#/deep-research/collections/{collection_id}`입니다. 상세 화면은 저장 필터 정의, 상태/reason, 마지막 refresh, 변화 수, 현재 외부 evidence 카드, Deep Research 시작을 보여줍니다. empty/stale/noisy/source unavailable/deleted 상태를 별도로 표시하며, hash 직접 열기와 back/forward를 지원합니다.
 
 `Agent에게 변화 묻기`는 명시적으로 클릭해야만 실행됩니다. 서버는 ID/revision을 다시 확인하고 현재/이전 스냅샷 metadata와 현재 외부 evidence 카드 최대 12개만 구성합니다. 카드 문자열은 `external_evidence_untrusted`, Collection 정의는 `saved_filter_metadata_not_evidence`로 표시하며 응답은 대화형·비변경입니다. 상세 진입과 refresh는 Agent job을 만들지 않습니다.

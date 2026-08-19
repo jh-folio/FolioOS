@@ -17,6 +17,7 @@ from features.automation.schema import (
 )
 from features.agent_mode.bridge import submit_agent_task
 from features.agent_mode.generation_mode import llm_override_for_mode
+from features.common.jobs import get_job
 from features.common.research_library.rss.service import import_rssarchive
 from features.common.research_library.signals.runtime import promote_kr_rss_leads
 from features.common.utils import kst_date, now_iso, read_json, write_json
@@ -82,12 +83,19 @@ def failure_reason(exc: BaseException) -> str:
     return UNKNOWN_FAILURE_REASON
 
 
+# 실행 기록은 로그가 아니라 스케줄 상태다(schedule_due가 읽는다). append와 reconcile이
+# 둘 다 read-modify-write인데 스케줄러 데몬 스레드와 API 수동 실행(FastAPI 스레드풀)이
+# 병렬로 겹치므로, 잠금 없이는 그 사이에 끼어든 행이 통째로 사라져 브리핑이 중복 생성된다.
+_RUNS_LOCK = threading.Lock()
+
+
 def _append_run(row: dict) -> None:
-    runs = read_json(RUNS_PATH, [])
-    if not isinstance(runs, list):
-        runs = []
-    runs.insert(0, row)
-    write_json(RUNS_PATH, runs[:50])
+    with _RUNS_LOCK:
+        runs = read_json(RUNS_PATH, [])
+        if not isinstance(runs, list):
+            runs = []
+        runs.insert(0, row)
+        write_json(RUNS_PATH, runs[:50])
 
 
 def list_runs(limit: int = 20) -> list[dict]:
@@ -422,7 +430,19 @@ def run_automation_once(kind: str, schedule: dict | None = None) -> dict:
             result = _run_briefing(schedule=schedule)
         else:
             return {"ok": False, "error": f"Unsupported automation: {kind}"}
-        row = {"kind": kind, "status": "done", "startedAt": started, "finishedAt": now_iso(), "result": result}
+        status = "done"
+        job_id = ""
+        if kind == "briefing" and isinstance(result, dict) and result.get("generationMode") == "llm_cli":
+            # submit_agent_task는 job을 전용 스레드로 띄우고 바로 돌아온다. 이 시점은
+            # 완료가 아니라 제출이다 — done으로 적으면 job이 실패해도 그날 '성공'이
+            # 남아 30분 재시도가 한 번도 돌지 않고 화면도 성공으로 말한다.
+            briefing_job = result.get("briefing") if isinstance(result.get("briefing"), dict) else {}
+            job_id = str(briefing_job.get("id") or "").strip()
+            if job_id:
+                status = "submitted"
+        row = {"kind": kind, "status": status, "startedAt": started, "finishedAt": now_iso(), "result": result}
+        if job_id:
+            row["jobId"] = job_id
         if schedule_id:
             row["scheduleId"] = schedule_id
         _append_run(row)
@@ -445,7 +465,62 @@ def run_automation_once(kind: str, schedule: dict | None = None) -> dict:
         return {"ok": False, **row}
 
 
+def _reconcile_submitted_briefings() -> None:
+    """CLI 제출 브리핑 행에 job 종결 상태를 되돌려 적는다.
+
+    submitted 행은 job이 도는 동안 성공처럼 취급되어 중복 제출을 막고, job이
+    실패로 끝나면 여기서 failed로 바뀌어 README의 재시도 계약(30분 뒤, 하루 3회)이
+    되살아난다. 화면의 실행 기록도 이 파일을 읽으므로 함께 진실이 된다.
+    """
+    with _RUNS_LOCK:
+        _reconcile_submitted_briefings_locked()
+
+
+def _reconcile_submitted_briefings_locked() -> None:
+    runs = read_json(RUNS_PATH, [])
+    if not isinstance(runs, list):
+        return
+    changed = False
+    for row in runs:
+        if not isinstance(row, dict) or row.get("kind") != "briefing" or row.get("status") != "submitted":
+            continue
+        job_id = str(row.get("jobId") or "").strip()
+        if not job_id:
+            row["status"] = "failed"
+            row["error"] = "briefing_job_id_missing"
+            changed = True
+            continue
+        try:
+            job = get_job(job_id)
+        except Exception:  # noqa: BLE001 - job 저장소를 못 읽으면 다음 주기에 다시 본다
+            continue
+        if job is None:
+            # 재시작 복구(load_jobs)가 미완 job을 failed로 남기므로 없는 job은 기록 유실이다.
+            row["status"] = "failed"
+            row["error"] = "briefing_job_not_found"
+            changed = True
+            continue
+        job_status = str(job.get("status") or "").strip()
+        # committing도 아직 도는 상태다(JobStatus에 있다). 커밋 구간에 reconcile 주기가
+        # 걸리면 여기서 failed로 못박혀 뒤이은 done이 영원히 반영되지 않고, 30분 뒤
+        # 같은 브리핑이 한 번 더 만들어진다.
+        if job_status in {"queued", "running", "cancel_requested", "committing"}:
+            continue
+        row["status"] = "done" if job_status == "done" else "failed"
+        if row["status"] == "failed":
+            # 원문 메시지는 담지 않는다 — 실행 기록은 코드 식별자만 갖는다.
+            row["error"] = "briefing_job_failed"
+        finished = str(job.get("finishedAt") or "").strip()
+        if finished:
+            # 재시도 30분 간격은 제출 시각이 아니라 실제 실패 시각부터 센다.
+            row["finishedAt"] = finished
+        changed = True
+    if changed:
+        write_json(RUNS_PATH, runs)
+
+
 def run_due_automations(now: dt.datetime | None = None) -> dict:
+    _reconcile_submitted_briefings()
     settings = read_settings()
     runs = list_runs(100)
     executed = []

@@ -64,10 +64,36 @@ def annual_values(sec_summary: dict, metric: str, limit: int = 5) -> list[float]
     return [r["value"] for r in sorted([r for r in frame if r["metric"] == metric], key=lambda r: (r["end"], r["year"]), reverse=True)[:limit]]
 
 
+def annual_year_values(sec_summary: dict, metric: str) -> dict[str, float]:
+    """연도 → 값. 같은 해끼리 빼려면 값에 연도가 붙어 있어야 한다."""
+    frame = annual_metric_frame(sec_summary)
+    if pl is not None:
+        rows = frame.filter(pl.col("metric") == metric).sort(["end", "year"], descending=True).to_dicts()
+    else:
+        rows = sorted([r for r in frame if r["metric"] == metric], key=lambda r: (r["end"], r["year"]), reverse=True)
+    out: dict[str, float] = {}
+    for row in rows:
+        year = str(row.get("year") or "")
+        if year and year not in out:
+            out[year] = float(row["value"])
+    return out
+
+
+def latest_year_value(sec_summary: dict, metric: str) -> tuple[float | None, str]:
+    """최신 값과 그 값의 연도. 연도를 함께 돌려줘야 같은 해끼리만 뺄 수 있다."""
+    values = annual_year_values(sec_summary, metric)
+    for year, value in values.items():  # annual_year_values는 최신 연도부터 담는다
+        return value, year
+    return None, ""
+
+
 def fcf_series(sec_summary: dict, limit: int = 5) -> list[float]:
-    cfo = annual_values(sec_summary, "Operating Cash Flow", limit)
-    capex = annual_values(sec_summary, "Capital Expenditure", limit)
-    return [a - b for a, b in zip(cfo, capex)]
+    # 연도 키를 버리고 순서대로 빼면 2025년 CFO에서 2022년 CapEx를 빼는 일이
+    # 생긴다. 두 지표의 보고 연도가 갈리는 제출사에서 실제로 발생한다.
+    cfo = annual_year_values(sec_summary, "Operating Cash Flow")
+    capex = annual_year_values(sec_summary, "Capital Expenditure")
+    years = sorted(set(cfo) & set(capex), reverse=True)[:limit]
+    return [cfo[year] - capex[year] for year in years]
 
 
 def derived_financials(sec_summary: dict) -> dict:
@@ -81,7 +107,14 @@ def derived_financials(sec_summary: dict) -> dict:
     cash = latest_value(sec_summary, "Cash & Equivalents")
     current_assets = latest_value(sec_summary, "Current Assets")
     current_liabilities = latest_value(sec_summary, "Current Liabilities")
-    fcf = cfo - capex if cfo is not None and capex is not None else None
+    # 연도가 갈린 CFO와 CapEx를 빼면 어느 해의 것도 아닌 FCF가 된다. 같은 해일 때만 뺀다.
+    cfo_value, cfo_year = latest_year_value(sec_summary, "Operating Cash Flow")
+    capex_value, capex_year = latest_year_value(sec_summary, "Capital Expenditure")
+    fcf = (
+        cfo_value - capex_value
+        if cfo_value is not None and capex_value is not None and cfo_year and cfo_year == capex_year
+        else None
+    )
     tax_rate = tax / pretax if tax is not None and pretax not in {None, 0} and pretax > 0 else None
     debt_cost = interest / debt if interest is not None and debt not in {None, 0} and debt > 0 else None
     current_ratio = current_assets / current_liabilities if current_assets is not None and current_liabilities not in {None, 0} else None

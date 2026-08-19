@@ -215,18 +215,20 @@ def index_query_ids(data_dir: Path, query: str, allowed_ids: set[str]) -> set[st
     if not expression:
         return set()
     path = data_dir / "research-index.sqlite3"
-    placeholders = ",".join("?" for _ in allowed_ids)
+    # 허용 ID를 `IN (...)`에 바인딩하지 않는다. 검색어만 지정한 컬렉션의 허용 집합은
+    # 색인의 모든 article 문서라, SQLITE_MAX_VARIABLE_NUMBER(현행 32766, 구버전 999)를
+    # 넘는 순간 `too many SQL variables`가 컬렉션 전체를 열지 못하게 만든다.
+    # FTS MATCH가 어차피 먼저 평가되므로 교집합은 파이썬에서 잡는다(결과는 동일).
     try:
         with sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=5) as connection:
             rows = connection.execute(
-                f"SELECT DISTINCT c.doc_id FROM chunks_fts JOIN chunks c "
-                "ON c.chunk_id=chunks_fts.chunk_id WHERE chunks_fts MATCH ? "
-                f"AND c.doc_id IN ({placeholders})",
-                (expression, *sorted(allowed_ids)),
+                "SELECT DISTINCT c.doc_id FROM chunks_fts JOIN chunks c "
+                "ON c.chunk_id=chunks_fts.chunk_id WHERE chunks_fts MATCH ?",
+                (expression,),
             ).fetchall()
     except sqlite3.DatabaseError as error:
         raise CollectionSourceUnavailableError from error
-    return {str(row[0]) for row in rows}
+    return {str(row[0]) for row in rows} & set(allowed_ids)
 
 
 def ranked_index_rows(data_dir: Path, query: str, rows: tuple[ProviderRow, ...]) -> tuple[ProviderRow, ...]:

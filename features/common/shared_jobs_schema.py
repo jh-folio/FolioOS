@@ -182,6 +182,8 @@ class RssProjection(StrictModel):
     added: Annotated[int, Field(ge=0)]
     total: Annotated[int, Field(ge=0)]
     failed: Annotated[int, Field(ge=0)]
+    # 수집·정리가 건너뛴 이유(예: workspace_moved). 없으면 None이라 옛 저장분도 그대로 읽힌다.
+    skipped: Annotated[str, Field(max_length=40)] | None = None
 
 
 class SetupProjection(StrictModel):

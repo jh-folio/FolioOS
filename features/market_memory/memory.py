@@ -1675,6 +1675,10 @@ def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict, observed_at
                 """,
                 (state["effectiveFrom"], updated_at, state_key, state_id),
             )
+        # confidence는 ON CONFLICT UPDATE 목록에 넣지 않는다. 이 경로가 넘기는 값은
+        # 항상 기본값(0.55)이라, 같은 날 같은 state_key로 다시 저장하면
+        # refresh_regime_state()가 근거로 계산해 넣은 값이 기본값으로 되돌아간다.
+        # momentum·evidence_count_*·last_confirmed_at을 건드리지 않는 것과 같은 이유다.
         conn.execute(
             """
             INSERT INTO market_narrative_states (
@@ -1695,7 +1699,6 @@ def upsert_state_from_memory(conn: sqlite3.Connection, memory: dict, observed_at
                 net_effect=excluded.net_effect,
                 summary=excluded.summary,
                 rationale=excluded.rationale,
-                confidence=excluded.confidence,
                 effective_from=excluded.effective_from,
                 effective_to=excluded.effective_to,
                 source_memory_id=excluded.source_memory_id,

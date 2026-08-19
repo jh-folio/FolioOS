@@ -31,9 +31,12 @@ def build_rule_report(
     user_context: str = "",
     topic_plan: dict | None = None,
     data_gaps: list | None = None,
+    as_of: str = "",
 ) -> str:
     label = topic.get("label", "시장")
-    today = dt.datetime.now(tz=KST).strftime("%Y-%m-%d")
+    # 제목 날짜는 호출자가 정한 보고서 기준일이다. 여기서 실행 시각을 다시 읽으면
+    # 자정을 넘겨 끝난 생성에서 JSON `date`/`title`과 본문 H1만 하루 어긋난다.
+    today = str(as_of or "").strip() or dt.datetime.now(tz=KST).strftime("%Y-%m-%d")
     sections = []
 
     sections.append(f"# {label} 분석 리포트 — {today}")

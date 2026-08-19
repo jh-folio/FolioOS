@@ -70,6 +70,56 @@ def test_the_session_key_is_what_the_market_actually_covers(anchor, market, expe
     assert _scope_session_date(market, windows) == expected
 
 
+@pytest.mark.parametrize(
+    ("time_of_day", "expected"),
+    [
+        # 08:00은 아직 개장 전이라 직전 완료 세션이다.
+        ("08:00", "2026-08-12"),
+        # 11:00은 장중이다. 진행 중인 세션이 곧 이 브리핑의 세션이다.
+        ("11:00", "2026-08-13"),
+        ("18:00", "2026-08-13"),
+    ],
+)
+def test_a_japanese_intraday_briefing_does_not_take_the_previous_session_key(time_of_day, expected):
+    """장중 생성분이 전날 파일로 커밋되면 그 세션의 마감 브리핑이 덮어써진다.
+
+    `marketSessions.jp.sessionDate`는 장중일 때 직전 **완료** 세션을 담는다. 그 값을
+    저장 키로 쓰던 동안 08-13 11:00 생성분이 `2026-08-12.jp.json`으로 갔고, 제목은
+    이미 끝난 `2026.08.12`를 `장중`이라고 말했다.
+    """
+    from features.common.market_calendar import briefing_market_windows
+    from features.daily_briefing.builder import _scope_session_date
+
+    windows = briefing_market_windows("2026-08-13", as_of=f"2026-08-13T{time_of_day}:00+09:00")
+
+    assert _scope_session_date("jp", windows) == expected
+    # 일본은 한국과 같은 시간대라 나란히 흘러야 한다.
+    assert _scope_session_date("jp", windows) == _scope_session_date("kr", windows)
+
+
+def test_an_intraday_japanese_title_names_the_session_in_progress():
+    from features.common.market_calendar import briefing_market_windows
+    from features.daily_briefing.schema import briefing_market_title
+
+    windows = briefing_market_windows("2026-08-13", as_of="2026-08-13T11:00:00+09:00")
+    title = briefing_market_title(
+        "2026-08-13", "jp", session_mode="jp_intraday", market_windows=windows,
+    )
+
+    assert "2026.08.13" in title and "장중" in title
+
+
+def test_europe_is_untouched_by_the_intraday_rule():
+    """유럽은 한국시간 자정 이후 마감이라 `phase` 키 자체가 없다."""
+    from features.common.market_calendar import briefing_market_windows
+    from features.daily_briefing.builder import _scope_session_date
+
+    windows = briefing_market_windows("2026-08-13", as_of="2026-08-13T11:00:00+09:00")
+    session = (windows.get("marketSessions") or {})["europe"]
+
+    assert _scope_session_date("europe", windows) == session["sessionDate"]
+
+
 def test_both_save_paths_use_the_session_key():
     """규칙 경로와 Agent 경로가 같은 키를 써야 한다.
 

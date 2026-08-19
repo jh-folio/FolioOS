@@ -456,6 +456,20 @@ def _latest_metric_value(sec_summary: dict, market_data: dict | None, metric: st
         return None
 
 
+def _latest_metric_entry(sec_summary: dict, market_data: dict | None, metric: str) -> tuple[float | None, str]:
+    """최신 값과 그 값의 연도. 연도가 다른 CFO와 CapEx를 빼면 어느 해의 것도 아닌 FCF가 된다."""
+    entries = sorted(_annual_value_map(sec_summary, metric).items(), reverse=True)
+    if not entries and metric in {"Operating Cash Flow", "Capital Expenditure"}:
+        entries = sorted(_market_cashflow_by_year(market_data, metric).items(), reverse=True)
+    if not entries:
+        return None, ""
+    year, item = entries[0]
+    try:
+        return float(item.get("val")), str(year)
+    except Exception:
+        return None, ""
+
+
 def _fcf_series_with_fallback(sec_summary: dict, market_data: dict | None = None, limit: int = 5) -> list[float]:
     values, _ = _derived_fcf_by_year(sec_summary, market_data)
     out = []
@@ -542,8 +556,13 @@ def build_financial_quality_analysis(sec_summary: dict, market_data: dict | None
     dividends = _latest_number(sec_summary, "Dividends Paid")
 
     fcf = _latest_metric_value(sec_summary, market_data, "Free Cash Flow")
-    if fcf is None and cfo is not None and capex is not None:
-        fcf = cfo - capex
+    if fcf is None:
+        # 같은 해일 때만 뺀다. 연도가 갈리면 FCF를 만들지 않고 결측으로 남긴다.
+        # 밸류에이션 표는 "확인 필요"인데 품질 표만 연도 섞인 FCF로 판단을 내면 안 된다.
+        cfo_value, cfo_year = _latest_metric_entry(sec_summary, market_data, "Operating Cash Flow")
+        capex_value, capex_year = _latest_metric_entry(sec_summary, market_data, "Capital Expenditure")
+        if cfo_value is not None and capex_value is not None and cfo_year and cfo_year == capex_year:
+            fcf = cfo_value - capex_value
     fcf_margin = _ratio(fcf, revenue)
     cfo_to_operating_income = _ratio(cfo, operating_income)
     cfo_to_net_income = _ratio(cfo, net_income)
@@ -687,8 +706,12 @@ def build_valuation_metrics(company: dict, sec_summary: dict, market_data: dict 
         enterprise_value = market_cap + net_debt
 
     fcf = _latest_metric_value(sec_summary, market, "Free Cash Flow")
-    if fcf is None and cfo is not None and capex is not None:
-        fcf = cfo - capex
+    if fcf is None:
+        # 같은 해일 때만 뺀다. 연도가 갈리면 FCF를 만들지 않고 결측으로 남긴다.
+        cfo_value, cfo_year = _latest_metric_entry(sec_summary, market, "Operating Cash Flow")
+        capex_value, capex_year = _latest_metric_entry(sec_summary, market, "Capital Expenditure")
+        if cfo_value is not None and capex_value is not None and cfo_year and cfo_year == capex_year:
+            fcf = cfo_value - capex_value
     psr = _ratio(market_cap, revenue)
     per = _ratio(price, eps) if eps and eps > 0 else None
     ev_ebitda = _ratio(enterprise_value, ebitda) if ebitda and ebitda > 0 else None

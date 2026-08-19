@@ -19,6 +19,8 @@ Data Source Reliability는 보고서와 Thesis Delta가 어떤 자료를 더 신
 ## 원칙
 
 - 공식자료는 뉴스/RSS보다 우선한다.
+- 같은 우선순위 그룹 안에서는 최신 자료가 앞에 온다(날짜 없는 항목은 그룹 뒤). 호출자가 앞에서부터 잘라 쓰기 때문이다.
+- 점수화된 공시 문단은 문단마다 고유한 제목을 갖는다. 제목이 같으면 evidence 중복 제거에서 한 건으로 합쳐진다.
 - 사용자 노트는 계속 hypothesis이며 evidence로 집계하지 않는다.
 - 한국 데이터 자동 연동이 부족한 경우에는 `research-inbox/market-data/` 수동 CSV 경로와 `suggestedAction`을 제시한다.
 - provider 실패는 보고서 생성을 막기보다 `dataGaps`와 quality warning으로 드러낸다.

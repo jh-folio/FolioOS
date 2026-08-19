@@ -67,6 +67,43 @@ def test_the_marker_makes_the_next_start_use_the_new_location(moved, tmp_path):
     assert marker["workspace"] == str(target)
 
 
+def test_moving_pauses_the_writing_jobs_until_the_restart(moved):
+    """표지를 쓴 순간부터 이 프로세스는 두 워크스페이스를 동시에 본다.
+
+    모듈 상수 수십 곳은 import 시점의 옛 폴더를 들고 있고, 새로 뜨는 수집
+    서브프로세스와 호출 시점에 판정하는 경로는 새 폴더를 본다. 그 사이에 수집·정리를
+    돌리면 새 자료가 두 폴더로 갈린다.
+    """
+    assert workspace.moved_pending_restart() is False
+
+    result = service.move_workspace("documents")
+
+    assert result["collectionPausedUntilRestart"] is True
+    assert result["restartRequired"] is True
+    assert workspace.moved_pending_restart() is True
+
+
+def test_the_cleanup_does_not_reach_the_copy_that_was_just_made(moved, tmp_path):
+    """정리는 호출 시점에 폴더를 판정해 방금 복사한 사본을 지운다 — 옮긴 자료가 준다."""
+    from features.common.research_library.rss import retention
+
+    rss = moved / "research-inbox" / "rss"
+    rss.mkdir(parents=True, exist_ok=True)
+    (rss / "2020-01-02 09-00-00 - BBC - ancient.md").write_text("body", encoding="utf-8")
+
+    service.move_workspace("documents")
+    copied = (
+        tmp_path / "home" / "Documents" / "FolioOS" / "research-inbox" / "rss"
+        / "2020-01-02 09-00-00 - BBC - ancient.md"
+    )
+    assert copied.exists()
+
+    result = retention.delete_expired(30)
+
+    assert result["skipped"] == "workspace_moved"
+    assert copied.exists(), "방금 옮긴 사본에서 파일이 사라졌습니다"
+
+
 def test_a_marker_pointing_nowhere_is_ignored(moved):
     """사용자가 옮긴 폴더를 지웠을 수 있다. 없는 경로로 시작하면 저장이 전부 실패한다."""
     (moved / workspace.MARKER_NAME).write_text(

@@ -239,6 +239,9 @@ def _best_rows(rows: list[dict], forms, point_in_time: bool) -> list[dict]:
         else:
             filtered = [r for r in filtered if 45 <= _duration_days(r) <= 120]
     filtered.sort(key=lambda r: (r.get("end", ""), r.get("filed", "")), reverse=True)
+    # 분기는 8개를 모은다. 4개만 모으면 전년 동기가 표에 아예 없어 계절성 비교가
+    # 불가능하다(10-Q에는 Q4가 없어 4개는 1년치도 못 채운다).
+    cap = 4 if annual else 8
     deduped = []
     seen = set()
     for row in filtered:
@@ -247,7 +250,7 @@ def _best_rows(rows: list[dict], forms, point_in_time: bool) -> list[dict]:
             continue
         seen.add(key)
         deduped.append(row)
-        if len(deduped) >= 4:
+        if len(deduped) >= cap:
             break
     return deduped
 
@@ -350,7 +353,8 @@ def build_companyfacts_summary(company: dict, cache_dir: Path) -> dict:
                 "metric": metric,
                 "concept": concept,
                 "annual": annual[:3],
-                "quarterly": quarterly[:4],
+                # 전년 동기 비교를 하려면 8분기가 있어야 한다.
+                "quarterly": quarterly[:8],
                 "recent": recent,
             }
         )

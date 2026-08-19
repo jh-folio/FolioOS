@@ -101,9 +101,14 @@ def preview(days: int, rss_dir: Path | None = None, today: dt.date | None = None
 
 def delete_expired(days: int, rss_dir: Path | None = None, today: dt.date | None = None) -> dict:
     """기간이 지난 파일을 지운다. 행 정리는 부르는 쪽의 재색인이 맡는다."""
-    from features.common.workspace import research_inbox_dir
+    from features.common.workspace import moved_pending_restart, research_inbox_dir
 
     days = normalize_days(days)
+    if rss_dir is None and moved_pending_restart():
+        # 옮긴 뒤 재시작 전에는 `research_inbox_dir()`가 방금 복사한 **새** 폴더를
+        # 가리키는데 이 프로세스의 색인·캐시는 옛 폴더를 본다. 그 상태로 지우면
+        # 사용자가 옮겨 놓은 사본에서 파일이 사라진다(§6 절대 규칙 2).
+        return {"days": days, "deleted": 0, "freedBytes": 0, "failed": 0, "skipped": "workspace_moved"}
     rss_dir = rss_dir or (research_inbox_dir() / "rss")
     resolved_root = rss_dir.resolve()
     deleted = 0

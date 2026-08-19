@@ -13,11 +13,13 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import re
 import threading
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from features.common.canonical_report_io import safe_child_path
 from features.investment_review.schema import normalize_review
 from features.common.workspace import data_dir
 
@@ -25,6 +27,23 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = data_dir()
 REVIEW_DIR = DATA_DIR / "investment-review"
 MEMORY_DB = DATA_DIR / "market-memory.sqlite3"
+
+REVIEW_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def normalize_review_date(value) -> str:
+    """리뷰 날짜는 YYYY-MM-DD 형식 하나만 받는다.
+
+    사용자 입력 date가 그대로 캐시 파일 경로에 붙으므로, 형식을 검증하지 않으면
+    `../portfolio` 같은 값이 `data/portfolio.json`을 리뷰 JSON으로 덮어쓴다
+    (§6 절대 규칙 2). 브리핑의 `_valid_briefing_date()`와 같은 계약이다.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return _today()
+    if not REVIEW_DATE_RE.fullmatch(text):
+        raise ValueError("invalid_review_date")
+    return text
 
 
 def _today() -> str:
@@ -157,22 +176,41 @@ def aggregate_checkpoints(thesis_deltas: list, regime_states: list, *, limit: in
         checkpoints_from_regime_state,
         checkpoints_from_thesis_delta,
     )
-    collected = []
+    thesis_rows = []
     for d in thesis_deltas or []:
-        collected.extend(checkpoints_from_thesis_delta(d, artifact_id=str(d.get("ticker") or d.get("deltaId") or "")) or [])
+        thesis_rows.extend(checkpoints_from_thesis_delta(d, artifact_id=str(d.get("ticker") or d.get("deltaId") or "")) or [])
+    regime_rows = []
     for s in regime_states or []:
-        collected.extend(checkpoints_from_regime_state(s, artifact_id=str(s.get("id") or s.get("stateKey") or "")) or [])
-    seen: set[str] = set()
-    out = []
-    for c in collected:
-        text = str(c.get("checkpoint") or "").strip()
-        if not text or text in seen:
-            continue
-        seen.add(text)
-        out.append(c)
-        if len(out) >= limit:
-            break
-    return out
+        regime_rows.extend(checkpoints_from_regime_state(s, artifact_id=str(s.get("id") or s.get("stateKey") or "")) or [])
+
+    # 같은 문구라도 종목이 다르면 다른 체크포인트다. thesis delta의 기본 문구는 모든
+    # 종목이 같아서 문구만으로 접으면 첫 종목만 살아남고, 티커별 필터를 거친 나머지
+    # 종목은 근거 없이 "확인할 체크포인트 없음"이 된다.
+    seen: set[tuple[str, str]] = set()
+
+    def _dedup(rows: list) -> list:
+        out = []
+        for c in rows:
+            text = str(c.get("checkpoint") or "").strip()
+            key = (str(c.get("ticker") or "").strip().upper(), text)
+            if not text or key in seen:
+                continue
+            seen.add(key)
+            out.append(c)
+        return out
+
+    thesis_rows = _dedup(thesis_rows)
+    regime_rows = _dedup(regime_rows)
+
+    # 소스별 정원. thesis가 먼저 수집되므로 정원 없이 자르면 종목이 6개만 넘어도
+    # 시장(regime) 체크포인트가 0건이 되어, 리뷰가 시장 쪽 확인 사항을 통째로 잃는다.
+    # 한쪽이 정원을 못 채우면 다른 쪽이 남은 자리를 흡수한다.
+    limit = max(0, int(limit))
+    thesis_quota = limit * 2 // 3
+    regime_quota = limit - thesis_quota
+    thesis_take = min(len(thesis_rows), max(thesis_quota, limit - min(len(regime_rows), regime_quota)))
+    regime_take = min(len(regime_rows), limit - thesis_take)
+    return thesis_rows[:thesis_take] + regime_rows[:regime_take]
 
 
 def build_linked_notes(notes: list, *, limit: int = 12) -> list:
@@ -284,8 +322,11 @@ def render_markdown(review: dict) -> str:
     kc = review.get("keyCheckpoints") or []
     lines.append("## 이번 주 체크포인트")
     if kc:
+        # thesis 체크포인트의 기본 문구는 종목이 달라도 같다. 티커를 빼면 같은 줄이
+        # 종목 수만큼 반복되어 어느 종목을 확인하라는 것인지 알 수 없다.
         for c in kc[:12]:
-            lines.append(f"- {c.get('checkpoint')}")
+            ticker = str(c.get("ticker") or "").strip().upper()
+            lines.append(f"- **{ticker}** {c.get('checkpoint')}" if ticker else f"- {c.get('checkpoint')}")
     else:
         lines.append("- 구조화된 체크포인트가 없습니다.")
     lines.append("")
@@ -793,7 +834,8 @@ class InvestmentContextService:
 # ---------------------------------------------------------------------------
 
 def _cache_path(date: str) -> Path:
-    return REVIEW_DIR / f"{date}.json"
+    # normalize_review_date()가 이미 형식을 막지만, 경로 조립은 별도로도 봉쇄한다.
+    return safe_child_path(REVIEW_DIR, f"{date}.json")
 
 
 def _load_cached(date: str) -> dict | None:
@@ -809,7 +851,10 @@ def _load_cached(date: str) -> dict | None:
 def _load_latest() -> dict | None:
     if not REVIEW_DIR.exists():
         return None
-    files = sorted(REVIEW_DIR.glob("*.json"), reverse=True)
+    # 미래 날짜 저장본은 파일명 역순 정렬에서 언제나 1등이라 '최신 저장본' 자리를 영구히
+    # 선점한다. 옛 버전이 남긴 파일이 있을 수 있으므로 읽을 때 걸러 낸다.
+    today = _today()
+    files = sorted((path for path in REVIEW_DIR.glob("*.json") if path.stem <= today), reverse=True)
     for path in files:
         try:
             return json.loads(path.read_text(encoding="utf-8"))
@@ -840,13 +885,26 @@ def build_review(
     force_refresh: bool = False,
     persist: bool = True,
 ) -> dict:
-    date = str(date or _today())
+    requested = normalize_review_date(date)
     if not force_refresh:
-        cached = _load_cached(date)
+        cached = _load_cached(requested)
         if cached:
-            return normalize_review(cached, date=date)
+            return normalize_review(cached, date=requested)
 
     warnings: list = []
+    # 집계 입력(regime/thesis/portfolio/watchlist/notes)은 전부 현재 시점 조회이고 as-of
+    # 질의 경로가 없다. 그래서 어떤 날짜를 요청받아도 결과는 오늘의 판단이다.
+    today = _today()
+    date = requested
+    if requested != today:
+        warnings.append(
+            f"이 리뷰는 현재 데이터로 집계했습니다. {requested} 시점 데이터로 재구성한 것이 아닙니다."
+        )
+        if persist:
+            # 저장은 파일명이 곧 날짜라, 다른 날짜로 저장하면 오늘의 판단이 그 날짜의
+            # 판단으로 굳는다(미래 날짜는 `_load_latest()`까지 영구 선점한다).
+            warnings.append(f"요청한 {requested} 대신 오늘({today}) 리뷰로 저장했습니다.")
+            date = today
     regime_states = _load_regime_states(warnings)
     theses, deltas = _load_theses_with_deltas(warnings)
     positions = _load_positions(warnings) if include_portfolio else []
@@ -893,7 +951,7 @@ def build_review(
 
 
 def get_review(date: str | None = None) -> dict:
-    date = str(date or _today())
+    date = normalize_review_date(date)
     cached = _load_cached(date)
     if cached:
         return normalize_review(cached, date=date)

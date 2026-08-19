@@ -4,11 +4,26 @@
  * `2026. 6. 15.`, `2026-06-13`. 브리핑 카드는 초 단위 시각까지 노출해 혼자 길었다.
  */
 
+/** 시각이 붙은 값만 KST 날짜로 바꾼다.
+ *
+ * 저장된 생성 시각은 UTC(`now_iso()`)라 앞 10자를 그대로 쓰면 KST 00~09시 생성분이
+ * 전날로 보인다. 앱의 사용자 노출 날짜 기준은 KST이고, 보고서 id도 같은 기준이다.
+ * `2026-08-04`처럼 날짜만 있는 값(브리핑 발행일)은 시각이 없으므로 건드리지 않는다.
+ */
+function kstDatePart(text: string): string {
+  if (!text.includes("T")) return text.slice(0, 10);
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return text.slice(0, 10);
+  const kst = new Date(parsed.getTime() + 9 * 60 * 60 * 1000);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}`;
+}
+
 /** 목록의 날짜. 어느 화면이든 `2026.08.04`. */
 export function listDate(value?: string): string {
   const text = String(value || "").trim();
   if (!text) return "";
-  const iso = text.slice(0, 10);
+  const iso = kstDatePart(text);
   const matched = /^(\d{4})[-.](\d{2})[-.](\d{2})$/.exec(iso);
   if (matched) return `${matched[1]}.${matched[2]}.${matched[3]}`;
   const parsed = new Date(text);

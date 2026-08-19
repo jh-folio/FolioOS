@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shutil
+import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -17,10 +18,34 @@ from features.common.shared_jobs_completion import ArtifactCompletionProof
 from features.common.shared_jobs_projection import utc_z
 from features.common.shared_jobs_schema import ErrorCode, JOB_ID_PATTERN, JobStatus, TERMINAL_STATUSES
 from features.common.shared_jobs_store import JobsStoreUnavailableError, SharedJobStore
-from features.common.atomic_replace import replace_with_retry
+from features.common.atomic_replace import ATTEMPTS, BASE_DELAY, replace_with_retry
 
 
 PACK_ID_PATTERN: Final = re.compile(r"^[A-Za-z0-9_.-]{1,120}$")
+
+
+def rmtree_with_retry(
+    path: Path,
+    *,
+    attempts: int = ATTEMPTS,
+    base_delay: float = BASE_DELAY,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """`shutil.rmtree()`를 하되, 잠깐 잡혀 있으면 다시 시도한다(§파일 저장).
+
+    Windows에서 백신 실시간 검사나 검색 색인기가 pack 파일 핸들을 잡고 있으면
+    `WinError 5/32`(둘 다 `PermissionError`)로 거부되고 보통 수십 밀리초 뒤 풀린다.
+    쓰기는 `replace_with_retry()`로 물러났다 다시 쓰는데 삭제만 한 번에 포기하면,
+    그 비대칭이 잡 종료와 시작 복구를 통째로 실패시킨다.
+    """
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            sleep(base_delay * (2**attempt))
 
 
 class StrictModel(BaseModel):
@@ -110,7 +135,7 @@ class JobPrivateLifecycle:
         try:
             owner.relative_to(self.context_root.resolve())
             if owner.exists():
-                shutil.rmtree(owner)
+                rmtree_with_retry(owner)
             return not owner.exists()
         except OSError:
             return False
@@ -219,14 +244,23 @@ class JobPrivateLifecycle:
             raise JobsStoreUnavailableError()
 
     def recover_startup(self, store: SharedJobStore) -> None:
+        """재시작 후 남은 비종료 잡을 종료 상태로 되돌린다.
+
+        pack 삭제가 끝내 실패한 잡은 fail-closed 계약대로 비종료로 남기고
+        `cleanup_blocked`에 넣는다(잡 조회는 503). 다만 거기서 멈추지 않고 나머지
+        잡의 전환과 orphan 정리를 끝낸 뒤 마지막에 알린다 — 첫 실패에서 빠져나오면
+        뒤의 좀비 잡이 그대로 남는다. 호출자는 이 예외로 기동을 멈추지 않는다.
+        """
         state = store.load()
+        blocked: list[str] = []
         for job in state.jobs:
             if job.status not in {JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED}:
                 continue
             if not self.cleanup_owner(job.id):
                 self.cleanup_blocked.add(job.id)
                 store.mark_private_cleanup_failed(job.id)
-                raise PrivateCleanupError(job.id)
+                blocked.append(job.id)
+                continue
             self.worker_private.pop(job.id, None)
             store.transition_recovery(
                 job.id,
@@ -234,6 +268,8 @@ class JobPrivateLifecycle:
             )
         active = {job.id for job in store.load().jobs if job.status not in TERMINAL_STATUSES}
         self.cleanup_orphans(active)
+        if blocked:
+            raise PrivateCleanupError(blocked[0])
 
     def cleanup_orphans(self, nonterminal_job_ids: set[str]) -> list[str]:
         if not self.context_root.exists():
@@ -246,6 +282,11 @@ class JobPrivateLifecycle:
             modified = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
             if path.name in nonterminal_job_ids or modified > cutoff:
                 continue
-            shutil.rmtree(path)
+            try:
+                rmtree_with_retry(path)
+            except OSError:
+                # 24시간 넘게 남은 폴더를 지우는 위생 작업이다. 지금 잠겨 있다고 복구
+                # 전체를 실패시키지 않는다 — 다음 시작에서 다시 지운다.
+                continue
             removed.append(path.name)
         return removed

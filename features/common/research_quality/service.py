@@ -1,9 +1,12 @@
 """Research quality service: load, evaluate, and persist quality fields."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
+from features.common.canonical_identity import ReportKind
+from features.common.canonical_report_state import load_report
+from features.common.canonical_report_types import WriteKind
+from features.common.canonical_reports import commit_sync, prepare
 from features.common.research_schema.service import load_artifact
 from features.common.utils import kst_date
 from features.common.research_quality.evaluator import evaluate_artifact, evaluate_report
@@ -58,11 +61,21 @@ def recheck_quality(artifact_type: str, artifact_id: str) -> dict:
         raise FileNotFoundError(f"Artifact not found: {artifact_type}/{artifact_id}")
     quality = evaluate_artifact(artifact_type, artifact)
     path = _artifact_json_path(artifact_type, artifact_id)
+    saved = False
     if path:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        data["quality"] = quality
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"ok": True, "artifactType": artifact_type, "artifactId": artifact_id, "quality": quality, "saved": bool(path)}
+        # 정식 커밋 배관으로만 저장한다. `quality`는 canonicalRevision.hash 계산에
+        # 포함되는 필드라, 리비전 갱신 없이 파일을 직접 덮어쓰면 지문이 어긋나
+        # 그 보고서의 재생성·Personal Overlay·제안 승인이 영구히 실패한다
+        # (실측: data/briefings/2026-08-04.kr.json이 그 상태로 발견됐다).
+        current = load_report(path) or {}
+        commit_sync(prepare(
+            report_kind=ReportKind(artifact_type),
+            exact_path=path,
+            write_kind=WriteKind.CANONICAL,
+            candidate={**current, "quality": quality},
+        ))
+        saved = True
+    return {"ok": True, "artifactType": artifact_type, "artifactId": artifact_id, "quality": quality, "saved": saved}
 
 
 def evaluate_markdown(markdown: str, **kwargs) -> dict:

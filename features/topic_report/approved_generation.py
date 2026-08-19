@@ -125,6 +125,7 @@ def build_approved_report(
         approved.userContext,
         topic_plan=approved.topicPlan.model_dump(mode="json"),
         data_gaps=list(gaps),
+        as_of=approved.asOfDate,
     )
     final_engine = attempted if output is not None else "rules"
     final_adapter = (

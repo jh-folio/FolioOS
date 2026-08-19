@@ -300,6 +300,9 @@ def project_terminal_result(
                 added=_integer(safe, "added") or 0,
                 total=_integer(safe, "total") or 0,
                 failed=_integer(safe, "failed") or 0,
+                # 코드 식별자만 싣는다. `지금 정리`의 bool 형태는 이유가 아니므로 버리고,
+                # 길이는 잘라서 담는다 — 여기서 ValidationError가 나면 잡이 종결되지 못한다.
+                skipped=(_text(safe, "skipped") or "")[:40] or None,
             )
         case TaskType.SETUP:
             return SetupProjection(ok=True, adapter=job.adapter)

@@ -123,7 +123,7 @@ def test_explicit_unusable_and_churn_thresholds_trigger_noisy() -> None:
 
 
 @pytest.mark.parametrize(
-    ("current", "reason"),
+    ("previous", "reason"),
     [
         (
             snapshot(
@@ -142,25 +142,43 @@ def test_explicit_unusable_and_churn_thresholds_trigger_noisy() -> None:
             ),
             "clock_skew",
         ),
-        (
-            snapshot(
-                evidence_ids=["ev_a"],
-                index_generation=None,
-                rss_generation=None,
-                watermark=None,
-            ),
-            "provider_generation_reset",
-        ),
     ],
 )
-def test_stale_and_provider_reset_have_safe_reason_codes(
-    current: CollectionResolutionSnapshot,
+def test_last_saved_snapshot_age_drives_stale_reason_codes(
+    previous: CollectionResolutionSnapshot,
     reason: str,
 ) -> None:
-    previous = snapshot(evidence_ids=["ev_a"])
+    """만료는 마지막 저장 스냅샷에만 성립한다.
+
+    current는 호출자가 방금 만든 해석이라 나이가 늘 ~0이었고, 그 값을 보던 동안
+    화면의 `최근 스냅샷 만료` 라벨은 한 번도 뜨지 않았다.
+    """
+    # current는 방금 만든 해석 — 시각이 정상이어도 previous가 오래되면 stale이다.
+    current = snapshot(evidence_ids=["ev_a"], resolved_at=NOW.isoformat().replace("+00:00", "Z"))
     result = calculate_change(current, previous, now=NOW)
     assert result.health is CollectionHealth.STALE
     assert reason in result.reasonCodes
+
+
+def test_a_fresh_previous_snapshot_is_not_expired_by_a_current_read() -> None:
+    previous = snapshot(evidence_ids=["ev_a"], resolved_at="2026-07-27T11:00:00.000000Z")
+    current = snapshot(evidence_ids=["ev_a"], resolved_at=NOW.isoformat().replace("+00:00", "Z"))
+    result = calculate_change(current, previous, now=NOW)
+    assert result.health is CollectionHealth.ACTIVE
+    assert result.reasonCodes == ("healthy",)
+
+
+def test_provider_generation_reset_still_reports_stale() -> None:
+    previous = snapshot(evidence_ids=["ev_a"])
+    current = snapshot(
+        evidence_ids=["ev_a"],
+        index_generation=None,
+        rss_generation=None,
+        watermark=None,
+    )
+    result = calculate_change(current, previous, now=NOW)
+    assert result.health is CollectionHealth.STALE
+    assert "provider_generation_reset" in result.reasonCodes
 
 
 def test_definition_change_discards_incomparable_baseline() -> None:

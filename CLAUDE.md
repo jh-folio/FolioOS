@@ -300,6 +300,7 @@ features/company_analysis/financial_quality_prompt.md
 - 표지가 필요한 이유는 옮기기가 **원본을 지우지 않기** 때문이다. 표지가 없으면 앱 폴더 규칙이 먼저 걸려 방금 옮긴 곳이 아니라 옛 자료를 계속 쓴다. 표지는 배포 zip에 없으므로 새 버전 폴더에서는 문서 폴더 규칙이 자료를 다시 찾는다.
 - **경로를 앱 폴더 기준으로 만들지 않는다.** `documents.path`는 자료 폴더 기준 상대 경로이며 `indexing/service.py::workspace_relative()`가 만든다. 앱 폴더(`ROOT`) 기준으로 두면 자료를 문서 폴더로 옮긴 순간 `path.relative_to(ROOT)`가 `ValueError`를 던져 인덱싱 전체가 멈춘다 — 옮기기가 성공해도 앱을 못 쓴다. 기본값에서는 자료 폴더가 곧 앱 폴더라 저장되는 문자열이 같아 기존 색인은 그대로 읽힌다.
 - 판정은 프로세스당 1회 캐시한다. 모듈 상수 수십 곳이 import 시점에 읽는다. 옮긴 뒤에는 재시작이 필요하며 화면이 그렇게 안내한다.
+- **옮긴 뒤 재시작 전까지 RSS 수집과 보관 기간 정리는 쉰다.** 표지가 쓰인 순간부터 한 프로세스가 두 워크스페이스를 동시에 본다 — 모듈 상수(`RSS_INBOX_DIR`)는 옛 폴더, 수집 서브프로세스와 호출 시점에 판정하는 경로(`data_dir()`·`research_inbox_dir()`)는 새 폴더다. 그대로 수집하면 Markdown은 옛 폴더에·evidence 행은 새 DB에 갈려, 재시작 뒤 그 기사가 파일 없는 행으로만 남아 색인·브리핑에서 사라진다. 정리는 반대로 방금 복사한 사본을 지운다. `workspace.moved_pending_restart()`가 그 창을 표시하고, 건너뛴 작업은 `skipped: "workspace_moved"`와 재시작 안내를 함께 돌려준다 — 조용히 건너뛰면 자동 수집이 도는 줄 알고 며칠을 보낸다.
 - 옮기기(`features/common/workspace_service.py`)는 복사 → 파일별 크기 검증 → 표지 순이다. 검증 실패 시 표지를 쓰지 않아 앱이 계속 원본을 쓴다. 목적지에 자료가 있으면 `merge` 없이 진행하지 않고, 목적지는 `documents`/`app` 둘뿐이다(임의 경로 금지). `FOLIO_HOME`이 설정돼 있으면 옮기기를 막는다 — 표지를 써도 다음 시작에서 환경변수가 이기므로 옮겼다고 말하면 거짓말이 된다.
 - 문서 폴더는 Windows 레지스트리(`User Shell Folders\Personal`)로 읽는다. OneDrive 리디렉션 시 `~/Documents`가 실제 문서 폴더가 아니다. 목적지가 OneDrive 아래면 막지 않고 경고만 한다.
 
@@ -309,6 +310,8 @@ features/company_analysis/financial_quality_prompt.md
 - **이유**: `os.replace()`는 POSIX에서 대상이 열려 있어도 성공하지만 Windows는 `WinError 5`(액세스 거부)나 `WinError 32`(사용 중)로 거부한다. 백신 실시간 검사·검색 색인기·탐색기 미리보기가 잡고 있을 때 나며, 보통 수십 밀리초 안에 풀린다. 한 번 거부됐다고 실패로 끝내면 사용자가 작업 상태나 보고서 저장을 잃는다.
 - `replace_with_retry()`는 `PermissionError`만 최대 6회(총 0.31초) 물러나며 재시도하고, 끝내 안 되면 원래 예외를 올린다. 경로 없음처럼 기다려도 안 풀리는 오류는 즉시 올린다.
 - `write_bytes_atomic()`은 임시 파일에 쓰고 제자리로 옮기며, 실패 시 임시 파일을 남기지 않는다.
+- **임시 이름은 호출마다 다르다**(`{대상}.{uuid}{suffix}`). 이름을 고정하면 같은 파일을 동시에 쓰는 두 호출이 한 임시 파일을 공유해, 나중 내용이 먼저 제자리로 가고(응답과 저장 내용이 어긋난다) 뒤이은 교체는 임시 파일이 이미 사라져 `FileNotFoundError`로 500이 된다(실측 6,000회 중 1,260회). pid로는 부족하다 — 겹치는 쪽은 한 프로세스 안에서 sync 엔드포인트를 나눠 처리하는 스레드풀 스레드이고, `watchlist.json`·`portfolio-presets.json`·각종 설정 파일에는 호출자 잠금이 없다.
+- **삭제도 같은 재시도를 쓴다.** job 비공개 pack 폴더 제거는 `shared_jobs_private.rmtree_with_retry()`를 거친다. 쓰기만 물러났다 다시 쓰고 삭제는 한 번에 포기하면, 그 비대칭이 잡 종료와 시작 복구를 통째로 실패시킨다.
 - 전체 테스트를 반복 실행해 잡은 실제 오류가 근거다. 파일을 쓰는 테스트라면 어느 것이든 드물게 걸렸고 단독 실행 시에는 통과해, 오래 `간헐적 실패`로만 남아 있었다.
 
 ### 웹 검색 출처 범위 (Web Search Scope)
@@ -343,7 +346,8 @@ features/company_analysis/financial_quality_prompt.md
 - `start.ps1`과 `start.sh`는 종료 코드 7이면 루프를 돌며 `py -3 app.py`(또는 Python 경로)를 재실행한다. 0도 7도 아니면 `start.ps1`은 창을 붙잡아(`Read-Host`) 실패 이유가 사라지지 않게 한다.
 - `start-archive.cmd`나 `start.ps1` / `start.sh`로 실행 중일 때만 재시작이 자동으로 동작한다. 터미널에서 `py -3 app.py`를 직접 실행 중이면 서버가 종료만 된다.
 - `_RESTART_REQUESTED` 플래그로 동시에 여러 재시작 요청이 들어와도 한 번만 실행한다.
-- 재시작 후 `load_jobs()`는 `data/jobs.json`에서 `queued`/`running` 상태인 작업을 `failed`로 변환한다(좀비 잡 방지).
+- 재시작 후 `load_jobs()`는 `jobs-v2.json`과 legacy `data/jobs.json` 양쪽의 `queued`/`running`/`cancel_requested` 작업을 `failed_restart`로 변환한다(좀비 잡 방지). **legacy 파일도 실제로 고쳐 쓴다** — API는 `JOBS` 캐시가 아니라 매 요청 `_store().merged()`를 다시 읽고 merged()가 legacy 행을 그대로 싣기 때문에, 캐시만 고치면 구버전에서 남은 `running` 행이 영원히 실행 중으로 보인다.
+- **비공개 pack 삭제가 막혀도 기동을 멈추지 않는다.** `recover_startup()`은 실패한 잡을 `cleanup_blocked`에 남겨 잡 조회를 503으로 닫되(fail-closed), 나머지 잡 전환과 orphan 정리를 끝내고 마지막에 알린다. `load_jobs()`는 그 예외를 잡고 계속한다 — 백신이 pack을 수십 밀리초 잡았다고 앱 전체가 안 켜지는 것이 더 나쁘다.
 
 ### 백그라운드 작업과 증분 인덱싱
 
@@ -596,7 +600,7 @@ features/company_analysis/financial_quality_prompt.md
 - lead끼리의 교차 확인(`corroborated`)은 독립 provider가 둘 이상일 때만 성립하므로 현재 도달하지 않는 경로다. 확인은 공식 자료 경로(`confirm_signal`)가 담당한다.
 - **별도 `signals` 자동화는 0.5에서 삭제했다.** 승인 provider가 하나뿐이라 lead를 보여주는 화면이 없고, 하는 일이 RSS 수집과 겹쳤다. 설정 항목(`저지연 리드 수집`)과 스케줄 kind를 모두 없앴으며 승격은 RSS 수집이 계속한다.
 - `evidence_items.intake_stage=lead`는 `is_countable_evidence()`에서 항상 제외되고 source ledger에 들어가지 않는다. corroboration/공식 확인 후 승격된 row만 evidence가 된다.
-- retention 기본값: 일반 lead 3일, Watchlist/Portfolio 관련 14일, corroborated 30일.
+- retention 기본값: 일반 lead 3일, 티커가 연결된 lead 14일, corroborated 30일(`normalize_signal`은 `related_tickers`가 비었는지만 본다 — 워치리스트·포트폴리오 보유 여부를 따로 확인하지 않는다). **집행은 두 곳이다** — `promote_kr_rss_leads()`가 승격 전에 `purge_expired()`를 부르고(RSS 수집·`지금 수집` 버튼과 함께 돈다), `query_signals()`가 아직 지워지지 않은 만료 lead를 결과에서 뺀다. 승격만 남기고 purge 호출부를 없애면 보존 계약이 집행되지 않는다 — lead 행은 `markdown_path`가 비어 있어 `prune_orphan_evidence()`도 걷어내지 못한다.
 - 상시 WebSocket 연결은 두지 않는다(`start_signal_runtime`은 lifespan 호환용 no-op).
 - run log에는 provider/count/status/error code만 남기고 headline/raw payload를 남기지 않는다.
 - **0.4.8부터 lead를 보여주는 화면이 없다.** 워치리스트 상세의 `빠른 시장 신호` 레일은 승인 provider가 하나만 남아 교차 확인이 불가능해졌고 lead 티커가 워치리스트 종목과 맞는 경우가 없어 제거했다. 승격·retention 런타임은 그대로 남아 대화 context(`sourceContext.fastSignals`)가 계속 읽는다.

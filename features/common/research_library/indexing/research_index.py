@@ -625,15 +625,15 @@ def hybrid_search(
         # Stage 1: FTS5 — collect candidate chunk_ids with their BM25 rank
         fts_query = sanitize_fts_query(q)
         fts_rank: dict[str, int] = {}  # chunk_id -> 0-based rank (lower = better)
+        scope_filter, scope_params = _scope_sql(scope_prefixes)
+        allowed_filter = ""
+        allowed_params: tuple[str, ...] = ()
+        if allowed_doc_ids is not None:
+            allowed_placeholders = ",".join("?" for _ in allowed_doc_ids)
+            allowed_filter = f"AND d.doc_id IN ({allowed_placeholders})"
+            allowed_params = tuple(sorted(allowed_doc_ids))
         if fts_query:
             try:
-                scope_filter, scope_params = _scope_sql(scope_prefixes)
-                allowed_filter = ""
-                allowed_params: tuple[str, ...] = ()
-                if allowed_doc_ids is not None:
-                    allowed_placeholders = ",".join("?" for _ in allowed_doc_ids)
-                    allowed_filter = f"AND d.doc_id IN ({allowed_placeholders})"
-                    allowed_params = tuple(sorted(allowed_doc_ids))
                 rows = conn.execute(
                     f"""
                     SELECT chunks_fts.chunk_id
@@ -655,16 +655,27 @@ def hybrid_search(
         # 인덱스에 LIKE로 물어 후보를 보탠다. 라틴·한글 질의는 이 경로를 타지 않는데,
         # LIKE는 단어 경계를 모르기 때문이다 — `AI`가 `capital`·`chain`에 걸려
         # 오탐이 늘어난다(실측 2건 기대에 6건). 기존 결과가 바뀌지 않는 이유이기도 하다.
+        # 이 경로도 1단계 FTS와 같은 범위·허용 문서 제한을 진다. 제한 없이 후보를 보태면
+        # 허용 밖 문서가 후보 정원(fts_pool)을 먹어 정작 허용된 문서가 밀려난다 —
+        # 호출부의 파이썬 후처리가 유출은 막지만 재현율은 되돌려주지 못한다.
         if has_cjk(q):
             for term in sorted({t for t in TOKEN_RE.findall(q) if has_cjk(t)} or {q}, key=len, reverse=True)[:4]:
                 try:
                     rows = conn.execute(
-                        """
-                        SELECT chunk_id FROM chunks_cjk
-                        WHERE text LIKE ? ESCAPE '\\'
+                        f"""
+                        SELECT chunks_cjk.chunk_id
+                        FROM chunks_cjk
+                        JOIN chunks c ON c.chunk_id = chunks_cjk.chunk_id
+                        JOIN documents d ON d.doc_id = c.doc_id
+                        WHERE chunks_cjk.text LIKE ? ESCAPE '\\' {scope_filter} {allowed_filter}
                         LIMIT ?
                         """,
-                        (f"%{term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')}%", min(120, fts_pool)),
+                        (
+                            f"%{term.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')}%",
+                            *scope_params,
+                            *allowed_params,
+                            min(120, fts_pool),
+                        ),
                     ).fetchall()
                 except sqlite3.OperationalError:
                     break

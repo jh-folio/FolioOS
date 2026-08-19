@@ -95,7 +95,13 @@ def store_lock(path: str) -> RLock:
 
 
 TRANSITIONS = {
-    JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.CANCELLED}),
+    # QUEUED→FAILED는 첫 RUNNING 전이 쓰기가 실패해 잡이 시작조차 못 한 경우다.
+    # 이 칸이 비어 있으면 `run_job`의 예외 처리가 JobTransitionError로 되튕기고,
+    # 그때 pack은 이미 지워진 뒤라 잡이 `cleanup_blocked`에 프로세스 수명 내내
+    # 남아 `/api/jobs`와 Work Log가 계속 503이 된다(§서버 재시작의 fail-closed).
+    # 재시작 복구용 FAILED_RESTART로 대신하면 "서버 재시작" 메시지가 붙어
+    # 원인을 잘못 말한다.
+    JobStatus.QUEUED: frozenset({JobStatus.RUNNING, JobStatus.CANCELLED, JobStatus.FAILED}),
     JobStatus.RUNNING: frozenset({JobStatus.CANCEL_REQUESTED, JobStatus.COMMITTING, JobStatus.FAILED, JobStatus.DONE}),
     JobStatus.CANCEL_REQUESTED: frozenset({JobStatus.CANCELLED, JobStatus.FAILED_CANCEL}),
     JobStatus.COMMITTING: frozenset({JobStatus.FAILED_COMMIT}),

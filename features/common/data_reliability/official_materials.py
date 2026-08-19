@@ -70,10 +70,16 @@ def official_evidence_from_materials(materials: dict, *, artifact_type: str = "t
         meta = ranked.get("metadata") or {}
         form = meta.get("form") or "10-K"
         filing_date = str(meta.get("filingDate") or "")[:10]
-        for paragraph in ranked.get("paragraphs", [])[:4]:
+        for order, paragraph in enumerate(ranked.get("paragraphs", [])[:4], 1):
             text = paragraph.get("paragraph") or paragraph.get("text") or ""
+            item_label = str(paragraph.get("item") or "").strip()
+            # 문단에는 url/path가 없어 dedupe 키가 title|source|date로 떨어진다.
+            # 제목이 같으면 문단 4개가 1개로 합쳐지므로 순번을 제목에 넣는다.
+            title = f"{ticker} {form} ranked paragraph {order}"
+            if item_label:
+                title = f"{title} (Item {item_label})"
             rows.append({
-                "title": f"{ticker} {form} ranked paragraph",
+                "title": title,
                 "source": f"SEC {form}",
                 "date": filing_date,
                 "type": "filing",

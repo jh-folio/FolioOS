@@ -214,6 +214,8 @@ from features.obsidian.workflow.service import (
     read_workflow_note,
     validate_workflow_notes,
 )
+from features.common.canonical_identity import CanonicalIdentityError
+from features.common.canonical_reports import CanonicalConflictError, CanonicalValidationError
 from features.personal_overlay.service import (
     attach_overlay_to_briefing,
     attach_overlay_to_report,
@@ -235,6 +237,7 @@ from features.topic_report.service import (
 from features.topic_report.routes import ApprovedRequestBoundary
 from features.smart_collections.routes import SmartCollectionBoundary, create_smart_collection_service
 from features.investment_notes.intelligence_routes import create_intelligence_router
+from features.common.research_quality.evaluator import evaluate_artifact as evaluate_research_artifact
 from features.common.research_quality.service import (
     evaluate_payload as evaluate_research_quality_payload,
     get_quality as get_research_quality,
@@ -251,6 +254,7 @@ from features.common.quality_generation.schema import normalize_quality_mode
 from features.investment_review.service import (
     get_review as get_investment_review,
     generate_review as generate_investment_review,
+    normalize_review_date,
 )
 from features.investment_review.context_routes import create_investment_context_router
 from features.common.workspace import config_dir, data_dir, research_inbox_dir
@@ -415,6 +419,19 @@ def query_lists(request: Request):
 
 def request_generation_mode(_payload: dict | None) -> str:
     return default_generation_mode()
+
+
+def canonical_write_http_error(exc: Exception) -> HTTPException:
+    """Canonical 커밋 예외를 HTTP로 옮긴다.
+
+    동시 커밋(제안 승인·예약 생성)이나 정체성 불일치는 서버 고장이 아니라 충돌이다.
+    500으로 나가면 화면이 "다시 시도"밖에 말할 수 없다. 포트폴리오 409와 같은 모양으로
+    `{"code": ...}`를 실어 화면이 무엇이 어긋났는지 말할 수 있게 한다.
+    """
+    return HTTPException(
+        status_code=409,
+        detail={"code": getattr(exc, "code", "canonical_write_failed"), "message": str(exc)},
+    )
 
 
 _RESTART_REQUESTED = False
@@ -704,6 +721,8 @@ def api_briefing_personal_overlay(date: str, marketScope: str = "both", body: di
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Briefing not found")
+    except (CanonicalConflictError, CanonicalValidationError, CanonicalIdentityError) as exc:
+        raise canonical_write_http_error(exc) from exc
 
 
 @fastapi_app.get("/api/content-revisions")
@@ -784,9 +803,11 @@ def api_get_analysis_report(report_id: str, includePersonal: bool = False):
     if not report:
         raise HTTPException(status_code=404, detail="Analysis report not found")
     if not report.get("quality") or "sourceGrounding" not in report.get("quality", {}):
+        # 열람은 저장물을 바꾸지 않는다 — 배지는 응답에만 계산해 싣는다. 예전에는 여기서
+        # recheck가 파일을 직접 덮어써 canonicalRevision 지문을 깨뜨렸다. 영구 backfill은
+        # POST /api/research-quality/recheck(정식 커밋 배관)만 한다.
         try:
-            result = recheck_research_quality("company_analysis", report_id)
-            report["quality"] = result.get("quality")
+            report["quality"] = evaluate_research_artifact("company_analysis", report)
         except Exception:
             report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(report, includePersonal)
@@ -809,6 +830,8 @@ def api_analysis_personal_overlay(report_id: str, body: dict | None = Body(defau
         )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Analysis report not found")
+    except (CanonicalConflictError, CanonicalValidationError, CanonicalIdentityError) as exc:
+        raise canonical_write_http_error(exc) from exc
 
 
 @fastapi_app.get("/api/theses")
@@ -1215,6 +1238,8 @@ def api_research_quality_recheck(artifact_type: str, artifact_id: str):
         return recheck_research_quality(artifact_type, artifact_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Artifact not found")
+    except (CanonicalConflictError, CanonicalValidationError, CanonicalIdentityError) as exc:
+        raise canonical_write_http_error(exc) from exc
 
 
 @fastapi_app.post("/api/quality-generation/preflight")
@@ -1249,6 +1274,11 @@ def api_investment_review():
 @fastapi_app.post("/api/investment-review/generate")
 def api_investment_review_generate(body: dict | None = Body(default=None)):
     body = body or {}
+    try:
+        # date는 캐시 파일 경로가 되므로 두 분기(CLI/규칙) 모두 여기서 먼저 형식을 막는다.
+        body["date"] = normalize_review_date(body.get("date"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid_review_date")
     generation_mode = request_generation_mode(body)
     if generation_mode == "llm_cli":
         return submit_agent_task("investment_review", {
@@ -1263,7 +1293,10 @@ def api_investment_review_generate(body: dict | None = Body(default=None)):
 
 @fastapi_app.get("/api/investment-review/{date}")
 def api_investment_review_by_date(date: str):
-    return get_investment_review(date)
+    try:
+        return get_investment_review(date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid_review_date")
 
 
 @fastapi_app.get("/api/agent-bridge/status")
@@ -1645,9 +1678,9 @@ def api_get_topic_report(report_id: str, includePersonal: bool = False):
     if not report:
         raise HTTPException(status_code=404, detail="Topic report not found")
     if not report.get("quality") or "sourceGrounding" not in report.get("quality", {}):
+        # 열람은 저장물을 바꾸지 않는다 — 배지는 응답에만 계산해 싣는다(위 기업분석 GET과 동일).
         try:
-            result = recheck_research_quality("topic_report", report_id)
-            report["quality"] = result.get("quality")
+            report["quality"] = evaluate_research_artifact("topic_report", report)
         except Exception:
             report["quality"] = {"status": "warn", "warnings": ["quality evaluation failed"]}
     return strip_overlay(report, includePersonal)

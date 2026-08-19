@@ -115,6 +115,93 @@ def test_refresh_regime_state_keeps_existing_status_compatibility(monkeypatch):
         assert states[0]["evidenceCount90d"] == 2
 
 
+def test_upsert_memory_keeps_regime_calculated_confidence():
+    """재저장이 Regime이 계산한 confidence를 기본값으로 되돌리면 안 된다.
+
+    같은 날 같은 state_key는 같은 state_id라 재저장이 흔한 경로다. momentum과
+    근거 카운트는 남는데 confidence만 0.55로 돌아가면 행이 서로 모순된다.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = os.path.join(tmp, "market-memory.sqlite3")
+        entry = {
+            "date": "2026-06-10",
+            "title": "AI 반도체 공급망 수요가 이어진다",
+            "summary": "HBM 주문과 서버 투자 계획이 함께 늘었다.",
+            "storyFamily": "AI 반도체 공급망",
+            "importance": "high",
+            "entryMode": "issue",
+            "tags": ["AI", "반도체"],
+            "sources": [
+                {"source": "Reuters", "title": "HBM demand", "url": "https://example.com/a"},
+                {"source": "Bloomberg", "title": "server capex", "url": "https://example.com/b"},
+            ],
+        }
+        first = M.upsert_memory(db_path, entry)
+        state_id = first["state"]["id"]
+
+        conn = M.connect(db_path)
+        with conn:
+            conn.execute(
+                """
+                UPDATE market_narrative_states
+                SET confidence=0.81, momentum='strengthening', evidence_count_30d=3
+                WHERE state_id=?
+                """,
+                (state_id,),
+            )
+        conn.close()
+
+        M.upsert_memory(db_path, entry)
+
+        conn = M.connect(db_path)
+        row = conn.execute(
+            "SELECT confidence, momentum, evidence_count_30d FROM market_narrative_states WHERE state_id=?",
+            (state_id,),
+        ).fetchone()
+        conn.close()
+        assert row["confidence"] == 0.81
+        assert row["momentum"] == "strengthening"
+        assert row["evidence_count_30d"] == 3
+
+
+def test_refresh_thesis_links_keeps_manual_relationship():
+    """사용자가 지정한 링크 relationship을 자동 추론이 덮어쓰면 안 된다.
+
+    thesis는 hypothesis이고 이 행은 연결 정보다. method='manual'인 행을 자동
+    갱신이 바꾸면 행이 자기 출처를 거짓으로 말하게 된다.
+    """
+    from features.thesis_tracking import store as thesis_store
+
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = os.path.join(tmp, "market-memory.sqlite3")
+        _seed_db(db_path)
+        conn = M.connect(db_path)
+        thesis_store.init_db(conn)
+        with conn:
+            conn.execute(
+                """
+                INSERT INTO thesis (ticker, company, status, linked_regimes_json, note_path)
+                VALUES ('NVDA', 'NVIDIA', 'active', '["ai_supply"]', 'Theses/NVDA.md')
+                """
+            )
+        conn.close()
+
+        R.upsert_regime_thesis_link(db_path, "state-ai", {
+            "ticker": "NVDA",
+            "relationship": "core_holding",
+            "strength": 0.9,
+        })
+
+        conn = M.connect(db_path)
+        summary = R.refresh_thesis_links(conn, "state-ai")
+        conn.close()
+        assert summary["count"] >= 1  # 자동 추론이 같은 행을 실제로 쳤다
+
+        link = R.list_regime_thesis_links(db_path, "state-ai")[0]
+        assert link["method"] == "manual"
+        assert link["relationship"] == "core_holding"
+
+
 def test_memory_matching_distinguishes_states():
     """상태별 근거가 구분되어야 한다 — 감성 단어 겹침만으로 전부 매칭되면 안 됨."""
     ai_state = {"state_key": "ai_supply", "state_label": "AI 반도체 공급망", "story": "ai_supply", "story_family": "AI 반도체 공급망",

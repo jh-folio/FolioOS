@@ -333,8 +333,8 @@ def summarize_market_state(states: list[dict], *, limit: int = 5) -> dict:
             "nextMemoryCheck": _next_memory_check(checkpoint, direction),
             "askAgentPrompt": f"{title}가 내 포트폴리오에 주는 의미를 설명해줘",
         })
-    if not drivers:
-        summary = "아직 정리된 중기 시장 상황이 없습니다. RSS 수집과 Market Memory 정리를 먼저 실행하세요."
+    # 드라이버가 없을 때의 안내는 posture("대기")가 갖는다 — _plain_conclusion과
+    # actionGuide가 그 문구를 내므로 여기서 summary를 따로 대입하지 않는다.
     posture = _posture(drivers)
     summary = _plain_conclusion(posture)
     action_guide = _action_guide(posture)

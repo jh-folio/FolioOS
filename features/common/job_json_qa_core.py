@@ -144,7 +144,6 @@ def briefing_matrix(runtime: Path) -> tuple[bool, bool, bool]:
             scopes=("kr", "us"),
             reports={"us": {"markdown": "# US"}, "kr": {"markdown": "# KR"}},
             visuals={"us": {"snapshots": {"SPY": {"rows": [1, 2]}}}},
-            link={"summary": "linked"},
             terminal_result={
                 "artifactId": "2026-07-18",
                 "reportId": "2026-07-18",
@@ -172,9 +171,10 @@ def briefing_matrix(runtime: Path) -> tuple[bool, bool, bool]:
     reports = [read_json(owner.root / "briefings" / f"2026-07-18.{scope}.json") for scope in ("us", "kr")]
     with gzip.open(owner.root / "briefings" / "2026-07-18.us.visuals.json.gz", "rt", encoding="utf-8") as stream:
         visual = json.load(stream)
-    link = read_json(owner.root / "briefings" / "2026-07-18.link.json")
     matrix = recovered and all((report.get("jobCommit") or {}).get("jobId") == job.id for report in reports)
-    reread = (visual.get("jobCommit") or {}).get("jobId") == job.id and link.get("summary") == "linked"
+    # 브리핑이 만드는 저장물은 시장별 보고서와 gzip visuals 사이드카뿐이다
+    # (`job_briefing_producer.briefing_specs()`). `.link.json`은 존재하지 않는다.
+    reread = (visual.get("jobCommit") or {}).get("jobId") == job.id
     return matrix, ordered == sorted(ordered), reread
 
 

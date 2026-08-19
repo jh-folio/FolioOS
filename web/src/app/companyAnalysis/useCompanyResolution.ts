@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getJson } from "../../api";
 
 export type CompanyCandidate = {
@@ -36,6 +36,10 @@ export function useCompanyResolution(query: string, options?: { preferHome?: boo
   // 사용자가 후보를 고르면 그 선택이 이후 타이핑 전까지 이긴다.
   const [picked, setPicked] = useState<CompanyCandidate | null>(null);
   const requestId = useRef(0);
+  // 선택이 입력칸을 그 회사 이름으로 바꾸는 호출자가 있다(워치리스트). 그 변경까지
+  // "사용자가 다시 타이핑했다"로 읽으면 방금 고른 후보가 즉시 지워져, 재조회가
+  // 끝날 때까지 후보 목록이 다시 뜨고 Enter가 이름 안의 쉼표를 구분자로 쪼갠다.
+  const pickedQueryRef = useRef<string | null>(null);
 
   useEffect(() => {
     const text = query.trim();
@@ -68,8 +72,19 @@ export function useCompanyResolution(query: string, options?: { preferHome?: boo
     return () => window.clearTimeout(timer);
   }, [query, preferHome]);
 
-  useEffect(() => setPicked(null), [query]);
+  /** 후보를 고른다. `nextQuery`는 그 선택 때문에 입력칸이 바뀔 값이다. */
+  const pick = useCallback((candidate: CompanyCandidate | null, nextQuery?: string) => {
+    pickedQueryRef.current = candidate && nextQuery !== undefined ? nextQuery : null;
+    setPicked(candidate);
+  }, []);
+
+  useEffect(() => {
+    // 선택이 만든 입력 변경은 그 선택을 지우지 않는다.
+    if (pickedQueryRef.current !== null && pickedQueryRef.current === query) return;
+    pickedQueryRef.current = null;
+    setPicked(null);
+  }, [query]);
 
   const effective = picked || (resolution?.status === "confident" ? resolution.match : null);
-  return { resolution, pending, picked, setPicked, effective };
+  return { resolution, pending, picked, setPicked, pick, effective };
 }

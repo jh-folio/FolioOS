@@ -67,6 +67,25 @@ BRIEFING_PROMPT_PATHS = {
     "jp": BRIEFING_PROMPT_JP_PATH,
 }
 MARKET_LABELS = {"us": "미국장", "kr": "한국장", "europe": "유럽장", "jp": "일본장"}
+# 구조화 체크포인트를 뽑을 섹션 제목. 규칙 경로(`## 6. 다음 {market_label} 체크포인트`)와
+# 시장별 프롬프트가 같은 라벨을 쓴다.
+_LEGACY_CHECKPOINT_HEADING = "내일 확인할 체크포인트"
+
+
+def briefing_checkpoint_headings(scopes=None):
+    """체크포인트 섹션 제목을 시장 라벨에서 파생한다.
+
+    손으로 나열하면 시장이 늘 때 새 시장만 조용히 0건이 된다 — 실제로 유럽·일본은
+    본문에 섹션이 멀쩡히 있는데도 저장 JSON의 `checkpoints`가 매번 비었고 없는
+    데이터 갭까지 붙었다.
+    """
+    keys = [str(scope).lower() for scope in (scopes if scopes is not None else MARKET_LABELS)]
+    return [
+        *(f"다음 {MARKET_LABELS[key]} 체크포인트" for key in keys if key in MARKET_LABELS),
+        _LEGACY_CHECKPOINT_HEADING,
+    ]
+
+
 # 단독 시장 범위에서 다른 시장 자료를 어떻게 쓸지의 계약. 시장마다 옆 시장과의
 # 시간 관계가 달라 문장이 하나로 합쳐지지 않는다.
 _SCOPE_OUTPUT_INSTRUCTIONS = {
@@ -1320,23 +1339,40 @@ def build_prompt_markdown(date, source_date, docs, groups, headlines, market_dri
     return reader_facing_briefing_markdown(markdown)
 
 
+# 옛 브리핑에만 남아 있는 제목. 시장 라벨에서 파생되지 않으므로 따로 적는다.
+_PREV_CHECKLIST_LEGACY_HEADINGS = ("다음 시장 체크포인트", "오늘의 투자 체크리스트")
+# 제목 목록을 손으로 나열하면 새 시장만 조용히 빈다. 실제로 `미국장|한국장|시장`만
+# 적혀 있는 동안, 유럽·일본 파일이 그날 최신이면 `load_prev_briefing()`이 시장 무관
+# 최신 파일을 돌려주므로 **미국장·한국장 생성에서도** 전일 체크포인트 블록이 비었다.
+_PREV_CHECKLIST_RE = re.compile(
+    r"#{1,3}\s*(?:\d+\.\s*)?(?:"
+    + "|".join(
+        re.escape(heading)
+        for heading in (*briefing_checkpoint_headings(), *_PREV_CHECKLIST_LEGACY_HEADINGS)
+    )
+    + r")\s*\n([\s\S]*?)(?=\n#{1,3}\s|\Z)",
+    re.IGNORECASE,
+)
+
+
 def extract_prev_checklist(markdown):
     """브리핑 Markdown에서 다음 거래일 확인 항목 섹션을 추출한다.
 
-    개선된 브리핑은 '내일 확인할 체크포인트'를, 기존 브리핑은 '오늘의 투자
-    체크리스트'를 사용하므로 두 제목을 모두 인식한다. 섹션 번호(예: '6. ')가
-    붙어도 매칭되고, 다음 H1~H3 제목 직전까지 본문을 가져온다.
+    제목은 `briefing_checkpoint_headings()`(MARKET_LABELS 파생)에서 조립해 네 시장을
+    모두 커버하고, 옛 브리핑의 '오늘의 투자 체크리스트'·'다음 시장 체크포인트'도
+    함께 인식한다. 섹션 번호(예: '6. ')가 붙어도 매칭되고, 다음 H1~H3 제목 직전까지
+    본문을 가져온다.
     """
-    m = re.search(
-        r"#{1,3}\s*(?:\d+\.\s*)?(?:내일 확인할 체크포인트|다음 (?:미국장|한국장|시장) 체크포인트|오늘의 투자 체크리스트)\s*\n([\s\S]*?)(?=\n#{1,3}\s|\Z)",
-        str(markdown or ""),
-        re.IGNORECASE,
-    )
+    m = _PREV_CHECKLIST_RE.search(str(markdown or ""))
     return m.group(1).strip() if m else ""
 
 
 BRIEFING_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-BRIEFING_REPORT_FILE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:\.(?:us|kr))?\.json$")
+# 시장 접미사는 계약에서 파생한다. 손으로 `us|kr`이라 적어 둔 동안 유럽·일본
+# 브리핑이 저장은 되면서 `GET /api/briefings`와 전일 체크포인트 조회에서만 빠졌다.
+BRIEFING_REPORT_FILE_RE = re.compile(
+    rf"^\d{{4}}-\d{{2}}-\d{{2}}(?:\.(?:{'|'.join(SINGLE_MARKET_SCOPES)}))?\.json$"
+)
 
 
 def _briefing_report_paths():

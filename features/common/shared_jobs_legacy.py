@@ -59,6 +59,7 @@ def _result(raw: Mapping[str, JsonValue]) -> dict[str, str | int | bool | None]:
         "artifactId",
         "savedCount",
         "snapshotId",
+        "skipped",
     }
     projected = {
         key: item
@@ -161,6 +162,9 @@ def normalize_legacy_job(job_id: str, raw: Mapping[str, JsonValue], clock) -> Sh
     updated = _utc_timestamp(_string(raw, "updatedAt"), created) or created
     progress_value = raw.get("progress")
     progress = progress_value if isinstance(progress_value, int) else (100 if status in {JobStatus.DONE, JobStatus.CANCELLED} else 0)
+    # failed_restart는 원인이 알려진 종료다 — 재시작이 잡을 끊었다. INTERNAL_ERROR로
+    # 적으면 화면이 "알 수 없는 오류"라고 말해, 다시 실행하면 되는 잡이 고장으로 읽힌다.
+    error_code = ErrorCode.RESTART_INTERRUPTED if status == JobStatus.FAILED_RESTART else ErrorCode.INTERNAL_ERROR
     values = base.model_dump(mode="json")
     values.update(
         {
@@ -172,7 +176,7 @@ def normalize_legacy_job(job_id: str, raw: Mapping[str, JsonValue], clock) -> Sh
             "startedAt": _utc_timestamp(_string(raw, "startedAt")),
             "updatedAt": updated,
             "finishedAt": _utc_timestamp(_string(raw, "finishedAt"), updated) if status.value.startswith("failed") or status in {JobStatus.DONE, JobStatus.CANCELLED} else None,
-            "errorCode": ErrorCode.INTERNAL_ERROR.value if status.value.startswith("failed") else None,
+            "errorCode": error_code.value if status.value.startswith("failed") else None,
         }
     )
     interim = SharedJob.model_validate(
@@ -187,7 +191,7 @@ def normalize_legacy_job(job_id: str, raw: Mapping[str, JsonValue], clock) -> Sh
     )
     if status in {JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.CANCEL_REQUESTED, JobStatus.COMMITTING}:
         return SharedJob.model_validate(values)
-    projection = project_terminal_result(interim, status, _result(raw), ErrorCode.INTERNAL_ERROR)
+    projection = project_terminal_result(interim, status, _result(raw), error_code)
     values["resultProjection"] = projection.model_dump(mode="json")
     values["finishedAt"] = _utc_timestamp(_string(raw, "finishedAt"), updated) or updated
     return SharedJob.model_validate(values)

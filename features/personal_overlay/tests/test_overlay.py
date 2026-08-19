@@ -231,3 +231,39 @@ def _run_all():
 
 if __name__ == "__main__":
     sys.exit(0 if _run_all() else 1)
+
+
+def test_overlay_attach_keeps_canonical_committed_during_llm(tmp_path, monkeypatch):
+    """generate_overlay(LLM 수십 초) 사이에 커밋된 새 canonicalRevision을 되돌리면 안 된다.
+
+    예전에는 읽어 둔 dict을 통째로 write_json해서, 그 사이 예약 생성·제안 승인이
+    커밋한 revision 2가 경고 없이 revision 1 본문으로 되돌아갔다.
+    """
+    import json as _json
+
+    import features.personal_overlay.service as svc
+
+    briefings = tmp_path / "briefings"
+    briefings.mkdir()
+    path = briefings / "2026-08-14.us.json"
+    path.write_text(
+        _json.dumps({"date": "2026-08-14", "marketScope": "us", "markdown": "v1"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(svc, "BRIEFINGS_DIR", briefings)
+    monkeypatch.setattr(svc, "_gather_hypotheses", lambda *args, **kwargs: [])
+
+    def concurrent_commit_then_overlay(canonical_in, hyps, kind, **kwargs):
+        current = _json.loads(path.read_text(encoding="utf-8"))
+        current["markdown"] = "v2"
+        path.write_text(_json.dumps(current), encoding="utf-8")
+        return {"summary": "개인 해석"}, "rules"
+
+    monkeypatch.setattr(svc, "generate_overlay", concurrent_commit_then_overlay)
+
+    result = svc.attach_overlay_to_briefing("2026-08-14", market_scope="us")
+
+    saved = _json.loads(path.read_text(encoding="utf-8"))
+    assert result["ok"] is True
+    assert saved["markdown"] == "v2"
+    assert saved["personalOverlay"]["summary"] == "개인 해석"

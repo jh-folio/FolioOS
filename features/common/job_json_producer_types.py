@@ -29,7 +29,7 @@ class ReportJobRequest:
 class OverlayJobRequest:
     report_kind: ReportKind
     report_id: str
-    market_scope: Literal["us", "kr"] | None
+    market_scope: Literal["us", "kr", "europe", "jp"] | None
     personal_overlay: dict[str, JsonValue]
     terminal_result: TerminalResult
 
@@ -38,7 +38,7 @@ class OverlayJobRequest:
 class QualityRepairJobRequest:
     report_kind: ReportKind
     report_id: str
-    market_scope: Literal["us", "kr"] | None
+    market_scope: Literal["us", "kr", "europe", "jp"] | None
     candidate: dict[str, JsonValue]
     terminal_result: TerminalResult
 

@@ -108,5 +108,11 @@ def annotate_source_priority(items, *, artifact_type: str) -> list[dict]:
         row["sourcePriority"] = source_priority_rank(artifact_type, row)
         row["sourceReliability"] = reliability_for_source(row)
         rows.append(row)
-    return sorted(rows, key=lambda x: (x.get("sourcePriority", 99), str(x.get("date") or ""), str(x.get("title") or "")))
+    # 호출자는 이 결과를 앞에서부터 limit까지만 쓴다. 같은 우선순위 그룹에서
+    # 날짜가 오름차순이면 가장 오래된 자료만 살아남는다. 빈 날짜(companyfacts 등)는
+    # 역순 정렬에서 자연히 그룹 뒤로 간다.
+    rows.sort(key=lambda x: str(x.get("title") or ""))
+    rows.sort(key=lambda x: str(x.get("date") or ""), reverse=True)
+    rows.sort(key=lambda x: x.get("sourcePriority", 99))
+    return rows
 

@@ -42,6 +42,25 @@ def test_structured_ids_are_left_alone():
     assert out["summary"] == "가격이 올랐다 (Bloomberg)."
 
 
+def test_punctuation_after_a_removed_reference_survives():
+    """참조를 걷어낸 자리의 문장부호는 붙여서 남긴다 — 지우면 문장이 무너진다."""
+    text = "미국 지수는 강세 (rss:item:23) , 한국은 약세다. 물가는 2.5 % 수준."
+    assert scrub_inline_refs(text, LOOKUP) == "미국 지수는 강세, 한국은 약세다. 물가는 2.5% 수준."
+
+
+def test_punctuation_after_a_named_reference_survives():
+    text = "유동성은 완화적이다 (rss:item:76) ."
+    assert scrub_inline_refs(text, LOOKUP) == "유동성은 완화적이다 (Reuters)."
+
+
+def test_scrubbed_text_never_carries_control_characters():
+    """치환 문자열이 역참조가 아니라 제어문자였던 적이 있다. 화면에 그대로 나갔다."""
+    payload = {"summary": "판단 : 강세다 (rss:item:23) ."}
+    out = scrub_inline_refs(payload, LOOKUP)
+    assert out["summary"] == "판단: 강세다."
+    assert not any(ord(char) < 32 for char in out["summary"])
+
+
 def test_decimals_and_percentages_survive():
     text = "미 10년물이 4.627%로 내렸고 WTI는 -9.79%다."
     assert scrub_inline_refs(text, LOOKUP) == text

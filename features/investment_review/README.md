@@ -28,8 +28,17 @@
 - **LLM 없이 규칙 기반**으로 생성한다. 데이터가 없으면 빈 섹션 + warning(원문 불변).
 - 집계는 주입식 순수 함수(`build_market_state`, `build_thesis_changes`,
   `build_portfolio_impacts`, `aggregate_checkpoints`, `build_linked_notes`)로 분리 — DB 없이 테스트 가능.
+- **체크포인트 dedupe 키는 `(티커, 문구)`다.** thesis delta의 기본 체크포인트 문구는 모든 종목이
+  같아서 문구만으로 접으면 첫 종목만 살아남고, 종목별 Investment Context 필터를 거친 나머지
+  종목은 근거 없이 "확인할 체크포인트 없음"이 된다.
 - **캐싱**: 일 1회 생성 후 `data/investment-review/{date}.json`. 저장본이 있으면 재사용,
   강제 재생성(`forceRefresh`) 가능, 해당 날짜 저장본이 없으면 최신 저장본 + `stale` 표시.
+- **저장은 언제나 오늘 날짜다.** 집계 입력(regime·thesis·포트폴리오·워치리스트·노트)은 전부 현재
+  시점 조회이며 as-of 질의 경로가 없다. `date`에 다른 날짜를 주면 결과에 "현재 데이터로 집계했다"는
+  warning이 붙고, 저장은 오늘 파일로 한다 — 파일명이 곧 날짜라 다른 날짜로 저장하면 오늘의 판단이
+  그 날짜의 판단으로 굳는다(미래 날짜 파일은 `_load_latest()`의 '최신 저장본' 자리까지 영구 선점한다).
+  `persist=False` 렌더링(잡 준비)은 호출자가 날짜를 소유하므로 라벨을 바꾸지 않고 warning만 남긴다.
+- `date` 형식은 `YYYY-MM-DD`만 받는다(`normalize_review_date`). 다른 값은 `ValueError`이며 API는 400이다.
 
 ## 홈 대시보드 구성 (UI)
 

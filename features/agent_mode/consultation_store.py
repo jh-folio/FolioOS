@@ -229,6 +229,16 @@ def _update_memory(session: dict) -> None:
 
 
 def _new_continuation(data_dir: Path, session: dict) -> dict:
+    # 이미 이어 둔 대화가 있으면 그것을 쓴다. 새로 만들면 `continuedBy`가 덮여
+    # 앞선 continuation이 고아가 되고, 같은 요청이 재시도될 때마다 빈 대화가 늘어난다.
+    existing = clean_id(session.get("continuedBy"))
+    if existing:
+        try:
+            _, continued = _private_session(data_dir, existing)
+        except (KeyError, ValueError):
+            continued = {}
+        if continued.get("status") == "active":
+            return public_session(continued)
     created = create_session(data_dir, {"title": f"{session.get('title') or '투자 상담'} (계속)", "scope": session.get("scope"), "continuationOf": session.get("id")})
     path, current = _private_session(data_dir, str(session.get("id") or ""))
     current["continuedBy"] = created["id"]
@@ -244,11 +254,9 @@ def append_user_message(data_dir: Path, session_id: str, content: str, *, operat
         path, session = _private_session(data_dir, session_id)
         if session.get("status") != "active":
             raise ValueError("consultation_archived")
-        # Keep one slot and enough encoded space for the paired assistant reply.
-        if len(session.get("messages") or []) >= MAX_MESSAGES - 1:
-            continuation = _new_continuation(data_dir, session)
-            return append_user_message(data_dir, continuation["id"], content, operation_id=operation_id, retry_message_id=retry_message_id)
         operation_id = clean_id(operation_id) or "op-" + uuid.uuid4().hex
+        # 멱등·재시도 검사는 메시지 상한 검사보다 앞이다. 뒤에 두면 같은 operationId
+        # 재시도가 상한 검사에 먼저 걸려 continuation을 매번 새로 만든다.
         for message in session.get("messages") or []:
             if message.get("operationId") == operation_id:
                 return {"session": public_session(session), "message": message, "idempotent": True}
@@ -260,6 +268,10 @@ def append_user_message(data_dir: Path, session_id: str, content: str, *, operat
                     session["updatedAt"] = _now()
                     _atomic_write(path, session)
                     return {"session": public_session(session), "message": message, "idempotent": False}
+        # Keep one slot and enough encoded space for the paired assistant reply.
+        if len(session.get("messages") or []) >= MAX_MESSAGES - 1:
+            continuation = _new_continuation(data_dir, session)
+            return append_user_message(data_dir, continuation["id"], content, operation_id=operation_id, retry_message_id=retry_message_id)
         text = clean_text(content, MAX_MESSAGE_CHARS)
         if not text:
             raise ValueError("consultation_message_required")
@@ -285,7 +297,7 @@ def append_user_message(data_dir: Path, session_id: str, content: str, *, operat
                 raise
             session["messages"].pop()
             continuation = _new_continuation(data_dir, session)
-            return append_user_message(data_dir, continuation["id"], text, operation_id=operation_id)
+            return append_user_message(data_dir, continuation["id"], text, operation_id=operation_id, retry_message_id=retry_message_id)
         return {"session": public_session(session), "message": message, "idempotent": False}
 
 

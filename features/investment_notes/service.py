@@ -325,7 +325,15 @@ def _sync_files_to_index(conn: sqlite3.Connection) -> None:
     for path in NOTES_DIR.glob("*.json"):
         note = read_json(path, {})
         if isinstance(note, dict) and note.get("id"):
-            _upsert_index(conn, normalize_note(note, note), path)
+            row = normalize_note(note, note)
+            # 목록 조회는 읽기 경로다. `normalize_note`는 updatedAt에 언제나 현재 시각을
+            # 박으므로 파일에 남은 값을 되돌린다 — 안 그러면 목록을 여는 것만으로 전 노트의
+            # 수정 시각이 조회 시각으로 덮이고 `ORDER BY updated_at`이 glob 순서(파일명순)로
+            # 격하돼 방금 수정한 노트가 위로 오지 않는다.
+            saved_updated = _clean_text(note.get("updatedAt"))
+            if saved_updated:
+                row["updatedAt"] = saved_updated
+            _upsert_index(conn, row, path)
 
 
 def list_notes(

@@ -263,6 +263,19 @@ def test_review_builder_can_render_without_touching_cache(monkeypatch: pytest.Mo
     assert isinstance(review["markdown"], str)
 
 
+def test_briefing_qa_matrix_checks_only_artifacts_the_producer_makes(tmp_path: Path) -> None:
+    """QA 하네스는 실제 산출물(시장별 보고서 + gzip visuals)만 검사해야 한다.
+
+    예전에는 `BriefingJobRequest(link=...)`로 없는 인자를 넘기고 `.link.json`
+    사이드카를 읽어, 호출 즉시 TypeError가 나 QA 스크립트가 한 번도 완주하지 못했다.
+    """
+    from features.common.job_json_qa_core import briefing_matrix
+
+    matrix, ordered, reread = briefing_matrix(tmp_path)
+
+    assert (matrix, ordered, reread) == (True, True, True)
+
+
 def test_briefing_producer_rejects_unrequested_visual_metadata(tmp_path: Path) -> None:
     # Given: a US-only request carrying an unrelated KR visual payload.
     data_root = tmp_path / "data"

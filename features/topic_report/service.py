@@ -518,6 +518,7 @@ def generate_topic_report(
             topic, market_data, macro_data, docs, memories, user_context,
             topic_plan=topic_plan,
             data_gaps=evidence_pack["dataGaps"] if evidence_pack else None,
+            as_of=date,
         )
         if not generation["message"]:
             generation["message"] = "규칙 기반 보고서를 생성했습니다."
@@ -626,10 +627,16 @@ def _reports_dir() -> Path:
     return REPORTS_DIR
 
 
-def _stable_topic_id(date: str, topic_key: str, label: str) -> str:
+def _stable_topic_id(date: str, topic_key: str, label: str, *, discriminator: str = "") -> str:
     # (날짜, 주제 키, 라벨) 기준 안정적 id — 같은 주제를 같은 날 재생성하면 최신본으로
     # 덮어써서 자동 저장이 파일을 무한정 쌓지 않게 한다.
-    key = f"{date}:{topic_key}:{label}".encode("utf-8")
+    # 라벨은 `topic_subject()`가 40자로 끊은 주제어라 같은 주제로 시작하는 다른 질문이
+    # 같은 라벨이 된다. 승인 경로는 planHash를 판별자로 넘겨 서로 덮어쓰지 않게 한다.
+    # 판별자가 없으면 예전 키와 같은 문자열이라 기존 저장 파일의 id가 그대로 재현된다.
+    parts = f"{date}:{topic_key}:{label}"
+    if discriminator:
+        parts = f"{parts}:{discriminator}"
+    key = parts.encode("utf-8")
     return hashlib.sha256(key).hexdigest()[:8]
 
 

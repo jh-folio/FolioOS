@@ -22,17 +22,74 @@ def test_aggregate_from_thesis_and_regime():
     assert len(cps) == 3
 
 
-def test_dedup_same_checkpoint_text():
-    deltas = [{"ticker": "NVDA", "nextCheckpoints": ["같은 체크포인트"]}]
-    states = [{"id": "s1", "stateLabel": "x", "nextCheckpoints": ["같은 체크포인트"]}]
-    cps = S.aggregate_checkpoints(deltas, states)
+def test_dedup_same_checkpoint_text_in_same_scope():
+    states = [
+        {"id": "s1", "stateLabel": "x", "nextCheckpoints": ["같은 체크포인트"]},
+        {"id": "s2", "stateLabel": "y", "nextCheckpoints": ["같은 체크포인트"]},
+    ]
+    cps = S.aggregate_checkpoints([], states)
     assert len(cps) == 1
+
+
+def test_same_default_text_survives_for_each_ticker():
+    """thesis delta 기본 문구는 종목 공통이라 문구만으로 접으면 한 종목만 남는다."""
+    from features.investment_review import context_links as CL
+
+    text = "해당 변수의 안정 또는 thesis를 뒷받침하는 후속 신호 확인"
+    deltas = [
+        {"ticker": "NVDA", "nextCheckpoints": [text]},
+        {"ticker": "AMD", "nextCheckpoints": [text]},
+    ]
+    cps = S.aggregate_checkpoints(deltas, [])
+    assert {c["ticker"] for c in cps} == {"NVDA", "AMD"}
+    assert len(cps) == 2
+    # 티커별 필터(투자 맥락 projection)를 거쳐도 각 종목이 자기 체크포인트를 갖는다.
+    assert len(CL._due_checkpoints(cps, "NVDA")) == 1
+    assert len(CL._due_checkpoints(cps, "AMD")) == 1
 
 
 def test_limit_applied():
     deltas = [{"ticker": "T", "nextCheckpoints": [f"체크포인트 {i}" for i in range(30)]}]
     cps = S.aggregate_checkpoints(deltas, [], limit=5)
     assert len(cps) == 5
+
+
+def test_regime_survives_a_crowd_of_theses():
+    """thesis가 먼저 수집되므로 정원이 없으면 시장 체크포인트가 통째로 사라진다."""
+    deltas = [{"ticker": f"T{i}", "nextCheckpoints": [f"종목 확인 {i}"]} for i in range(8)]
+    states = [{"id": f"s{i}", "stateLabel": f"내러티브 {i}", "nextCheckpoints": [f"시장 확인 {i}"]} for i in range(3)]
+
+    cps = S.aggregate_checkpoints(deltas, states, limit=12)
+
+    assert sum(1 for c in cps if c["artifactType"] == "regime_state") >= 1
+    assert sum(1 for c in cps if c["artifactType"] == "thesis_delta") >= 1
+    assert len(cps) <= 12
+
+
+def test_one_source_absorbs_the_other_quota():
+    deltas = [{"ticker": "T", "nextCheckpoints": [f"체크포인트 {i}" for i in range(20)]}]
+    assert len(S.aggregate_checkpoints(deltas, [], limit=12)) == 12
+
+    states = [{"id": f"s{i}", "stateLabel": "x", "nextCheckpoints": [f"시장 {i}"]} for i in range(20)]
+    assert len(S.aggregate_checkpoints([], states, limit=12)) == 12
+
+
+def test_render_prefixes_the_ticker():
+    """기본 문구는 종목이 달라도 같아서, 티커가 없으면 같은 줄이 반복된다."""
+    review = {
+        "date": "2026-08-19",
+        "keyCheckpoints": [
+            {"ticker": "NVDA", "checkpoint": "후속 신호 확인"},
+            {"ticker": "AMD", "checkpoint": "후속 신호 확인"},
+            {"ticker": "", "checkpoint": "10년물 금리 재상승 확인"},
+        ],
+    }
+
+    md = S.render_markdown(review)
+
+    assert "- **NVDA** 후속 신호 확인" in md
+    assert "- **AMD** 후속 신호 확인" in md
+    assert "- 10년물 금리 재상승 확인" in md
 
 
 def test_empty_when_no_checkpoints():

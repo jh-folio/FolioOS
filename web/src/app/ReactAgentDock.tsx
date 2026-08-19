@@ -502,7 +502,10 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     } finally {
       setBusy(false);
     }
-  }, [adapter?.label, adapter?.model, busy, effort, meta.label, model, surface]);
+    // threads.threadId/pending은 useDockThreads가 렌더마다 새로 담는 스냅샷 값이라
+    // 의존성에서 빠지면 낡은 threadId로 이전 대화에 질문이 저장된다 — `새 대화`·
+    // `짚어보기`·대화 전환 직후의 첫 질문이 전부 직전 스레드로 갔다.
+  }, [adapter?.label, adapter?.model, busy, effort, meta.label, model, surface, threads.threadId, threads.pending, threads.createThread, threads.latestReply, threads.bumpList]);
 
   async function resumeAgentJob(messageIdValue: string, jobId: string) {
     const controller = new AbortController();
@@ -513,8 +516,15 @@ export function ReactAgentDock({ surface, open, onOpen, onClose }: ReactAgentDoc
     try {
       const current = await getJson<AgentJob>(`/api/jobs/${encodeURIComponent(jobId)}`, { signal: controller.signal });
       const done = await pollAgentJobBounded(current, { signal: controller.signal });
-      const result = done.result || {};
+      // 제출 경로와 같은 계약이다 — 답변 본문은 잡 결과가 아니라 스레드에서 읽는다.
+      // 스레드 메시지 잡은 {sessionId, messageId, status, proposalId}만 돌려주므로,
+      // 잡 결과에서 읽으면 답변 자리에 `작업이 완료되었습니다.`가 대신 들어간다.
+      const result: AgentResult = {
+        ...(done.result || {}),
+        reply: threads.threadId ? await threads.latestReply(threads.threadId) : "",
+      };
       const proposalHydration = await hydrateAgentProposalFromResult(result);
+      threads.bumpList();
       setMessages((messages) => messages.map((message) => message.id === messageIdValue ? {
         ...message,
         text: result.reply || done.message || "Agent가 응답을 반환하지 않았습니다.",

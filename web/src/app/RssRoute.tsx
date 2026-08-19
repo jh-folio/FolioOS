@@ -64,6 +64,11 @@ type AgentJob = {
   result?: Record<string, unknown>;
 };
 
+// 서버가 돌려주는 것은 코드(`workspace_moved`)뿐이다. 안내문에는 원본·목적지 경로가
+// 실릴 수 있어 결과에 담지 않고 화면이 갖는다.
+const WORKSPACE_MOVED_NOTICE =
+  "자료 위치를 옮겼습니다. 서버를 재시작하기 전까지는 RSS 수집과 보관 기간 정리를 실행하지 않습니다 — 지금 수집하면 새 자료가 옛 폴더와 새 폴더로 갈립니다.";
+
 const EMPTY_FILTERS: RssFilters = { start: "", end: "", source: "", market: "", language: "" };
 const pageSize = 20;
 const MARKET_OPTIONS = [
@@ -183,6 +188,10 @@ export function RssRoute() {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  // 검색 결과는 한 번에 다 받은 목록이라 페이지가 없다. 그런데 payload를 통째로
+  // 갈아끼우다 보니 `total`이 결과 수로 바뀌어도 페이지 계산은 그대로 돌았고,
+  // 페이지 버튼을 누르면 검색 결과가 아니라 일반 피드로 되돌아갔다.
+  const [searchMode, setSearchMode] = useState(false);
 
   const items = payload?.items || [];
   const total = payload?.total ?? items.length;
@@ -197,6 +206,7 @@ export function RssRoute() {
       const params = buildParams(nextPage, nextFilters);
       const nextPayload = await getJson<RssPayload>(`/api/rss/items?${params.toString()}`);
       setPayload(nextPayload);
+      setSearchMode(false);
       setPage(nextPage);
       setFilters(nextFilters);
       setDraftFilters(nextFilters);
@@ -281,6 +291,7 @@ export function RssRoute() {
         has_more: false,
         sources,
       });
+      setSearchMode(true);
       setPage(1);
       setStatus(`뉴스 검색 결과 ${rows.length}개`);
       setReactAgentContextScope("rss", { surface: "rss", viewId: "rssfeed", reportKind: "news_search", reportId: query });
@@ -298,6 +309,12 @@ export function RssRoute() {
     try {
       const job = await postJson<AgentJob>("/api/rssarchive/import", {});
       const done = await pollJob(job);
+      // 자료 위치를 옮긴 뒤 재시작 전까지는 수집이 쉰다. 그 사실을 말하지 않으면
+      // "신규 0개"로 보여서, 수집이 도는 줄 알고 며칠을 보낸다.
+      if (done.result?.skipped === "workspace_moved") {
+        setStatus(WORKSPACE_MOVED_NOTICE);
+        return;
+      }
       const added = Number.isFinite(Number(done.result?.added)) ? ` 신규 ${done.result?.added}개` : "";
       setStatus(`RSS 수집 완료.${added}`);
       await loadItems(1, filters);
@@ -313,6 +330,8 @@ export function RssRoute() {
   const currentPage = Math.min(Math.max(page, 1), totalPages);
   const pageStart = Math.max(1, currentPage - 2);
   const pageEnd = Math.min(totalPages, currentPage + 2);
+  // 검색 결과에는 `1/N` 쪽수를 붙이지 않는다. 넘길 페이지가 없다.
+  const countLabel = total > 0 ? (searchMode ? `${total}개` : `${total}개 · ${currentPage}/${totalPages}`) : "0개";
 
   return (
     <div className="react-rss-route" data-rss-route>
@@ -324,7 +343,7 @@ export function RssRoute() {
           <div className="react-rss-hero-actions">
             <span className="react-rss-stat-pill">
               <strong>LOADED</strong>
-              {total > 0 ? `${total}개 · ${currentPage}/${totalPages}` : "0개"}
+              {countLabel}
             </span>
             <span className="react-rss-stat-pill">
               <strong>INDEXED</strong>
@@ -397,8 +416,8 @@ export function RssRoute() {
       </section>
 
       <div className="react-rss-summary">
-        <strong>{filterLabel(filters)}</strong>
-        <span>{total > 0 ? `${total}개 · ${currentPage}/${totalPages}` : "0개"}</span>
+        <strong>{searchMode ? `"${searchQuery.trim()}" 검색 결과` : filterLabel(filters)}</strong>
+        <span>{countLabel}</span>
       </div>
 
       {error && <p className="react-dashboard-error">{error}</p>}
@@ -439,7 +458,7 @@ export function RssRoute() {
         )}
       </section>
 
-      {totalPages > 1 && (
+      {!searchMode && totalPages > 1 && (
         <nav className="react-rss-pagination" aria-label="RSS pagination">
           <button className="btn" type="button" disabled={currentPage === 1 || loading} onClick={() => loadItems(currentPage - 1, filters)}>
             이전

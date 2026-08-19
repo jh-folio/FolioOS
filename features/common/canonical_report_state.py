@@ -19,6 +19,11 @@ CANONICAL_EXCLUDED_FIELDS: Final = frozenset(
     {"canonicalRevision", "agentRevisions", "personalOverlay", "updatedAt", "jobCommit"}
 )
 
+# 품질 재평가만으로 바뀌는 필드. 지문(canonical_content_hash)에서 빼지 않는다 —
+# 빼면 기존 저장물의 canonicalRevision.hash가 전부 어긋나 그 보고서가 영구히 못 쓰게 된다.
+# 대신 "본문이 실제로 바뀌었는가"를 따로 판정할 때만 제외한다.
+CANONICAL_QUALITY_FIELDS: Final = frozenset({"quality"})
+
 
 def _sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
@@ -43,6 +48,16 @@ def copy_mapping(value: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
 
 def canonical_content_hash(report: Mapping[str, JsonValue]) -> str:
     content = {key: deepcopy(value) for key, value in report.items() if key not in CANONICAL_EXCLUDED_FIELDS}
+    return _sha256(canonical_json_bytes(content))
+
+
+def substantive_content_hash(report: Mapping[str, JsonValue]) -> str:
+    """quality를 뺀 내용 지문. 저장하지 않고 커밋 시 비교에만 쓴다."""
+    content = {
+        key: deepcopy(value)
+        for key, value in report.items()
+        if key not in CANONICAL_EXCLUDED_FIELDS and key not in CANONICAL_QUALITY_FIELDS
+    }
     return _sha256(canonical_json_bytes(content))
 
 
@@ -111,6 +126,38 @@ def _mark_overlay_stale(report: dict[str, JsonValue]) -> None:
         report["personalOverlay"] = updated
 
 
+def _advance_overlay_revision(
+    report: dict[str, JsonValue],
+    current_revision: tuple[int, str] | None,
+    number: int,
+    content_hash: str,
+) -> None:
+    """quality만 바뀐 커밋에서 overlay의 리비전 포인터만 따라 올린다.
+
+    Canonical `markdown`이 그대로인데 "본문이 바뀌어 개인 해석이 낡았다"고 말하면 안 된다
+    (§5 원칙 1). 하지만 quality는 지문에 포함돼 revision 번호·해시가 반드시 오르므로,
+    포인터를 두면 `personal_overlay/schema.py::public_projection`이 번호·해시 불일치로
+    stale을 낸다. 그래서 포인터를 새 리비전으로 옮긴다.
+
+    overlay가 **지금** 리비전을 가리키고 있을 때만 옮긴다. 이미 낡은 overlay(옛 번호를
+    가리키거나 stale 표시가 붙은 것)를 quality 재평가가 되살리면 안 된다.
+    personalOverlay는 CANONICAL_EXCLUDED_FIELDS라 이 변경이 지문을 건드리지 않는다.
+    """
+    overlay = report.get("personalOverlay")
+    if not isinstance(overlay, dict) or current_revision is None:
+        return
+    pointer = overlay.get("canonicalRevision")
+    if not isinstance(pointer, dict):
+        return
+    if pointer.get("number") != current_revision[0] or pointer.get("hash") != current_revision[1]:
+        return
+    if overlay.get("stale") or overlay.get("staleReason"):
+        return
+    updated = deepcopy(overlay)
+    updated["canonicalRevision"] = {"number": number, "hash": content_hash}
+    report["personalOverlay"] = updated
+
+
 def canonical_candidate(
     current: dict[str, JsonValue] | None,
     candidate: Mapping[str, JsonValue],
@@ -128,8 +175,18 @@ def canonical_candidate(
         target["personalOverlay"] = deepcopy(current["personalOverlay"])
     if current is not None and "agentRevisions" in current and "agentRevisions" not in target:
         target["agentRevisions"] = deepcopy(current["agentRevisions"])
+    # quality만 달라진 커밋(재평가)은 본문 변경이 아니다. revision은 지문에 quality가
+    # 들어가므로 올라가지만, overlay를 stale로 찍는 대신 포인터만 따라 올린다.
+    quality_only = (
+        changed
+        and current is not None
+        and substantive_content_hash(current) == substantive_content_hash(target)
+    )
     if current is not None and changed:
-        _mark_overlay_stale(target)
+        if quality_only:
+            _advance_overlay_revision(target, current_revision, target_number, target_content_hash)
+        else:
+            _mark_overlay_stale(target)
     if current_revision is not None and not changed:
         revision_value = deepcopy(current["canonicalRevision"])
         if not isinstance(revision_value, dict):

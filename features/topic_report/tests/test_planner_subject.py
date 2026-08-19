@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from features.topic_report.planner import build_rule_plan, topic_subject
+from features.topic_report.topic_schema import normalize_topic_plan
 
 LONG_QUESTION = (
     "메모리 반도체의 방향성: 피크 아웃인가, 공급 부족인가 - 상반기 내내 잘 오르던 "
@@ -59,6 +60,35 @@ def test_the_saved_title_is_the_subject_not_the_paragraph():
     assert plan["topicLabel"] == "메모리 반도체의 방향성"
     # 원문 질문은 그대로 남는다. 짧은 이름은 표시용이지 기록의 대체가 아니다.
     assert plan["topic"] == LONG_QUESTION
+
+
+def test_a_short_label_survives_the_gate_whole():
+    """게이트는 상한이지 무조건 절단이 아니다.
+
+    짧고 변별력 있는 라벨까지 첫 구획에서 자르면, planHash로 파일이 갈린 같은 날
+    두 보고서가 화면에서 글자까지 같은 카드가 된다.
+    """
+    plan = normalize_topic_plan({"topicLabel": "AI 데이터센터: 전력 병목"}, topic="AI 데이터센터 전력")
+    assert plan["topicLabel"] == "AI 데이터센터: 전력 병목"
+
+
+def test_a_paragraph_label_is_still_cut_to_the_subject():
+    long_label = "메모리 반도체의 방향성: " + "배경이 아주 길게 이어지는 문장입니다. " * 8
+    plan = normalize_topic_plan({"topicLabel": long_label}, topic=LONG_QUESTION)
+    assert plan["topicLabel"] == "메모리 반도체의 방향성"
+    assert len(plan["topicLabel"]) <= 40
+
+
+def test_a_short_label_is_still_one_line():
+    """예전에는 topic_subject()가 줄바꿈에서 끊어 주었다."""
+    plan = normalize_topic_plan({"topicLabel": "AI 데이터센터\n전력 병목"}, topic="AI 데이터센터")
+    assert plan["topicLabel"] == "AI 데이터센터 전력 병목"
+
+
+def test_a_label_of_exactly_forty_characters_is_kept():
+    label = "가" * 40
+    plan = normalize_topic_plan({"topicLabel": label}, topic="주제")
+    assert plan["topicLabel"] == label
 
 
 def test_questions_pick_the_right_korean_particle():

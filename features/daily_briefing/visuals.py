@@ -60,6 +60,15 @@ MARKET_META = {
     for market in PRODUCT_MARKETS
 }
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# 정규장 시간(현지 시각)과 tzdata가 없을 때의 고정 오프셋. 미국은 서머타임이 있어
+# 오프셋을 계산해야 하므로 이 표에 두지 않는다.
+_REGULAR_SESSION_HOURS = {
+    "us": (dt.time(9, 30), dt.time(16, 0)),
+    "kr": (dt.time(9, 0), dt.time(15, 30)),
+    "europe": (dt.time(8, 0), dt.time(16, 30)),
+    "jp": (dt.time(9, 0), dt.time(15, 30)),
+}
+_FALLBACK_UTC_OFFSETS = {"kr": (9, "KST"), "jp": (9, "JST"), "europe": (0, "GMT")}
 
 
 # 단일 시장 스냅샷 필터. 시장 계약에서 파생한다 — {US, KR}로 적어두면 유럽·일본
@@ -863,7 +872,13 @@ def _load_visual_report(root, date_text, market_scope=""):
 
 
 def _market_clock(market, now=None):
-    market_key = "us" if str(market or "").upper() == "US" else "kr"
+    # 시장 코드에서 직접 고른다. 예전에는 `US가 아니면 KR`이라 유럽·일본이 KRX 달력과
+    # 서울 09:00~15:30에 갇혔고, KRX만 쉬는 날 뒤에는 스냅샷이 본문보다 며칠 이른
+    # 세션을 요청했다(설 연휴 뒤 실측 5거래일 차이). 그래도 `close_snapshot`으로
+    # 표시돼 어긋난 사실이 드러나지 않았다.
+    market_key = str(market or "").lower()
+    if market_key not in MARKET_META:
+        market_key = "kr"
     meta = MARKET_META[market_key]
     current = now or dt.datetime.now(dt.timezone.utc)
     if current.tzinfo is None:
@@ -871,8 +886,9 @@ def _market_clock(market, now=None):
     try:
         timezone = ZoneInfo(meta["timezone"])
     except ZoneInfoNotFoundError:
-        if market_key == "kr":
-            timezone = dt.timezone(dt.timedelta(hours=9), name="KST")
+        if market_key in _FALLBACK_UTC_OFFSETS:
+            offset_hours, offset_name = _FALLBACK_UTC_OFFSETS[market_key]
+            timezone = dt.timezone(dt.timedelta(hours=offset_hours), name=offset_name)
         else:
             year = current.year
             march = dt.date(year, 3, 1)
@@ -884,7 +900,7 @@ def _market_clock(market, now=None):
             timezone = dt.timezone(dt.timedelta(hours=offset), name="EDT" if offset == -4 else "EST")
     local = current.astimezone(timezone)
     trading_day = is_market_open(local.date(), meta["market"])
-    opens, closes = ((dt.time(9, 30), dt.time(16, 0)) if market_key == "us" else (dt.time(9, 0), dt.time(15, 30)))
+    opens, closes = _REGULAR_SESSION_HOURS[market_key]
     state = "open" if trading_day and opens <= local.time() < closes else "closed"
     if trading_day and local.time() < opens:
         reason = "before_regular_session"

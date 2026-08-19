@@ -63,6 +63,9 @@
 
 - **유럽은 하나의 캘린더가 아닙니다.** 영국 은행휴일은 LSE만 닫고 Euronext·Xetra는 열립니다. 주현절은 반대로 마드리드만 닫습니다. 이런 날이 연 십여 일 있어 `divergent`/`openVenues`/`closedVenues`로 갈린 상태를 그대로 보고하고, 지역 `isOpen`은 한 곳이라도 열리면 참입니다.
 - **표가 없는 연도는 추측하지 않습니다.** `coverage_expired`를 반환하고 개장으로 간주하지 않습니다. 새 연도 공시가 나오면 `EXCHANGE_HOLIDAYS` 표만 갱신합니다.
+- **그래도 세션 기준일이 주말이 되지는 않습니다.** 표가 없으면 `previous_trading_day()`/`next_trading_day()`의 최종 폴백이 매번 도달하는데, 예전에는 달력상 하루를 그대로 돌려줘 2027-03-08 브리핑의 유럽·일본 세션일이 일요일(2027-03-07)이었습니다. 주말은 표 없이도 아는 사실이라 건너뛰고, 공휴일까지 맞히려는 추측은 하지 않습니다. 개장 여부는 계속 `coverage_expired`로 보고합니다.
+- **미국 휴장일은 주말에 걸리면 인접 평일로 옮깁니다.** 신정만 예외로 토요일 보정이 없습니다(NYSE는 전년 12/31에 휴장하지 않습니다). 성탄절은 양방향입니다.
+- **한국 대체공휴일은 `KR_LUNAR_MARKET_HOLIDAYS` 표에 함께 적습니다.** 고정 공휴일이 주말에 걸리면 다음 첫 비공휴일이 휴장일입니다. 빠지면 열리지 않은 장이 정규 거래일로 판정되어 브리핑이 없는 마감을 서술합니다. 같은 표가 `features/market_calendar/adapters/exchange.py::KRX_HOLIDAYS`에도 있어 **한쪽만 고치면 갈라집니다** — 실제로 2026-09-28·2026-10-05가 그렇게 갈라져 있었습니다.
 
 ## 히트맵 universe (S&P 500 / KOSPI 200 / 유럽 / 닛케이 225)
 
@@ -78,6 +81,7 @@ py -3 -m features.common.market_data.nikkei225_universe
 - **섹터는 지수별 분류 대신 시세 provider의 분류를 씁니다.** 네 유럽 지수가 ICB·Prime Standard·GICS 하위산업을 제각각 쓰기 때문입니다. 네 어휘로 동시에 묶은 히트맵은 묶음이 아닙니다.
 - **일본 증권코드는 영숫자입니다.** 2024년부터 `285A`(키오시아) 같은 코드가 쓰여 숫자 4자리만 받으면 신규 편입 종목이 조용히 빠집니다.
 - provider 실패는 마지막 정상 스냅샷으로 되돌아가고 `stale`로 표시합니다. 캐시도 없으면 `unavailable`입니다 — 빈 히트맵과 무변동 장세는 화면에서 구분되지 않기 때문입니다.
+- **last-good 캐시 저장 실패는 스냅샷을 죽이지 않습니다.** `save_last_good_snapshot()`은 `atomic_replace`로 쓰고 실패 시 `False`를 돌려줍니다. 여기 오면 시세를 이미 다 받은 뒤라, 캐시 저장 하나 때문에 예외를 올리면 그 시장 히트맵이 통째로 비고 브리핑 사이드카는 immutable이라 영구히 `unavailable`로 남습니다.
 
 ## market_data/providers.py
 
@@ -88,6 +92,7 @@ py -3 -m features.common.market_data.nikkei225_universe
 - `YFinanceKoreaMarketProvider`: KOSPI/KOSDAQ/KOSPI200 지수 종가·등락률과 원·달러 환율을 조회합니다.
 - `PyKrxKoreaMarketProvider`는 2026-08-12에 제거했습니다. pykrx 1.2.x부터 지수 조회에 KRX 계정(`KRX_ID`/`KRX_PW`)이 필요해 자격증명 없는 설치에서는 항상 실패했고, 거래대금·투자자별 수급·업종 등락률은 그래서 실제로 채워진 적이 없습니다.
 - `fetch_korea_market_data(date)`: provider chain을 실행하고, 별도 FX 보조 경로로 원·달러 환율(`USDKRW=X`)을 붙입니다.
+- **환율도 지수와 같은 세션일로 부릅니다.** Toss 경로가 켜져 있으면 `fetch_usdkrw_exchange_rate(date_time=<세션일>)`로 요청하고, 응답 `asOfDate`가 세션일보다 미래면 그 세션의 값이 아니므로 버리고 yfinance로 폴백합니다. 예전에는 무인자 호출이라 지난 세션 브리핑에 오늘 환율이 섞였습니다(yfinance 경로는 원래 `as_of <= date`로 잘라 왔습니다).
 
 provider가 실패해도 호출자는 빈 payload와 warning을 받아야 하며, 보고서 생성 경로는 수치를 추정하지 않고 한계를 명시해야 합니다.
 

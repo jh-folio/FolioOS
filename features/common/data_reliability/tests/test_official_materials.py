@@ -32,6 +32,33 @@ def test_official_materials_emit_companyfacts_and_10k_evidence():
     assert not gaps
 
 
+def test_all_ranked_paragraphs_survive_evidence_dedupe():
+    evidence, _gaps = official_evidence_from_materials(
+        {
+            "company": {"ticker": "NVDA"},
+            "secFacts": {"ok": True, "cik": "0001045810", "markdown": "Revenue..."},
+            "rankedFiling": {
+                "ok": True,
+                "metadata": {"form": "10-K", "filingDate": "2026-03-01"},
+                "paragraphs": [
+                    {"item": "1A", "paragraph": "Risk factors"},
+                    {"item": "7", "paragraph": "MD&A"},
+                    {"item": "1", "paragraph": "Business"},
+                    {"item": "7", "paragraph": "MD&A continued"},
+                ],
+            },
+            "filingDocs": [],
+            "supportDocs": [],
+        },
+        artifact_id="NVDA",
+    )
+
+    ranked = [x for x in evidence if str(x.get("axis", "")).startswith("ranked_filing_paragraph")]
+    assert len(ranked) == 4
+    assert len({x["title"] for x in ranked}) == 4
+    assert len({x["id"] for x in ranked}) == 4
+
+
 def test_missing_official_materials_emit_actionable_gaps():
     evidence, gaps = official_evidence_from_materials({"company": {"ticker": "ABC"}}, artifact_id="ABC")
     assert not evidence

@@ -47,7 +47,6 @@ def analyze_company(query, web_search_override=None, llm_override=None, analysis
     top_tags = sorted(set(tags), key=tags.count, reverse=True)[:6]
     recent = " ".join(doc.get("summary", "") for doc in selected[:5]) or "선별된 보조 뉴스/리포트 자료가 없습니다."
     charts = charts_fn(materials)
-    gaps = resolve_company_analysis_gaps(materials, web_search_allowed=bool(web_search_override))
     preflight = preflight_from_context("company_analysis", {}, {
         "sourceCount": len(selected) or len(docs), "documentCount": len(docs),
         "analysisInputs": {
@@ -58,6 +57,11 @@ def analyze_company(query, web_search_override=None, llm_override=None, analysis
     llm_result, llm_status = llm_fn(
         query, docs, web_search_override=web_search_override, llm_override=llm_override,
         materials=materials, quality_preflight=preflight, analysis_style=analysis_style,
+    )
+    # 설정이 아니라 실제 결과로 기록한다. 설정만 보면 CLI 모드·LLM 실패·자료 없음처럼
+    # 웹 검색이 한 번도 돌지 않은 경로에서도 official_web_search가 "시도함"으로 남는다.
+    gaps = resolve_company_analysis_gaps(
+        materials, web_search_allowed=bool(llm_result and llm_result.get("webSearch"))
     )
     common = {
         "saved": False, "generatedAt": now_iso(), "query": query, "company": company,

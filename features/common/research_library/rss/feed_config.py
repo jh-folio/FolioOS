@@ -53,32 +53,96 @@ def _coerce_scalar(value: str):
         return text
 
 
+def _split_inline(text: str) -> list[str]:
+    """`"a", "b"`를 항목으로 가른다. 따옴표 안의 쉼표는 구분자가 아니다."""
+    parts: list[str] = []
+    buffer: list[str] = []
+    quote = ""
+    for char in text:
+        if quote:
+            buffer.append(char)
+            if char == quote:
+                quote = ""
+            continue
+        if char in "\"'":
+            quote = char
+            buffer.append(char)
+            continue
+        if char == ",":
+            parts.append("".join(buffer))
+            buffer = []
+            continue
+        buffer.append(char)
+    parts.append("".join(buffer))
+    return [part.strip() for part in parts if part.strip()]
+
+
+def _coerce_value(value: str):
+    """스칼라 또는 인라인 시퀀스(`["finanzen"]`). 설정이 쓰는 두 형태뿐이다."""
+    text = str(value or "").strip()
+    if text.startswith("[") and text.endswith("]"):
+        return [_coerce_scalar(part) for part in _split_inline(text[1:-1])]
+    return _coerce_scalar(text)
+
+
 def _fallback_yaml_feeds(text: str) -> list[dict]:
-    feeds = []
-    current = None
+    """PyYAML 없이 `config/rss_feeds.yaml`을 읽는다. 그 파일이 쓰는 구조만 읽는다.
+
+    **들여쓰기를 본다.** 예전에는 `- `로 시작하면 무조건 새 피드로 봐서 `only_publishers`
+    아래의 블록 시퀀스 항목(`- "Reuters"`)이 피드 경계가 됐다. 그 키는 빈 문자열로 남고
+    소비자(`feed_item_allowed`, `url_section_allowed`)는 빈 값에서 통과시키므로, 필터가
+    통째로 사라져도 유효 피드 수는 그대로라 겉으로는 아무 신호가 없었다.
+
+    받는 구조: 피드 항목의 스칼라 키, 블록 시퀀스(`only_publishers`), 한 단계 중첩
+    매핑과 그 안의 인라인 시퀀스(`url_sections: {allow: [...]}`).
+    """
+    feeds: list[dict] = []
+    current: dict | None = None
     in_feeds = False
+    item_indent: int | None = None
+    # 값이 비어 있는 키 아래로 더 깊은 줄이 오면 그 줄들이 이 키의 값이다.
+    nested_key = ""
+    nested_indent = 0
     for raw_line in str(text or "").splitlines():
         line = raw_line.rstrip()
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        if stripped == "feeds:":
-            in_feeds = True
-            continue
+        indent = len(line) - len(line.lstrip())
         if not in_feeds:
+            in_feeds = stripped == "feeds:"
             continue
-        if stripped.startswith("- "):
+        if stripped == "-" or stripped.startswith("- "):
+            rest = stripped[1:].strip()
+            if item_indent is not None and indent > item_indent:
+                if current is not None and nested_key and indent > nested_indent:
+                    if not isinstance(current.get(nested_key), list):
+                        current[nested_key] = []
+                    current[nested_key].append(_coerce_scalar(rest))
+                continue
             if current:
                 feeds.append(current)
+            if item_indent is None:
+                item_indent = indent
             current = {}
-            rest = stripped[2:].strip()
+            nested_key = ""
             if rest and ":" in rest:
                 key, value = rest.split(":", 1)
-                current[key.strip()] = _coerce_scalar(value)
+                current[key.strip()] = _coerce_value(value)
             continue
-        if current is not None and ":" in stripped:
-            key, value = stripped.split(":", 1)
-            current[key.strip()] = _coerce_scalar(value)
+        if current is None or ":" not in stripped:
+            continue
+        key, value = stripped.split(":", 1)
+        key = key.strip()
+        if nested_key and indent > nested_indent:
+            if not isinstance(current.get(nested_key), dict):
+                current[nested_key] = {}
+            current[nested_key][key] = _coerce_value(value)
+            continue
+        current[key] = _coerce_value(value)
+        # 값이 비면 다음 줄들이 이 키에 딸린다. 아무것도 안 따라오면 빈 문자열로 남는다.
+        nested_key = key if not str(value).strip() else ""
+        nested_indent = indent
     if current:
         feeds.append(current)
     return feeds

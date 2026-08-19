@@ -29,7 +29,12 @@ export function PortfolioTargets({ revision, onChanged }: { revision: number; on
       const list = Array.isArray(payload) ? payload : payload.presets || [];
       setPresets(list);
       // 비중이 담긴 목표만 비교 대상이 된다. 빈 목표를 고르면 표가 전부 0이 된다.
-      setCompareId((current) => current || list.find((row) => row.positions.length)?.id || "");
+      // 지금 고른 목표가 목록에서 사라졌으면(지웠거나 다른 탭에서 없앴거나) 다시 고른다 —
+      // 그대로 두면 없는 presetId로 조회해 전 종목이 "목표 0%·전량 매도"로 그려진다.
+      setCompareId((current) => {
+        if (current && list.some((row) => row.id === current && row.positions.length)) return current;
+        return list.find((row) => row.positions.length)?.id || "";
+      });
       setError("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "목표 비중을 불러오지 못했습니다.");
@@ -82,6 +87,8 @@ export function PortfolioTargets({ revision, onChanged }: { revision: number; on
     try {
       await deleteJson(`/api/portfolio/presets/${encodeURIComponent(preset.id)}`, {});
       setConfirmDelete("");
+      // 지운 목표를 비교 대상으로 들고 있으면 표가 옛 수치인 채로 남는다.
+      if (compareId === preset.id) { setCompareId(""); setGaps(null); }
       await load();
       onChanged();
       setNote(`${preset.name}을(를) 지웠습니다.`);

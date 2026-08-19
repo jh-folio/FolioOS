@@ -141,16 +141,27 @@ def list_events(db_path: Path, *, start: str = "", end: str = "", market: str = 
     if kinds:
         clauses.append(f"kind IN ({','.join('?' for _ in kinds)})")
         params.extend(kinds)
+    limit = max(1, min(int(limit), 500))
+    wanted = {ticker.upper() for ticker in tickers or []}
+    sql = f"SELECT * FROM market_calendar_events WHERE {' AND '.join(clauses)} ORDER BY starts_at"
     with sqlite3.connect(str(db_path)) as conn:
         conn.row_factory = sqlite3.Row
         ensure_calendar_table(conn)
-        rows = conn.execute(f"SELECT * FROM market_calendar_events WHERE {' AND '.join(clauses)} ORDER BY starts_at LIMIT ?", (*params, max(1, min(int(limit), 500)))).fetchall()
+        # 티커 판정은 파이썬에서 한다(tickers_json이 리스트라 LIKE로 거르면 `MU`가 `MUFG`를 문다).
+        # 그래서 티커를 물었을 때는 SQL LIMIT을 걸지 않는다 — 걸면 티커와 무관한 앞쪽 일정이
+        # LIMIT을 소진해 종목 일정이 한 건도 남지 않는다(실측: 90일 창의 앞 20건이 전부 macro라
+        # `ticker=AVGO&limit=20`이 항상 빈 결과였다). 절단은 필터 뒤에 한다.
+        if wanted:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        else:
+            rows = conn.execute(f"{sql} LIMIT ?", (*params, limit)).fetchall()
     events = []
-    wanted = {ticker.upper() for ticker in tickers or []}
     for row in rows:
         row_tickers = json.loads(row["tickers_json"] or "[]")
         if wanted and not wanted.intersection(row_tickers):
             continue
+        if len(events) >= limit:
+            break
         events.append({
             "id": row["id"], "kind": row["kind"], "title": row["title"], "market": row["market"], "country": row["country"],
             "tickers": row_tickers, "startsAt": row["starts_at"], "endsAt": row["ends_at"], "timezone": row["timezone"], "allDay": bool(row["all_day"]),
@@ -249,22 +260,30 @@ def refresh_calendar(data_dir: Path, *, include_estimates: bool = True) -> dict:
         providers["us_macro_source"] = "yfinance_fallback"
 
     estimates: list[dict] = []
-    queried: set[str] = set()
+    queried: dict[str, set[str]] = {}
     if include_estimates and tickers:
         earnings, earnings_queried = estimated_earnings_events(tickers)
         dividends, dividends_queried = estimated_dividend_events(tickers)
         estimates = [*earnings, *dividends]
-        queried = earnings_queried | dividends_queried
+        # 두 어댑터는 서로 다른 호출(`Ticker.calendar` vs `get_info()`)이라 따로 실패한다.
+        # 합집합으로 넘기면 한쪽만 성공한 날 다른 종류의 멀쩡한 행이 "물어봤는데 답에 없다"로
+        # 지워진다. 종류별로 나눠 넘긴다.
+        queried = {"earnings": earnings_queried, "dividend": dividends_queried}
         events.extend(estimates)
         providers.update({"yfinance_earnings": len(earnings), "yfinance_dividends": len(dividends)})
     count = upsert_events(memory_db, events)
-    if queried:
+    if any(queried.values()):
         providers["pruned_estimates"] = prune_stale_estimates(memory_db, estimates, queried)
     return {"ok": True, "stored": count, "providers": providers, "dataGaps": macro_coverage_gaps(), "agentCalled": False}
 
 
-def prune_stale_estimates(db_path: Path, fresh: list[dict], queried: set[str]) -> int:
+def prune_stale_estimates(db_path: Path, fresh: list[dict], queried: dict[str, set[str]] | set[str]) -> int:
     """이번에 **물어본 티커**에 한해, 답에 없던 실적·배당 추정 행을 지운다.
+
+    `queried`는 `{"earnings": {...}, "dividend": {...}}`처럼 **종류별**로 받는다.
+    실적과 배당은 서로 다른 provider 호출이라 한쪽만 실패하는 일이 흔한데, 합쳐서
+    받으면 조회조차 못 한 종류의 행이 삭제 통행권을 얻는다. 집합 하나를 주면 두 종류
+    모두에 적용하는 옛 계약으로 동작한다.
 
     이 두 종류는 매 수집마다 티커 목록에서 다시 만들어지므로, 물어봤는데 답에
     없는 행은 갱신 실패가 아니라 더는 성립하지 않는 행이다. 실제로 시장 판정을
@@ -283,8 +302,15 @@ def prune_stale_estimates(db_path: Path, fresh: list[dict], queried: set[str]) -
 
     공식 일정(휴장·FOMC·지표)과 확정 상태 행은 건드리지 않는다.
     """
-    symbols = {str(t).strip().upper() for t in (queried or set()) if str(t).strip()}
-    if not symbols:
+    def _symbols(values) -> set[str]:
+        return {str(t).strip().upper() for t in (values or ()) if str(t).strip()}
+
+    if isinstance(queried, dict):
+        by_kind = {str(kind): _symbols(values) for kind, values in queried.items()}
+    else:
+        shared = _symbols(queried)
+        by_kind = {"earnings": shared, "dividend": shared}
+    if not any(by_kind.values()):
         return 0
     # id는 저장할 때 `normalize_event`가 만든다. 호출자가 정규화 전 dict를 넘기면
     # keep이 비어 방금 넣은 행까지 지워지므로, 여기서 같은 방식으로 다시 만든다.
@@ -299,13 +325,16 @@ def prune_stale_estimates(db_path: Path, fresh: list[dict], queried: set[str]) -
         # tickers_json은 리스트라 SQL로 정확히 매칭하기 어렵다. 후보만 SQL로 좁히고
         # 티커 판정은 파이썬에서 한다 — LIKE로 걸러내면 `MU`가 `MUFG`를 문다.
         rows = conn.execute(
-            """SELECT id, tickers_json FROM market_calendar_events
+            """SELECT id, kind, tickers_json FROM market_calendar_events
                WHERE kind IN ('earnings','dividend') AND status = 'estimated'
                  AND provider = 'yfinance'"""
         ).fetchall()
         doomed = []
-        for row_id, tickers_json in rows:
+        for row_id, kind, tickers_json in rows:
             if row_id in keep:
+                continue
+            symbols = by_kind.get(str(kind)) or set()
+            if not symbols:
                 continue
             try:
                 row_tickers = {str(t).strip().upper() for t in json.loads(tickers_json or "[]")}

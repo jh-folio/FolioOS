@@ -335,17 +335,21 @@ def ranked_10k_paragraphs(company: dict, cache_dir: Path, max_paragraphs: int = 
 
 def ranked_paragraphs_to_markdown(result: dict) -> str:
     metadata = result.get("metadata", {}) or {}
+    # 이 함수는 연차(10-K/20-F)와 분기(10-Q) 발췌 모두를 렌더한다. 문구를 10-K로
+    # 박아 두면 10-Q MD&A 발췌가 연차보고서 서술로 읽힌다.
+    form = str(result.get("form") or metadata.get("form") or "").strip()
+    doc_label = f"SEC {form}" if form else "SEC filing"
     if not result.get("ok"):
-        return f"SEC 10-K HTML paragraphs unavailable: {result.get('reason') or metadata.get('error') or 'unknown'}"
+        return f"{doc_label} HTML paragraphs unavailable: {result.get('reason') or metadata.get('error') or 'unknown'}"
     lines = [
-        "SEC 10-K HTML filing metadata",
+        f"{doc_label} HTML filing metadata",
         f"- Form: {metadata.get('form', '')}",
         f"- Filing date: {metadata.get('filingDate', '')}",
         f"- Report date: {metadata.get('reportDate', '')}",
         f"- Accession: {metadata.get('accession', '')}",
         f"- URL: {metadata.get('url', '')}",
         "",
-        "Top scored 10-K paragraphs by sector/GICS profile",
+        f"Top scored {form or 'filing'} paragraphs by sector/GICS profile",
     ]
     for idx, row in enumerate(result.get("paragraphs", []), 1):
         lines.append(

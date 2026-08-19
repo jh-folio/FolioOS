@@ -264,6 +264,10 @@ def move_workspace(destination: str, *, merge: bool = False) -> dict:
     else:
         _write_marker(target)
     reset_cache()
+    # 표지를 쓴 순간부터 이 프로세스는 두 워크스페이스를 동시에 본다 — 모듈 상수는 옛
+    # 폴더, 새로 판정하는 경로와 수집 서브프로세스는 새 폴더다. 재시작 전까지 자료를
+    # 쓰는 작업(수집·정리)을 쉬게 해서 새 자료가 두 폴더로 갈리지 않게 한다.
+    workspace.mark_moved_pending_restart()
 
     return {
         "path": str(target),
@@ -271,6 +275,8 @@ def move_workspace(destination: str, *, merge: bool = False) -> dict:
         "fileCount": files,
         "totalBytes": total,
         "copied": copied,
+        # 재시작 전까지 RSS 수집과 보관 기간 정리가 쉰다. 화면이 재시작을 안내한다.
+        "collectionPausedUntilRestart": True,
         # 접어 넣지 못한 DB가 있으면 알린다. 자료가 상한 것은 아니지만(SQLite가 목적지에서
         # 복구한다) 무슨 일이 있었는지는 숨기지 않는다.
         "checkpointFailed": checkpoint_failed,

@@ -121,3 +121,46 @@ def test_live_sql_runtime_commits_each_registered_sql_task(
         payload = json.loads(connection.execute("SELECT payload_json FROM market_state_snapshots").fetchone()[0])
     assert payload["headline"] == "projected:1"
     assert AttemptStore(combined_root / "market-state-update-attempts.json").load().attempts[0].status is AttemptStatus.SUCCESS
+
+
+def test_briefing_identity_covers_every_market_and_legacy_files():
+    """접미사를 `.us`/`.kr`로만 알던 자리.
+
+    이 함수는 CLI 실행이 **다 끝난 뒤** 커밋 단계에서 불린다. 여기서 던지면 수십 초~몇
+    분의 Agent 실행이 통째로 버려진다. `canonical_identity`는 네 시장과 접미사 없는 옛
+    브리핑을 모두 해결할 수 있는데 그 앞의 판정만 막고 있었다.
+    """
+    from features.common.canonical_identity import BRIEFING_MARKETS, ReportKind
+
+    for market in BRIEFING_MARKETS:
+        report_id = f"2026-08-14.{market}"
+        path = str(Path("D:/data/briefings") / f"{report_id}.json")
+        assert job_runtime._identity(ReportKind.BRIEFING, report_id, path) == ("2026-08-14", market)
+
+    # 접미사 없는 옛 브리핑도 저장 대상이다. 하류 `_briefing_identity`가 scope=None을 받는다.
+    assert job_runtime._identity(
+        ReportKind.BRIEFING, "2026-06-18", "/data/briefings/2026-06-18.json",
+    ) == ("2026-06-18", None)
+
+
+def test_quality_repair_save_target_prefix_is_stripped():
+    """`saveTarget`은 `briefing:{id}` 형태다.
+
+    접두가 남으면 `briefing:2026-08-14`가 report id가 되어 경로 해석이 거부한다.
+    """
+    from features.common.canonical_identity import ReportKind
+
+    assert job_runtime._identity(
+        ReportKind.BRIEFING, "2026-08-14.jp", "briefing:2026-08-14.jp",
+    ) == ("2026-08-14", "jp")
+    assert job_runtime._identity(
+        ReportKind.BRIEFING, "briefing:2026-08-14", "briefing:2026-08-14",
+    ) == ("2026-08-14", None)
+
+
+def test_non_briefing_identities_are_untouched():
+    from features.common.canonical_identity import ReportKind
+
+    assert job_runtime._identity(
+        ReportKind.COMPANY_ANALYSIS, "NVDA_2026-08-14", "/data/company-analysis/NVDA_2026-08-14.json",
+    ) == ("NVDA_2026-08-14", None)

@@ -131,12 +131,19 @@ def query_signals(
     cursor: str = "",
     limit: int = 50,
     include_unhealthy: bool = False,
+    now: dt.datetime | None = None,
 ) -> dict:
     limit = max(1, min(int(limit or 50), 100))
     if not Path(db_path).exists():
         return {"items": [], "nextCursor": None, "count": 0}
     clauses = ["intake_stage='lead'"]
     params: list = []
+    # 보관 기간이 지난 lead는 삭제 전에도 답에 넣지 않는다. purge는 RSS 수집이 돌 때만
+    # 도는데, 상담 context(`sourceContext.fastSignals`)는 그 사이에도 조회한다 —
+    # 수개월 전 만료된 headline이 최신 신호처럼 실리면 안 된다.
+    observed = (now or dt.datetime.now(dt.timezone.utc)).astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
+    clauses.append("(expires_at_utc='' OR expires_at_utc>=?)")
+    params.append(observed)
     # 승인 목록에서 내린 provider(FinancialJuice, Benzinga 등)의 과거 lead가 DB에 남아
     # 있다. 코드에서 어댑터를 지워도 이 행들은 계속 조회돼 화면에 뜬다. 지금 수집하지
     # 않는 출처는 보여주지 않는다 — 사용자는 갱신되는 신호로 오해한다.

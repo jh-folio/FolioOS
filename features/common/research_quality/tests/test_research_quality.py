@@ -91,3 +91,52 @@ def _run_all():
 
 if __name__ == "__main__":
     sys.exit(0 if _run_all() else 1)
+
+
+def test_recheck_persists_through_the_canonical_pipeline(tmp_path, monkeypatch):
+    """재평가 저장이 canonicalRevision 지문을 깨뜨리면 안 된다.
+
+    quality는 지문 계산에 포함되는 필드라, 예전처럼 파일을 직접 덮어쓰면 지문이
+    어긋나 그 보고서의 재생성·Personal Overlay가 영구히 실패했다
+    (실측: data/briefings/2026-08-04.kr.json). 저장 후에도 정식 배관의 다음
+    커밋이 성공해야 한다.
+    """
+    import json
+
+    from features.common import research_quality
+    from features.common.canonical_identity import ReportKind
+    from features.common.canonical_report_state import revision
+    from features.common.canonical_report_types import WriteKind
+    from features.common.canonical_reports import commit_sync, prepare
+    from features.common.research_quality import service as svc
+
+    briefings = tmp_path / "briefings"
+    briefings.mkdir()
+    path = briefings / "2099-01-05.us.json"
+    commit_sync(prepare(
+        report_kind=ReportKind.BRIEFING,
+        exact_path=path,
+        write_kind=WriteKind.CANONICAL,
+        candidate={"date": "2099-01-05", "marketScope": "us", "markdown": "# 본문"},
+    ))
+    monkeypatch.setattr(svc, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        svc, "load_artifact", lambda _type, _id: json.loads(path.read_text(encoding="utf-8"))
+    )
+
+    result = svc.recheck_quality("briefing", "2099-01-05.us")
+
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert result["saved"] is True
+    assert saved["quality"] == result["quality"]
+    assert revision(saved) is not None  # 지문 검증이 예외 없이 통과해야 한다
+
+    # 지문이 멀쩡하므로 이후의 정식 커밋(재생성·overlay에 해당)이 계속 성공한다.
+    commit_sync(prepare(
+        report_kind=ReportKind.BRIEFING,
+        exact_path=path,
+        write_kind=WriteKind.CANONICAL,
+        candidate={"date": "2099-01-05", "marketScope": "us", "markdown": "# 본문 v2"},
+    ))
+    regenerated = json.loads(path.read_text(encoding="utf-8"))
+    assert regenerated["markdown"] == "# 본문 v2"

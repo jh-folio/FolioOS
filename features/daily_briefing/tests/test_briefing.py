@@ -585,6 +585,40 @@ def test_briefing_listing_and_previous_report_ignore_visual_sidecars():
         svc.BRIEFINGS_DIR = original_dir
 
 
+def test_briefing_listing_finds_every_market_not_only_us_and_kr():
+    """접미사를 손으로 `us|kr`이라 적어 둔 동안 유럽·일본 브리핑은 저장은 되면서
+    `GET /api/briefings`와 전일 체크포인트 조회에서만 빠졌다.
+    """
+    from features.daily_briefing.schema import SINGLE_MARKET_SCOPES
+
+    original_dir = svc.BRIEFINGS_DIR
+    try:
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            svc.BRIEFINGS_DIR = root
+            for scope in SINGLE_MARKET_SCOPES:
+                (root / f"2026-06-18.{scope}.json").write_text(
+                    json.dumps({"date": "2026-06-18", "marketScope": scope, "markdown": f"# {scope}"}),
+                    encoding="utf-8",
+                )
+            (root / "2026-06-18.europe.visuals.json.gz").write_bytes(b"not-a-report")
+
+            listed = svc.list_briefings()
+
+            assert {row["marketScope"] for row in listed} == set(SINGLE_MARKET_SCOPES)
+            assert svc.load_prev_briefing("2026-06-19") is not None
+    finally:
+        svc.BRIEFINGS_DIR = original_dir
+
+
+def test_briefing_report_file_pattern_rejects_sidecars_and_unknown_markets():
+    assert svc.BRIEFING_REPORT_FILE_RE.fullmatch("2026-08-13.jp.json")
+    assert svc.BRIEFING_REPORT_FILE_RE.fullmatch("2026-08-13.europe.json")
+    assert svc.BRIEFING_REPORT_FILE_RE.fullmatch("2026-08-13.json")
+    assert not svc.BRIEFING_REPORT_FILE_RE.fullmatch("2026-08-13.visuals.json")
+    assert not svc.BRIEFING_REPORT_FILE_RE.fullmatch("2026-08-13.link.json")
+
+
 def _run_all():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     passed = 0

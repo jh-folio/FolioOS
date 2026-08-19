@@ -66,6 +66,8 @@ reuse_as_evidence: false
 
 사용자 노트는 evidence가 아니라 hypothesis입니다. Personal Overlay와 Thesis Delta는 이 노트를 옹호하지 않고 최신 외부 자료와 대조합니다.
 
+**재스캔은 Vault의 현재 상태를 반영합니다.** 이번 스캔에서 보이지 않은 행은 `prune_missing_notes()`가 지우고 요약의 `removed`로 보고합니다. note_id가 `sha1(rel_path)`라 노트를 지우거나 이름·폴더를 바꾸면 새 행이 생기는데, 옛 행을 남기면 없는 파일이 계속 hypothesis로 조회되고 이름만 바꾼 노트가 두 건으로 집계됩니다. 읽기에 실패한 파일도 Vault에 있으므로 본 것으로 칩니다 — 일시적 읽기 실패는 삭제가 아닙니다.
+
 ## 템플릿과 검사
 
 `workflow/`는 사용자 2차 사고를 쓰기 위한 기본 노트를 만듭니다.

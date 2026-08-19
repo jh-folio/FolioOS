@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import time
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 
@@ -52,9 +53,16 @@ def write_bytes_atomic(
     suffix: str = ".tmp",
     sleep: Callable[[float], None] = time.sleep,
 ) -> None:
-    """임시 파일에 쓰고 제자리로 옮긴다. 실패하면 임시 파일을 남기지 않는다."""
+    """임시 파일에 쓰고 제자리로 옮긴다. 실패하면 임시 파일을 남기지 않는다.
+
+    임시 이름은 호출마다 다르다. 이름을 고정하면 같은 파일을 동시에 쓰는 두 호출이
+    한 임시 파일을 공유해, 나중 내용이 먼저 제자리로 가고(응답과 저장 내용이 어긋난다)
+    뒤이은 교체는 임시 파일이 이미 사라져 `FileNotFoundError`로 죽는다. pid로는
+    부족하다 — 겹치는 쪽은 한 프로세스 안에서 sync 엔드포인트를 나눠 처리하는
+    스레드풀 스레드다.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + suffix)
+    temporary = path.with_name(f"{path.name}.{uuid.uuid4().hex}{suffix}")
     try:
         temporary.write_bytes(data)
         replace_with_retry(temporary, path, sleep=sleep)

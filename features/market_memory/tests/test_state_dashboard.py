@@ -45,6 +45,18 @@ def test_summarize_market_state_returns_one_summary_and_five_drivers():
     assert "rawEvidence" not in payload["drivers"][0]
 
 
+def test_summarize_market_state_without_drivers_keeps_one_wait_message():
+    payload = summarize_market_state([], limit=5)
+
+    assert payload["drivers"] == []
+    assert payload["posture"]["label"] == "대기"
+    # 안내는 posture 한 곳에서 나온다 — summary가 덮이는 죽은 대입이 남아 있으면 안 된다.
+    assert payload["summary"] == "아직 판단할 자료가 부족합니다. 먼저 최신 뉴스와 시장 흐름을 더 모아야 합니다."
+    assert payload["plainConclusion"] == payload["summary"]
+    assert payload["briefs"][0]["value"] == payload["summary"]
+    assert "RSS 수집과 Market Memory 정리" in payload["actionGuide"]["timing"]
+
+
 def test_driver_headline_prefers_conclusion_and_keeps_condensed_details():
     states = [
         {
@@ -405,6 +417,30 @@ def test_build_market_state_context_filters_candidates_by_market_scope():
     assert kr["sourceRefs"][0]["id"] == "rss:item:2"
     assert "supporting evidence" in us["marketDataPolicy"]["role"]
     assert "uncertainties" in us["marketDataPolicy"]["missingDataPolicy"]
+
+
+def test_build_market_state_context_filters_candidates_for_europe_and_jp():
+    """instruction이 '이 목록은 이 marketScope로 걸러졌다'고 보증하므로 실제로 걸러야 한다."""
+    rss_items = [
+        {"title": "S&P 500 futures rise", "media": "Reuters", "summary": "US market", "markets": ["US"]},
+        {"title": "코스피 외국인 순매수", "media": "연합뉴스", "summary": "KR market", "markets": ["KR"]},
+        {"title": "DAX slips after ECB comments", "media": "Reuters", "summary": "Europe market", "markets": ["EUROPE"]},
+        {"title": "닛케이 반도체주 상승", "media": "Nikkei", "summary": "Japan market", "markets": ["JP"]},
+        {"title": "Oil and dollar shape global risk", "media": "Bloomberg", "summary": "Global", "markets": ["GLOBAL"]},
+    ]
+
+    europe = build_market_state_context(rss_items=rss_items, states=[], market_tape={}, macro_snapshot={}, market_scope="europe")
+    jp = build_market_state_context(rss_items=rss_items, states=[], market_tape={}, macro_snapshot={}, market_scope="jp")
+
+    assert [item["title"] for item in europe["rssCandidates"]] == [
+        "DAX slips after ECB comments",
+        "Oil and dollar shape global risk",
+    ]
+    assert [item["title"] for item in jp["rssCandidates"]] == [
+        "닛케이 반도체주 상승",
+        "Oil and dollar shape global risk",
+    ]
+    assert "already filtered for this marketScope" in europe["instruction"]
 
 
 def test_run_llm_market_state_snapshot_generates_independent_market_views(tmp_path, monkeypatch):
