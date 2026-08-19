@@ -426,8 +426,18 @@ def _listing_rank(entry: dict, script: str, prefer_home: bool) -> tuple:
     시간대도 가격도 다른 별개의 증권이다. 기업분석은 반대다 — SEC companyfacts와
     10-K가 붙는 쪽이 아니면 보고서가 비므로 기본값은 계속 SEC 등록분이다.
     """
-    home = 1 if entry.get("source") == "constituents" else 0
-    sec = 1 if entry.get("cik") else 0
+    # 같은 상장이 여러 출처로 들어오므로, 상장 성격은 **그 티커의 모든 행을 합친**
+    # 값이어야 한다(`_dedupe`가 `listingFlags`로 넘긴다). 대표 한 줄만 보면 신호를
+    # 잃는다 — 000660은 curated(98점)가 constituents(96점)를 점수로 눌러 살아남는데,
+    # `home`을 들고 있던 쪽은 밀려난 constituents다. 그래서 "SK hynix"가 자국 상장을
+    # 제치고 미국 OTC ADR(SKHY)로 풀렸고, 한국장 브리핑이 그 차트를 market_mismatch로
+    # 버려 주도 기업 자리가 비었다.
+    flags = entry.get("listingFlags")
+    if flags:
+        home, sec = int(flags[0]), int(flags[1])
+    else:
+        home = 1 if entry.get("source") == "constituents" else 0
+        sec = 1 if entry.get("cik") else 0
     return (
         (home, sec) if prefer_home else (sec, home),
         1 if script and entry.get("market") == script else 0,
@@ -483,14 +493,24 @@ def _dedupe(rows: list[tuple[dict, int]], script: str = "", prefer_home: bool = 
     한두 글자짜리 약칭은 같은 회사라는 증거가 못 된다.
     """
     best: dict[str, tuple[dict, int]] = {}
+    # 상장 성격은 점수로 접기 **전에** 모은다. 한 티커가 curated·constituents·dart로
+    # 여러 번 들어오는데 대표는 점수로 고르므로, 그러지 않으면 `home`을 들고 있던 행이
+    # 조용히 사라진다(§`_listing_rank`).
+    flags: dict[str, tuple[int, int]] = {}
     for entry, score in rows:
         key = f"{entry.get('market','')}:{_ticker_key(entry.get('ticker'))}"
+        home, sec = flags.get(key, (0, 0))
+        flags[key] = (
+            max(home, 1 if entry.get("source") == "constituents" else 0),
+            max(sec, 1 if entry.get("cik") else 0),
+        )
         if key not in best or score > best[key][1]:
             best[key] = (entry, score)
 
     groups: list[tuple[dict, int]] = []
     owner: dict[str, int] = {}
-    for entry, score in best.values():
+    for key, (entry, score) in best.items():
+        entry = {**entry, "listingFlags": flags[key]}
         keys = _merge_keys(entry)
         index = next((owner[k] for k in keys if k in owner), None)
         if index is None:
