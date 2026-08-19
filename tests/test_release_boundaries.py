@@ -31,7 +31,11 @@ ROOT = Path(__file__).resolve().parents[1]
 # 2026-08-13 검토하고 옮김: 섹션 피드 4개에도 `url_sections`를 명시했다. 실측으로
 # 자기 섹션만 내놓지만(20/20), 규칙이 설정에 있어야 이미 쌓인 자료를 정리하는 쪽이
 # "지금 무엇을 수집하는가"를 피드 주소에서 추측하지 않는다.
-BASE_COMMIT = "27f1012f529b06b0bdfe3cf7db0d977bb5a943d4"
+# 2026-08-19 검토하고 옮김: KOSPI200 구성종목 199곳에 한글 정식명을 별칭으로 넣었다.
+# 그 이름은 DART 상장 목록에만 있었는데 그 파일은 배포에 없고 API 키가 있어야 받아진다
+# — 키 없이 설치하면 한국 기업이 수동 사전 8곳으로만 풀렸다. 같은 커밋에서
+# company_master 의 `현대자동차` 별칭과, 배포본에만 빠져 있던 NAVER 항목을 맞췄다.
+BASE_COMMIT = "352903faecac8091eac0da204e0099520150b71d"
 sys.path.insert(0, str(ROOT))
 from features.common.config_bootstrap import DEFAULT_CONFIG_NAMES  # noqa: E402
 
