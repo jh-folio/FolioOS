@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 import threading
 import urllib.request
 from pathlib import Path
@@ -73,9 +74,30 @@ _INDEX_CACHE: dict | None = None
 _INDEX_STAMP: tuple | None = None
 
 
+def _fold_latin_accents(text: str) -> str:
+    """라틴 문자의 악센트만 떨어뜨린다. `Estée` -> `Estee`.
+
+    `_key`의 문자 필터가 허용 범위 밖을 공백으로 바꾸는데, 악센트 붙은 글자가 거기
+    걸려 이름이 조각났다 — `Estée Lauder` -> `est e lauder`, `Nestlé` -> `nestl`,
+    `Société Générale` -> `soci t  g n rale`. SEC·구성종목 파일은 대개 악센트 없는
+    표기(`ESTEE LAUDER COMPANIES INC`)라 서로 만나지 못했다. 실측으로 2026-08-19
+    미국장 브리핑의 주도 기업 ② `Estée Lauder` 차트가 그렇게 빈자리로 나갔다.
+
+    **일본어 탁점은 남긴다.** `バ`는 `ハ`+탁점으로 분해되는데 그 탁점을 떼면 다른
+    글자가 된다(ソフトバンク -> ソフトハンク). 앞 글자가 ASCII 라틴일 때만 뗀다.
+    한글은 분해돼도 결합 문자가 아니라 자모(Lo)라 그대로 남고 NFC가 되돌린다.
+    """
+    folded = []
+    for char in unicodedata.normalize("NFD", str(text or "")):
+        if unicodedata.combining(char) and folded and folded[-1].isascii() and folded[-1].isalpha():
+            continue
+        folded.append(char)
+    return unicodedata.normalize("NFC", "".join(folded))
+
+
 def _key(value) -> str:
     """비교용 정규화. 접미사와 구두점을 걷어낸다."""
-    text = normalize(str(value or "")).lower().strip()
+    text = _fold_latin_accents(normalize(str(value or ""))).lower().strip()
     text = _SUFFIXES.sub(" ", text)
     # 가나·한자를 남긴다. 지우면 일본어로 친 이름이 빈 문자열이 되어 아무것도 못 찾는다.
     return re.sub(r"[^a-z0-9가-힣ぁ-んァ-ヴー一-龥 ]+", " ", text).strip()
