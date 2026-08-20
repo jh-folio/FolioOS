@@ -13,6 +13,11 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# **버전을 박아 두지 않는다.** 여기서 검사하는 것은 패키징이 도는가이지 어떤 숫자인가가
+# 아니다. 박아 두면 릴리즈마다 이 파일도 같이 고쳐야 하고, 잊으면 CI가 판올림 커밋에서
+# 실패한다 — 0.5.3에서 실제로 세 건이 그렇게 실패했다. 버전 자체의 계약은
+# `tests/test_version_contract.py`가 따로 지킨다.
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import verify_release as verifier  # noqa: E402
@@ -143,7 +148,7 @@ def test_package_defaults_to_version_file() -> None:
     result = run_package("--dry-run")
 
     assert result.returncode == 0, result.stderr
-    assert "FolioOS-v0.5.2" in result.stdout
+    assert f"FolioOS-v{VERSION}" in result.stdout
 
 
 def test_package_dry_run_requires_a_safe_version() -> None:
@@ -236,7 +241,7 @@ def test_package_build_creates_verified_zip(tmp_path: Path) -> None:
         )
 
     build = json.loads((package_dir / "BUILD.json").read_text(encoding="utf-8"))
-    assert build["version"] == "0.5.2"
+    assert build["version"] == VERSION
     assert len(build["commit"]) == 40
     assert package_zip.is_file()
     with zipfile.ZipFile(package_zip) as archive:
@@ -374,7 +379,7 @@ def test_real_zip_extracts_verifies_and_boots_on_first_run(tmp_path: Path) -> No
             except OSError:
                 time.sleep(0.2)
         assert health is not None, server.stderr.read() if server.poll() is not None and server.stderr else ""
-        assert health["version"] == "0.5.2"
+        assert health["version"] == VERSION
         assert health["commit"] == expected_commit
         assert (package / "config").is_dir()
     finally:

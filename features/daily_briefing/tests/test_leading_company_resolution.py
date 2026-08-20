@@ -46,8 +46,27 @@ def test_short_and_generic_us_names_resolve(name, ticker):
     assert parsed["warnings"] == []
 
 
-def test_a_korean_name_outside_the_manual_dictionary_resolves():
-    """알테오젠은 수동 사전에도 KOSPI200 구성종목에도 없다. DART 상장 목록에는 있다."""
+def test_a_korean_name_outside_the_manual_dictionary_resolves(monkeypatch):
+    """알테오젠은 수동 사전에도 KOSPI200 구성종목에도 없다. DART 상장 목록에는 있다.
+
+    **상장 목록을 stub한다.** 예전에는 `data/dart-cache/corp_codes.json`을 그대로 읽어,
+    캐시를 받아 둔 기계에서만 통과하고 CI에서는 빈 목록이라 실패했다 — 내려받아 둔
+    적이 있다는 사실이 테스트 통과의 조건이 되면 안 된다. 여기서 검사하는 것은
+    해석기가 상장 목록의 이름을 종목 코드로 잇는가이지, 캐시가 있는가가 아니다.
+    """
+    import features.common.company_resolution as resolution
+
+    monkeypatch.setattr(
+        resolution, "_dart_listed_rows",
+        lambda: [
+            {"ticker": "196170", "name": "알테오젠", "englishName": "Alteogen",
+             "market": "KR", "cik": "", "source": "dart"},
+        ],
+    )
+    # 색인은 프로세스 캐시라 stub만으로는 안 바뀐다. 이 테스트 안에서만 비우고 되돌린다.
+    monkeypatch.setattr(resolution, "_INDEX_CACHE", None, raising=False)
+    monkeypatch.setattr(resolution, "_INDEX_STAMP", None, raising=False)
+
     parsed = leading_company_subjects_from_markdown(_heading("한국장", "②", "알테오젠"))
 
     assert [row["ticker"] for row in parsed["kr"]] == ["196170"]
